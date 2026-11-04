@@ -79,6 +79,8 @@ data/item_names.tsv        item id -> name, from FFR-Randomizer by LordMikoda (M
 
 After `data/*.tsv` changes, run `python tools/gen_apworld_data.py` and commit the regenerated `data.py`.
 
+Ideas that are not on the test plan yet (Tablet Shards, skipping the prologue, an open-world mode) are in [IDEAS.md](IDEAS.md).
+
 At run time the mod writes these files into its own folder: `ap_out.txt`, `ap_state.txt`, `ap_status.txt`, `ffrap_dump.txt`, `chests.tsv` and `seen.tsv`. The fake server writes `ap_in.txt`.
 
 ## Console commands
