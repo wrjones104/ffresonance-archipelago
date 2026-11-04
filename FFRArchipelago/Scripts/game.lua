@@ -292,6 +292,166 @@ function G.IsChestOpenInSave(mapId, uid)
     return r == true
 end
 
+local CHEST_TABLE = "/Game/Datatable/Map/Gimmick/TreasureBox/CDT_MapGimmickTreasureBox.CDT_MapGimmickTreasureBox"
+local CHEST_FIELDS = { "mapId", "ID", "ItemId", "ItemNum", "Money", "IsTrap", "battleGroupId" }
+
+-- A composite table keeps its own copy of the rows, so a patch must reach its parent tables too
+-- (parents can be composite as well). Same walk as FFRRandomizer's tableFamily.
+local function TableFamily(root)
+    local family, seen = {}, {}
+    local function visit(dt)
+        if not (dt and dt:IsValid()) then return end
+        local key = dt:GetFullName()
+        if seen[key] then return end
+        seen[key] = true
+        family[#family + 1] = dt
+        pcall(function()
+            local parents = dt.ParentTables
+            for i = 1, #parents do visit(parents[i]) end
+        end)
+    end
+    visit(root)
+    return family
+end
+
+local function RowName(name)
+    if type(name) == "string" then return name end
+    local ok, s = pcall(function() return name:ToString() end)
+    return ok and s or tostring(name)
+end
+
+-- Every chest row as a plain table, sorted by map and id. nil when the table is not loaded.
+function G.ChestRows()
+    local dt = Find(CHEST_TABLE)
+    if not dt then return nil end
+    local rows = {}
+    pcall(function()
+        dt:ForEachRow(function(name, row)
+            local r = { row = RowName(name) }
+            for _, f in ipairs(CHEST_FIELDS) do
+                local v
+                pcall(function() v = row[f] end)
+                r[f] = v
+            end
+            rows[#rows + 1] = r
+        end)
+    end)
+    table.sort(rows, function(a, b)
+        if a.mapId ~= b.mapId then return (a.mapId or 0) < (b.mapId or 0) end
+        return (a.ID or 0) < (b.ID or 0)
+    end)
+    return rows
+end
+
+-- Writes every chest row to a tab-separated file, for the apworld's location table.
+function G.ExportChests(path)
+    local rows = G.ChestRows()
+    if not rows then return false, "chest table not loaded" end
+    local f = io.open(path, "w")
+    if not f then return false, "cannot write " .. path end
+    f:write("row\t", table.concat(CHEST_FIELDS, "\t"), "\n")
+    for _, r in ipairs(rows) do
+        local cells = { r.row }
+        for _, k in ipairs(CHEST_FIELDS) do cells[#cells + 1] = tostring(r[k]) end
+        f:write(table.concat(cells, "\t"), "\n")
+    end
+    f:close()
+    return true, #rows .. " rows"
+end
+
+-- Chest blanking experiment: every non-trap chest gives 1 gil instead of its vanilla reward.
+-- 1 gil is the shape the game's own gil chests use (ItemId -1, Money N). The originals are
+-- kept in memory, so turning it off restores them, and a game restart restores them anyway.
+local blankOriginals = {}   -- table full name .. "|" .. row -> { ItemId, ItemNum, Money }
+local BLANK = { ItemId = -1, ItemNum = 1, Money = 1 }
+
+local function BlankRow(key, row, on)
+    if on then
+        if row.IsTrap == true then return false end
+        if not blankOriginals[key] then
+            blankOriginals[key] = { ItemId = row.ItemId, ItemNum = row.ItemNum, Money = row.Money }
+        end
+        if row.ItemId == BLANK.ItemId and row.Money == BLANK.Money and row.ItemNum == BLANK.ItemNum then
+            return false
+        end
+        row.ItemId, row.ItemNum, row.Money = BLANK.ItemId, BLANK.ItemNum, BLANK.Money
+        return true
+    end
+    local orig = blankOriginals[key]
+    if not orig then return false end
+    row.ItemId, row.ItemNum, row.Money = orig.ItemId, orig.ItemNum, orig.Money
+    blankOriginals[key] = nil
+    return true
+end
+
+-- Applies (on) or undoes (off) the blanking on the chest tables and on the chests already
+-- spawned in this map, which carry their own copy of the row. Returns how many it changed.
+-- Safe to call again and again: rows already in the wanted state are skipped.
+function G.BlankChests(on)
+    local changed = 0
+    for _, dt in ipairs(TableFamily(Find(CHEST_TABLE))) do
+        local tableKey = dt:GetFullName()
+        pcall(function()
+            dt:ForEachRow(function(name, row)
+                local ok, did = pcall(BlankRow, tableKey .. "|" .. RowName(name), row, on)
+                if ok and did then changed = changed + 1 end
+            end)
+        end)
+    end
+    local mapId = G.MapId()
+    for _, c in ipairs(G.LiveChests()) do
+        if not c.open then
+            local ok, did = pcall(function()
+                return BlankRow("live|" .. tostring(mapId) .. "|" .. tostring(c.uid), c.actor.m_TreasureBoxData, on)
+            end)
+            if ok and did then changed = changed + 1 end
+        end
+    end
+    return changed
+end
+
+-- -------------------------------------------------------------------------------------------
+-- Shining spots (shinies)
+-- -------------------------------------------------------------------------------------------
+-- The sparkly pick-ups on the world map and in fields. They are not in a data table: they are
+-- BP_MapGimmick_FieldItem* actors placed in the level files, each with an m_UniqueId.
+-- FFRS_QoL's markers (based on ZArkadia's Item and Chest Markers, Nexus mod 25) treat a spot as
+-- looted when CPP_BFL_SaveDataMap:IsOpenTreasureBox(saveMapId, uniqueId) says so, the same
+-- call as chests. What a spot gives, and which field the actor changes when picked up, is not
+-- known yet: G.DumpFieldItems and the shiny log lines in main.lua are there to find out.
+
+local function ClassName(o)
+    local ok, n = pcall(function() return o:GetClass():GetFName():ToString() end)
+    return ok and n or "?"
+end
+
+function G.LiveFieldItems()
+    local out, seen = {}, {}
+    for _, cls in ipairs({ "CPP_MapGimmick", "BP_MapGimmick_FieldItem_C" }) do
+        local ok, all = pcall(FindAllOf, cls)
+        for _, a in ipairs(ok and all or {}) do
+            if Alive(a) then
+                local cname = ClassName(a)
+                local addr
+                pcall(function() addr = a:GetAddress() end)
+                if cname:find("FieldItem", 1, true) and not (addr and seen[addr]) then
+                    if addr then seen[addr] = true end
+                    pcall(function()
+                        out[#out + 1] = {
+                            uid = Int(a.m_UniqueId),
+                            hidden = a.bHidden == true,
+                            interact = Int(a.interactType),
+                            class = cname,
+                            actor = a,
+                        }
+                    end)
+                end
+            end
+        end
+    end
+    return out
+end
+
 -- -------------------------------------------------------------------------------------------
 -- On-screen text
 -- -------------------------------------------------------------------------------------------
@@ -402,6 +562,42 @@ function G.DumpChests(out, maxRows)
         end)
     end)
     out("chest table rows: " .. shown)
+end
+
+-- Every property of a field item's own classes (the Blueprint and the game's C++ bases, up to
+-- the engine's Actor), with values. This is where its reward fields will show up.
+function G.DumpFieldItems(out)
+    local mapId = G.MapId()
+    local items = G.LiveFieldItems()
+    out(string.format("map %s: %d field items", tostring(mapId), #items))
+    for _, it in ipairs(items) do
+        out(string.format("field item %s uid %s hidden %s interact %s, save says %s", it.class,
+            tostring(it.uid), tostring(it.hidden), tostring(it.interact),
+            tostring(mapId and it.uid and G.IsChestOpenInSave(mapId, it.uid))))
+        pcall(function()
+            local cls = it.actor:GetClass()
+            while cls and cls:IsValid() do
+                local cname = cls:GetFName():ToString()
+                if cname == "Actor" or cname == "Object" then break end
+                out("  class " .. cname)
+                cls:ForEachProperty(function(prop)
+                    local name = prop:GetFName():ToString()
+                    local kind = prop:GetClass():GetFName():ToString()
+                    local v
+                    pcall(function() v = it.actor[name] end)
+                    if kind == "StructProperty" then
+                        local s
+                        pcall(function() s = prop:GetStruct() end)
+                        out("    " .. name .. " : " .. (s and s:GetFName():ToString() or "?"))
+                        if s then DumpStruct(s, v, "      ", 1, out) end
+                    else
+                        out("    " .. kind .. " " .. name .. " = " .. Show(v))
+                    end
+                end)
+                cls = cls:GetSuperStruct()
+            end
+        end)
+    end
 end
 
 return G

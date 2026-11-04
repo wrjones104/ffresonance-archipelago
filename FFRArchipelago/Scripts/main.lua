@@ -3,7 +3,8 @@
 -- What it does:
 --   * Reads items from ap_in.txt and grants them in order: bag items, visions, party members
 --     and story flags. Each item is applied once, tracked by its Archipelago index.
---   * Reports opened chests (check chest:<mapId>:<uid>) and story counter changes to ap_out.txt.
+--   * Reports opened chests (check chest:<mapId>:<uid>), picked-up shinies (check
+--     shiny:<mapId>:<uid>) and story counter changes to ap_out.txt.
 --   * Writes ap_status.txt every few seconds, so you can see what it thinks is going on.
 --
 -- What it does NOT do yet: talk to an Archipelago server (a Python client will do that), stop
@@ -12,10 +13,13 @@
 -- Console commands (open the UE4SS console, ConsoleEnablerMod):
 --   ffrap_status                 what the mod sees right now
 --   ffrap_grant <kind> <id> [n]  grant directly, without the bridge: item, vision, unit, flag
---   ffrap_dump [rows]            chest discovery dump to ffrap_dump.txt
+--   ffrap_dump [rows]            chest and shiny discovery dump to ffrap_dump.txt
+--   ffrap_export                 every chest table row to chests.tsv
+--   ffrap_blank [on|off]         experiment: every non-trap chest gives 1 gil instead
+--   ffrap_savecheck              ask the save about every check reported so far
 --   ffrap_reset                  forget the applied-item count (re-grants everything!)
 
-local VERSION = "0.1.0"
+local VERSION = "0.2.0"
 
 local MOD_DIR = (debug.getinfo(1, "S").source:gsub("^@", ""):gsub("\\", "/"):match("^(.*/)Scripts/[^/]+$"))
     or "ue4ss/Mods/FFRArchipelago/"
@@ -50,6 +54,7 @@ local state = {
     inGameTicks = 0,
     ticks = 0,
     lastResult = "",
+    blank = false,     -- chest blanking experiment (ffrap_blank)
 }
 
 local STATE_PATH = MOD_DIR .. "ap_state.txt"
@@ -64,6 +69,7 @@ local function loadState()
     for line in f:lines() do
         local key, value = line:match("^(%w+)\t(.*)$")
         if key == "applied" then state.applied = tonumber(value) or 0 end
+        if key == "blank" then state.blank = value == "1" end
     end
     f:close()
 end
@@ -72,6 +78,7 @@ local function saveState()
     local f = io.open(STATE_PATH, "w")
     if not f then return end
     f:write("applied\t", state.applied, "\n")
+    f:write("blank\t", state.blank and "1" or "0", "\n")
     f:close()
 end
 
@@ -156,24 +163,93 @@ end
 
 local seenMaps = {}   -- map id -> true once its chests were logged against the save
 
-local function scanChests()
-    local mapId = game.MapId()
-    if not mapId then return end
-    local chests = game.LiveChests()
+-- This map visit: which map, the chests and shinies opened during it (for the save-timing
+-- log), and each shiny's state when first seen.
+local visit = { mapId = nil, opened = {}, shinies = {} }
+
+-- Save-timing discovery. The first in-game test showed IsOpenTreasureBox answering false for a
+-- chest opened moments before. When the map changes, ask the save again about everything opened
+-- during the visit that just ended: that tells us whether the save catches up on leaving a map.
+local function checkSaveAfterVisit(mapId, opened)
+    for _, o in ipairs(opened) do
+        log(string.format("save check after leaving map %d: %s %d save open %s", mapId, o.kind, o.uid,
+            tostring(game.IsChestOpenInSave(mapId, o.uid))))
+    end
+end
+
+local function newVisit(mapId)
+    if visit.mapId and #visit.opened > 0 then checkSaveAfterVisit(visit.mapId, visit.opened) end
+    visit = { mapId = mapId, opened = {}, shinies = {} }
+end
+
+local function opened(kind, mapId, uid)
+    local key = kind .. ":" .. mapId .. ":" .. uid
+    if report("check", key) then
+        log("check " .. key)
+        visit.opened[#visit.opened + 1] = { kind = kind, uid = uid }
+    end
+end
+
+local function scanChests(mapId)
     local firstVisit = not seenMaps[mapId]
     seenMaps[mapId] = true
-    for _, c in ipairs(chests) do
+    for _, c in ipairs(game.LiveChests()) do
         if c.uid then
             if firstVisit then
                 -- Discovery: does the actor's map id match what the save keys chests by?
                 log(string.format("map %d chest %d: actor open %s, save open %s", mapId, c.uid,
                     tostring(c.open), tostring(game.IsChestOpenInSave(mapId, c.uid))))
             end
-            if c.open and report("check", "chest:" .. mapId .. ":" .. c.uid) then
-                log("check chest:" .. mapId .. ":" .. c.uid)
+            if c.open then opened("chest", mapId, c.uid) end
+        end
+    end
+end
+
+-- Shinies. Which signal means "picked up" is not known yet, so this reports on the two that
+-- cannot fire by accident (the save says looted, or a spot seen available became hidden or
+-- lost its interaction) and only logs the third (the actor went away), because on the big
+-- world map actors also go away when their part of the map streams out.
+local function scanShinies(mapId)
+    local present = {}
+    for _, s in ipairs(game.LiveFieldItems()) do
+        if s.uid then
+            present[s.uid] = true
+            local saveOpen = game.IsChestOpenInSave(mapId, s.uid)
+            local used = s.hidden or s.interact == 0
+            local was = visit.shinies[s.uid]
+            if not was then
+                visit.shinies[s.uid] = { available = not used and not saveOpen }
+                log(string.format("map %d shiny %d (%s): hidden %s, interact %s, save open %s", mapId,
+                    s.uid, s.class, tostring(s.hidden), tostring(s.interact), tostring(saveOpen)))
+            elseif was.available and used then
+                log(string.format("map %d shiny %d changed: hidden %s, interact %s", mapId, s.uid,
+                    tostring(s.hidden), tostring(s.interact)))
+            end
+            if saveOpen or (was and was.available and used) then
+                opened("shiny", mapId, s.uid)
+                visit.shinies[s.uid].available = false
             end
         end
     end
+    for uid, st in pairs(visit.shinies) do
+        if st.available and not present[uid] and not st.goneLogged then
+            st.goneLogged = true
+            log(string.format("map %d shiny %d is gone (picked up, or streamed out?); not reported", mapId, uid))
+        end
+    end
+end
+
+local function scanLoot()
+    local mapId = game.MapId()
+    if not mapId then return end
+    if mapId ~= visit.mapId then
+        newVisit(mapId)
+        if state.blank then
+            log("chest blanking: " .. game.BlankChests(true) .. " rows set to 1 gil")
+        end
+    end
+    scanChests(mapId)
+    scanShinies(mapId)
 end
 
 local function watchStory()
@@ -203,6 +279,7 @@ local function statusLines()
         "map: " .. tostring(game.MapId()) .. "   story: " .. tostring(game.StoryCounter()),
         "party: " .. (party and table.concat(party, ", ") or "?"),
         "items applied: " .. state.applied .. "   queued: " .. queued(),
+        "chest blanking: " .. (state.blank and "on" or "off"),
         "last: " .. state.lastResult,
     }
 end
@@ -231,7 +308,10 @@ local function tick()
         if state.inGameTicks > SETTLE_TICKS then
             applyItems()
             watchStory()
-            if state.ticks % CHEST_EVERY == 0 then scanChests() end
+            if state.ticks % CHEST_EVERY == 0 then scanLoot() end
+            -- The tables can be rebuilt while the game runs, so blanking is applied again now
+            -- and then; rows already blank are skipped.
+            if state.blank and state.ticks % STATUS_EVERY == 0 then game.BlankChests(true) end
         end
     end
     if state.ticks % STATUS_EVERY == 0 then writeStatus() end
@@ -270,9 +350,41 @@ command("ffrap_dump", function(p)
     local path = MOD_DIR .. "ffrap_dump.txt"
     local f = io.open(path, "w")
     if not f then return end
-    game.DumpChests(function(line) f:write(line, "\n") end, tonumber(p[1]) or 5)
+    local function out(line) f:write(line, "\n") end
+    game.DumpChests(out, tonumber(p[1]) or 5)
+    out("")
+    game.DumpFieldItems(out)
     f:close()
-    notify("Chest dump written to ffrap_dump.txt")
+    notify("Chest and shiny dump written to ffrap_dump.txt")
+end)
+
+command("ffrap_export", function()
+    local ok, detail = game.ExportChests(MOD_DIR .. "chests.tsv")
+    notify(ok and ("Chest table exported to chests.tsv: " .. detail) or ("Export failed: " .. detail))
+end)
+
+command("ffrap_blank", function(p)
+    local want = p[1] == "on" or (p[1] == nil and not state.blank)
+    if p[1] == "off" then want = false end
+    state.blank = want
+    saveState()
+    local n = game.BlankChests(want)
+    notify("Chest blanking " .. (want and "on" or "off") .. ": " .. n .. " rows changed")
+end)
+
+-- Asks the save about every chest and shiny reported so far: run it after saving, or after
+-- leaving and re-entering a map, to see when the save catches up.
+command("ffrap_savecheck", function()
+    local yes, no = 0, 0
+    for key in pairs(state.reported) do
+        local kind, mapId, uid = key:match("^check|(%a+):(%d+):(%d+)$")
+        if kind then
+            local open = game.IsChestOpenInSave(tonumber(mapId), tonumber(uid))
+            log(string.format("savecheck %s:%s:%s save open %s", kind, mapId, uid, tostring(open)))
+            if open then yes = yes + 1 else no = no + 1 end
+        end
+    end
+    notify("Save check: " .. yes .. " reported checks are in the save, " .. no .. " are not (see UE4SS.log)")
 end)
 
 command("ffrap_reset", function()
