@@ -49,7 +49,7 @@ At run time the mod writes these files into its own folder: `ap_out.txt`, `ap_st
 | `ffrap_dump [rows]` | Chest and shiny discovery dump to `ffrap_dump.txt` |
 | `ffrap_export` | Every chest table row to `chests.tsv` |
 | `ffrap_blank [on\|off]` | Experiment: every non-trap chest gives 1 gil instead of its vanilla reward. It is remembered across restarts. |
-| `ffrap_savecheck` | Ask the save about every chest and shiny reported so far |
+| `ffrap_sync` | Report every location in `seen.tsv` that the save says is looted, from anywhere in the game (re-sync) |
 | `ffrap_reset` | Forget the applied-item count. Re-grants everything! |
 
 ## Bridge format
@@ -65,11 +65,25 @@ msg   <text>
 `ap_out.txt` (game to client):
 ```
 hello    <version>
-check    chest:<row mapId>:<row ID>     (chests with no row: chest:<map>:u<m_UniqueId>)
+check    chest:<row mapId>:<row ID>     (a rowless chest with a reward: chest:<map>:u<m_UniqueId>)
 check    shiny:<map>:<m_UniqueId>
 story    <counter>
 applied  <index>  <ok|fail>  <detail>
 ```
+
+`<map>` is always the map as the save keys it, `CPP_MapManager:GetSameMapId()`.
+
+## seen.tsv
+
+The mod appends one line the first time it sees each chest or shiny, across sessions. This builds our own location list and records the key the save knows each location by.
+
+```
+kind  map  uid  row  item  count  money  visible-condition
+```
+
+- `kind`: `chest` (has a table row), `xchest` (no row), `shiny`, or `spot` (a shiny-class story or quest point with no reward).
+- `map` and `uid` are the save's key: `IsOpenTreasureBox(map, uid)` answers for that location from anywhere in the game.
+- `row` is the chest table row (`mapId:ID`). For shinies this column holds the Blueprint class instead.
 
 ## Test results so far
 
@@ -97,17 +111,45 @@ applied  <index>  <ok|fail>  <detail>
 - **Rowless chests:** four chests had `m_Id -1` (one in 2010, three already open in 3020). 0.3.0 keys them by `m_UniqueId` and records them in `seen.tsv` to find out what they are.
 - **Switching saves:** the applied-item count and the reported checks are per install, not per save. Checks staying reported is right for Archipelago, because a location checked once stays checked. Items need a per-save index (open question 5).
 
-## Round 3 test plan (0.3.0)
+**Round 3 (0.3.0, 2026-11-04): passed the steps that were run; the chest save key is found.**
+- **Map ids:** `GetSameMapId()` was right at once on every change (2002, 2001, 2015, 5200, 1000, 3001). The save's `Map.mapId` said 3020 the whole time you were in 2002 and 2001.
+- **Chest save key: `IsOpenTreasureBox(current map, m_UniqueId)`.** `TypeData.ID` is the same number.
+  - It was true for every opened chest: 3020:1, 3020:3 to 3020:6, 3001:0, 3001:1 and the rowless ones.
+  - It was false for every closed one.
+  - `m_Id` matched nothing. Its one "true" was a collision: `m_Id 7` of chest 3020:7 is the `m_UniqueId` of opened chest 3020:1.
+- **Rows and maps do not line up.** Rows `3020:*` sit in map 2002, and rows `2001:*` in map 2001. The row key stays the location key, and `seen.tsv` now records each chest's save key next to it.
+- **Rowless chests:** the three in 2002 (`u50`, `u52`, `u54`) had no item and no money and were already open. They look like story chests, whose contents come from an event. 0.3.1 records them but no longer reports them.
+- **Shinies:** live pickups (`shiny:1000:137`, `shiny:1000:3`) and already-looted ones (`100`, `150`) were reported. One field shiny (map 3001, uid 80, item 20001) is story-gated: `{progress:31}==20`. Map 2015 has a Medal shiny (item 25004). `seen.tsv` now lists 85 world-map shinies and 8 event spots.
+- **Story counter:** a jump made with the Modding Tools' story knob (1130 → 5010 → 1130) was reported as `story 5010`. The client should treat story reports as "reached at least N" and remember the highest value.
+- **Clean start:** deleting `ap_state.txt` but keeping `ap_in.txt` re-granted items 0 to 6. That is correct behaviour; the round 3 instructions were wrong. A clean start deletes all three `ap_*.txt` files and restarts the fake server.
+- **Not run yet:** whether the second chest gives its real item after `ffrap_blank off`.
+
+## Round 4 test plan (0.3.1)
 
 Keep FFRRandomizer disabled.
 
-1. **Install.** Copy `Scripts/` over the old one. Delete `ap_out.txt` and `ap_state.txt` for a clean start. The log should say `version 0.3.0 loaded`.
-2. **Map ids.** Walk through a few map changes, including the world map. The log prints `map A -> B (save's Map.mapId C)` each time. B should be right straight away.
-3. **Chest save key.** On entering a map, the log prints each chest's key and what the save says under each candidate key. Open a chest, leave the map, and come back. Find the candidate that turns `true` for the opened chest. Also try map 2010, which uses rows `2001:*`.
-4. **Rowless chests.** Note what the `chest:<map>:u<id>` chests are in game, if you can tell. Their rows in `seen.tsv` show their item fields.
-5. **Shinies.** Pick up a few on the world map and in a field map. Each should give `check shiny:<map>:<uid>` within a second or two. Event spots (no reward) must never be reported.
-6. **Blanking.** Run `ffrap_blank on`, open a chest, then `ffrap_blank off` and open another in the same map. The second one should give its real item.
-7. **Seen list.** Fly around the world map for a while. `seen.tsv` collects every shiny with its reward. That is the start of our own shiny location list.
+1. **Install.** Copy `Scripts/` over the old one. For a clean start, delete `ap_in.txt`, `ap_out.txt` and `ap_state.txt`, then restart the fake server. Keep `seen.tsv`, because 0.3.1 reads the 0.3.0 lines. The log should say `version 0.3.1 loaded`.
+2. **Blanking restore.**
+   - Run `ffrap_blank on`, then open a chest. Expected: 1 gil.
+   - Run `ffrap_blank off`, then open another chest in the same map. Expected: its real item.
+3. **Sync.**
+   - Delete `ap_out.txt` while the game runs.
+   - Go to a different map and run `ffrap_sync`.
+   - Every chest and shiny you have opened that is in `seen.tsv` should come back as a `check` line.
+4. **More of the list.** Play or fly through a few areas you have not visited yet. `seen.tsv` grows with chests and shinies, each with its save key.
+
+## Open questions
+
+1. **Party members.** `AddUnit` puts a unit in the *active* party and fails when it is full. An Archipelago "party member" item should mean "has joined", which may be `JoinStatus` in `saveData.unitParameterList`.
+2. **Location list and save keys.** Chests and shinies are both in the save under `(GetSameMapId, m_UniqueId)`. The save answers at once and from anywhere (rounds 2 and 3). The chest table gives all 238 rows, but not their save keys. Shinies have no table at all. `seen.tsv` collects both as you play. The other options are ZArkadia's generated shiny list (197 spots across 52 maps, used with permission) or reading the level files.
+3. **Story chests and story-gated shinies.** Rowless chests with no reward look like story chests; what do they give, and through which event? Some shinies only appear under a story condition (map 3001 uid 80: `{progress:31}==20`), which the apworld's logic must respect.
+4. **Grant timing.** Is it safe to grant during battles, cutscenes and menus? So far the only guard is "save data and map manager exist" plus a 2-second settle.
+5. **Per-save item index.** The applied count is one number per install. The real mod must store it per save: in the save itself, or in a sidecar file keyed by slot, the way FFRBestiary does. Then loading an older save re-grants exactly what that save lacks. Reported checks can stay per install, because in Archipelago a location checked once stays checked.
+6. **Vanilla rewards.**
+   - Chests: blanking to 1 gil works. Restoring is being re-tested in round 4.
+   - Shinies carry their reward on the actor, so the same trick should work on `m_ItemId` and `m_Money`.
+   - Story events that hand out party members, visions or key items need their own approach.
+7. **Gil.** The Modding Tools can add gil, but FFRSLib has no command for it. Find that call. The chest table's `Money` field shows the game already grants gil from chests.
 
 ## After the POC
 

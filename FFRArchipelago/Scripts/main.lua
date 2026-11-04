@@ -16,10 +16,10 @@
 --   ffrap_dump [rows]            chest and shiny discovery dump to ffrap_dump.txt
 --   ffrap_export                 every chest table row to chests.tsv
 --   ffrap_blank [on|off]         experiment: every non-trap chest gives 1 gil instead
---   ffrap_savecheck              ask the save about every check reported so far
+--   ffrap_sync                   report every known location the save says is looted
 --   ffrap_reset                  forget the applied-item count (re-grants everything!)
 
-local VERSION = "0.3.0"
+local VERSION = "0.3.1"
 
 local MOD_DIR = (debug.getinfo(1, "S").source:gsub("^@", ""):gsub("\\", "/"):match("^(.*/)Scripts/[^/]+$"))
     or "ue4ss/Mods/FFRArchipelago/"
@@ -161,89 +161,98 @@ end
 -- Checks
 -- -------------------------------------------------------------------------------------------
 
-local seenMaps = {}   -- map id -> true once its chests were logged against the save
-
 -- After the map changes, actors from the map you left can still be alive for a moment, and
 -- round 2 showed them being counted under the new map's id. So nothing is judged until the map
 -- id has held for this many scans.
 local MAP_SETTLE_SCANS = 3
 
--- This map visit: which map, how many scans it has held, what was opened during it (for the
--- save-timing log), and which shinies were already logged.
-local visit = { mapId = nil, scans = 0, opened = {}, shinies = {} }
+-- This map visit: which map, how many scans it has held, and which chests and shinies were
+-- already recorded.
+local visit = { mapId = nil, scans = 0, recorded = {} }
 
--- Shinies and odd chests seen so far, across sessions: the start of our own location list.
--- One line each in seen.tsv: kind, map, id, class, item, count, money, visible condition.
+-- Everything seen so far, across sessions: our own location list, and the map from each
+-- location to the key the save knows it by. One line each in seen.tsv:
+--   kind  map  uid  row  item  count  money  visible-condition
+-- kind: chest (has a chest table row; row is its "mapId:ID"), xchest (no row), shiny, spot
+-- (a shiny-class story or quest point with no reward). map is the current map as the save
+-- keys it (CPP_MapManager:GetSameMapId) and uid is m_UniqueId: IsOpenTreasureBox(map, uid)
+-- answers for that location from anywhere in the game (round 3).
 local SEEN_PATH = MOD_DIR .. "seen.tsv"
-local seen = {}
+local seen = {}       -- "kind:map:uid" -> true
+local seenList = {}   -- the parsed lines, for ffrap_sync
+
+local function split(line)
+    local cells = {}
+    for cell in (line .. "\t"):gmatch("(.-)\t") do cells[#cells + 1] = cell end
+    return cells
+end
+
+local function addSeen(cells)
+    local key = cells[1] .. ":" .. cells[2] .. ":" .. cells[3]
+    if seen[key] then return false end
+    seen[key] = true
+    seenList[#seenList + 1] = { kind = cells[1], map = tonumber(cells[2]), uid = tonumber(cells[3]), row = cells[4] or "" }
+    return true
+end
 
 local function loadSeen()
     local f = io.open(SEEN_PATH, "r")
     if not f then return end
     for line in f:lines() do
-        local kind, map, id = line:match("^(%w+)\t(%d+)\t(%-?%w+)\t")
-        if kind then seen[kind .. ":" .. map .. ":" .. id] = true end
+        local cells = split((line:gsub("\r$", "")))
+        -- 0.3.0 wrote rowless chests as "u<uid>", with the row map in the row column.
+        if cells[1] == "xchest" and cells[3] and cells[3]:sub(1, 1) == "u" then
+            cells[3], cells[4] = cells[3]:sub(2), ""
+        end
+        if #cells >= 3 and tonumber(cells[2]) and tonumber(cells[3]) then addSeen(cells) end
     end
     f:close()
 end
 
-local function recordSeen(kind, mapId, id, class, itemId, itemNum, money, visible)
-    local key = kind .. ":" .. mapId .. ":" .. id
-    if seen[key] then return end
-    seen[key] = true
+local function recordSeen(kind, mapId, uid, row, itemId, itemNum, money, visible)
+    local cells = { kind, mapId, uid, row or "", itemId or "", itemNum or "", money or "", visible or "" }
+    for i, v in ipairs(cells) do cells[i] = (tostring(v):gsub("[\t\r\n]", " ")) end
+    if not addSeen(cells) then return end
     local f = io.open(SEEN_PATH, "a")
     if not f then return end
-    local cells = { kind, mapId, id, class or "", itemId or "", itemNum or "", money or "", visible or "" }
-    for i, v in ipairs(cells) do cells[i] = tostring(v):gsub("[\t\r\n]", " ") end
     f:write(table.concat(cells, "\t"), "\n")
     f:close()
 end
 
--- Save-timing discovery: when the map changes, ask the save again about everything opened during
--- the visit that just ended, under every candidate key.
-local function checkSaveAfterVisit(v)
-    for _, o in ipairs(v.opened) do
-        if o.kind == "chest" then
-            log(string.format("save check after leaving map %d: %s %s", v.mapId, o.key, game.ChestSaveKeys(v.mapId, o.c)))
-        else
-            log(string.format("save check after leaving map %d: %s save open %s", v.mapId, o.key,
-                tostring(game.IsChestOpenInSave(v.mapId, o.uid))))
-        end
-    end
-end
-
 local function newVisit(mapId)
-    if visit.mapId and #visit.opened > 0 then checkSaveAfterVisit(visit) end
-    visit = { mapId = mapId, scans = 0, opened = {}, shinies = {} }
+    visit = { mapId = mapId, scans = 0, recorded = {} }
 end
 
-local function opened(key, entry)
-    if report("check", key) then
-        log("check " .. key)
-        entry.key = key
-        visit.opened[#visit.opened + 1] = entry
-    end
+local function opened(key)
+    if report("check", key) then log("check " .. key) end
 end
 
--- A chest's location key comes from the chest table row it carries, so it does not depend on
--- which map the game reports. A chest with no row (ID -1; round 2 found four) is keyed by the
--- current map and its m_UniqueId, and recorded in seen.tsv to find out what it is.
+-- The location key of a chest. A chest with a table row is keyed by the row ("chest:3020:1"),
+-- which is stable and matches data/chests.tsv. Round 3 showed rows and maps do not line up
+-- (rows 3020:* sit in map 2002), so the row key never depends on the current map.
+-- A rowless chest with a reward is keyed by map and m_UniqueId ("chest:2002:u54"). Round 3's
+-- rowless chests had no item and no money and were already open: story chests, it seems.
+-- Those have no key: they are recorded but never reported.
+local function chestKey(mapId, c)
+    if c.rowMap and c.rowId and c.rowId >= 0 then return "chest:" .. c.rowMap .. ":" .. c.rowId end
+    local hasReward = (c.itemId and c.itemId >= 0) or (c.money and c.money >= 0)
+    if c.uniqueId and hasReward then return "chest:" .. mapId .. ":u" .. c.uniqueId end
+    return nil
+end
+
+-- Chests are reported when the actor says open or the save does. The save's key is the current
+-- map and m_UniqueId (round 3: true for every opened chest, false for every closed one).
 local function scanChests(mapId)
-    local firstVisit = not seenMaps[mapId]
-    seenMaps[mapId] = true
     for _, c in ipairs(game.LiveChests()) do
-        local key
-        if c.rowMap and c.rowId and c.rowId >= 0 then
-            key = "chest:" .. c.rowMap .. ":" .. c.rowId
-        elseif c.uniqueId then
-            key = "chest:" .. mapId .. ":u" .. c.uniqueId
-            recordSeen("xchest", mapId, "u" .. c.uniqueId, "rowmap " .. tostring(c.rowMap), c.itemId, c.itemNum, c.money, "")
-        end
-        if key then
-            if firstVisit then
-                log(string.format("map %d %s: open %s; save: %s", mapId, key, tostring(c.open), game.ChestSaveKeys(mapId, c)))
+        if c.uniqueId then
+            local key = chestKey(mapId, c)
+            if not visit.recorded["c" .. c.uniqueId] then
+                visit.recorded["c" .. c.uniqueId] = true
+                local hasRow = c.rowId and c.rowId >= 0
+                recordSeen(hasRow and "chest" or "xchest", mapId, c.uniqueId,
+                    hasRow and (c.rowMap .. ":" .. c.rowId) or "", c.itemId, c.itemNum, c.money, "")
             end
-            if c.open then opened(key, { kind = "chest", c = c }) end
+            if key and (c.open or game.IsChestOpenInSave(mapId, c.uniqueId)) then opened(key) end
         end
     end
 end
@@ -255,16 +264,35 @@ local function scanShinies(mapId)
     for _, s in ipairs(game.LiveFieldItems()) do
         if s.uid then
             local hasReward = (s.itemId and s.itemId >= 0) or (s.money and s.money >= 0)
-            local saveOpen = game.IsChestOpenInSave(mapId, s.uid)
-            if not visit.shinies[s.uid] then
-                visit.shinies[s.uid] = true
+            if not visit.recorded["s" .. s.uid] then
+                visit.recorded["s" .. s.uid] = true
                 recordSeen(hasReward and "shiny" or "spot", mapId, s.uid, s.class, s.itemId, s.itemNum, s.money, s.visible)
             end
-            if hasReward and (s.open or saveOpen) then
-                opened("shiny:" .. mapId .. ":" .. s.uid, { kind = "shiny", uid = s.uid })
+            if hasReward and (s.open or game.IsChestOpenInSave(mapId, s.uid)) then
+                opened("shiny:" .. mapId .. ":" .. s.uid)
             end
         end
     end
+end
+
+-- Re-sync from the save: every location in seen.tsv the save says is looted gets reported,
+-- wherever the player is. A client would run this after a reconnect, or after ap_out.txt was
+-- lost. Returns how many were new.
+local function syncFromSave()
+    local new = 0
+    for _, e in ipairs(seenList) do
+        local key
+        if e.kind == "chest" and e.row ~= "" then
+            key = "chest:" .. e.row
+        elseif e.kind == "shiny" then
+            key = "shiny:" .. e.map .. ":" .. e.uid
+        end
+        if key and game.IsChestOpenInSave(e.map, e.uid) and report("check", key) then
+            log("sync: check " .. key)
+            new = new + 1
+        end
+    end
+    return new
 end
 
 local function scanLoot()
@@ -403,19 +431,10 @@ command("ffrap_blank", function(p)
     notify("Chest blanking " .. (want and "on" or "off") .. ": " .. n .. " rows changed")
 end)
 
--- Asks the save about every chest and shiny reported so far: run it after saving, or after
--- leaving and re-entering a map, to see when the save catches up.
-command("ffrap_savecheck", function()
-    local yes, no = 0, 0
-    for key in pairs(state.reported) do
-        local kind, mapId, uid = key:match("^check|(%a+):(%d+):(%d+)$")
-        if kind then
-            local open = game.IsChestOpenInSave(tonumber(mapId), tonumber(uid))
-            log(string.format("savecheck %s:%s:%s save open %s", kind, mapId, uid, tostring(open)))
-            if open then yes = yes + 1 else no = no + 1 end
-        end
-    end
-    notify("Save check: " .. yes .. " reported checks are in the save, " .. no .. " are not (see UE4SS.log)")
+-- Reports every location in seen.tsv that the save says is looted (see syncFromSave).
+command("ffrap_sync", function()
+    local new = syncFromSave()
+    notify("Sync from save: " .. new .. " new checks from " .. #seenList .. " known locations")
 end)
 
 command("ffrap_reset", function()
