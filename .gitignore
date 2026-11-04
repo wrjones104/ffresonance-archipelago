@@ -1,0 +1,11 @@
+# Files the mod and the fake server write at run time
+FFRArchipelago/ap_in.txt
+FFRArchipelago/ap_out.txt
+FFRArchipelago/ap_state.txt
+FFRArchipelago/ap_status.txt
+FFRArchipelago/ffrap_dump.txt
+
+# Python
+__pycache__/
+*.pyc
+.venv/

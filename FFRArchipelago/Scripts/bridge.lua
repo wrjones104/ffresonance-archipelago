@@ -1,0 +1,86 @@
+-- bridge.lua: the file link between this mod and the Archipelago client.
+--
+-- UE4SS Lua can read and write files but has no sockets, so the mod and the client (a Python
+-- program, the fake server in tools/ for now) talk through two append-only text files in the
+-- mod folder. Each line is tab-separated fields.
+--
+--   ap_in.txt   client -> game
+--     item <index> <kind> <id> <count> <label>    kind: item | vision | unit | flag
+--     msg  <text>                                 shown on screen, not stored
+--
+--   ap_out.txt  game -> client
+--     hello <mod version>                         the mod started
+--     check <location key>                        e.g. chest:2031:7
+--     story <counter>                             the story counter changed
+--     applied <index>                             item <index> was handled
+--
+-- The client may rewrite ap_in.txt from the start (for example after it reconnects and the
+-- server resends every item). A file shorter than what was already read is read again from the
+-- top; items the game already applied are skipped by index, so nothing is granted twice.
+
+local B = {}
+
+function B.init(dir)
+    B.inPath = dir .. "ap_in.txt"
+    B.outPath = dir .. "ap_out.txt"
+    B.offset = 0
+end
+
+local function split(line)
+    local fields = {}
+    for field in (line .. "\t"):gmatch("(.-)\t") do
+        fields[#fields + 1] = field
+    end
+    return fields
+end
+
+-- New complete lines in ap_in.txt, each as a list of fields. A line still being written (no
+-- newline yet) waits for the next call.
+function B.readNew()
+    local f = io.open(B.inPath, "rb")
+    if not f then return {} end
+    local size = f:seek("end")
+    if size < B.offset then B.offset = 0 end
+    f:seek("set", B.offset)
+    local data = f:read("a") or ""
+    f:close()
+    local lastNewline = data:match(".*()\n")
+    if not lastNewline then return {} end
+    B.offset = B.offset + lastNewline
+    local out = {}
+    for line in data:sub(1, lastNewline):gmatch("([^\n]*)\n") do
+        line = line:gsub("\r$", "")
+        if line ~= "" then out[#out + 1] = split(line) end
+    end
+    return out
+end
+
+-- Appends one line to ap_out.txt. Tabs and newlines in a field would break the format, so they
+-- become spaces.
+function B.write(...)
+    local fields = { ... }
+    for i, v in ipairs(fields) do
+        fields[i] = tostring(v):gsub("[\t\r\n]", " ")
+    end
+    local f = io.open(B.outPath, "a")
+    if not f then return false end
+    f:write(table.concat(fields, "\t"), "\n")
+    f:close()
+    return true
+end
+
+-- Every line already in ap_out.txt, so a restarted game knows what it already reported.
+function B.readOut()
+    local f = io.open(B.outPath, "rb")
+    if not f then return {} end
+    local data = f:read("a") or ""
+    f:close()
+    local out = {}
+    for line in data:gmatch("([^\n]*)\n") do
+        line = line:gsub("\r$", "")
+        if line ~= "" then out[#out + 1] = split(line) end
+    end
+    return out
+end
+
+return B
