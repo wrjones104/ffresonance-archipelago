@@ -35,9 +35,10 @@ FFRArchipelago/            -> copy to ...\FFRS\Binaries\Win64\ue4ss\Mods\FFRArch
   Scripts/game.lua         every engine call (the only file to fix after a game patch)
   Scripts/bridge.lua       the file link to the client
 tools/fake_ap.py           fake Archipelago server for testing
+data/chests.tsv            every chest table row (ffrap_export): the chest location table
 ```
 
-At run time the mod writes these files into its own folder: `ap_out.txt`, `ap_state.txt`, `ap_status.txt`, `ffrap_dump.txt` and `chests.tsv`. The fake server writes `ap_in.txt`.
+At run time the mod writes these files into its own folder: `ap_out.txt`, `ap_state.txt`, `ap_status.txt`, `ffrap_dump.txt`, `chests.tsv` and `seen.tsv`. The fake server writes `ap_in.txt`.
 
 ## Console commands
 
@@ -64,8 +65,8 @@ msg   <text>
 `ap_out.txt` (game to client):
 ```
 hello    <version>
-check    chest:<mapId>:<uid>
-check    shiny:<mapId>:<uid>
+check    chest:<row mapId>:<row ID>     (chests with no row: chest:<map>:u<m_UniqueId>)
+check    shiny:<map>:<m_UniqueId>
 story    <counter>
 applied  <index>  <ok|fail>  <detail>
 ```
@@ -81,38 +82,32 @@ applied  <index>  <ok|fail>  <detail>
   - Gil chests have `ItemId = -1` and a `Money` value. `IsTrap` and `battleGroupId` are on every row.
   - `IsOpenTreasureBox` answered `false` for two chests opened moments before. Live checks use the chest's own `m_IsOpen`, so they work. A reconnect re-sync needs the save, so round 2 finds out when the save catches up.
 
-## Round 2 test plan (0.2.0)
+**Round 2 (0.2.0, 2026-11-04): mostly passed, and it found three bugs.**
+- **Chest export:** 238 rows, 56 maps, no duplicate `mapId:ID` keys, 9 gil chests and no trap rows. Row `3020:0` has `battleGroupId 51`, so it is probably a guarded chest. The export is in `data/chests.tsv`.
+- **Shinies:**
+  - The reward is on the actor: `m_ItemId`, `m_ItemNum`, `m_Money` on `CPP_MapGimmick_ItemObjectBase`.
+  - `CPP_MapGimmick_FieldItem.m_IsOpen` is the picked-up flag.
+  - The save (`IsOpenTreasureBox(map, m_UniqueId)`) answers true the moment one is picked up.
+  - Classes seen: `BP_MapGimmick_FieldItem_C`, `_Child_C` and `_Medal_C`.
+  - The world map (1000) has 93 field items. 8 of them have no item and no money, only a `VisibleCondition`: they are story or quest points, not pick-ups.
+- **Save timing:** shinies are in the save at once. Chests never were, under `m_Id`, even after leaving the map and saving. So the save does not key chests by `m_Id`. 0.3.0 logs the other candidates (`m_UniqueId`, `TypeData.ID`, the row's map).
+- **Bug 1, wrong current map:** the save's `Map.mapId` lagged minutes behind the real map. Two chests from map 3180 were reported as `chest:1000:0` and `chest:1000:2`. Fixed: the current map is now `CPP_MapManager:GetSameMapId()` (as FFRS_QoL uses), and chests are keyed by their own table row.
+- **Bug 2, actors lingering after a map change:** a map's actors outlive the map change for a moment. Fixed: nothing is judged until the map id has held for 3 scans.
+- **Bug 3, blanking restore:** after `ffrap_blank off`, chests in the current map still gave 1 gil. They had spawned while blanking was on, so their "original" snapshot was already blank. Fixed: originals are keyed by the row's `mapId:ID`, and a spawned chest restores from those.
+- **Rowless chests:** four chests had `m_Id -1` (one in 2010, three already open in 3020). 0.3.0 keys them by `m_UniqueId` and records them in `seen.tsv` to find out what they are.
+- **Switching saves:** the applied-item count and the reported checks are per install, not per save. Checks staying reported is right for Archipelago, because a location checked once stays checked. Items need a per-save index (open question 5).
 
-Disable FFRRandomizer for these tests: delete or rename its `enabled.txt`. It patches the same chest rows, and the two mods would fight over them.
+## Round 3 test plan (0.3.0)
 
-1. **Install.** Copy the new `FFRArchipelago` over the old one. Keep its `ap_*.txt` files, or delete them for a clean start. The log should say `version 0.2.0 loaded`.
-2. **Chest export.** Run `ffrap_export`, then copy `chests.tsv` into this repo under `data/`. It should hold 238 rows.
-3. **Save timing.**
-   - Open a chest, then leave the map. The log prints `save check after leaving map ...` for it.
-   - Save the game, then run `ffrap_savecheck`.
-   - Together these show when `IsOpenTreasureBox` catches up: on leaving the map, on saving, or never for this key.
-4. **Shinies, world map.** Pick up a few shinies on the world map, then fly far away and come back.
-   - The log has a line for each shiny when it is first seen.
-   - It prints `changed` (hidden or no interaction) when one is picked up.
-   - It prints `is gone` when an actor vanishes. Watch whether "gone" happens on pickup, on streaming out, or both.
-   - The server prints `check shiny:1000:<uid>` when a pickup is detected.
-5. **Shinies, field map.** Do the same in a dungeon or town with shinies.
-6. **Shiny dump.** Next to a shiny you have not picked up, run `ffrap_dump`. The field item section lists every property of the shiny's classes. That is where its reward (item id, count, maybe a lottery table) should show up.
-7. **Chest blanking.**
-   - Run `ffrap_blank on`, then open a chest you have not opened yet, in this map and in a new map.
-   - Note what the "obtained" popup says (expected: 1 gil).
-   - Check that the chest counts as opened and the server gets the check.
-   - Run `ffrap_blank off` afterwards.
+Keep FFRRandomizer disabled.
 
-## Open questions
-
-1. **Party members.** `AddUnit` puts a unit in the *active* party and fails when it is full. An Archipelago "party member" item should mean "has joined", which may be `JoinStatus` in `saveData.unitParameterList`.
-2. **Save timing.** When does `IsOpenTreasureBox` see a newly opened chest? (Round 2, step 3.)
-3. **Shiny pickup signal and contents.** Which actor field changes on pickup, and where the reward is defined. (Round 2, steps 4 to 6.) A full location list needs every shiny's map and uid. ZArkadia's generated list has 197 spots across 52 save maps, about 90 of them on the world map. We either ask to use that list or generate our own from the level files.
-4. **Grant timing.** Is it safe to grant during battles, cutscenes and menus? So far the only guard is "save data and map manager exist" plus a 2-second settle.
-5. **Per-save item index.** The applied count is one number per install. The real mod must store it per save: in the save itself, or in a sidecar file keyed by slot, the way FFRBestiary does. Then loading an older save re-grants exactly what that save lacks.
-6. **Vanilla rewards.** Chests: round 2, step 7. Shinies and story events that hand out party members, visions or key items need the same treatment.
-7. **Gil.** The Modding Tools can add gil, but FFRSLib has no command for it. Find that call. The chest table's `Money` field shows the game already grants gil from chests.
+1. **Install.** Copy `Scripts/` over the old one. Delete `ap_out.txt` and `ap_state.txt` for a clean start. The log should say `version 0.3.0 loaded`.
+2. **Map ids.** Walk through a few map changes, including the world map. The log prints `map A -> B (save's Map.mapId C)` each time. B should be right straight away.
+3. **Chest save key.** On entering a map, the log prints each chest's key and what the save says under each candidate key. Open a chest, leave the map, and come back. Find the candidate that turns `true` for the opened chest. Also try map 2010, which uses rows `2001:*`.
+4. **Rowless chests.** Note what the `chest:<map>:u<id>` chests are in game, if you can tell. Their rows in `seen.tsv` show their item fields.
+5. **Shinies.** Pick up a few on the world map and in a field map. Each should give `check shiny:<map>:<uid>` within a second or two. Event spots (no reward) must never be reported.
+6. **Blanking.** Run `ffrap_blank on`, open a chest, then `ffrap_blank off` and open another in the same map. The second one should give its real item.
+7. **Seen list.** Fly around the world map for a while. `seen.tsv` collects every shiny with its reward. That is the start of our own shiny location list.
 
 ## After the POC
 

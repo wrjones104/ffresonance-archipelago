@@ -19,7 +19,7 @@
 --   ffrap_savecheck              ask the save about every check reported so far
 --   ffrap_reset                  forget the applied-item count (re-grants everything!)
 
-local VERSION = "0.2.0"
+local VERSION = "0.3.0"
 
 local MOD_DIR = (debug.getinfo(1, "S").source:gsub("^@", ""):gsub("\\", "/"):match("^(.*/)Scripts/[^/]+$"))
     or "ue4ss/Mods/FFRArchipelago/"
@@ -163,91 +163,122 @@ end
 
 local seenMaps = {}   -- map id -> true once its chests were logged against the save
 
--- This map visit: which map, the chests and shinies opened during it (for the save-timing
--- log), and each shiny's state when first seen.
-local visit = { mapId = nil, opened = {}, shinies = {} }
+-- After the map changes, actors from the map you left can still be alive for a moment, and
+-- round 2 showed them being counted under the new map's id. So nothing is judged until the map
+-- id has held for this many scans.
+local MAP_SETTLE_SCANS = 3
 
--- Save-timing discovery. The first in-game test showed IsOpenTreasureBox answering false for a
--- chest opened moments before. When the map changes, ask the save again about everything opened
--- during the visit that just ended: that tells us whether the save catches up on leaving a map.
-local function checkSaveAfterVisit(mapId, opened)
-    for _, o in ipairs(opened) do
-        log(string.format("save check after leaving map %d: %s %d save open %s", mapId, o.kind, o.uid,
-            tostring(game.IsChestOpenInSave(mapId, o.uid))))
+-- This map visit: which map, how many scans it has held, what was opened during it (for the
+-- save-timing log), and which shinies were already logged.
+local visit = { mapId = nil, scans = 0, opened = {}, shinies = {} }
+
+-- Shinies and odd chests seen so far, across sessions: the start of our own location list.
+-- One line each in seen.tsv: kind, map, id, class, item, count, money, visible condition.
+local SEEN_PATH = MOD_DIR .. "seen.tsv"
+local seen = {}
+
+local function loadSeen()
+    local f = io.open(SEEN_PATH, "r")
+    if not f then return end
+    for line in f:lines() do
+        local kind, map, id = line:match("^(%w+)\t(%d+)\t(%-?%w+)\t")
+        if kind then seen[kind .. ":" .. map .. ":" .. id] = true end
+    end
+    f:close()
+end
+
+local function recordSeen(kind, mapId, id, class, itemId, itemNum, money, visible)
+    local key = kind .. ":" .. mapId .. ":" .. id
+    if seen[key] then return end
+    seen[key] = true
+    local f = io.open(SEEN_PATH, "a")
+    if not f then return end
+    local cells = { kind, mapId, id, class or "", itemId or "", itemNum or "", money or "", visible or "" }
+    for i, v in ipairs(cells) do cells[i] = tostring(v):gsub("[\t\r\n]", " ") end
+    f:write(table.concat(cells, "\t"), "\n")
+    f:close()
+end
+
+-- Save-timing discovery: when the map changes, ask the save again about everything opened during
+-- the visit that just ended, under every candidate key.
+local function checkSaveAfterVisit(v)
+    for _, o in ipairs(v.opened) do
+        if o.kind == "chest" then
+            log(string.format("save check after leaving map %d: %s %s", v.mapId, o.key, game.ChestSaveKeys(v.mapId, o.c)))
+        else
+            log(string.format("save check after leaving map %d: %s save open %s", v.mapId, o.key,
+                tostring(game.IsChestOpenInSave(v.mapId, o.uid))))
+        end
     end
 end
 
 local function newVisit(mapId)
-    if visit.mapId and #visit.opened > 0 then checkSaveAfterVisit(visit.mapId, visit.opened) end
-    visit = { mapId = mapId, opened = {}, shinies = {} }
+    if visit.mapId and #visit.opened > 0 then checkSaveAfterVisit(visit) end
+    visit = { mapId = mapId, scans = 0, opened = {}, shinies = {} }
 end
 
-local function opened(kind, mapId, uid)
-    local key = kind .. ":" .. mapId .. ":" .. uid
+local function opened(key, entry)
     if report("check", key) then
         log("check " .. key)
-        visit.opened[#visit.opened + 1] = { kind = kind, uid = uid }
+        entry.key = key
+        visit.opened[#visit.opened + 1] = entry
     end
 end
 
+-- A chest's location key comes from the chest table row it carries, so it does not depend on
+-- which map the game reports. A chest with no row (ID -1; round 2 found four) is keyed by the
+-- current map and its m_UniqueId, and recorded in seen.tsv to find out what it is.
 local function scanChests(mapId)
     local firstVisit = not seenMaps[mapId]
     seenMaps[mapId] = true
     for _, c in ipairs(game.LiveChests()) do
-        if c.uid then
+        local key
+        if c.rowMap and c.rowId and c.rowId >= 0 then
+            key = "chest:" .. c.rowMap .. ":" .. c.rowId
+        elseif c.uniqueId then
+            key = "chest:" .. mapId .. ":u" .. c.uniqueId
+            recordSeen("xchest", mapId, "u" .. c.uniqueId, "rowmap " .. tostring(c.rowMap), c.itemId, c.itemNum, c.money, "")
+        end
+        if key then
             if firstVisit then
-                -- Discovery: does the actor's map id match what the save keys chests by?
-                log(string.format("map %d chest %d: actor open %s, save open %s", mapId, c.uid,
-                    tostring(c.open), tostring(game.IsChestOpenInSave(mapId, c.uid))))
+                log(string.format("map %d %s: open %s; save: %s", mapId, key, tostring(c.open), game.ChestSaveKeys(mapId, c)))
             end
-            if c.open then opened("chest", mapId, c.uid) end
+            if c.open then opened(key, { kind = "chest", c = c }) end
         end
     end
 end
 
--- Shinies. Which signal means "picked up" is not known yet, so this reports on the two that
--- cannot fire by accident (the save says looted, or a spot seen available became hidden or
--- lost its interaction) and only logs the third (the actor went away), because on the big
--- world map actors also go away when their part of the map streams out.
+-- Shinies are reported when the actor's m_IsOpen is set or the save says looted; round 2 showed
+-- the save answering true the moment one is picked up. Spots without an item or money are
+-- story or quest points, not pick-ups: they are recorded as "spot" but never reported.
 local function scanShinies(mapId)
-    local present = {}
     for _, s in ipairs(game.LiveFieldItems()) do
         if s.uid then
-            present[s.uid] = true
+            local hasReward = (s.itemId and s.itemId >= 0) or (s.money and s.money >= 0)
             local saveOpen = game.IsChestOpenInSave(mapId, s.uid)
-            local used = s.hidden or s.interact == 0
-            local was = visit.shinies[s.uid]
-            if not was then
-                visit.shinies[s.uid] = { available = not used and not saveOpen }
-                log(string.format("map %d shiny %d (%s): hidden %s, interact %s, save open %s", mapId,
-                    s.uid, s.class, tostring(s.hidden), tostring(s.interact), tostring(saveOpen)))
-            elseif was.available and used then
-                log(string.format("map %d shiny %d changed: hidden %s, interact %s", mapId, s.uid,
-                    tostring(s.hidden), tostring(s.interact)))
+            if not visit.shinies[s.uid] then
+                visit.shinies[s.uid] = true
+                recordSeen(hasReward and "shiny" or "spot", mapId, s.uid, s.class, s.itemId, s.itemNum, s.money, s.visible)
             end
-            if saveOpen or (was and was.available and used) then
-                opened("shiny", mapId, s.uid)
-                visit.shinies[s.uid].available = false
+            if hasReward and (s.open or saveOpen) then
+                opened("shiny:" .. mapId .. ":" .. s.uid, { kind = "shiny", uid = s.uid })
             end
-        end
-    end
-    for uid, st in pairs(visit.shinies) do
-        if st.available and not present[uid] and not st.goneLogged then
-            st.goneLogged = true
-            log(string.format("map %d shiny %d is gone (picked up, or streamed out?); not reported", mapId, uid))
         end
     end
 end
 
 local function scanLoot()
-    local mapId = game.MapId()
+    local mapId = game.CurrentMap()
     if not mapId then return end
     if mapId ~= visit.mapId then
+        log("map " .. tostring(visit.mapId) .. " -> " .. mapId .. " (save's Map.mapId " .. tostring(game.MapId()) .. ")")
         newVisit(mapId)
         if state.blank then
             log("chest blanking: " .. game.BlankChests(true) .. " rows set to 1 gil")
         end
     end
+    visit.scans = visit.scans + 1
+    if visit.scans <= MAP_SETTLE_SCANS then return end
     scanChests(mapId)
     scanShinies(mapId)
 end
@@ -276,7 +307,7 @@ local function statusLines()
     return {
         "FFRArchipelago " .. VERSION .. "  " .. os.date("%Y-%m-%d %H:%M:%S"),
         "in game: " .. tostring(game.InGame()) .. " (" .. state.inGameTicks .. " ticks)",
-        "map: " .. tostring(game.MapId()) .. "   story: " .. tostring(game.StoryCounter()),
+        "map: " .. tostring(game.CurrentMap()) .. " (save's Map.mapId " .. tostring(game.MapId()) .. ")   story: " .. tostring(game.StoryCounter()),
         "party: " .. (party and table.concat(party, ", ") or "?"),
         "items applied: " .. state.applied .. "   queued: " .. queued(),
         "chest blanking: " .. (state.blank and "on" or "off"),
@@ -304,7 +335,7 @@ local function tick()
         state.lastStory = nil
     else
         state.inGameTicks = state.inGameTicks + 1
-        if state.inGameTicks == 1 then log("save loaded, map " .. tostring(game.MapId())) end
+        if state.inGameTicks == 1 then log("save loaded, map " .. tostring(game.CurrentMap())) end
         if state.inGameTicks > SETTLE_TICKS then
             applyItems()
             watchStory()
@@ -332,7 +363,7 @@ end
 
 command("ffrap_status", function()
     for _, line in ipairs(statusLines()) do log(line) end
-    notify("AP: map " .. tostring(game.MapId()) .. ", story " .. tostring(game.StoryCounter())
+    notify("AP: map " .. tostring(game.CurrentMap()) .. ", story " .. tostring(game.StoryCounter())
         .. ", " .. state.applied .. " items applied")
 end)
 
@@ -400,6 +431,7 @@ end)
 
 bridge.init(MOD_DIR)
 loadState()
+loadSeen()
 for _, f in ipairs(bridge.readOut()) do
     if f[1] == "check" or f[1] == "story" then state.reported[f[1] .. "|" .. tostring(f[2])] = true end
 end

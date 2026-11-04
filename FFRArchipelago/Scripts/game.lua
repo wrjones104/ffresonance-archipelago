@@ -99,7 +99,22 @@ function G.StoryCounter()
     return Int(v)
 end
 
--- The map the save says the player is on.
+-- The map the player is on, as the save keys it: CPP_MapManager:GetSameMapId(). Maps that share
+-- a save list (a town's inside and outside, say) answer with the same id, and that id is the one
+-- CPP_BFL_SaveDataMap:IsOpenTreasureBox wants. Found in FFRS_QoL's markers. Round 2 showed the
+-- save's own Map.mapId (G.MapId below) can lag minutes behind the map you are actually in.
+function G.CurrentMap()
+    local mgr = Live("CPP_MapManager")
+    if not mgr then return nil end
+    local ok, id = pcall(function() return mgr:GetSameMapId() end)
+    if not ok then return nil end
+    id = Int(id)
+    if id and id >= 0 then return id end
+    return nil
+end
+
+-- The map the save says the player is on. It is the save's record, which is only written now
+-- and then, so it is reported for comparison and not used for keys.
 function G.MapId()
     local sd = G.SaveData()
     if not sd then return nil end
@@ -266,7 +281,10 @@ end
 -- Chests
 -- -------------------------------------------------------------------------------------------
 
--- The chests in the loaded map, as { uid, open } pairs.
+-- The chests in the loaded maps. Each carries a copy of its chest table row in
+-- m_TreasureBoxData, so `rowMap` and `rowId` are the row's own mapId and ID: the location key,
+-- whatever map the game currently reports. `uid` (m_Id), `uniqueId` (m_UniqueId) and `typeId`
+-- (TypeData.ID) are the candidates for the save's key, which round 2 showed is not m_Id.
 function G.LiveChests()
     local out = {}
     local ok, all = pcall(FindAllOf, "CPP_MapGimmick_TreasureBox")
@@ -274,7 +292,17 @@ function G.LiveChests()
     for _, c in ipairs(all) do
         if Alive(c) then
             pcall(function()
-                out[#out + 1] = { uid = Int(c.m_Id), open = c.m_IsOpen == true, actor = c }
+                local e = { uid = Int(c.m_Id), open = c.m_IsOpen == true, actor = c }
+                pcall(function()
+                    e.rowMap = Int(c.m_TreasureBoxData.mapId)
+                    e.rowId = Int(c.m_TreasureBoxData.ID)
+                    e.itemId = Int(c.m_TreasureBoxData.ItemId)
+                    e.itemNum = Int(c.m_TreasureBoxData.ItemNum)
+                    e.money = Int(c.m_TreasureBoxData.Money)
+                end)
+                pcall(function() e.uniqueId = Int(c.m_UniqueId) end)
+                pcall(function() e.typeId = Int(c.TypeData.ID) end)
+                out[#out + 1] = e
             end)
         end
     end
@@ -290,6 +318,21 @@ function G.IsChestOpenInSave(mapId, uid)
     local ok, r = pcall(function() return lib:IsOpenTreasureBox(mapId, uid) end)
     if not ok then return nil end
     return r == true
+end
+
+-- Discovery: what the save says about a chest under each candidate key, as one string, e.g.
+-- "map 3020 / row map 2001: m_Id 3 false, m_UniqueId 17 true, TypeData.ID 17 true".
+-- Round 2: IsOpenTreasureBox(map, m_Id) was false for every chest, opened or not.
+function G.ChestSaveKeys(mapId, c)
+    local parts = {}
+    for _, m in ipairs({ mapId, c.rowMap ~= mapId and c.rowMap or nil }) do
+        local cells = {}
+        for _, k in ipairs({ { "m_Id", c.uid }, { "m_UniqueId", c.uniqueId }, { "TypeData.ID", c.typeId } }) do
+            if k[2] then cells[#cells + 1] = k[1] .. " " .. k[2] .. " " .. tostring(G.IsChestOpenInSave(m, k[2])) end
+        end
+        parts[#parts + 1] = "map " .. tostring(m) .. ": " .. table.concat(cells, ", ")
+    end
+    return table.concat(parts, " / ")
 end
 
 local CHEST_TABLE = "/Game/Datatable/Map/Gimmick/TreasureBox/CDT_MapGimmickTreasureBox.CDT_MapGimmickTreasureBox"
@@ -360,50 +403,69 @@ function G.ExportChests(path)
 end
 
 -- Chest blanking experiment: every non-trap chest gives 1 gil instead of its vanilla reward.
--- 1 gil is the shape the game's own gil chests use (ItemId -1, Money N). The originals are
--- kept in memory, so turning it off restores them, and a game restart restores them anyway.
-local blankOriginals = {}   -- table full name .. "|" .. row -> { ItemId, ItemNum, Money }
+-- 1 gil is the shape the game's own gil chests use (ItemId -1, Money N). Turning it off
+-- restores the originals, and a game restart restores them anyway.
+--
+-- The originals are keyed by the row's own mapId and ID, never by where the copy lives. A chest
+-- that spawns while blanking is on copies the already-blank row, so a snapshot of the spawned
+-- chest would "restore" it to blank. That was the 0.2.0 bug: after ffrap_blank off, chests in
+-- the map you were standing in still gave 1 gil until you left.
+local blankOriginals = {}   -- "mapId:ID" -> { ItemId, ItemNum, Money } as the game shipped them
 local BLANK = { ItemId = -1, ItemNum = 1, Money = 1 }
 
-local function BlankRow(key, row, on)
+local function RowKey(row)
+    return tostring(Int(row.mapId)) .. ":" .. tostring(Int(row.ID))
+end
+
+local function IsBlank(row)
+    return row.ItemId == BLANK.ItemId and row.Money == BLANK.Money and row.ItemNum == BLANK.ItemNum
+end
+
+-- Records a row's reward the first time it is seen un-blanked.
+local function Remember(row)
+    local key = RowKey(row)
+    if not blankOriginals[key] and not IsBlank(row) then
+        blankOriginals[key] = { ItemId = row.ItemId, ItemNum = row.ItemNum, Money = row.Money }
+    end
+end
+
+-- Sets one row (a table row or a chest's copy) blank or back. Returns true when it changed.
+local function BlankRow(row, on)
+    if row.IsTrap == true then return false end
     if on then
-        if row.IsTrap == true then return false end
-        if not blankOriginals[key] then
-            blankOriginals[key] = { ItemId = row.ItemId, ItemNum = row.ItemNum, Money = row.Money }
-        end
-        if row.ItemId == BLANK.ItemId and row.Money == BLANK.Money and row.ItemNum == BLANK.ItemNum then
-            return false
-        end
+        Remember(row)
+        if IsBlank(row) then return false end
         row.ItemId, row.ItemNum, row.Money = BLANK.ItemId, BLANK.ItemNum, BLANK.Money
         return true
     end
-    local orig = blankOriginals[key]
-    if not orig then return false end
+    local orig = blankOriginals[RowKey(row)]
+    if not orig or not IsBlank(row) then return false end
     row.ItemId, row.ItemNum, row.Money = orig.ItemId, orig.ItemNum, orig.Money
-    blankOriginals[key] = nil
     return true
 end
 
 -- Applies (on) or undoes (off) the blanking on the chest tables and on the chests already
--- spawned in this map, which carry their own copy of the row. Returns how many it changed.
+-- spawned, which carry their own copy of the row. Returns how many rows it changed.
 -- Safe to call again and again: rows already in the wanted state are skipped.
 function G.BlankChests(on)
     local changed = 0
-    for _, dt in ipairs(TableFamily(Find(CHEST_TABLE))) do
-        local tableKey = dt:GetFullName()
+    local family = TableFamily(Find(CHEST_TABLE))
+    -- Every table first records what it holds, so a parent table rebuilt with vanilla rows
+    -- still supplies the originals for a composite that is already blank.
+    for _, dt in ipairs(family) do
+        pcall(function() dt:ForEachRow(function(_, row) pcall(Remember, row) end) end)
+    end
+    for _, dt in ipairs(family) do
         pcall(function()
-            dt:ForEachRow(function(name, row)
-                local ok, did = pcall(BlankRow, tableKey .. "|" .. RowName(name), row, on)
+            dt:ForEachRow(function(_, row)
+                local ok, did = pcall(BlankRow, row, on)
                 if ok and did then changed = changed + 1 end
             end)
         end)
     end
-    local mapId = G.MapId()
     for _, c in ipairs(G.LiveChests()) do
         if not c.open then
-            local ok, did = pcall(function()
-                return BlankRow("live|" .. tostring(mapId) .. "|" .. tostring(c.uid), c.actor.m_TreasureBoxData, on)
-            end)
+            local ok, did = pcall(function() return BlankRow(c.actor.m_TreasureBoxData, on) end)
             if ok and did then changed = changed + 1 end
         end
     end
@@ -417,8 +479,9 @@ end
 -- BP_MapGimmick_FieldItem* actors placed in the level files, each with an m_UniqueId.
 -- FFRS_QoL's markers (based on ZArkadia's Item and Chest Markers, Nexus mod 25) treat a spot as
 -- looted when CPP_BFL_SaveDataMap:IsOpenTreasureBox(saveMapId, uniqueId) says so, the same
--- call as chests. What a spot gives, and which field the actor changes when picked up, is not
--- known yet: G.DumpFieldItems and the shiny log lines in main.lua are there to find out.
+-- call as chests. Round 2 confirmed that, live: the save answers true the moment a shiny is
+-- picked up. The reward is on the actor: m_ItemId, m_ItemNum, m_Money. Spots with neither an
+-- item nor money are story or quest points that only show under a VisibleCondition.
 
 local function ClassName(o)
     local ok, n = pcall(function() return o:GetClass():GetFName():ToString() end)
@@ -437,13 +500,21 @@ function G.LiveFieldItems()
                 if cname:find("FieldItem", 1, true) and not (addr and seen[addr]) then
                     if addr then seen[addr] = true end
                     pcall(function()
-                        out[#out + 1] = {
+                        local e = {
                             uid = Int(a.m_UniqueId),
                             hidden = a.bHidden == true,
                             interact = Int(a.interactType),
                             class = cname,
                             actor = a,
                         }
+                        -- Round 2 dump: CPP_MapGimmick_FieldItem.m_IsOpen is the picked-up flag,
+                        -- and the reward is on the actor (CPP_MapGimmick_ItemObjectBase).
+                        pcall(function() e.open = a.m_IsOpen == true end)
+                        pcall(function()
+                            e.itemId, e.itemNum, e.money = Int(a.m_ItemId), Int(a.m_ItemNum), Int(a.m_Money)
+                        end)
+                        pcall(function() e.visible = a.VisibleCondition:ToString() end)
+                        out[#out + 1] = e
                     end)
                 end
             end
@@ -530,11 +601,12 @@ end
 -- Answers: which field of the table row is the map id and which is the uid, so the apworld
 -- location list can come straight from CDT_MapGimmickTreasureBox.
 function G.DumpChests(out, maxRows)
-    local mapId = G.MapId()
-    out("map " .. tostring(mapId) .. ", story " .. tostring(G.StoryCounter()))
+    local mapId = G.CurrentMap()
+    out("map " .. tostring(mapId) .. " (save's Map.mapId " .. tostring(G.MapId()) .. "), story "
+        .. tostring(G.StoryCounter()))
     for _, c in ipairs(G.LiveChests()) do
-        out(string.format("chest uid %s open %s, save says %s", tostring(c.uid), tostring(c.open),
-            tostring(mapId and c.uid and G.IsChestOpenInSave(mapId, c.uid))))
+        out(string.format("chest row %s:%s m_Id %s open %s; save: %s", tostring(c.rowMap), tostring(c.rowId),
+            tostring(c.uid), tostring(c.open), mapId and G.ChestSaveKeys(mapId, c) or "?"))
         for _, field in ipairs({ "m_TreasureBoxData", "m_EventData" }) do
             local p = FindProperty(c.actor, field)
             local s
@@ -567,7 +639,7 @@ end
 -- Every property of a field item's own classes (the Blueprint and the game's C++ bases, up to
 -- the engine's Actor), with values. This is where its reward fields will show up.
 function G.DumpFieldItems(out)
-    local mapId = G.MapId()
+    local mapId = G.CurrentMap()
     local items = G.LiveFieldItems()
     out(string.format("map %s: %d field items", tostring(mapId), #items))
     for _, it in ipairs(items) do
