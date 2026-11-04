@@ -1,0 +1,14 @@
+# Example player options for Final Fantasy Resonance.
+name: Player{number}
+game: Final Fantasy Resonance
+
+Final Fantasy Resonance:
+  # The story checkpoint that completes your goal (1020 to 8050; the thousands digit is the
+  # chapter). 1130 makes a short test seed.
+  goal_story_checkpoint: 8050
+
+  # EXPERIMENTAL: the shinies seen so far become locations. They still give their vanilla item.
+  include_shinies: false
+
+  # Regions whose locations may only hold your own filler, e.g. ['Crystal Tower'].
+  excluded_regions: []

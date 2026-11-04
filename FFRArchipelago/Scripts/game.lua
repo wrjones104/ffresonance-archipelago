@@ -224,6 +224,28 @@ function G.UnlockVision(id)
     return "ok", "visionList " .. n .. " -> " .. (n + 1) .. ", synchro keys " .. keys .. ", HasVision " .. tostring(Has())
 end
 
+-- Gil, through the player save library: GetCurrentMoney, GetMaxNumMoney and
+-- SetCurrentMoney(value, true, false), as FFRS_QoL's gil multiplier calls them.
+function G.GrantGil(n)
+    local lib = Lib("CPP_BFL_SaveDataPlayer")
+    if not (lib and lib.GetCurrentMoney and lib.SetCurrentMoney) then
+        return "retry", "player save library not loaded"
+    end
+    local cur
+    pcall(function() cur = Int(lib:GetCurrentMoney()) end)
+    if not cur then return "retry", "cannot read current gil" end
+    local cap
+    pcall(function() cap = Int(lib:GetMaxNumMoney()) end)
+    local want = cur + n
+    if cap and cap > 0 and want > cap then want = cap end
+    local ok, err = pcall(function() lib:SetCurrentMoney(want, true, false) end)
+    if not ok then return "fail", "SetCurrentMoney raised: " .. tostring(err) end
+    local after
+    pcall(function() after = Int(lib:GetCurrentMoney()) end)
+    if after and after ~= want then return "fail", "gil reads " .. after .. " after setting " .. want end
+    return "ok", "gil " .. cur .. " -> " .. tostring(after or want)
+end
+
 -- Party members. CPP_VM_Party:AddUnit puts a unit in the ACTIVE party, and fails when it is
 -- full. For Archipelago we want "joined the roster", which may be a different call
 -- (JoinStatus in sd.unitParameterList). Open question 1 in the README.
@@ -402,9 +424,14 @@ function G.ExportChests(path)
     return true, #rows .. " rows"
 end
 
--- Chest blanking experiment: every non-trap chest gives 1 gil instead of its vanilla reward.
--- 1 gil is the shape the game's own gil chests use (ItemId -1, Money N). Turning it off
--- restores the originals, and a game restart restores them anyway.
+-- Chest blanking: every chest that is an Archipelago location gives 1 gil instead of its
+-- vanilla reward, because the real reward comes from the server. 1 gil is the shape the game's
+-- own gil chests use (ItemId -1, Money N). Turning it off restores the originals, and a game
+-- restart restores them anyway.
+--
+-- Chests holding an item at or above SHUFFLE_ID_LIMIT (visions, key items, valuables) are not
+-- locations and keep their content. The apworld uses the same limit (tools/gen_apworld_data.py).
+local SHUFFLE_ID_LIMIT = 13000
 --
 -- The originals are keyed by the row's own mapId and ID, never by where the copy lives. A chest
 -- that spawns while blanking is on copies the already-blank row, so a snapshot of the spawned
@@ -432,6 +459,7 @@ end
 -- Sets one row (a table row or a chest's copy) blank or back. Returns true when it changed.
 local function BlankRow(row, on)
     if row.IsTrap == true then return false end
+    if (Int(row.ItemId) or -1) >= SHUFFLE_ID_LIMIT then return false end
     if on then
         Remember(row)
         if IsBlank(row) then return false end

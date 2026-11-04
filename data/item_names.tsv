@@ -1,0 +1,590 @@
+id	name
+1	Potion
+2	Hi-Potion
+3	Ether
+4	Phoenix Down
+7	Antidote Herb
+8	Remedy
+9	Knife of Poison
+10	Eye Drops
+11	Smelling Salts
+12	Echo Herb
+13	Unicorn Horn
+14	X-Potion
+16	Gold Needle
+17	Herb of Awakening
+18	X-Ether
+19	Healing Spring
+20	Turbo Ether
+22	Elixir
+23	Megalixir
+24	Smoke Bomb
+26	Knife of Blind
+27	Knife of Silence
+28	Knife of Confuse
+29	Knife of Paralysis
+30	Knife of Sleep
+31	Mist Potion
+32	Mist Hi-Potion
+33	Mist X-Potion
+34	Mist Ether
+35	Mist Turbo Ether
+36	Mist X-Ether
+37	Phoenix Pinion
+200	Flame Scroll II
+201	Ice Scroll II
+202	Wind Scroll II
+203	Earth Scroll II
+204	Lightning Scroll II
+205	Water Scroll II
+206	Shuriken
+207	Fuma Shuriken
+208	Chef’s Knife
+209	Flame Scroll I
+210	Ice Scroll I
+211	Wind Scroll I
+212	Earth Scroll I
+213	Lightning Scroll I
+214	Water Scroll I
+500	Tent
+600	Small Golden Shell
+601	Golden Shell
+602	Large Golden Shell
+9500	ギサールの種（仮）
+9501	カラッカの種（仮）
+10100	Crimson Saber
+10101	Bronze Sword
+10102	Longsword
+10103	Bladed Shield
+10104	Knight’s Blade
+10105	Flametongue
+10106	Icebrand
+10107	Claymore
+10108	Kaiser Sword
+10109	Bastard Sword
+10110	Blood Sword
+10111	Greatsword
+10112	Rune Blade
+10113	Lunar Sword
+10114	Stagger Blade
+10115	Soul Sabre
+10116	Sword of Trials
+10117	Falchion
+10118	Moon Saber
+10119	Nocturne
+10120	Arcana Blade
+10121	Knight’s Sword
+10122	Ether’s Light
+10123	Guardian Sword
+10124	Variable Steel
+10125	Briar Edge
+10126	Hero’s Blade
+10127	Indomitable
+10128	Flamberge
+10129	Malice Breaker
+10130	Knight’s Greatsword
+10190	Save the Vermillion
+10194	Apocalypse
+10195	Excalibur
+10196	Lightbringer
+10197	Ragnarok+
+10198	Ancient Greatsword
+10199	Ragnarok
+10200	Shiden
+10201	Nodachi
+10202	Sakura-Fubuki
+10203	Ashura
+10204	Tsukiyo no Tachi
+10205	Kuki
+10206	Hyosetsumaru
+10207	Dodanuki
+10208	Uchigatana
+10209	Samurai’s Katana
+10210	Rasetsu
+10211	Hototogisu
+10212	Shiranui
+10213	Kogarasumaru
+10214	Kiku-Ichimonji
+10215	Kotetsu
+10216	Osafune
+10217	Laserblade
+10218	Astral Blade
+10219	Reito
+10220	Genmato
+10221	Rikudo
+10222	Hasaito
+10223	Sundering Odachi
+10224	Kikokusenga
+10225	Kumobashiri
+10226	Guardbreaker
+10227	Iwakirimaru
+10228	Vibroblade
+10229	Murasame
+10230	Gorgon Sword
+10231	Carbide Blade
+10290	Shisui
+10294	Mutsunokami
+10295	Masamune
+10296	Murakumo
+10297	Sasuke’s Blade+
+10298	Ancient Katana
+10299	Sasuke’s Blade
+10300	Reincarnation
+10301	Silver Bow
+10302	Floral Arc
+10303	Fujin’s Bow
+10304	Rune Bow
+10305	Midnight Longbow
+10306	Shortbow
+10307	Longbow
+10308	Elfin Bow
+10309	Greatbow
+10310	Crescent Bow
+10311	Composite Bow
+10312	Loxley Bow
+10313	Oracle Bow
+10314	Gandiva
+10315	Compound Bow
+10316	Rock Piercer
+10317	Heavy Crossbow
+10318	Ballista
+10319	Deafening Bow
+10320	Cure Drop
+10321	Seraphim Bow
+10322	Moon Rain
+10323	Ydalir
+10324	Rune Arch
+10325	Kagura Longbow
+10326	Bow of the Hawk
+10327	Spellblade’s Bow
+10390	Elysium
+10395	Yoichi Bow
+10396	Faerie Bow
+10397	Artemis Bow+
+10398	Ancient Bow
+10399	Artemis Bow
+10400	Mechabo Hammer
+10401	Bronze Hammer
+10402	Cross Pein Hammer
+10403	Sledgehammer
+10404	Iron Hammer
+10405	Heroic Hammer
+10406	Slam Hammer
+10407	Nightbreaker
+10408	Warpick
+10409	Star Shatterer
+10410	Dreadwing Mallet
+10411	Morning Star
+10412	Arc Hammer
+10413	Divine Mallet
+10414	Demon’s Maul
+10415	Piercing Mace
+10416	Bullseye Mace
+10417	Clown Hammer
+10418	Inquisitor’s Gavel
+10419	Analysis Hammer
+10420	Fortune’s Maul
+10421	Scorpion Tail
+10422	Buster Mace
+10423	Great Mace
+10424	Golem Hammer
+10425	Oni Maul
+10426	War Hammer
+10427	Mjollnir
+10490	Mechabo Hammer SUPER
+10495	Pilebunker
+10496	Thor’s Hammer+
+10497	Ancient Hammer
+10498	Thor’s Hammer
+10499	Gaia Hammer
+10500	Codex Belli
+10501	Disciple’s Grimoire
+10502	Adept’s Grimoire
+10503	Master’s Grimoire
+10504	Knightly Tactics
+10505	The Savant General
+10506	Codex Asura
+10507	Codex Pestis
+10508	R’lyeh Text
+10509	Celaeno Fragments
+10510	Book of Eibon
+10511	Pnakotic Manuscript
+10512	Necronomicon
+10513	Total Calisthenics
+10514	Illegible Lexicon
+10515	Book of Strength
+10516	Battle Grimoire
+10517	Index of War
+10518	Blessed Cults
+10519	Luminous Grimoire
+10520	Annihilaticon
+10521	Anatomy of Magic
+10522	Arch Drain
+10523	Sage’s Journal
+10524	Tome of Grace
+10525	Book of the Stars
+10526	Book of the Cosmos
+10590	Codex Providentiae
+10597	Last Resort+
+10598	Ancient Tome
+10599	Last Resort
+10600	Empress Birch
+10601	Leather Whip
+10602	Shock Whip
+10603	Lunar Whip
+10604	Death Adder
+10605	Shinobi’s Kusarigama
+10606	Whip Blade
+10607	Sleipnir’s Tail
+10608	Beast Killer
+10609	Dragon Whisker
+10610	Power Whip
+10611	Rush Whip
+10612	Thorn Whip
+10613	Whip of Affliction
+10614	Cursed Whip
+10615	Serpent Bone Whip
+10690	Abyss
+10696	Fire Birch+
+10697	Ancient Whip
+10698	Fire Birch
+10699	Rugged Whip
+10700	Renatus Duo
+10701	Peacemaker
+10702	Firefly
+10703	Musketoon
+10704	Hastur Long Barrel
+10705	A-Type Sniper R
+10706	Kokytos
+10707	Silver-Round Rifle
+10708	Culverin
+10709	Repeater Rifle
+10710	Quicksilver
+10711	Mythril Cannon
+10712	Magi-Blaster
+10713	Arcane Long Rifle
+10714	Rune Shooter
+10715	Spellfire
+10716	Pulse Cannon
+10717	Barrel Blazer
+10718	Barrier Bane
+10719	Impetus Breaker
+10720	Jackpot Gun
+10721	Gatling Gun
+10722	Loose Cannon
+10723	Ultra Magnum
+10790	Caelum Renatum
+10797	Arcturus+
+10798	Ancient Firearm
+10799	Arcturus
+10800	White Roselia
+10801	Mythril Rod
+10802	Resonate Staff
+10803	Silver Staff
+10804	Vajra Staff
+10805	Staff of the Magi
+10806	Unyielding Staff
+10807	Mystletainn
+10808	Laevateinn
+10809	Whale Whisker
+10810	Striking Staff
+10811	War Pick
+10812	Iron Baton
+10813	Pole Mace
+10814	Battle Staff
+10815	Impact Wand
+10816	Rod of Focus
+10817	Catastrophe
+10818	Barrier Staff
+10819	High Caster
+10820	Seraph’s Rod
+10890	Roselia
+10897	Wizard’s Rod+
+10898	Ancient Rod
+10899	Wizard’s Rod
+11000	Leather Armor
+11001	Knight’s Jacket
+11002	Black Garb
+11003	Prickly Straitjacket
+11004	Bronze Chestplate
+11005	Tunic
+11006	Surcoat
+11007	Engineer’s Jacket
+11008	Red Jacket
+11009	Mythril Vest
+11010	Rose Jacket
+11011	Shinobi Gear
+11012	Power Vest
+11013	Kenpo Gi
+11014	Brigandine
+11015	Crown Vest
+11016	Diamond Chestplate
+11017	Bone Mail
+11018	Anti-Magic Gear
+11019	Astral Jacket
+11020	Rune Scales
+11021	Arcane Coat
+11022	Spell Jacket
+11023	Ninja Gear
+11024	Hoodwink Garb
+11025	Mirage Jacket
+11026	Shadowstep Garb
+11027	Swallow Scales
+11028	Aethereal Chestplate
+11029	Xibalba Coat
+11030	Jacket of Restoration
+11031	Scarlet Vest
+11032	Adamite Jacket
+11033	Lorica Sancta
+11034	Chestplate of Preparation
+11035	Blessed Cuirass
+11097	Mirage Vest+
+11098	Ancient Garment
+11099	Mirage Vest
+11300	Stout Armor
+11301	Crystal Armor
+11302	Iron Armor
+11303	Silver Chestplate
+11304	Golden Armor
+11305	Shielded Armor
+11306	Phalanx
+11307	Knight Armor
+11308	Lunar Plate
+11309	Carmine Armor
+11310	Glacial Armor
+11311	Polaris Cuirass
+11312	Armor of Dusk
+11313	Force Armor
+11314	Diamond Armor
+11315	Armor of Gales
+11316	Devout’s Armor
+11317	Ether Plate
+11318	Oracle’s Armor
+11319	Fortress Gear
+11320	Scale Mail
+11321	Protective Gear
+11322	Tyr’s Armor
+11323	Guardian’s Plate
+11324	Plate of Providence
+11325	Beast Hunter’s Armor
+11326	Mythril Armor
+11327	Gear Plate
+11328	Gladiator’s Armor
+11329	Lorica Apocalyptica
+11396	Genji Armor
+11397	Tatenashi Armor+
+11398	Ancient Cuirass
+11399	Tatenashi Armor
+11500	Leather Robe
+11501	Spirit Veil
+11502	Sorcerer’s Habit
+11503	Cotton Robe
+11504	White Dress
+11505	Angelic Vesture
+11506	Silk Robe
+11507	Bard’s Tunic
+11508	Cape of the Raiju
+11509	Lunar Eclipse Robe
+11510	Solar Eclipse Robe
+11511	Cleric’s Surplice
+11512	Sage’s Robe
+11513	Elegant Robe
+11514	Robe of Roses
+11515	Devout’s Robe
+11516	White Robe
+11517	Black Robe
+11518	Gaia Gear
+11519	Minerva Bustier
+11520	Behemoth Suit
+11521	Protective Overcoat
+11522	Aegis Robe
+11523	Vita Cloak
+11524	Guarding Gown
+11525	Rock Cloak
+11526	Mirage Robe
+11527	Phantom Robe
+11528	Mirage Coat
+11529	Arch Robe
+11530	Illusory Robe
+11531	Feather Robes
+11597	Lordly Robes+
+11598	Ancient Cloak
+11599	Lordly Robes
+12000	Earrings of Health
+12001	Adept’s Armlet
+12002	Power Stone
+12003	Mage’s Glasses
+12004	Idaten’s Shoes
+12005	Lucky Bell
+12006	Fire Sprite Earrings
+12007	Ring of Retaliation
+12008	Aeolian Misanga
+12010	Chocobo Down Charm
+12011	Reflect Ring
+12012	Protect Ring
+12013	Barrier Ring
+12014	Hermes Sandals
+12015	Iron Sandals
+12016	Berserker Ring
+12017	Angel Ring
+12018	Safety Bit
+12019	Star Pendant
+12020	Silver-Rimmed Glasses
+12021	Power Wristbands
+12022	Bulletproof Vest
+12023	Earrings
+12024	Talisman
+12025	Precognizant Beads
+12026	Zephyr Cloak
+12027	Gale Hairpin
+12028	Brigand’s Gloves
+12029	Alarm Earrings
+12030	Swift Badge
+12031	Poison Charm
+12032	Monk’s Prayer Beads
+12033	Hairband
+12034	Insulated Gloves
+12035	Headband
+12036	Mage’s Shard
+12037	Mage’s Stone
+12038	Philosopher’s Stone
+12039	Aquatic Veil
+12040	Jeweled Ring
+12042	Tiara of Frost
+12043	Fujin’s Fuda
+12044	Mole Doll
+12045	Scintillating Ring
+12046	Silver Key
+12047	Trick Coin
+12048	Protector’s Seal
+12049	Calm Armlet
+12050	Knight’s Medallion
+12051	Crest of Criticality
+12052	Blessed Pendant
+12053	Chocobo Nitro
+12054	Enchanted Ring
+12055	Amulet of Magic Absorption
+12056	Moonlight Ring
+12057	Hairpin of Grace
+12058	Ring of Rage
+12059	Mastery Pendant
+12060	Stagger Ring
+12061	Adept’s Monocle
+12062	Arcane Pendant
+12063	Vitality Charm
+12064	Heart Anklet
+12065	Ribbon
+12066	Warding Bell
+12067	Foe Attractor
+12068	Warrior’s Bandana
+12069	Circlet of Enlightenment
+12070	Gentleman Thief’s Monocle
+12071	Sniper’s Eye
+12072	Cursed Ring
+12073	Dark Rosary
+12074	Scar Orb
+12075	Evil Eye
+12076	Vampire Charm
+12077	Life Charm
+12078	Solar Pendant
+12079	Snow Spirit’s Scarf
+12080	Thunder God’s Earrings
+12081	Azure Amulet
+12082	Sylph’s Tiara
+12083	Golem Core
+12084	Halo Ring
+12085	Demon’s Ring
+12086	Adamantine Beads
+12087	Anti-Magic Studs
+12090	Mastery Ring
+12095	Ultima Reactor
+12096	Genji Gloves
+12097	Gold Hairpin+
+12098	Ancient Accessory
+12099	Gold Hairpin
+12100	Rose Circlet
+12101	Super Ribbon
+12102	Dragon Seal
+12103	Omega Badge
+13017	Amelia
+13024	Tronn
+13027	Victoria
+13033	Camille
+13045	Leah
+13051	Ayaka
+13060	Charlotte
+13062	Wilhelm
+13080	Aileen
+13100	Warrior of Light
+13101	Firion
+13102	Onion Knight
+13103	Cecil
+13105	Bartz
+13108	Terra
+13110	Cloud
+13113	Sephiroth
+13116	Squall
+13118	Zidane
+13120	Tidus
+13123	Shantotto
+13124	Vaan
+13125	Lightning
+13127	Y’shtola
+13128	Noctis
+13130	Clive
+20005	White Jade Stone
+20006	Black Jade Stone
+20007	Magic Tome
+20008	Tunnel Key
+20009	Level 1 Lab Key Card
+20010	Level 2 Lab Key Card
+20011	Level 3 Lab Key Card
+20016	Adamantite
+20018	牢屋の鍵
+20019	Dungeon Key
+20020	Dew of Reprieve
+20021	Throne Room Key
+20023	Viscus Vitae
+20024	Rushroom
+20025	Pure Water
+20026	Convalescence Draught
+20027	Super Salubrious Salad Stem
+20028	Portrait of Dario
+20029	Dario’s Letter
+20030	Ruby Fragment
+20031	Broken Sword Hilt
+20032	Broken Sword Blade
+20033	Cabin Key
+25000	Magicite Shard
+25001	Magicite
+25002	Magicite Cryst
+25004	Tablet Shard
+27006	Magi-tenna
+27007	Resonance Stone
+27008	High-Power Generator
+29000	Fledgling’s Proof of Victory
+29001	Brawler’s Proof of Victory
+29002	Gladiator’s Proof of Victory
+29003	Champion’s Proof of Victory
+29500	Magitek Armor Key
+29510	Archwitch’s Grimoire
+29520	Magitek Airship Passkey
+30000	Tome of Sages
+30001	Exodus
+30002	Choboco Saddle
+30003	Trick Coin
+30004	Sorcerer's Cape
+30005	Lordly Robes
+30006	Premium Card
+30007	Transporter
+30008	Soul Jade
+30009	Runic Bracer
+30010	Bandit Cuff Links
+30011	Chocobo Saddle-Bike
+30012	[TEMP] Increase movement speed
+30013	[TEMP] Airship skin
+30014	[TEMP] EXP Suppressor
+30015	Fury Ring
+30016	[TEMP] Enemy lure
+30017	Cursed Ring
+30018	賢者の巻物

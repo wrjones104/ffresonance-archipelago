@@ -1,0 +1,96 @@
+kind	map	uid	row	item	count	money	visible
+shiny	2015	4	BP_MapGimmick_FieldItem_Medal_C	25004	1	-1	
+spot	1000	0	BP_MapGimmick_FieldItem_C	-1	1	-1	{progress:8}==30
+spot	1000	116	BP_MapGimmick_FieldItem_C	-1	1	-1	{progress:30}>=20&!{flag:141}
+spot	1000	115	BP_MapGimmick_FieldItem_C	-1	1	-1	{progress:30}>=20&!{flag:143}
+spot	1000	113	BP_MapGimmick_FieldItem_C	-1	1	-1	{progress:30}>=20&!{flag:142}
+spot	1000	184	BP_MapGimmick_FieldItem_C	-1	1	-1	{progress:41}==20&!{flag:322}
+shiny	1000	30	BP_MapGimmick_FieldItem_C	16	3	-1	
+shiny	1000	143	BP_MapGimmick_FieldItem_C	32	1	-1	
+shiny	1000	36	BP_MapGimmick_FieldItem_C	12007	1	-1	
+shiny	1000	68	BP_MapGimmick_FieldItem_C	10718	1	-1	
+shiny	1000	37	BP_MapGimmick_FieldItem_C	10518	1	-1	
+shiny	1000	144	BP_MapGimmick_FieldItem_C	10222	1	-1	
+shiny	1000	145	BP_MapGimmick_FieldItem_C	35	1	-1	
+shiny	1000	39	BP_MapGimmick_FieldItem_C	207	3	-1	
+shiny	1000	31	BP_MapGimmick_FieldItem_C	211	3	-1	
+shiny	1000	32	BP_MapGimmick_FieldItem_C	12024	1	-1	
+shiny	1000	33	BP_MapGimmick_FieldItem_C	16	2	-1	
+shiny	1000	34	BP_MapGimmick_FieldItem_C	28	2	-1	
+shiny	1000	35	BP_MapGimmick_FieldItem_C	206	3	-1	
+shiny	1000	45	BP_MapGimmick_FieldItem_C	12006	1	-1	
+shiny	1000	57	BP_MapGimmick_FieldItem_C	37	2	-1	
+shiny	1000	46	BP_MapGimmick_FieldItem_C	7	3	-1	
+shiny	1000	47	BP_MapGimmick_FieldItem_C	10219	1	-1	
+shiny	1000	48	BP_MapGimmick_FieldItem_C	12072	1	-1	
+shiny	1000	49	BP_MapGimmick_FieldItem_C	20	1	-1	
+shiny	1000	50	BP_MapGimmick_FieldItem_C	19	2	-1	
+shiny	1000	51	BP_MapGimmick_FieldItem_C	11317	1	-1	
+shiny	1000	58	BP_MapGimmick_FieldItem_C	33	1	-1	
+shiny	1000	94	BP_MapGimmick_FieldItem_C	12026	1	-1	
+shiny	1000	95	BP_MapGimmick_FieldItem_C	214	2	-1	
+shiny	1000	96	BP_MapGimmick_FieldItem_C	34	1	-1	
+shiny	1000	97	BP_MapGimmick_FieldItem_C	1	3	-1	
+shiny	1000	98	BP_MapGimmick_FieldItem_C	10302	1	-1	
+shiny	1000	169	BP_MapGimmick_FieldItem_C	29	5	-1	
+spot	1000	76	BP_MapGimmick_FieldItem_C	-1	1	-1	{progress:45}==30
+spot	1000	124	BP_MapGimmick_FieldItem_C	-1	1	-1	{progress:45}==10
+spot	1000	77	BP_MapGimmick_FieldItem_C	-1	1	-1	{progress:45}==20
+shiny	1000	150	BP_MapGimmick_FieldItem_C	1	1	-1	
+shiny	1000	99	BP_MapGimmick_FieldItem_C	7	2	-1	
+shiny	1000	100	BP_MapGimmick_FieldItem_C	1	2	-1	
+shiny	1000	102	BP_MapGimmick_FieldItem_C	12004	1	-1	
+shiny	1000	104	BP_MapGimmick_FieldItem_C	12002	1	-1	
+shiny	1000	3	BP_MapGimmick_FieldItem_C	209	2	-1	
+shiny	1000	105	BP_MapGimmick_FieldItem_C	32	2	-1	
+shiny	1000	127	BP_MapGimmick_FieldItem_C	7	2	-1	
+shiny	1000	128	BP_MapGimmick_FieldItem_C	500	1	-1	
+shiny	1000	4	BP_MapGimmick_FieldItem_C	25000	1	-1	
+shiny	1000	5	BP_MapGimmick_FieldItem_C	10401	1	-1	
+shiny	1000	7	BP_MapGimmick_FieldItem_C	31	3	-1	
+shiny	1000	82	BP_MapGimmick_FieldItem_C	37	1	-1	
+shiny	1000	83	BP_MapGimmick_FieldItem_C	212	2	-1	
+shiny	1000	24	BP_MapGimmick_FieldItem_C	10217	1	-1	
+shiny	1000	25	BP_MapGimmick_FieldItem_C	4	3	-1	
+shiny	1000	26	BP_MapGimmick_FieldItem_C	34	1	-1	
+shiny	1000	21	BP_MapGimmick_FieldItem_C	500	1	-1	
+shiny	1000	130	BP_MapGimmick_FieldItem_C	3	1	-1	
+shiny	1000	22	BP_MapGimmick_FieldItem_C	210	2	-1	
+shiny	1000	1	BP_MapGimmick_FieldItem_C	9	2	-1	
+shiny	1000	27	BP_MapGimmick_FieldItem_Child_C	12087	1	-1	
+shiny	1000	178	BP_MapGimmick_FieldItem_Child_C	29	3	-1	
+shiny	1000	182	BP_MapGimmick_FieldItem_Child_C	205	1	-1	
+shiny	1000	139	BP_MapGimmick_FieldItem_Child_C	207	1	-1	
+shiny	1000	148	BP_MapGimmick_FieldItem_Child_C	19	3	-1	
+shiny	1000	185	BP_MapGimmick_FieldItem_Child_C	22	1	-1	
+shiny	1000	186	BP_MapGimmick_FieldItem_Child_C	32	1	-1	
+shiny	1000	187	BP_MapGimmick_FieldItem_Child_C	22	1	-1	
+shiny	1000	188	BP_MapGimmick_FieldItem_Child_C	20	2	-1	
+shiny	1000	189	BP_MapGimmick_FieldItem_Child_C	25000	1	-1	
+shiny	1000	179	BP_MapGimmick_FieldItem_Child_C	24	5	-1	
+shiny	1000	149	BP_MapGimmick_FieldItem_Child_C	23	1	-1	
+shiny	1000	180	BP_MapGimmick_FieldItem_Child_C	33	1	-1	
+shiny	1000	181	BP_MapGimmick_FieldItem_Child_C	36	2	-1	
+shiny	1000	167	BP_MapGimmick_FieldItem_Child_C	33	1	-1	
+shiny	1000	154	BP_MapGimmick_FieldItem_Child_C	14	1	-1	
+shiny	1000	159	BP_MapGimmick_FieldItem_Child_C	30	2	-1	
+shiny	1000	160	BP_MapGimmick_FieldItem_Child_C	12028	1	-1	
+shiny	1000	161	BP_MapGimmick_FieldItem_Child_C	203	2	-1	
+shiny	1000	162	BP_MapGimmick_FieldItem_Child_C	19	3	-1	
+shiny	1000	163	BP_MapGimmick_FieldItem_Child_C	10521	1	-1	
+shiny	1000	164	BP_MapGimmick_FieldItem_Child_C	11026	1	-1	
+shiny	1000	165	BP_MapGimmick_FieldItem_Child_C	36	1	-1	
+shiny	1000	166	BP_MapGimmick_FieldItem_Child_C	33	1	-1	
+shiny	1000	155	BP_MapGimmick_FieldItem_Child_C	8	1	-1	
+shiny	1000	156	BP_MapGimmick_FieldItem_Child_C	202	2	-1	
+shiny	1000	157	BP_MapGimmick_FieldItem_Child_C	32	3	-1	
+shiny	1000	158	BP_MapGimmick_FieldItem_Child_C	10319	1	-1	
+shiny	1000	52	BP_MapGimmick_FieldItem_Child_C	2	2	-1	
+shiny	1000	56	BP_MapGimmick_FieldItem_Child_C	206	2	-1	
+shiny	1000	53	BP_MapGimmick_FieldItem_Child_C	29	2	-1	
+shiny	1000	54	BP_MapGimmick_FieldItem_Child_C	10520	1	-1	
+shiny	1000	55	BP_MapGimmick_FieldItem_Child_C	10417	1	-1	
+shiny	1000	11	BP_MapGimmick_FieldItem_Child_C	3	2	-1	
+shiny	1000	136	BP_MapGimmick_FieldItem_Child_C	31	1	-1	
+shiny	1000	137	BP_MapGimmick_FieldItem_Child_C	3	1	-1	
+shiny	3001	80	BP_MapGimmick_FieldItem_C	20001	1	-1	{progress:31}==20

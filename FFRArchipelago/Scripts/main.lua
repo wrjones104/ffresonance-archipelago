@@ -1,25 +1,27 @@
--- FFRArchipelago: proof of concept for an Archipelago client inside Final Fantasy Resonance.
+-- FFRArchipelago: the in-game half of the Final Fantasy Resonance Archipelago client.
 --
 -- What it does:
---   * Reads items from ap_in.txt and grants them in order: bag items, visions, party members
---     and story flags. Each item is applied once, tracked by its Archipelago index.
+--   * Reads items from ap_in.txt and grants them in order: bag items, gil, visions, party
+--     members and story flags. Each item is applied once, tracked by its Archipelago index.
 --   * Reports opened chests (check chest:<mapId>:<uid>), picked-up shinies (check
 --     shiny:<mapId>:<uid>) and story counter changes to ap_out.txt.
+--   * Follows the client's session: a new `seed` line in ap_in.txt starts the mod's state over.
 --   * Writes ap_status.txt every few seconds, so you can see what it thinks is going on.
 --
--- What it does NOT do yet: talk to an Archipelago server (a Python client will do that), stop
--- chests giving their vanilla item, or stop story events giving theirs. See README.md.
+-- The Archipelago client (apworld/ff_resonance/client.py) writes ap_in.txt and reads ap_out.txt.
+-- What it does NOT do yet: replace shiny rewards, or stop story events giving theirs.
 --
 -- Console commands (open the UE4SS console, ConsoleEnablerMod):
 --   ffrap_status                 what the mod sees right now
---   ffrap_grant <kind> <id> [n]  grant directly, without the bridge: item, vision, unit, flag
+--   ffrap_grant <kind> <id> [n]  grant directly, without the bridge: item, gil, vision, unit, flag
 --   ffrap_dump [rows]            chest and shiny discovery dump to ffrap_dump.txt
 --   ffrap_export                 every chest table row to chests.tsv
---   ffrap_blank [on|off]         experiment: every non-trap chest gives 1 gil instead
+--   ffrap_blank [on|off]         chests that are Archipelago locations give 1 gil instead
 --   ffrap_sync                   report every known location the save says is looted
 --   ffrap_reset                  forget the applied-item count (re-grants everything!)
 
-local VERSION = "0.3.1"
+local VERSION = "0.4.0"
+local PROTOCOL = 1        -- the bridge protocol; the apworld's MOD_PROTOCOL
 
 local MOD_DIR = (debug.getinfo(1, "S").source:gsub("^@", ""):gsub("\\", "/"):match("^(.*/)Scripts/[^/]+$"))
     or "ue4ss/Mods/FFRArchipelago/"
@@ -54,7 +56,9 @@ local state = {
     inGameTicks = 0,
     ticks = 0,
     lastResult = "",
-    blank = false,     -- chest blanking experiment (ffrap_blank)
+    blank = false,     -- chest blanking (ffrap_blank, or the client's "cfg blank 1")
+    seed = nil,        -- the client session ("<seed name>:<slot>") this state belongs to
+    syncPending = false, -- report everything the save says is looted, once in game
 }
 
 local STATE_PATH = MOD_DIR .. "ap_state.txt"
@@ -70,6 +74,7 @@ local function loadState()
         local key, value = line:match("^(%w+)\t(.*)$")
         if key == "applied" then state.applied = tonumber(value) or 0 end
         if key == "blank" then state.blank = value == "1" end
+        if key == "seed" and value ~= "" then state.seed = value end
     end
     f:close()
 end
@@ -79,6 +84,7 @@ local function saveState()
     if not f then return end
     f:write("applied\t", state.applied, "\n")
     f:write("blank\t", state.blank and "1" or "0", "\n")
+    f:write("seed\t", state.seed or "", "\n")
     f:close()
 end
 
@@ -99,6 +105,7 @@ local GRANTS = {
     vision = function(it) return game.UnlockVision(it.id) end,
     unit = function(it) return game.AddUnit(it.id) end,
     flag = function(it) return game.SetFlag(it.id, it.count ~= 0) end,
+    gil = function(it) return game.GrantGil(math.max(it.count, 1)) end,
 }
 
 local function grant(it)
@@ -109,9 +116,35 @@ local function grant(it)
     return code, detail
 end
 
+-- A new client session (another seed, or another slot) starts everything over: no item of the
+-- old session is applied, no old check is kept, and ap_out.txt is emptied so the client never
+-- sends an old seed's checks. Then everything the save already has is reported once in game.
+local function newSession(key)
+    log("new session " .. key .. (state.seed and (" (was " .. state.seed .. ")") or ""))
+    state.seed, state.applied, state.queue, state.reported = key, 0, {}, {}
+    state.syncPending = true
+    saveState()
+    local f = io.open(bridge.outPath, "w")
+    if f then f:close() end
+    bridge.write("hello", VERSION, PROTOCOL)
+    bridge.write("seed", key)
+end
+
 local function readInbox(initial)
     for _, f in ipairs(bridge.readNew()) do
-        if f[1] == "item" then
+        if f[1] == "seed" and f[2] and f[2] ~= "" then
+            if f[2] ~= state.seed then newSession(f[2]) end
+        elseif f[1] == "cfg" and f[2] == "blank" then
+            local want = f[3] == "1"
+            if want ~= state.blank then
+                state.blank = want
+                saveState()
+                if game.InGame() then game.BlankChests(want) end
+                log("chest blanking " .. (want and "on" or "off") .. " (client)")
+            end
+        elseif f[1] == "sync" then
+            if not initial then state.syncPending = true end
+        elseif f[1] == "item" then
             local index, id = tonumber(f[2]), tonumber(f[4])
             if index and id then
                 if index >= state.applied then state.queue[index] = { kind = f[3], id = id, count = tonumber(f[5]) or 1,
@@ -338,7 +371,7 @@ local function statusLines()
         "map: " .. tostring(game.CurrentMap()) .. " (save's Map.mapId " .. tostring(game.MapId()) .. ")   story: " .. tostring(game.StoryCounter()),
         "party: " .. (party and table.concat(party, ", ") or "?"),
         "items applied: " .. state.applied .. "   queued: " .. queued(),
-        "chest blanking: " .. (state.blank and "on" or "off"),
+        "chest blanking: " .. (state.blank and "on" or "off") .. "   session: " .. tostring(state.seed),
         "last: " .. state.lastResult,
     }
 end
@@ -368,6 +401,10 @@ local function tick()
             applyItems()
             watchStory()
             if state.ticks % CHEST_EVERY == 0 then scanLoot() end
+            if state.syncPending then
+                state.syncPending = false
+                log("sync from save: " .. syncFromSave() .. " new checks")
+            end
             -- The tables can be rebuilt while the game runs, so blanking is applied again now
             -- and then; rows already blank are skipped.
             if state.blank and state.ticks % STATUS_EVERY == 0 then game.BlankChests(true) end
@@ -398,7 +435,7 @@ end)
 command("ffrap_grant", function(p)
     local kind, id, n = p[1], tonumber(p[2]), tonumber(p[3]) or 1
     if not (kind and id) then
-        notify("usage: ffrap_grant <item|vision|unit|flag> <id> [n]")
+        notify("usage: ffrap_grant <item|gil|vision|unit|flag> <id> [n]")
         return
     end
     local code, detail = grant({ kind = kind, id = id, count = n })
@@ -454,8 +491,9 @@ loadSeen()
 for _, f in ipairs(bridge.readOut()) do
     if f[1] == "check" or f[1] == "story" then state.reported[f[1] .. "|" .. tostring(f[2])] = true end
 end
+bridge.write("hello", VERSION, PROTOCOL)
+if state.seed then bridge.write("seed", state.seed) end
 readInbox(true)
-bridge.write("hello", VERSION)
 log("version " .. VERSION .. " loaded from " .. MOD_DIR .. ", " .. state.applied .. " items already applied")
 
 LoopAsync(TICK_MS, function()

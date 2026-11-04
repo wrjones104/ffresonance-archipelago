@@ -7,6 +7,7 @@ and it prints what the game writes to ap_out.txt (checks, story changes, applied
 
 Commands:
     item <id> [n] [label]   a bag item, e.g.  item 10100 1 Crimson Saber
+    gil <amount>            gil, e.g.  gil 500
     vision <id> [label]     e.g.  vision 13017 Amelia
     unit <id> [label]       a party member, e.g.  unit 1002
     flag <index> [0|1]      a story flag
@@ -105,6 +106,9 @@ def main():
                     n = int(args[1]) if len(args) > 1 else 1
                     label = " ".join(args[2:]) or f"item {args[0]} x{n}"
                     append(in_path, "item", index, "item", int(args[0]), n, label)
+                    index += 1
+                elif cmd == "gil":
+                    append(in_path, "item", index, "gil", 0, int(args[0]), f"{int(args[0])} Gil")
                     index += 1
                 elif cmd in ("vision", "unit"):
                     label = " ".join(args[1:]) or f"{cmd} {args[0]}"

@@ -11,3 +11,6 @@ FFRArchipelago/seen.tsv
 __pycache__/
 *.pyc
 .venv/
+
+# Built apworld
+dist/
