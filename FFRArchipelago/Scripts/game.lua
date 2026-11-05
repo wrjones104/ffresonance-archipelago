@@ -1315,9 +1315,14 @@ local FEED_PREFIX = "FFRAP_Feed"
 G.FEED_MAX = 5          -- lines on screen at once
 G.FEED_SHOW = 6.0       -- seconds a line stays fully visible
 G.FEED_FADE = 1.5       -- seconds it then takes to fade out
-local FEED_PADDING = { Left = 0, Top = 0, Right = 48, Bottom = 96 }
+-- 140 px up: clear of the "Back" prompt that menus and the chest pop-up put at the very bottom
+-- right (round 21).
+local FEED_PADDING = { Left = 0, Top = 0, Right = 48, Bottom = 140 }
 local FEED_FONT_SIZE = 20
-local ALIGN_RIGHT, ALIGN_BOTTOM, JUSTIFY_RIGHT = 2, 3, 2
+-- EHorizontalAlignment and EVerticalAlignment are Fill 0, Left/Top 1, Center 2, Right/Bottom 3.
+-- 0.9.0 to 0.9.3 had right as 2, which is centre (round 21). ETextJustify is Left 0, Center 1,
+-- Right 2.
+local ALIGN_RIGHT, ALIGN_BOTTOM, JUSTIFY_RIGHT = 3, 3, 2
 local feed = { box = nil, host = nil, tree = nil, lines = {}, made = 0 }
 
 -- Round 18: 0.9.0 crashed the game the first time it made the feed in the field. A crash in the
@@ -1379,15 +1384,26 @@ end
 -- properties instead (plain values, an object and a name), before the line is added to the box:
 -- the engine builds the on-screen text from these properties when the line is added.
 local function StyleLine(tb)
-    local guideFont
+    -- The key guide's text is a CommonTextBlock, which can take its font from a style when it is
+    -- drawn and leave its own Font.FontObject empty. A line given an empty font object draws
+    -- nothing (round 21: every step worked and no line showed), so the font is only copied
+    -- when there is one.
+    local fontObject, typeface
     pcall(function()
         local guide = Live("WBP_KeyGuide_C")
-        if guide then guideFont = guide.Text_Name.Font end
+        if guide then
+            local f = guide.Text_Name.Font
+            if f.FontObject and f.FontObject:IsValid() then
+                fontObject, typeface = f.FontObject, f.TypefaceFontName
+            end
+        end
     end)
-    step("style: font object and typeface (field writes)")
-    if guideFont then
-        pcall(function() tb.Font.FontObject = guideFont.FontObject end)
-        pcall(function() tb.Font.TypefaceFontName = guideFont.TypefaceFontName end)
+    local fontName = "none, the default font is kept"
+    pcall(function() if fontObject then fontName = fontObject:GetFullName() end end)
+    step("style: font object and typeface (field writes): " .. fontName)
+    if fontObject then
+        pcall(function() tb.Font.FontObject = fontObject end)
+        pcall(function() tb.Font.TypefaceFontName = typeface end)
     end
     step("style: font size (field write)")
     pcall(function() tb.Font.Size = FEED_FONT_SIZE end)
@@ -1428,6 +1444,50 @@ function G.FeedLine(text, now, opts)
         table.remove(feed.lines, 1)
     end
     return true
+end
+
+-- What the engine says about the feed, as lines for the log: the box's and each line's size,
+-- visibility and font. ffrap_feed check (round 21: the lines were made and none showed).
+function G.FeedReport()
+    local out = {}
+    local function size(w)
+        local s = "?"
+        pcall(function() local d = w:GetDesiredSize(); s = string.format("%.0fx%.0f", d.X, d.Y) end)
+        return s
+    end
+    local function vis(w)
+        local v, shown = "?", "?"
+        pcall(function() v = tostring(w:GetVisibility()) end)
+        pcall(function() shown = tostring(w:IsVisible()) end)
+        return "visibility " .. v .. ", visible " .. shown
+    end
+    local host = FeedHost()
+    out[#out + 1] = "HUD overlay: " .. (host and (size(host) .. ", " .. vis(host)) or "none (not in the field)")
+    if not (feed.box and Alive(feed.box)) then
+        out[#out + 1] = "box: none"
+        return out
+    end
+    local parent = "?"
+    pcall(function() parent = feed.box:GetParent():GetFName():ToString() end)
+    local h, v = "?", "?"
+    pcall(function() h = tostring(feed.box.Slot.HorizontalAlignment) end)
+    pcall(function() v = tostring(feed.box.Slot.VerticalAlignment) end)
+    out[#out + 1] = "box: " .. size(feed.box) .. ", " .. vis(feed.box) .. ", in " .. parent ..
+        ", alignment " .. h .. "/" .. v
+    for i, line in ipairs(feed.lines) do
+        local text, font, fsize, opacity = "?", "?", "?", "?"
+        pcall(function() text = line.tb:GetText():ToString() end)
+        pcall(function()
+            local f = line.tb.Font.FontObject
+            font = (f and f:IsValid()) and f:GetFName():ToString() or "none"
+        end)
+        pcall(function() fsize = tostring(line.tb.Font.Size) end)
+        pcall(function() opacity = tostring(line.tb:GetRenderOpacity()) end)
+        out[#out + 1] = string.format("line %d: \"%s\", %s, %s, font %s size %s, opacity %s",
+            i, text, size(line.tb), vis(line.tb), font, fsize, opacity)
+    end
+    if #feed.lines == 0 then out[#out + 1] = "lines: none (they fade after " .. (G.FEED_SHOW + G.FEED_FADE) .. " s)" end
+    return out
 end
 
 -- Fades and removes old lines. Returns how many are on screen.

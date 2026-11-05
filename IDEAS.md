@@ -492,4 +492,16 @@ Plan: build option 1 first, because it is known to work. Then try option 2 as an
 
 **Round 20:** the plain test worked; the styled one crashed twice at `style: copy the key guide's font`, which is `tb:SetFont(guide.Text_Name.Font)`. Passing an `FSlateFontInfo` (or an `FSlateColor`) from Lua to a function loses the struct's engine-only parts. A lesson for all UI work here: write a widget's fields before it goes on screen; never hand a font or Slate colour struct to a setter. 0.9.3 does that: the font object, typeface, size, shadow colour and justification are field writes on the new line, before it is added to the box. The text keeps the default white.
 
+**Round 21:** no crash, but no lines showed, though every step reported `line done`. There were two causes:
+- **Alignment:** the alignment enum is Fill 0, Left/Top 1, Center 2, Right/Bottom 3, and 0.9.0 to 0.9.3 used 2 for right (centre).
+- **Font:** the key guide's `CommonTextBlock` may carry no font object of its own (its style supplies one when it is drawn), and an empty font object draws nothing.
+
+The "Back" prompt that menus and the chest pop-up show at the bottom right also needs room.
+
+**0.9.4:**
+- Right is 3.
+- The font object is copied only when the key guide has one (the step logs its name).
+- The feed sits 140 px up.
+- `ffrap_feed check` logs the engine's view of the box and lines.
+
 **Still to tune, once it works:** the size, the place and the time on screen.

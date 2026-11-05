@@ -22,7 +22,7 @@ The world is tested off-line: Archipelago's general tests pass with it, its own 
 - **ModSettings** (a Blueprint mod in `Content/Paks/LogicMods`, from the same modding tools as FFRSLib) is optional. On-screen messages ("Received ...", "Sent ...", "Archipelago is paused", "Prologue skipped") go to ModSettings' Toast panel. The mod's own item feed (`ffrap_feed on`) is meant to replace it in the field, but it crashed the game in round 18 and is off by default while it is tested. Without ModSettings the messages only go to `UE4SS.log`, and the Archipelago client shows items coming and going.
 - **FFRSLib, FFRS_QoL, FFRBestiary and FFRRandomizer are not needed.** Their code is where the game calls come from (see "Where the game calls come from"), but this mod calls the game directly. FFRRandomizer should stay disabled (IDEAS.md, idea 10).
 
-1. **Mod.** Copy `FFRArchipelago/Scripts` and `FFRArchipelago/Assets` over the installed mod (0.9.3). Delete the old `ap_in.txt`, `ap_out.txt` and `ap_state.txt`, and keep `seen.tsv`. Keep FFRRandomizer disabled.
+1. **Mod.** Copy `FFRArchipelago/Scripts` and `FFRArchipelago/Assets` over the installed mod (0.9.4). Delete the old `ap_in.txt`, `ap_out.txt` and `ap_state.txt`, and keep `seen.tsv`. Keep FFRRandomizer disabled.
 2. **World.** Run `python tools/build_apworld.py`, then copy `dist/ff_resonance.apworld` into your Archipelago `custom_worlds` folder. Or, from source, copy `apworld/ff_resonance` into `worlds/`.
 3. **Seed.**
    - Copy `apworld/Final Fantasy Resonance.yaml` into Archipelago's `Players` folder and set a name.
@@ -112,7 +112,7 @@ At run time the mod writes these files into its own folder: `ap_out.txt`, `ap_st
 | `ffrap_notice [text]` | Experimental: tries to show the text with the game's quest-notice banner, in the field. |
 | `ffrap_logo` | Puts the Archipelago logo at the end of the mod's line on the title screen. The mod does this by itself; the command is for trying it again by hand. |
 | `ffrap_layout <text>` | Logs the chain of panels holding the on-screen text that holds `<text>`, up to the screen's root layout. For finding where new HUD elements can go. |
-| `ffrap_feed [on\|off\|test [plain]]` | The item feed at the bottom right of the field HUD: off by default (messages go to ModSettings' Toast) while it is tested, kept in `ap_state.txt` as `itemfeed`. `test` shows three sample lines. Every step the feed takes is logged before it runs (`feed step: ...`), so a crash's last line names the call. `test plain` leaves out the styling. |
+| `ffrap_feed [on\|off\|test [plain]]` | The item feed at the bottom right of the field HUD: off by default (messages go to ModSettings' Toast) while it is tested, kept in `ap_state.txt` as `itemfeed`. `test` shows three sample lines. Every step the feed takes is logged before it runs (`feed step: ...`), so a crash's last line names the call. `test plain` leaves out the styling. `check` logs what the engine says about the feed: the box's and each line's size, visibility and font. |
 | `ffrap_bind` | Link the loaded save to the client's session, in place of any earlier one. The same as `/bind` in the client. |
 | `ffrap_reset` | Set the loaded save's applied-item count to 0. Re-grants everything to it! |
 
@@ -267,14 +267,23 @@ Rounds 6 to 9 (2026-11-05) worked out and tested the prologue skip; their result
 - **Why:** a font (`FSlateFontInfo`) holds engine-only parts that a struct passed from Lua does not carry. The setters that take a Slate colour (`FSlateColor`) have the same problem.
 - **0.9.3** styles each line by writing its fields (font object, typeface, size, shadow colour, justification) before the line goes on screen. No setter is given a struct.
 
-## Round 21 test plan (mod 0.9.3, world 0.1.3)
+**Round 21 (mod 0.9.3, 2026-11-05): no crash, but no lines showed.**
+- **What ran:** `ffrap_feed test` and the real items (`ffrap_feed on`, a `/bind` with five items, three chests) ran every step, and every line logged `line done`. None showed on screen.
+- **Two causes found:**
+  - **Alignment:** the alignment numbers were wrong. Unreal counts Fill 0, Left/Top 1, Center 2, Right/Bottom 3, and the feed used 2 for right, so the box was centred.
+  - **Font:** the font copy may have emptied the font. The key guide's text is a `CommonTextBlock`, which can take its font from a style when drawn and leave its own font object empty. A line with an empty font object draws nothing.
+- **The "Back" prompt:** menus and the chest pop-up put a "Back" prompt at the very bottom right.
 
-1. **Install.** Copy `FFRArchipelago/Scripts` and `FFRArchipelago/Assets` over the installed mod. The log should say `version 0.9.3 loaded`.
-2. **The styled test, in the field:** run `ffrap_feed test`. The steps are now `style: font object and typeface (field writes)`, `style: font size`, `style: shadow colour` and `style: justification`.
-   - If it crashes, send `UE4SS.log`: the last `feed step:` line.
-   - If it works, three lines should show at the bottom right in the HUD's font, with a shadow, then fade after about 6 seconds. Send a screenshot.
-3. **For real:** only if step 2 worked, run `ffrap_feed on`, then open some chests and load an older save of the seed (several items at once). Each item gets a line, and a batch of more than five shows the last four and "and N more".
-4. **Look:** say whether the size, the place or the time on screen should change.
+## Round 22 test plan (mod 0.9.4, world 0.1.3)
+
+1. **Install.** Copy `FFRArchipelago/Scripts` and `FFRArchipelago/Assets` over the installed mod. The log should say `version 0.9.4 loaded`. The feed stays on if you switched it on in round 21.
+2. **The test, in the field:**
+   - Run `ffrap_feed test`, then `ffrap_feed check` at once (within 6 seconds).
+   - The `feed step: style: font object and typeface ...` line now names the font it copied, or says the default is kept.
+   - `feed check:` lines give the HUD overlay's size, the box's size, visibility and alignment (should be `3/3`), and each line's size, font and opacity.
+   - Send those lines and a screenshot.
+3. **If lines show:** they should be at the bottom right, 140 px up (above the "Back" prompt). Open a chest and check the feed and the prompt do not overlap.
+4. **If nothing shows:** try `ffrap_feed test plain` and `ffrap_feed check` too. Send the `feed check:` lines from both.
 
 ## Open questions
 

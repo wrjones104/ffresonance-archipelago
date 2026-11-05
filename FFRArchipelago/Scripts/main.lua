@@ -24,7 +24,7 @@
 --   ffrap_notice [text]          experimental: show text with the game's quest-notice banner
 --   ffrap_logo                   the Archipelago logo on the mod's title line, by hand
 --   ffrap_layout <text>          the panels holding some on-screen text, to the log
---   ffrap_feed [on|off|test [plain]]  the item feed at the bottom right of the field HUD (off by default)
+--   ffrap_feed [on|off|test [plain]|check]  the item feed at the bottom right of the field HUD (off by default)
 --   ffrap_find <text>            game classes, functions and fields named like the text, to find_<text>.txt
 --   ffrap_blank [on|off]         chests that are Archipelago locations give 1 gil instead
 --   ffrap_sync                   report every known location the save says is looted
@@ -37,7 +37,7 @@
 -- follows the save slots the linked game is saved to. While any other save is loaded, the mod
 -- grants nothing, reports nothing and leaves the chests vanilla.
 
-local VERSION = "0.9.3"
+local VERSION = "0.9.4"
 local PROTOCOL = 1        -- the bridge protocol; the apworld's MOD_PROTOCOL
 
 local MOD_DIR = (debug.getinfo(1, "S").source:gsub("^@", ""):gsub("\\", "/"):match("^(.*/)Scripts/[^/]+$"))
@@ -946,9 +946,9 @@ command("ffrap_logo", function()
     notify("Logo: " .. tostring(result or "not added") .. " (" .. tostring(detail) .. ")")
 end)
 
--- ffrap_feed [on|off|test [plain]]: the item feed on the field HUD (off by default while it is
--- tested). `test` shows three sample lines, logging each step first; `test plain` leaves out
--- the styling.
+-- ffrap_feed [on|off|test [plain]|check]: the item feed on the field HUD (off by default while
+-- it is tested). `test` shows three sample lines, logging each step first; `test plain` leaves
+-- out the styling; `check` logs what the engine says about the feed's box and lines.
 command("ffrap_feed", function(p)
     local what = p and p[1]
     if what == "on" or what == "off" then
@@ -967,6 +967,9 @@ command("ffrap_feed", function(p)
             results[#results + 1] = ok and "ok" or tostring(why)
         end
         log("feed test: " .. table.concat(results, ", "))
+    elseif what == "check" then
+        for _, line in ipairs(game.FeedReport()) do log("feed check: " .. line) end
+        game.Toast("Feed check written to the log")
     else
         notify("Item feed is " .. (feedOn and "on" or "off") .. " (ffrap_feed on|off|test)")
     end
