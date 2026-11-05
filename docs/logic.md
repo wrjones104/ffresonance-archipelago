@@ -1,0 +1,142 @@
+# Progression logic: design draft
+
+The design for turning the world from "chests swap items" into a real Archipelago game, where items unlock places and the multiworld depends on them.
+
+**How to use this document:**
+- Write in it freely. Bullet points are enough, and rough notes are fine.
+- Each section has what is already known, and **Your call** where a decision is yours. Where I have a suggestion, it is marked *Suggestion*. Ignore it if you have a better idea.
+- When a section has settled, the apworld code follows from it (section 9). In-game tests come from section 8.
+
+Related: [progression.md](progression.md) (the chapter-by-chapter reference), [IDEAS.md](../IDEAS.md) ideas 3 (open world), 4 (vehicles) and 5 (key items).
+
+## 1. Where the world stands today
+
+- **One region.** Every location is reachable from the start as far as logic goes. Late-game chests are simply late.
+- **No progression items.** Equipment is "useful", and consumables and gil are "filler". Key items, visions and party members stay where the game puts them, so the story can always be finished.
+- **Locations:** 216 chests in 10 regions, and 83 shinies on the world map (an option, off by default). 26 chests that hold items with id 13000 and up (visions, key items, valuables) keep their vanilla content and are not locations.
+- **Goal:** reach a story checkpoint (`goal_story_checkpoint`, default 8050).
+- **Options:** the goal, `include_shinies` and `excluded_regions`.
+
+## 2. The experience
+
+**Your call:** what should a good run feel like? Some questions to start with:
+- **Length:** how long should a typical seed take? A full story run, or something shorter?
+- **The goal:** finish the story, or something else as well? For example, a number of Tablet Shards (idea 1), beating certain bosses, or collecting Espers.
+- **What feels different:** what is fun about Resonance specifically that items could play with? Party members, Visions, vehicles, Espers?
+- **Limits:** what should never happen? For example, a seed that needs grinding, a story that breaks, or being stuck with nothing to do.
+- **Other players:** how soon should this world start sending useful things to the rest of the multiworld? The first chapters are fairly linear.
+
+## 3. The mode: follow the story, or open world
+
+This choice shapes everything else.
+
+**Follow the story (story mode).** The player plays the story as normal. Story progress opens each chapter's lands, and items gate *extra* things inside them: side areas, vehicles, optional bosses, upgrades.
+- *For:* it works with the game as it is. The story never needs anything the mod cannot guarantee.
+- *Against:* the main path is fixed, so early spheres are small, and progression items can only gate what the story does not need.
+
+**Open world (idea 3).** Story progress is set or skipped so that lands are open, and items (vehicles, keys) decide where you can go.
+- *For:* real routing, and big early spheres. This is what makes many Archipelago games fun.
+- *Against:* it needs a lot of game work first: opening lands without the story, with events and NPCs in a sensible state, and a goal that does not depend on story order.
+
+**Your call:** which mode first?
+
+*Suggestion:* story mode first, built so that open world can come later. The skip prologue work shows the story counter and flags can be set, so open world is not out of reach. But story mode can ship much sooner, and it teaches us which gates the game checks by item.
+
+## 4. What the mod can do in game
+
+What a progression item can be depends on what the mod can grant and what the game checks.
+
+| Grant | How | Tested |
+|---|---|---|
+| Bag items (consumables, equipment, key items, artifacts) | `AddInventory` | yes, every round since round 1 |
+| Gil | `SetCurrentMoney` | yes (round 5) |
+| Visions | `visionList` plus `AddInventory`, the FFRSLib way | built; not yet a real Archipelago item |
+| Party members | `CPP_VM_Party:AddUnit` | built; it puts a unit in the *active* party and fails when that is full (README, open question 1). "Has joined" may be `JoinStatus` instead. Needs testing |
+| Story flags | `SetFlag` | yes (the skip prologue sets 21) |
+| Vehicles | the Chocobo by item 30002 | yes: the saddle alone lets you ride (round 5). The airship is unknown: 29520 only changes how it looks |
+
+**What the game checks.** A gate only works as an Archipelago item if the game checks for the *item*, not for a story flag set at the same time. That is the main thing to test for each candidate (section 8).
+
+## 5. Progression item candidates
+
+Filled from progression.md and IDEAS.md idea 5. **Your call:** which ones go in, and are there others?
+
+| Candidate | Item id | Gates | Game checks | Tested | In v1? |
+|---|---|---|---|---|---|
+| Chocobo (Choboco Saddle) | 30002 | Kolobos Island, the Felicitas region | the item | yes (round 5) | |
+| Airship | unknown | world-map flight: Sanctums, volcanoes, ice islands, Whirlpool Hollow | unknown (29520 is cosmetic) | no: needs the flag test (idea 4) | |
+| Radar: Magi-tenna | 27006 | tier 1 world-map treasures | unknown | no | |
+| Radar: Resonance Stone | 27007 | tier 2 world-map treasures | unknown | no | |
+| Radar: High-Power Generator | 27008 | tier 3 world-map treasures | unknown | no | |
+| Gaia Hammer (field skill) | unknown | the sealing stone in Grandshelt Desert, to Titan | unknown (from Colosseum, proofs 29000–29003) | no | |
+| White Jade Stone | 20005 | Holy, which clears the Bog of No Return: western Gronoa, Odin | unknown | no | |
+| Lab Key Cards 1–3 | 20009–20011 | Research Center Ruins | unknown | no | |
+| Tunnel Key | 20008 | probably the Zoldaad tunnels | unknown | no | |
+| Dungeon Key, Throne Room Key | 20019, 20021 | Zoldaad Castle | unknown | no | |
+| Ruby Fragment (×3) | 20030 | Carbuncle | unknown | no | |
+| Broken Sword Hilt, Blade | 20031, 20032 | Odin (Iron Splitter) | unknown | no | |
+| Tablet Shards | 25004 | the Tablet Shard turn-in (idea 1) | unknown | no | |
+| Party members | units 1001–1008 | battle strength; maybe story events | the story expects them | no | |
+| Visions (26), Espers (9) | various | battle strength | — | no | |
+
+**Things to weigh:**
+- **Story items in story mode.** A key item the story itself needs (a key on the main path) cannot be taken out of its place, or the story can stall until another player sends it. That may be fine, or it may be miserable. *Suggestion:* in v1, only shuffle gates on optional content, and keep main-path keys where they are.
+- **Party members** would be the most Resonance-feeling progression, but the story scripts them joining. They need careful testing before they are items.
+- **Upgrades as progressive items.** The three radar parts could be one "Progressive Radar" item, received three times.
+
+## 6. Regions and access
+
+The location regions today, with where each opens in the story:
+
+| Region | Chests | Opens (story) | Needs, beyond the story | Can you go back later? |
+|---|---|---|---|---|
+| Grandshelt | 47 | chapter 1 | | |
+| Kol | 8 | chapter 1 (Village of Kol) | Chocobo? | |
+| Lan | 33 | ? | | |
+| Dirnado | 20 | chapter 2 | | |
+| Olderion | 23 | chapter 3 | | |
+| Zoldaad | 22 | chapter 4 | keys inside (Tunnel, Dungeon, Throne Room)? | |
+| Mysidia | 25 | chapter 5 | Radar Pulse (story) | |
+| Gronoa | 17 | chapter 6 | Holy for the west | |
+| Pharm | 11 | chapter 7 | | |
+| Crystal Tower | 10 | chapter 8 | | |
+| World Map (shinies) | 83 | varies | airship, radar tiers | |
+
+**Your call, and facts to fill in:**
+- Where is **Lan**, and when does it open?
+- Which regions can be **revisited** later, and from when (the airship)? Anything you cannot go back to belongs in `excluded_regions` by default, or needs logic that says "before chapter N".
+- The **sub-areas** inside a region that need an item. For example, the Kolobos part of Grandshelt needs the Chocobo. Those become their own logic regions.
+
+**How story progress fits the logic (story mode).** Story progress is not an item, so each chapter is an *event* in logic: "Chapter 2 open" is reached once chapter 1's region is. Locations in a chapter's lands need that event, plus any items for their sub-area. That gives the fill a sphere structure that follows the story.
+
+## 7. Options
+
+**Your call:** what should players be able to change? Some candidates:
+- **The goal** (exists), plus other goals if section 2 adds them.
+- **Shinies** (exists).
+- **Which gates are shuffled:** for example, vehicles yes/no, key items yes/no, party members yes/no.
+- **Excluded regions** (exists).
+- **Starting items:** for example, start with the Chocobo, to open more early.
+- **The skip prologue** is always on with "New Game (Archipelago)", and needs no option.
+
+## 8. Tests needed before the logic can rely on them
+
+Each is an in-game check. Most can be done with `ffrap_grant` on a save, and a look at whether the gate opens.
+
+1. **For each key item in section 5:** does the gate open with the item alone (granted on a save before the story hands it out)? And does the story still work when the item is already in the bag before the story would hand it out?
+2. **The airship:** which flag or item lets it fly (idea 4). That needs a flag diff around the point the story hands it out, with `ffrap_snapshot`.
+3. **Party members:** does `AddUnit`, or setting `JoinStatus`, give a working member before the story would? And what does the story do when that member is already there?
+4. **Revisiting:** which regions can be reached again after their chapter.
+5. **Lan:** where it is and when it opens.
+6. **The goal:** does the ending reach story 8050?
+
+## 9. How this becomes code (for reference)
+
+Once the sections above are settled:
+- **`items.py`:** the chosen gates become `progression` items in the pool. Where an item is shuffled, its vanilla chest becomes a location, if it is not one already (ids at or above 13000 are kept vanilla today).
+- **New `regions.py` and `rules.py`:**
+  - a region per land (and per item-gated sub-area);
+  - chapter events;
+  - `set_rule` per location or entrance (`state.has("Chocobo", player)`, and so on).
+- **The mod:** granting a progression item is already `AddInventory`, `AddUnit` or `SetFlag`. In story mode, the story's own hand-out of a shuffled item must be stopped, or the item ends up given twice. That is new mod work, per item.
+- **Tests:** Archipelago's world tests (`test/`) check that every seed can be beaten. Unit tests check each rule.

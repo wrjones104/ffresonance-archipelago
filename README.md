@@ -85,11 +85,14 @@ tools/snapdiff.py          compares two ffrap_snapshot files
 data/chests.tsv            every chest table row (ffrap_export): the chest location table
 data/shinies.tsv           shinies seen in game (the mod's seen.tsv)
 data/item_names.tsv        item id -> name, from FFR-Randomizer by LordMikoda (MIT)
+docs/progression.md        the game's progression, chapter by chapter
+docs/logic.md              the progression logic design (draft)
+FFRArchipelago/Assets/     the Archipelago logo for the title screen
 ```
 
 After `data/*.tsv` changes, run `python tools/gen_apworld_data.py` and commit the regenerated `data.py`.
 
-Ideas that are not on the test plan yet (Tablet Shards, skipping the prologue, an open-world mode) are in [IDEAS.md](IDEAS.md).
+Ideas that are not on the test plan yet (Tablet Shards, skipping the prologue, an open-world mode) are in [IDEAS.md](IDEAS.md). The progression logic is being designed in [docs/logic.md](docs/logic.md).
 
 At run time the mod writes these files into its own folder: `ap_out.txt`, `ap_state.txt`, `ap_status.txt`, `ffrap_dump.txt`, `chests.tsv` and `seen.tsv`. The fake server writes `ap_in.txt`.
 
