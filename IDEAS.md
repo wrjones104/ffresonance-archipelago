@@ -448,9 +448,14 @@ Plan: build option 1 first, because it is known to work. Then try option 2 as an
 - The client knows the item and the player once the server answers the check. `LocationInfo` scouting can tell it before the chest is opened.
 - The pop-up is the game's item-get dialog. It shows the chest row's item and count, which blanking set to gil 1.
 
+**Plan (2026-11-05, next after the item feed):**
+1. **The client** scouts the slot's locations once at connect (`LocationScouts`, `create_as_hint` 0, so no hints are made), and writes one line per location to `ap_in.txt`: `scout <location key> <item name> <player name> <flags>`. The flags give progression, useful or trap.
+2. **The mod** keeps those by location key. While a chest's pop-up is up, it rewrites the pop-up's text. Your own item reads "Rod of Focus"; another player's reads "Ether for Alice". The gil icon and the "1" are hidden or replaced.
+3. Received items still come to the feed as now, so a batch never means a pile of pop-ups.
+
 **To find out:**
-- Which widget or view model draws the dialog (`ffrap_find Obtain`, or inspect while it is open), and whether its text can be set before it shows.
-- How the client gets the text to the mod in time: scout every location at connect and write `scout <location> <item> <player>` lines to `ap_in.txt`.
+- Which widget draws the pop-up, and which of its texts and images hold the item. 0.10.0 logs the panels around the "obtained" text by itself, once per run, the first time a chest check is reported (round 24).
+- Whether the text can be changed while the pop-up is up (the feed showed that field writes before a widget is drawn are safe; this is a widget already drawn, so `SetText` it is).
 
 ## 14. An item feed on the HUD
 
@@ -512,4 +517,15 @@ The "Back" prompt that menus and the chest pop-up show at the bottom right also 
 - The feed takes the first key list and key guide that are on screen, and only counts an overlay that is on screen.
 - Messages that wait 10 seconds for a HUD on screen go to ModSettings' Toast, so none are lost from the screen.
 
-**Still to tune, once it works:** the size, the place and the time on screen.
+**Round 23: it works.**
+- Lines show at the bottom right in the game's `SystemText` font.
+- A chest's line waits until its pop-up is closed, so it never meets the "Back" prompt.
+- You prefer lines that fade (unlike TUNIC and Hollow Knight, which keep the last few on screen), but a bit longer and with more space between them.
+
+**0.10.0:**
+- On by default.
+- Each line is shown 10 seconds, then fades over 2.
+- 6 px under each line.
+- The `feed step:` logging only runs during `ffrap_feed test`.
+
+**Still to tune:** the size, the place, colours (Archipelago's item colours for progression, useful and trap items need the item flags from the client), and whether the time on screen feels right.

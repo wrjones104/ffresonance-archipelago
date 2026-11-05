@@ -1313,8 +1313,9 @@ end
 
 local FEED_PREFIX = "FFRAP_Feed"
 G.FEED_MAX = 5          -- lines on screen at once
-G.FEED_SHOW = 6.0       -- seconds a line stays fully visible
-G.FEED_FADE = 1.5       -- seconds it then takes to fade out
+G.FEED_SHOW = 10.0      -- seconds a line stays fully visible (round 23: a little longer)
+G.FEED_FADE = 2.0       -- seconds it then takes to fade out
+local FEED_LINE_GAP = { Left = 0, Top = 0, Right = 0, Bottom = 6 }   -- space under each line
 -- 140 px up: clear of the "Back" prompt that menus and the chest pop-up put at the very bottom
 -- right (round 21).
 local FEED_PADDING = { Left = 0, Top = 0, Right = 48, Bottom = 140 }
@@ -1456,6 +1457,7 @@ function G.FeedLine(text, now, opts)
     if not (okAdd and slot) then return false, "AddChildToVerticalBox failed: " .. tostring(errAdd) end
     step("align the line")
     pcall(function() slot:SetHorizontalAlignment(ALIGN_RIGHT) end)
+    pcall(function() slot:SetPadding(FEED_LINE_GAP) end)
     step("line done")
     feed.lines[#feed.lines + 1] = { tb = tb, born = now }
     while #feed.lines > G.FEED_MAX do

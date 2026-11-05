@@ -24,7 +24,7 @@
 --   ffrap_notice [text]          experimental: show text with the game's quest-notice banner
 --   ffrap_logo                   the Archipelago logo on the mod's title line, by hand
 --   ffrap_layout <text>          the panels holding some on-screen text, to the log
---   ffrap_feed [on|off|test [plain]|check]  the item feed at the bottom right of the field HUD (off by default)
+--   ffrap_feed [on|off|test [plain]|check]  the item feed at the bottom right of the field HUD (on by default)
 --   ffrap_find <text>            game classes, functions and fields named like the text, to find_<text>.txt
 --   ffrap_blank [on|off]         chests that are Archipelago locations give 1 gil instead
 --   ffrap_sync                   report every known location the save says is looted
@@ -37,7 +37,7 @@
 -- follows the save slots the linked game is saved to. While any other save is loaded, the mod
 -- grants nothing, reports nothing and leaves the chests vanilla.
 
-local VERSION = "0.9.5"
+local VERSION = "0.10.0"
 local PROTOCOL = 1        -- the bridge protocol; the apworld's MOD_PROTOCOL
 
 local MOD_DIR = (debug.getinfo(1, "S").source:gsub("^@", ""):gsub("\\", "/"):match("^(.*/)Scripts/[^/]+$"))
@@ -66,16 +66,12 @@ end
 -- and off the field (the title screen) they go to ModSettings' Toast as before.
 local FEED_QUEUE_MAX = 20
 local FEED_WAIT_MAX = 10     -- seconds messages wait for the feed before they go to the Toast
--- Off unless switched on: round 18 crashed the game the first time 0.9.0 made the feed.
-local feedOn = false         -- ffrap_feed on|off; kept in ap_state.txt
+-- On unless switched off: it works since 0.9.5 (round 23), and messages it cannot show go to
+-- the Toast after FEED_WAIT_MAX.
+local feedOn = true          -- ffrap_feed on|off; kept in ap_state.txt
 local feedQueue = {}
 local feedQueueSince = nil   -- when the oldest waiting message came
 local feedClock = 0          -- seconds, from the tick count
-
--- Every step the feed takes is logged before it runs, whether from ffrap_feed test or from a
--- message: a crash in the engine ends the game before Lua can log, so the last `feed step:`
--- line in UE4SS.log names the call (round 19).
-game.feedTrace = function(what) log("feed step: " .. what) end
 
 local function show(msg)
     if feedOn and game.InGame() then
@@ -421,9 +417,31 @@ local function newVisit(mapId)
     visit = { mapId = mapId, scans = 0, recorded = {} }
 end
 
+-- The chest pop-up ("You obtained the following:") is up while a chest's check is reported, so
+-- the first chest check of a run starts a short look for its text, and the panels holding it are
+-- logged once (IDEAS.md, idea 13: what is needed to put the Archipelago item in the pop-up).
+local DIALOG_TEXT = "obtained"
+local dialogProbe = { ticks = 0, done = false }
+
+local function probeDialog()
+    if dialogProbe.done or dialogProbe.ticks <= 0 then return end
+    dialogProbe.ticks = dialogProbe.ticks - 1
+    local chain = game.LayoutOf(DIALOG_TEXT)
+    if chain then
+        dialogProbe.done = true
+        for i, line in ipairs(chain) do log("chest pop-up layout " .. i .. ": " .. line) end
+    elseif dialogProbe.ticks == 0 then
+        dialogProbe.done = true
+        log("chest pop-up: no on-screen text holding \"" .. DIALOG_TEXT .. "\" was found")
+    end
+end
+
 local function opened(key)
     if not sessionSave() then return end
-    if report("check", key) then log("check " .. key) end
+    if report("check", key) then
+        log("check " .. key)
+        if not dialogProbe.done and dialogProbe.ticks == 0 and key:find("^chest:") then dialogProbe.ticks = 10 end
+    end
 end
 
 -- The location key of a chest. A chest with a table row is keyed by the row ("chest:3020:1"),
@@ -837,6 +855,7 @@ local function tick()
                 bindLoaded()
             end
             autoSkip()
+            pcall(probeDialog)
             -- Chests and shinies are still recorded in seen.tsv for any save; scanLoot reports
             -- them only for the session's save (see opened).
             if state.ticks % CHEST_EVERY == 0 then scanLoot() end
@@ -957,9 +976,9 @@ command("ffrap_logo", function()
     notify("Logo: " .. tostring(result or "not added") .. " (" .. tostring(detail) .. ")")
 end)
 
--- ffrap_feed [on|off|test [plain]|check]: the item feed on the field HUD (off by default while
--- it is tested). `test` shows three sample lines, logging each step first; `test plain` leaves
--- out the styling; `check` logs what the engine says about the feed's box and lines.
+-- ffrap_feed [on|off|test [plain]|check]: the item feed on the field HUD (on by default).
+-- `test` shows three sample lines, logging each step first; `test plain` leaves out the
+-- styling; `check` logs what the engine says about the feed's box and lines.
 command("ffrap_feed", function(p)
     local what = p and p[1]
     if what == "on" or what == "off" then
@@ -972,11 +991,15 @@ command("ffrap_feed", function(p)
         -- UE4SS.log names the call. `test plain` leaves out the styling.
         local plain = p[2] == "plain"
         log("feed test" .. (plain and " (plain)" or "") .. ": starting")
+        -- Each step is logged before it runs while testing: a crash in the engine ends the game
+        -- before Lua can log, so the last `feed step:` line in UE4SS.log names the call (round 19).
+        game.feedTrace = function(step) log("feed step: " .. step) end
         local results = {}
         for _, msg in ipairs({ "Received Potion from Bob", "Sent Ether to Alice", "Received Rod of Focus" }) do
             local ok, why = game.FeedLine(msg, feedClock, { plain = plain })
             results[#results + 1] = ok and "ok" or tostring(why)
         end
+        game.feedTrace = nil
         log("feed test: " .. table.concat(results, ", "))
     elseif what == "check" then
         for _, line in ipairs(game.FeedReport()) do log("feed check: " .. line) end

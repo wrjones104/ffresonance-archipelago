@@ -19,10 +19,10 @@ The world is tested off-line: Archipelago's general tests pass with it, its own 
 
 **What the mod needs:**
 - **UE4SS**, the only thing it needs to run. ConsoleEnablerMod and BPModLoaderMod come with UE4SS. The console is only for the `ffrap_*` commands.
-- **ModSettings** (a Blueprint mod in `Content/Paks/LogicMods`, from the same modding tools as FFRSLib) is optional. On-screen messages ("Received ...", "Sent ...", "Archipelago is paused", "Prologue skipped") go to ModSettings' Toast panel. The mod's own item feed (`ffrap_feed on`) is meant to replace it in the field, but it crashed the game in round 18 and is off by default while it is tested. Without ModSettings the messages only go to `UE4SS.log`, and the Archipelago client shows items coming and going.
+- **ModSettings** (a Blueprint mod in `Content/Paks/LogicMods`, from the same modding tools as FFRSLib) is optional. In the field, messages ("Received ...", "Sent ...", "Archipelago is paused", "Prologue skipped") go to the mod's own item feed at the bottom right of the HUD (since 0.10.0, on by default). ModSettings' Toast panel takes them off the field (the title screen), when no HUD is on screen for 10 seconds, and with `ffrap_feed off`. Without ModSettings those few only go to `UE4SS.log`.
 - **FFRSLib, FFRS_QoL, FFRBestiary and FFRRandomizer are not needed.** Their code is where the game calls come from (see "Where the game calls come from"), but this mod calls the game directly. FFRRandomizer should stay disabled (IDEAS.md, idea 10).
 
-1. **Mod.** Copy `FFRArchipelago/Scripts` and `FFRArchipelago/Assets` over the installed mod (0.9.5). Delete the old `ap_in.txt`, `ap_out.txt` and `ap_state.txt`, and keep `seen.tsv`. Keep FFRRandomizer disabled.
+1. **Mod.** Copy `FFRArchipelago/Scripts` and `FFRArchipelago/Assets` over the installed mod (0.10.0). Delete the old `ap_in.txt`, `ap_out.txt` and `ap_state.txt`, and keep `seen.tsv`. Keep FFRRandomizer disabled.
 2. **World.** Run `python tools/build_apworld.py`, then copy `dist/ff_resonance.apworld` into your Archipelago `custom_worlds` folder. Or, from source, copy `apworld/ff_resonance` into `worlds/`.
 3. **Seed.**
    - Copy `apworld/Final Fantasy Resonance.yaml` into Archipelago's `Players` folder and set a name.
@@ -112,7 +112,7 @@ At run time the mod writes these files into its own folder: `ap_out.txt`, `ap_st
 | `ffrap_notice [text]` | Experimental: tries to show the text with the game's quest-notice banner, in the field. |
 | `ffrap_logo` | Puts the Archipelago logo at the end of the mod's line on the title screen. The mod does this by itself; the command is for trying it again by hand. |
 | `ffrap_layout <text>` | Logs the chain of panels holding the on-screen text that holds `<text>`, up to the screen's root layout. For finding where new HUD elements can go. |
-| `ffrap_feed [on\|off\|test [plain]]` | The item feed at the bottom right of the field HUD: off by default (messages go to ModSettings' Toast) while it is tested, kept in `ap_state.txt` as `itemfeed`. `test` shows three sample lines. Every step the feed takes is logged before it runs (`feed step: ...`), so a crash's last line names the call. `test plain` leaves out the styling. `check` logs what the engine says about the feed: the box's and each line's size, visibility and font. |
+| `ffrap_feed [on\|off\|test [plain]]` | The item feed at the bottom right of the field HUD: on by default; off sends messages to ModSettings' Toast. Kept in `ap_state.txt` as `itemfeed`. `test` shows three sample lines. Every step the feed takes is logged before it runs (`feed step: ...`), so a crash's last line names the call. `test plain` leaves out the styling. `check` logs what the engine says about the feed: the box's and each line's size, visibility and font. |
 | `ffrap_bind` | Link the loaded save to the client's session, in place of any earlier one. The same as `/bind` in the client. |
 | `ffrap_reset` | Set the loaded save's applied-item count to 0. Re-grants everything to it! |
 
@@ -280,16 +280,23 @@ Rounds 6 to 9 (2026-11-05) worked out and tested the prologue skip; their result
 - **The font:** the key guide font came back empty for the same reason (`none, the default font is kept`).
 - **Messages:** with the feed on, every message went to that invisible feed instead of ModSettings' Toast, so items showed only in the client.
 
-## Round 23 test plan (mod 0.9.5, world 0.1.3)
+**Round 23 (mod 0.9.5, 2026-11-05): the item feed works.**
+- `ffrap_feed check` found 2 key lists, 1 on screen, and an overlay 525x400 and visible. The lines were 26 px tall in the game's own font, `SystemText` (`/Game/UI/Font/SystemText`).
+- Lines showed at the bottom right, right-justified with a shadow ("Received Celaeno Fragments", "Received Repeater Rifle", and the test lines).
+- **Chest items:** a chest's item line waits in the queue while the chest pop-up is up, and shows once it is closed: Monk's Prayer Beads arrived at 15:33:12.98 and its line was made at 15:33:13.48. So the feed never meets the pop-up's "Back" prompt.
+- **Your notes:** a little more space between lines, and a little longer on screen (you prefer them fading out over staying, as in TUNIC and Hollow Knight).
 
-1. **Install.** Copy `FFRArchipelago/Scripts` and `FFRArchipelago/Assets` over the installed mod. The log should say `version 0.9.5 loaded`.
-2. **The test, in the field:** run `ffrap_feed test`, then `ffrap_feed check` within 6 seconds.
-   - `feed check: key lists (WBP_FieldFuncList2_C): N, on screen 1` should show one on screen.
-   - The HUD overlay and the box should have a size and `visible true`.
-   - The `style: font ...` step should name a font, not "none".
-   - Send the lines and a screenshot.
-3. **Real items:** open chests. Each item should get a line at the bottom right, above the "Back" prompt. If the feed cannot find a HUD on screen for 10 seconds, the messages go to ModSettings' Toast instead, with a `feed: no HUD on screen` line in the log.
-4. If it still shows nothing, run `ffrap_feed off` to go back to the Toast, and send the `feed check:` lines.
+## Round 24 test plan (mod 0.10.0, world 0.1.3)
+
+1. **Install.** Copy `FFRArchipelago/Scripts` and `FFRArchipelago/Assets` over the installed mod. The log should say `version 0.10.0 loaded`.
+2. **The feed, on by default:**
+   - Lines have 6 px between them and stay 10 seconds, then fade over 2.
+   - There are no more `feed step:` lines in the log, except during `ffrap_feed test`.
+   - If you had switched it off, `ffrap_feed on`.
+3. **The chest pop-up's layout (for IDEAS.md, idea 13):** open a chest that is an Archipelago location, and leave the pop-up up for a few seconds before pressing OK.
+   - The mod looks for the pop-up's text by itself (once per run) and logs `chest pop-up layout 1:`, `2:` and so on.
+   - Send those lines. If it logs `no on-screen text holding "obtained" was found`, say what language the game is in.
+4. Say whether the spacing and the time on screen feel right now.
 
 ## Open questions
 
