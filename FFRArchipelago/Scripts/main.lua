@@ -21,6 +21,7 @@
 --   ffrap_skip [slot]            skip the prologue on a new game; with a slot, save there and reload
 --   ffrap_inspect <class|path>   one object's fields and functions to inspect_<name>.tsv
 --   ffrap_title [list|add]       the Archipelago entry on the title menu (added at start-up)
+--   ffrap_notice [text]          experimental: show text with the game's quest-notice banner
 --   ffrap_find <text>            game classes, functions and fields named like the text, to find_<text>.txt
 --   ffrap_blank [on|off]         chests that are Archipelago locations give 1 gil instead
 --   ffrap_sync                   report every known location the save says is looted
@@ -33,7 +34,7 @@
 -- follows the save slots the linked game is saved to. While any other save is loaded, the mod
 -- grants nothing, reports nothing and leaves the chests vanilla.
 
-local VERSION = "0.8.1"
+local VERSION = "0.8.2"
 local PROTOCOL = 1        -- the bridge protocol; the apworld's MOD_PROTOCOL
 
 local MOD_DIR = (debug.getinfo(1, "S").source:gsub("^@", ""):gsub("\\", "/"):match("^(.*/)Scripts/[^/]+$"))
@@ -602,6 +603,7 @@ end
 -- and checked again now and then in case the game reloads the asset. Loads the asset only
 -- outside a game.
 local orderLogged = nil   -- the last order result logged, so each new one is logged once
+local layoutLogged = false   -- the version text's layout is logged once per run (for the logo)
 local function titleTick()
     if state.ticks ~= 1 and state.ticks % TITLE_EVERY ~= 0 then return end
     local inGame = game.InGame()
@@ -622,8 +624,14 @@ local function titleTick()
         end
     end
     if not inGame then
-        local shown = game.TitleVersionLine(TITLE_LINE)
-        if shown == "added" then log("title: \"" .. TITLE_LINE .. "\" shown above the version text") end
+        local shown, block = game.TitleVersionLine(TITLE_LINE)
+        if shown == "added" then
+            log("title: \"" .. TITLE_LINE .. "\" shown above the version text")
+            if not layoutLogged and block then
+                layoutLogged = true
+                log("title: version text layout: " .. game.DescribeWidget(block))
+            end
+        end
     end
 end
 
@@ -839,6 +847,7 @@ local FUNCTION_CLASSES = {
     "CPP_BFL_SaveDataPlayer", "CPP_BFL_DBG_FlagSaveData", "CPP_BFL_Scenario", "CPP_ScenarioSubsystem",
     "CPP_DM_EventShortcutData", "CPP_DM_SaveDataManager", "CPP_DM_BFL_SaveData", "CPP_Task_NewGame",
     "CPP_MuchaSaveDataManager", "CPP_MuchaGameSaveData",
+    "CPP_BFL_Chat", "CPP_ChatSubsystem", "CPP_QuestSubsystem", "CPP_VM_QuestNotice",
 }
 
 -- ffrap_title [list|add]: the Archipelago title entry (IDEAS.md, idea 6). The mod adds it at
@@ -854,6 +863,15 @@ command("ffrap_title", function(p)
     local entries = game.TitleEntries()
     log("title: " .. entries)
     if what ~= "add" then notify("Title menu: " .. entries) end
+end)
+
+-- ffrap_notice <text>: try the game's quest-notice banner with our own text (experimental).
+command("ffrap_notice", function(p)
+    local text = table.concat(p or {}, " ")
+    if text == "" then text = "Archipelago: test notice" end
+    local ok, detail = game.QuestNotice(text)
+    log("notice: " .. tostring(detail))
+    if not ok then notify("Notice: " .. tostring(detail)) end
 end)
 
 -- ffrap_inspect <class or path>: one object's fields and functions to inspect_<name>.tsv.

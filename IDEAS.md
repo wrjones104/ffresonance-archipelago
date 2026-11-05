@@ -335,14 +335,23 @@ Plan: build option 1 first, because it is known to work. Then try option 2 as an
 - **The mod's name and version on the title:** the game's version ("1.0.1.0", bottom left) is a TextBlock. The mod writes "FFRArchipelago <version>" in front of it on a line of its own, so it shows above the version if the block grows upwards. The title widget is made again each time the title shows, so this is checked every 3 seconds while not in a game.
 - **The logo** is saved as `FFRArchipelago/Assets/archipelago_logo.png` (from the Archipelago community; free with credit for unpaid projects). Showing it needs an `Image` widget made at run time, with the texture loaded from the file (`KismetRenderingLibrary.ImportFileAsTexture2D`). That is the next step after the text.
 
+**Round 14:** the order and the version line worked. The version block is right-justified, so "1.0.1.0" moved right under our longer line. 0.8.2 sets it to left-justified and logs the block's layout (its slot, parent panel and that panel's children) once per run.
+
+**Where the logo goes:** small, about two text lines high, just left of "FFRArchipelago <version>" in the bottom-left corner.
+- It sits next to the text it belongs to and stays clear of the game's artwork and the menu (which the game makes again).
+- How it is placed depends on the layout line from round 15: an `Image` added to the same panel (a canvas slot can take a position, a vertical box cannot), or a horizontal box holding the logo and the text.
+- The picture: `FFRArchipelago/Assets/archipelago_logo.png`, loaded with `KismetRenderingLibrary.ImportFileAsTexture2D` and set with `Image.SetBrushFromTexture`.
+
 **Still open:**
 - **Skipping the movie outright:** find what the opening holds the player's input with. `CPP_Task_NewGame` is the place to start (`ffrap_inspect` while a new game is starting).
-- **The logo on the title:** see above.
 - **Our own on-screen text:** messages go through ModSettings' Toast panel, so without that mod a player sees nothing. Two ways:
   - **Use one of the game's own notices.** The executable names `CPP_VM_QuestNotice` and `CPP_DA_QuestNotice` (quest pop-ups), `CPP_WBP_ChatNotice` (`UI.Layout.Chat.Notice`) and `CPP_VM_BattleResult_Notification`. If one of them takes plain text, our messages look like the game's.
   - **Make our own widget:** a `TextBlock` (and later the logo) on a widget we create. This is the same work as the logo.
 
-  The round 14 probes look at the first way.
+  Round 14 probes:
+  - `CPP_VM_QuestNotice` (the "new quest" banner, `WBP_QuestNotice` in the field layout) holds `NoticeData.NoticeTitle` (a text), `NoticeQuestData` (a quest's name, subtitle and so on) and `bDisplayNotice`. It has `ExecuteNotics(bool)`, `PlayNoticeSound` and `CloseNotice`. 0.8.2's `ffrap_notice <text>` sets the title and the quest name, then calls `ExecuteNotics(true)`.
+  - `CPP_BFL_Chat.Notice` is a call in the chat library (`CPP_ChatSubsystem` keeps the notice widget, and the save keeps a `NoticeQueue`). Its parameters come with round 15's `ffrap_functions`.
+  - If neither takes our text, we make our own widget (as for the logo).
 
 ## 7. Enemy randomization
 

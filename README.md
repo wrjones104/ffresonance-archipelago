@@ -22,7 +22,7 @@ The world is tested off-line: Archipelago's general tests pass with it, its own 
 - **ModSettings** (a Blueprint mod in `Content/Paks/LogicMods`, from the same modding tools as FFRSLib) is optional. Every on-screen message ("Received ...", "Archipelago is paused", "Prologue skipped") is drawn with its Toast panel, because the game's own on-screen text call is compiled out. Without it the mod works the same, but the messages only go to `UE4SS.log`.
 - **FFRSLib, FFRS_QoL, FFRBestiary and FFRRandomizer are not needed.** Their code is where the game calls come from (see "Where the game calls come from"), but this mod calls the game directly. FFRRandomizer should stay disabled (IDEAS.md, idea 10).
 
-1. **Mod.** Copy `FFRArchipelago/Scripts` over the installed mod (0.8.1). Delete the old `ap_in.txt`, `ap_out.txt` and `ap_state.txt`, and keep `seen.tsv`. Keep FFRRandomizer disabled.
+1. **Mod.** Copy `FFRArchipelago/Scripts` over the installed mod (0.8.2). Delete the old `ap_in.txt`, `ap_out.txt` and `ap_state.txt`, and keep `seen.tsv`. Keep FFRRandomizer disabled.
 2. **World.** Run `python tools/build_apworld.py`, then copy `dist/ff_resonance.apworld` into your Archipelago `custom_worlds` folder. Or, from source, copy `apworld/ff_resonance` into `worlds/`.
 3. **Seed.**
    - Copy `apworld/Final Fantasy Resonance.yaml` into Archipelago's `Players` folder and set a name.
@@ -109,6 +109,7 @@ At run time the mod writes these files into its own folder: `ap_out.txt`, `ap_st
 | `ffrap_inspect <class or path>` | One object's fields and functions to `inspect_<name>.tsv`: a class name gives its first live instance (else its default object), and a path gives that object (IDEAS.md, idea 6). |
 | `ffrap_find <text>` | Every game class or struct, native or Blueprint, whose name or one of its functions or fields holds the text, to `find_<text>.txt`. Walks every object, so the game pauses for a moment. Run it in game: at the title screen it crashed the game once (round 11). |
 | `ffrap_title [list\|add]` | `list` logs the entries the title menu shows. `add` adds the Archipelago entry again by hand: the mod adds it at start-up and keeps it there. |
+| `ffrap_notice [text]` | Experimental: tries to show the text with the game's quest-notice banner, in the field. |
 | `ffrap_bind` | Link the loaded save to the client's session, in place of any earlier one. The same as `/bind` in the client. |
 | `ffrap_reset` | Set the loaded save's applied-item count to 0. Re-grants everything to it! |
 
@@ -231,22 +232,22 @@ Rounds 6 to 9 (2026-11-05) worked out and tested the prologue skip; their result
 - **The Archipelago new game:** it linked to the new seed. The game autosaved to slot 0 two seconds after story 1005, and the skip ran by itself 1.5 seconds later (`skip (automatic): saved to slot 0 (map 3001, flag 1 false)`). It landed at the Earth Shrine, ready to play.
 - **Checks and items:** the two chests in map 3001 sent their checks and brought 400 Gil and an Ether. Loading slot 0 (saved before they arrived) granted both again, as it should.
 
-## Round 14 test plan (mod 0.8.1, world 0.1.3)
+**Round 14 (mod 0.8.1, 2026-11-05): passed.**
+- **The title menu** read Continue, Load Game, New Game, New Game (Archipelago), Options, Quit Game (`entry order rebuilt as [0,1,2,5,3,4]`). Every entry still worked.
+- **The version line** showed "FFRArchipelago 0.8.1" above "1.0.1.0", and again after coming back from a game. The block is right-justified, though, so "1.0.1.0" moved right. 0.8.2 sets it to left-justified.
+- **New Game (Archipelago)** linked, delivered the seed's items, and skipped the prologue by itself. Three chests in map 3000 sent their checks.
+- **Notice probes:** `ffrap_find Notice` found 42 names, and `CPP_VM_QuestNotice` was inspected (IDEAS.md, idea 6).
 
-This round tests the title-screen changes and looks for a game notice our messages could use (IDEAS.md, idea 6). Keep FFRRandomizer disabled.
+## Round 15 test plan (mod 0.8.2, world 0.1.3)
 
-1. **Install.** Copy `FFRArchipelago/Scripts` over the installed mod. The log should say `version 0.8.1 loaded`. (The `Assets` folder is not used yet.)
-2. **The title screen.**
-   - Expected in the log: `title: Archipelago entry ready`, then `title: entry order rebuilt as [0,1,2,5,3,4]`.
-   - The menu should read Continue, Load Game, New Game, **New Game (Archipelago)**, Options, Quit Game.
-   - `FFRArchipelago 0.8.1` should be above `1.0.1.0` in the bottom-left corner, with `title: "FFRArchipelago 0.8.1" shown above the version text` in the log.
-   - Check that every entry still does what it says: Continue, Load Game, Options (and back), and Quit Game's dialog (answer No).
-   - If the order line says `could not order`, the entry stays at the bottom. Send the line.
-3. **New Game (Archipelago)** works as in round 13: it links to the seed and skips the prologue by itself.
-4. **Back to the title** from a game: the order and the version line are still right.
-5. **Game notices, in game:** `ffrap_find Notice`, then `ffrap_inspect CPP_VM_QuestNotice`. If a quest pop-up shows during play, run `ffrap_inspect CPP_VM_QuestNotice` again while it is on screen.
+1. **Install.** Copy `FFRArchipelago/Scripts` over the installed mod. The log should say `version 0.8.2 loaded`.
+2. **The title.**
+   - "FFRArchipelago 0.8.2" and "1.0.1.0" should both start at the left edge, in line with the copyright lines.
+   - The log should have one `title: version text layout: ...` line. Send it: the logo's place depends on it.
+3. **The quest banner, in the field:** run `ffrap_notice Received Potion from Bob`. Watch for the "new quest" banner, and look at the log's `notice:` line. Say what showed: our text, an empty banner, or nothing.
+4. **Function lists, in game:** run `ffrap_functions` and send `functions.txt`. It now lists `CPP_BFL_Chat` (its `Notice` call), `CPP_ChatSubsystem`, `CPP_QuestSubsystem` and `CPP_VM_QuestNotice`.
 
-Send `UE4SS.log` (the `[FFRAP]` lines), the `find_Notice.txt` and `inspect_*.tsv` files, and a screenshot of the title.
+Send `UE4SS.log` (the `[FFRAP]` lines), `functions.txt` and a screenshot of the title corner.
 
 ## Open questions
 

@@ -1105,7 +1105,10 @@ end
 -- the copyright lines). The version is a TextBlock whose text starts with four dotted numbers;
 -- the new line goes in front of it, so it shows above when the block grows upwards. The title
 -- widget is made again each time the title shows, so this is checked again now and then.
--- Returns "added", "already" or nil when no version text is on screen.
+-- The block is right-justified, which pushed the version to the right once our longer line
+-- widened it (round 14), so it is set to left-justified (ETextJustify Left = 0).
+-- Returns "added", "already" or nil when no version text is on screen, and the TextBlock.
+local JUSTIFY_LEFT = 0
 function G.TitleVersionLine(line)
     local ok, all = pcall(FindAllOf, "TextBlock")
     if not ok or not all then return nil end
@@ -1114,14 +1117,76 @@ function G.TitleVersionLine(line)
             local text
             pcall(function() text = tb:GetText():ToString() end)
             if text then
-                if text:find(line, 1, true) then return "already" end
+                if text:find(line, 1, true) then
+                    pcall(function() tb:SetJustification(JUSTIFY_LEFT) end)
+                    return "already", tb
+                end
                 if text:match("^%d+%.%d+%.%d+%.%d+") then
-                    if pcall(function() tb:SetText(FText(line .. "\n" .. text)) end) then return "added" end
+                    if pcall(function() tb:SetText(FText(line .. "\n" .. text)) end) then
+                        pcall(function() tb:SetJustification(JUSTIFY_LEFT) end)
+                        return "added", tb
+                    end
                 end
             end
         end
     end
     return nil
+end
+
+-- A widget's place in its layout, for the log: its class, its slot's class, its parent panel
+-- and the parent's children. This is what placing the logo next to the version text needs.
+function G.DescribeWidget(w)
+    local function cls(o)
+        local n
+        pcall(function() n = o:GetClass():GetFName():ToString() end)
+        return n or "?"
+    end
+    local function name(o)
+        local n
+        pcall(function() n = o:GetFName():ToString() end)
+        return n or "?"
+    end
+    local parts = { "widget " .. cls(w) .. " " .. name(w) }
+    local slot
+    pcall(function() slot = w.Slot end)
+    if slot and Alive(slot) then parts[#parts + 1] = "slot " .. cls(slot) end
+    local parent
+    pcall(function() parent = w:GetParent() end)
+    if parent and Alive(parent) then
+        parts[#parts + 1] = "parent " .. cls(parent) .. " " .. name(parent)
+        local n, kids = 0, {}
+        pcall(function() n = parent:GetChildrenCount() end)
+        for i = 0, n - 1 do
+            pcall(function()
+                local c = parent:GetChildAt(i)
+                kids[#kids + 1] = cls(c) .. " " .. name(c)
+            end)
+        end
+        parts[#parts + 1] = "children [" .. table.concat(kids, ", ") .. "]"
+        local grand
+        pcall(function() grand = parent:GetParent() end)
+        if grand and Alive(grand) then parts[#parts + 1] = "grandparent " .. cls(grand) .. " " .. name(grand) end
+    end
+    local owner
+    pcall(function() owner = w:GetOuter():GetOuter() end)   -- the widget tree, then its widget
+    if owner and Alive(owner) then parts[#parts + 1] = "in " .. cls(owner) end
+    return table.concat(parts, "; ")
+end
+
+-- Tries to show `text` with the game's quest-notice banner (the "new quest" pop-up): the
+-- banner's view model holds NoticeData.NoticeTitle and ExecuteNotics(bool) (round 14 probes).
+-- Experimental: returns ok and a detail.
+function G.QuestNotice(text)
+    local vm = Live("CPP_VM_QuestNotice")
+    if not vm then return false, "no quest notice view model (be in the field)" end
+    local set = {}
+    if pcall(function() vm.NoticeData.NoticeTitle = FText(text) end) then set[#set + 1] = "NoticeTitle" end
+    if pcall(function() vm.NoticeQuestData.Name = FText(text) end) then set[#set + 1] = "quest Name" end
+    local okRun, err = pcall(function() vm:ExecuteNotics(true) end)
+    if not okRun then return false, "ExecuteNotics raised: " .. tostring(err) end
+    local shown
+    pcall(function() shown = vm.bDisplayNotice end)
+    return true, "set " .. table.concat(set, " and ") .. "; ExecuteNotics ran; bDisplayNotice " .. tostring(shown)
 end
 
 -- -------------------------------------------------------------------------------------------
