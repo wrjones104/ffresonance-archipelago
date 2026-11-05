@@ -114,16 +114,41 @@ Mod 0.5.1 wrote struct values inside maps (`mapGimmick`, `perMapSaveDataMap`, `c
 | `Map.perMapSaveDataMap` | add 5010, 2013, 20000, 3001. Contents to come from 0.5.3 |
 | `Map.mapGimmick` | add 2014, 3001. Contents to come from 0.5.3 |
 
-**Leads from the executable.** The game has its own tools for this. Each one could replace part of the recipe:
-- A debug "event shortcut" system: `CPP_DM_EventShortcutData`, `DM_EventShortcutSaveData`, `GetEventShortcutMap`, `m_EventShortcutList`. It may be a jump to a story event with its save state already made. Look for it in `ffrs_debug_menu` (step 2).
-- A new-game task and its starting data: `CPP_Task_NewGame`, `InitGameSaveData`, `SaveData_InitGameData`, `InitPlayableUnitSaveData`.
-- Save-data function libraries: `CPP_BFL_SaveDataParty`, `CPP_BFL_SaveDataUnit`, `CPP_BFL_SaveDataInventory`, `CPP_BFL_SaveData_PerMap`, `CPP_BFL_SaveDataProgress`, `CPP_BFL_SaveDataMap`. Calling these is safer than writing arrays and maps from Lua, because the game keeps its own data in step.
-- `MapTestStartByLoadSaveData`, and the `playableChapterStart` / `playableChapterEnd` fields.
+**Step 2 and the third run (2026-11-05, mod 0.5.3).**
+- **The debug menu is empty.** The Home page lists 0 items (「0個の項目」), and the side panel only shows build, PC, input and rendering information. The `CPP_DM_*` classes (event shortcuts, the debug save manager) are not in the game at all, so the shipping build has no chapter jump.
+- **The map contents can be read now.** `live.saveStructs` was 56. (The snapshot was of the base save, which matches `ch1` apart from the player's position, two flags and one scan entry.)
+  - `perMapSaveDataMap{map}` holds three booleans: `bIsKnown`, `bIsVisited` and `bIsCleared`. Maps 10040, 5010, 2013, 20000 and 3001 are known and visited, and none is cleared.
+  - `mapGimmick{map}` is the game's own chest record for each map: `treasureBox.treasureBoxList[]` with `ID`, `UniqueID`, `IsOpen`, `isDisableTrap` and `IsUnlock`. It also holds `gimmickState`, `switchData` and `switchSequenceData`, which are empty here.
+    - Map 3001 has three chests, all closed: ID 0 (uid 23), ID 1 (uid 24) and ID -1 (uid 80). IDs 0 and 1 are our locations `chest:3001:0` and `chest:3001:1`. The game makes these rows when the map loads, so the skip does not need them.
+    - Map 2014 has nine chests. Four have ID -1 (uids 5, 7, 9, 10) and are open and unlocked; the five with IDs 0, 1, 3, 4 and 5 are closed. None of map 2014's chests are in our location table. To find out: whether the story opens the four ID -1 rows, and whether map 2014 has chests we should add.
+- **`ffrap_functions`** listed 236 functions from 14 classes. The ones the skip needs are below.
 
-**Next:**
-1. With mod 0.5.3, take `ffrap_snapshot ch1` again at the Earth Shrine. `live.saveStructs` should now be above 0, and the `perMapSaveDataMap` and `mapGimmick` lines should show fields. If your `ch1` save is in a slot, loading it is enough.
-2. Step 2: `ffrs_debug_menu`. Look for an event shortcut page.
-3. Run `ffrap_functions` once in game. It writes the functions of the classes above, with their parameters, to `functions.txt`. The build can then call them where possible.
+**The build, field by field.** Each line uses the game's own function where there is one:
+
+| Recipe | Call |
+|---|---|
+| Story counter → 1030 | Write `Progress.Progress[0]` directly, as FFRSLib's `ffrs_story_set` does. There is no setter, only `CPP_BFL_DBG_FlagSaveData.SetProgressList` |
+| Event flags on | `CPP_BFL_SaveDataProgress.SetFlag(index, true)` |
+| Party [1001, 1002] | `CPP_BFL_SaveDataParty.SetUnitToParty(0, 1001)`, `SetUnitToParty(1, 1002)` |
+| Join status | `CPP_BFL_SaveDataUnit.SetJoinStatus(1001, 0)`, `(1002, 0)`, `(1006, 2)` |
+| Fina's reset | `UnEquipmentAll(1006)`, `SetEquipmentId(1006, 10600, 0)`, `SetSaveDataUnitExperience(1006, 0)`, `SetSaveDataUnitHitPoint(1006, 200)`, `SetSaveDataUnitMagicPoint(1006, 70)`. There is no call that clears her 7 active skills, so empty `activeSkillIdList` directly |
+| Rain's `baseParameterList[5]` 0 → 3 | `AddBaseParameter(1001, 5, 3)`, if parameter type 5 is that index. Its meaning is unknown |
+| Inventory | `CPP_BFL_SaveDataInventory.SetInventoryItem(id, n)`: 10100 ×1, 10200 ×1, 11000 ×2, 12000 ×2. Then 10699, 11301 and 12029 (Fina's old gear) to 0 |
+| Guest unit | `SetGuestUnitHitPointAndMagicPoint(9999, 9999)` |
+| Battles won | `CPP_BFL_SaveDataPlayer.SetWinNum(3)` |
+| Visited maps | `CPP_BFL_SaveData_PerMap.AddKnownMap(m)` and `AddVisitedMap(m)` for 5010, 2013, 20000 and 3001 |
+| Map 2014's open chests | `CPP_BFL_SaveDataMap.SetTreasureBox(2014, -1, uid, true)` and `UnlockTreasureBox` for uids 5, 7, 9 and 10, if the story opens them |
+| Arrival | `CPP_BFL_SaveDataMap.SetMapIdAndMapUnitLocation(3001, (-5775, 0, -197.85), 2)` |
+| Save and reload | `CPP_BFL_SaveData.SaveGameData(slot)` on `GetAutoSaveSlotIndex()` (slot 0, which a new game overwrites anyway), then `LoadGameData(slot)` or FFRSLib's travel reload |
+
+Left out: `inventoryProcedure` (probably the "new item" marks) and the scan data.
+
+**When it runs.** On a new game that the mod links to a session whose slot data has `skip_prologue` on: as soon as the save settles at story 1000 on map 10040, during the opening movie. Before that, a console command `ffrap_skip` can test the same code on any new game.
+
+**Save linking, found on the way (mod 0.5.4).**
+- A new game can carry the timestamp of the autosave slot it is about to overwrite. In the second run, a new game showed up as linked slot 0. A save at story 1000 or lower now always counts as a new game.
+- A new game autosaves into slot 0 and overwrites whatever autosave is there. An Archipelago game that lives only in the autosave slot is lost when you start a new game, so keep it in a manual slot too.
+- `/bind` keeps the applied-item count. A save bound in the middle of a seed does not get the items applied before. This is open question 5 in the README (a per-save item index). The skip makes a new save for each seed, so it should come together with that fix.
 
 **Still to find out:**
 - What the prologue changes outside the save object. The reload in step 4 rebuilds what the game derives from the save at load time, but not anything that is never saved.

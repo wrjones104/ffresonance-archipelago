@@ -28,7 +28,7 @@
 -- follows the save slots the linked game is saved to. While any other save is loaded, the mod
 -- grants nothing, reports nothing and leaves the chests vanilla.
 
-local VERSION = "0.5.3"
+local VERSION = "0.5.4"
 local PROTOCOL = 1        -- the bridge protocol; the apworld's MOD_PROTOCOL
 
 local MOD_DIR = (debug.getinfo(1, "S").source:gsub("^@", ""):gsub("\\", "/"):match("^(.*/)Scripts/[^/]+$"))
@@ -40,6 +40,7 @@ local bridge = require("bridge")
 local TICK_MS = 500
 local SETTLE_TICKS = 4        -- wait this long after a save loads before granting
 local MAX_GRANTS_PER_TICK = 5
+local NEW_GAME_STORY = 1000   -- the story counter of a new game, until the first scene ends
 local CHEST_EVERY = 2         -- ticks between chest scans
 local STATUS_EVERY = 10       -- ticks between status file writes
 
@@ -454,6 +455,14 @@ local function followSave()
     if obj ~= save.obj then
         save.obj, save.ticks, save.pending = obj, ticks, nil
         save.slot = game.SlotForTicks(ticks)
+        -- A new game can carry the timestamp of the autosave slot it is about to overwrite
+        -- (round 7: a new game showed up as linked slot 0). Nothing at the very start of the
+        -- story is worth keeping, so a save there is always a new game.
+        local story = game.StoryCounter()
+        if save.slot ~= nil and story and story <= NEW_GAME_STORY then
+            log("story " .. story .. ": a new game, although its timestamp matches slot " .. save.slot)
+            save.slot = nil
+        end
         log("save loaded: slot " .. tostring(save.slot) .. ", session slots [" .. slotsText() .. "]")
         judgeSave()
     elseif ticks ~= save.ticks then
