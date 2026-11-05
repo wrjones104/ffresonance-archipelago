@@ -22,7 +22,7 @@ The world is tested off-line: Archipelago's general tests pass with it, its own 
 - **ModSettings** (a Blueprint mod in `Content/Paks/LogicMods`, from the same modding tools as FFRSLib) is optional. On-screen messages ("Received ...", "Sent ...", "Archipelago is paused", "Prologue skipped") go to ModSettings' Toast panel. The mod's own item feed (`ffrap_feed on`) is meant to replace it in the field, but it crashed the game in round 18 and is off by default while it is tested. Without ModSettings the messages only go to `UE4SS.log`, and the Archipelago client shows items coming and going.
 - **FFRSLib, FFRS_QoL, FFRBestiary and FFRRandomizer are not needed.** Their code is where the game calls come from (see "Where the game calls come from"), but this mod calls the game directly. FFRRandomizer should stay disabled (IDEAS.md, idea 10).
 
-1. **Mod.** Copy `FFRArchipelago/Scripts` and `FFRArchipelago/Assets` over the installed mod (0.9.4). Delete the old `ap_in.txt`, `ap_out.txt` and `ap_state.txt`, and keep `seen.tsv`. Keep FFRRandomizer disabled.
+1. **Mod.** Copy `FFRArchipelago/Scripts` and `FFRArchipelago/Assets` over the installed mod (0.9.5). Delete the old `ap_in.txt`, `ap_out.txt` and `ap_state.txt`, and keep `seen.tsv`. Keep FFRRandomizer disabled.
 2. **World.** Run `python tools/build_apworld.py`, then copy `dist/ff_resonance.apworld` into your Archipelago `custom_worlds` folder. Or, from source, copy `apworld/ff_resonance` into `worlds/`.
 3. **Seed.**
    - Copy `apworld/Final Fantasy Resonance.yaml` into Archipelago's `Players` folder and set a name.
@@ -274,16 +274,22 @@ Rounds 6 to 9 (2026-11-05) worked out and tested the prologue skip; their result
   - **Font:** the font copy may have emptied the font. The key guide's text is a `CommonTextBlock`, which can take its font from a style when drawn and leave its own font object empty. A line with an empty font object draws nothing.
 - **The "Back" prompt:** menus and the chest pop-up put a "Back" prompt at the very bottom right.
 
-## Round 22 test plan (mod 0.9.4, world 0.1.3)
+**Round 22 (mod 0.9.4, 2026-11-05): no lines showed, and `ffrap_feed check` showed why.**
+- **The HUD overlay the feed used:** `0x0, visible false`. Our box in it was too. In UE, `IsVisible` is false for a widget with no live on-screen widget behind it.
+- **The cause:** `FindFirstOf("WBP_FieldFuncList2_C")` found a copy of the key list that is never drawn, likely the template a widget Blueprint keeps. The feed went into that copy.
+- **The font:** the key guide font came back empty for the same reason (`none, the default font is kept`).
+- **Messages:** with the feed on, every message went to that invisible feed instead of ModSettings' Toast, so items showed only in the client.
 
-1. **Install.** Copy `FFRArchipelago/Scripts` and `FFRArchipelago/Assets` over the installed mod. The log should say `version 0.9.4 loaded`. The feed stays on if you switched it on in round 21.
-2. **The test, in the field:**
-   - Run `ffrap_feed test`, then `ffrap_feed check` at once (within 6 seconds).
-   - The `feed step: style: font object and typeface ...` line now names the font it copied, or says the default is kept.
-   - `feed check:` lines give the HUD overlay's size, the box's size, visibility and alignment (should be `3/3`), and each line's size, font and opacity.
-   - Send those lines and a screenshot.
-3. **If lines show:** they should be at the bottom right, 140 px up (above the "Back" prompt). Open a chest and check the feed and the prompt do not overlap.
-4. **If nothing shows:** try `ffrap_feed test plain` and `ffrap_feed check` too. Send the `feed check:` lines from both.
+## Round 23 test plan (mod 0.9.5, world 0.1.3)
+
+1. **Install.** Copy `FFRArchipelago/Scripts` and `FFRArchipelago/Assets` over the installed mod. The log should say `version 0.9.5 loaded`.
+2. **The test, in the field:** run `ffrap_feed test`, then `ffrap_feed check` within 6 seconds.
+   - `feed check: key lists (WBP_FieldFuncList2_C): N, on screen 1` should show one on screen.
+   - The HUD overlay and the box should have a size and `visible true`.
+   - The `style: font ...` step should name a font, not "none".
+   - Send the lines and a screenshot.
+3. **Real items:** open chests. Each item should get a line at the bottom right, above the "Back" prompt. If the feed cannot find a HUD on screen for 10 seconds, the messages go to ModSettings' Toast instead, with a `feed: no HUD on screen` line in the log.
+4. If it still shows nothing, run `ffrap_feed off` to go back to the Toast, and send the `feed check:` lines.
 
 ## Open questions
 

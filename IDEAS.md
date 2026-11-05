@@ -504,4 +504,12 @@ The "Back" prompt that menus and the chest pop-up show at the bottom right also 
 - The feed sits 140 px up.
 - `ffrap_feed check` logs the engine's view of the box and lines.
 
+**Round 22:** `ffrap_feed check` showed the overlay the feed used was `0x0, visible false`.
+- **The cause:** `FindFirstOf` had found a copy of the key list that is never drawn (a widget Blueprint's template), so the feed and its lines lived in a HUD nobody sees. The key guide font came back empty for the same reason.
+- **A lesson for all UI work here:** pick the instance that is on screen (`IsVisible()`), not the first one found.
+
+**0.9.5:**
+- The feed takes the first key list and key guide that are on screen, and only counts an overlay that is on screen.
+- Messages that wait 10 seconds for a HUD on screen go to ModSettings' Toast, so none are lost from the screen.
+
 **Still to tune, once it works:** the size, the place and the time on screen.

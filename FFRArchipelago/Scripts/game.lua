@@ -1333,14 +1333,34 @@ local function step(what)
     if G.feedTrace then G.feedTrace(what) end
 end
 
--- The field HUD's overlay and the widget tree to make widgets in, or nil off the field.
+-- True when a widget is on screen: UWidget.IsVisible is true only for a widget that has a live
+-- Slate widget that is visible.
+local function Shown(w)
+    local ok, v = pcall(function() return w:IsVisible() end)
+    return ok and v == true
+end
+
+-- The first instance of a widget class that is on screen. FindFirstOf can hand back a copy that
+-- is never drawn, such as the template a widget Blueprint keeps (round 22: the feed went into a
+-- 0x0, never-visible HUD, and the key guide's font came back empty).
+local function ShownInstance(className)
+    local ok, all = pcall(FindAllOf, className)
+    if not ok or not all then return nil end
+    for _, w in ipairs(all) do
+        if Alive(w) and Shown(w) then return w end
+    end
+    return nil
+end
+
+-- The field HUD's overlay and the widget tree to make widgets in, or nil when no field HUD is
+-- on screen (off the field, loading, a battle, a menu that hides the HUD).
 local function FeedHost()
-    local list = Live("WBP_FieldFuncList2_C")
+    local list = ShownInstance("WBP_FieldFuncList2_C")
     if not list then return nil end
     local host, tree
     pcall(function() host = list:GetParent() end)
     pcall(function() tree = list:GetOuter() end)
-    if host and Alive(host) and tree then return host, tree end
+    if host and Alive(host) and Shown(host) and tree then return host, tree end
     return nil
 end
 
@@ -1351,9 +1371,8 @@ end
 
 -- The feed's box in the current HUD, made when needed. Returns the box or nil and why not.
 local function FeedBox()
-    step("find the field HUD")
     local host, tree = FeedHost()
-    if not host then return nil, "no field HUD" end
+    if not host then return nil, "no field HUD on screen" end
     local hostName
     pcall(function() hostName = host:GetFullName() end)
     if feed.box and Alive(feed.box) and feed.host == hostName then return feed.box end
@@ -1390,7 +1409,7 @@ local function StyleLine(tb)
     -- when there is one.
     local fontObject, typeface
     pcall(function()
-        local guide = Live("WBP_KeyGuide_C")
+        local guide = ShownInstance("WBP_KeyGuide_C")
         if guide then
             local f = guide.Text_Name.Font
             if f.FontObject and f.FontObject:IsValid() then
@@ -1461,8 +1480,18 @@ function G.FeedReport()
         pcall(function() shown = tostring(w:IsVisible()) end)
         return "visibility " .. v .. ", visible " .. shown
     end
+    local lists, shownLists = 0, 0
+    pcall(function()
+        for _, w in ipairs(FindAllOf("WBP_FieldFuncList2_C") or {}) do
+            if Alive(w) then
+                lists = lists + 1
+                if Shown(w) then shownLists = shownLists + 1 end
+            end
+        end
+    end)
+    out[#out + 1] = "key lists (WBP_FieldFuncList2_C): " .. lists .. ", on screen " .. shownLists
     local host = FeedHost()
-    out[#out + 1] = "HUD overlay: " .. (host and (size(host) .. ", " .. vis(host)) or "none (not in the field)")
+    out[#out + 1] = "HUD overlay: " .. (host and (size(host) .. ", " .. vis(host)) or "none on screen")
     if not (feed.box and Alive(feed.box)) then
         out[#out + 1] = "box: none"
         return out

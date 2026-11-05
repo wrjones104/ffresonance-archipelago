@@ -37,7 +37,7 @@
 -- follows the save slots the linked game is saved to. While any other save is loaded, the mod
 -- grants nothing, reports nothing and leaves the chests vanilla.
 
-local VERSION = "0.9.4"
+local VERSION = "0.9.5"
 local PROTOCOL = 1        -- the bridge protocol; the apworld's MOD_PROTOCOL
 
 local MOD_DIR = (debug.getinfo(1, "S").source:gsub("^@", ""):gsub("\\", "/"):match("^(.*/)Scripts/[^/]+$"))
@@ -65,9 +65,11 @@ end
 -- the HUD is there. Otherwise they wait in a short queue for the HUD (loading, a map change),
 -- and off the field (the title screen) they go to ModSettings' Toast as before.
 local FEED_QUEUE_MAX = 20
+local FEED_WAIT_MAX = 10     -- seconds messages wait for the feed before they go to the Toast
 -- Off unless switched on: round 18 crashed the game the first time 0.9.0 made the feed.
 local feedOn = false         -- ffrap_feed on|off; kept in ap_state.txt
 local feedQueue = {}
+local feedQueueSince = nil   -- when the oldest waiting message came
 local feedClock = 0          -- seconds, from the tick count
 
 -- Every step the feed takes is logged before it runs, whether from ffrap_feed test or from a
@@ -78,6 +80,7 @@ game.feedTrace = function(what) log("feed step: " .. what) end
 local function show(msg)
     if feedOn and game.InGame() then
         if #feedQueue == 0 and game.FeedLine(msg, feedClock) then return end
+        if #feedQueue == 0 then feedQueueSince = feedClock end
         if #feedQueue < FEED_QUEUE_MAX then feedQueue[#feedQueue + 1] = msg end
         return
     end
@@ -93,6 +96,14 @@ end
 -- how many more there were.
 local function flushFeed()
     if #feedQueue == 0 then return end
+    -- Waited too long (the feed cannot find a HUD on screen, round 22): the Toast takes them, so
+    -- no message is lost from the screen.
+    if feedQueueSince and feedClock - feedQueueSince > FEED_WAIT_MAX then
+        log("feed: no HUD on screen for " .. FEED_WAIT_MAX .. " s; " .. #feedQueue .. " message(s) go to the Toast")
+        game.Toast(#feedQueue == 1 and feedQueue[1] or table.concat(feedQueue, " / "))
+        feedQueue, feedQueueSince = {}, nil
+        return
+    end
     local lines = feedQueue
     if #lines > game.FEED_MAX then
         local more = #lines - (game.FEED_MAX - 1)
@@ -110,7 +121,7 @@ local function flushFeed()
             return
         end
     end
-    feedQueue = {}
+    feedQueue, feedQueueSince = {}, nil
 end
 
 -- -------------------------------------------------------------------------------------------
