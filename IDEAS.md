@@ -308,17 +308,21 @@ Plan: build option 1 first, because it is known to work. Then try option 2 as an
   - `NewGame` found nothing, because 0.7.2 matched function and field names only, not class names (`CPP_Task_NewGame`), and skipped Blueprint classes. The opening's names (`IsOpeningProcess`, `BeforeOpeningInputMappingContext`) are probably on a Blueprint class.
   - `InputMapping` found `CPP_InputManager.RegisterInputMappingContext`, `CPP_DA_MUCHA_INPUT.pInputMappingContextList` and `CPP_PlayerMappableKeysSubsystem.GetInputMappingContextList`: the places a control scheme gets switched.
 
-**The entry, as built (mod 0.7.3, experimental):**
-- `ffrap_title add` adds row 5 to `EntryPropertyMap` as a copy of the New Game row.
-- A hook on `CPP_VM_Title:ExecuteEntry` runs before the game's own code. When the type is 5, it marks the new game as an Archipelago one and changes the argument to 2, so the game runs its own New Game.
-- Open: whether the menu shows a row it has no enum name for. `GetDisplayEntryList` may build its list from the map, or from the enum values 0 to 4. If the row does not show, the next try is a hook that adds 5 to the list that `GetDisplayEntryList` returns.
-- The label is still "New Game". The next inspect of `DA_Title` shows the row's fields, and then the label can be set (FFRSLib sets its System Menu label the same way).
-- `ffrap_find` 0.7.3 also matches class and struct names, looks in Blueprint classes under `/Game`, and skips objects that are being destroyed.
+**Round 12 (mod 0.7.3):** the entry works.
+- `ffrap_title add` added row 5. It showed (as a second "New Game", at the bottom) once the menu was made again. Choosing it called `ExecuteEntry(5)`, and the hook turned that into a normal New Game.
+- The row struct `TitleEntryProperty` holds `EntryName` (the label, an FText), `DisplayProperty` (`bCheckSaveData`, `bCheckPlatform`, `DisplayPlatformMap`) and `SystemActionTag` (`None` for New Game).
+- `IsOpeningProcess` is a function on several widgets (finger cursor, menu titles, a combo box): their own open animation. So the before/after-opening idea above was a false lead, and skipping the movie outright is still unsolved. `CPP_Task_NewGame` is the new-game task's class.
 
-**Next, once the entry shows and works:**
-1. On an Archipelago new game: link it to the seed even if the session already has a save, wait for story 1005 and the first autosave, then skip.
-2. Then try ending the opening early (the control-scheme switch).
-3. Add the entry at start-up without a command, and add the logo and version text.
+**Built (mod 0.8.0):**
+- **At start-up** (and every 3 seconds after), the mod loads `DA_Title` when it is not loaded, adds row 5 labelled "Archipelago" (`EntryName` set with `FText`), and hooks `ExecuteEntry`. Loading the asset early is how FFRSLib gets its System Menu entry into the first menu.
+- **Choosing Archipelago** marks the next new game. That game links to the seed even when the seed has other saves: with per-save item counts, several saves for one seed are safe. If it autosaved before the client connected, its slot is linked when the session starts.
+- **Plain New Game stays vanilla** once the entry is in place: it no longer links itself.
+- **The automatic skip:** on an Archipelago game, once the story is at 1005 and the game has autosaved (so the save has a slot), it waits 2 seconds and runs the same skip as `ffrap_skip <that slot>`. It makes one try per game. If that fails, the message says to run `ffrap_skip`.
+- The entry is at the bottom of the list. Moving it up to sit under New Game would mean rebuilding the map in a new order. That is possible, but it risks the game's own rows, so it waits.
+
+**Still open:**
+- **Skipping the movie outright:** find what the opening holds the player's input with. `CPP_Task_NewGame` is the place to start (`ffrap_inspect` while a new game is starting).
+- **The logo and version text on the title screen:** find the title layout widget (`ffrap_find TitleLayout` or `ffrap_find WBP_Title`, in game) and add an `Image` and a `TextBlock`.
 
 ## 7. Enemy randomization
 

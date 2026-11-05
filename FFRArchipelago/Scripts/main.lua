@@ -20,19 +20,20 @@
 --   ffrap_functions [class ...]  the functions of game classes to functions.txt (default: save-data classes)
 --   ffrap_skip [slot]            skip the prologue on a new game; with a slot, save there and reload
 --   ffrap_inspect <class|path>   one object's fields and functions to inspect_<name>.tsv
---   ffrap_title [list|add]       experimental: the Archipelago entry on the title menu
+--   ffrap_title [list|add]       the Archipelago entry on the title menu (added at start-up)
 --   ffrap_find <text>            game classes, functions and fields named like the text, to find_<text>.txt
 --   ffrap_blank [on|off]         chests that are Archipelago locations give 1 gil instead
 --   ffrap_sync                   report every known location the save says is looted
 --   ffrap_bind                   link the loaded save to the client's session (also /bind in the client)
 --   ffrap_reset                  set the loaded save's applied-item count to 0 (re-grants everything to it!)
 --
--- Each client session belongs to one save. A new game started during a session is linked to
--- it at once; an existing save is linked with ffrap_bind or the client's /bind. The link
+-- Each client session belongs to its saves. A new game started from the Archipelago entry on
+-- the title menu is linked to it at once and skips the prologue by itself (plain New Game stays
+-- vanilla); an existing save is linked with ffrap_bind or the client's /bind. The link
 -- follows the save slots the linked game is saved to. While any other save is loaded, the mod
 -- grants nothing, reports nothing and leaves the chests vanilla.
 
-local VERSION = "0.7.3"
+local VERSION = "0.8.0"
 local PROTOCOL = 1        -- the bridge protocol; the apworld's MOD_PROTOCOL
 
 local MOD_DIR = (debug.getinfo(1, "S").source:gsub("^@", ""):gsub("\\", "/"):match("^(.*/)Scripts/[^/]+$"))
@@ -45,6 +46,8 @@ local TICK_MS = 500
 local SETTLE_TICKS = 4        -- wait this long after a save loads before granting
 local MAX_GRANTS_PER_TICK = 5
 local NEW_GAME_STORY = 1000   -- the story counter of a new game, until the first scene ends
+local TITLE_EVERY = 6         -- ticks between checks that the title entry is still there
+local AUTO_SKIP_WAIT = 4      -- ticks to wait after the first autosave before the automatic skip
 local CHEST_EVERY = 2         -- ticks between chest scans
 local STATUS_EVERY = 10       -- ticks between status file writes
 
@@ -78,7 +81,7 @@ local state = {
     live = nil,        -- "<save object>|<timestamp>" of the session's save the count is for, so a
                        -- reloaded mod (the game still running) knows it is the same save
     bindPending = false, -- the client asked to link the loaded save
-    apNewGame = false, -- the Archipelago title entry started this new game (experimental)
+    apNewGame = false, -- the Archipelago title entry was just chosen: the next new game is one
 }
 
 -- The loaded save, and whether it is the session's. Not kept across game restarts: save data
@@ -89,6 +92,9 @@ local save = {
     slot = nil,        -- the slot it was loaded from, or nil for an unsaved new game
     pending = nil,     -- a timestamp the game just saved with, until its slot is known
     pendingItems = nil, -- the applied count when that save happened
+    apObj = nil,       -- the save object of a new game started from the Archipelago title entry
+    autoWait = 0,      -- ticks waited before the automatic prologue skip
+    autoDone = false,  -- the automatic skip was tried (or given up) for this game
     ok = false,        -- true when this is the session's save
 }
 
@@ -454,20 +460,32 @@ local function setOk(ok)
     end
 end
 
+local titleReady = false   -- the Archipelago title entry is in the menu's data asset
+
 -- Decides whether a save that was just loaded (or a new game) is the session's.
 local function judgeSave()
     if not state.seed then setOk(true); return end
     -- The same save the count was for, still loaded (the mod was reloaded): keep the count.
     local same = state.live ~= nil and state.live == (tostring(save.obj) .. "|" .. tostring(save.ticks))
-    if save.slot ~= nil and state.slots[save.slot] then
+    if save.apObj ~= nil and save.apObj == save.obj then
+        -- Started from the Archipelago title entry: it joins the session even when the session
+        -- has other saves already. It holds none of the session's items yet. It may have
+        -- autosaved before the client connected, so its slot is linked too.
+        setOk(true)
+        if not same then setApplied(0, "an Archipelago new game") end
+        if save.slot ~= nil then linkSlot(save.slot, state.applied) end
+        saveState()
+        notify("Archipelago: this new game is linked to the seed")
+    elseif save.slot ~= nil and state.slots[save.slot] then
         setOk(true)
         log("save slot " .. save.slot .. " is the session's save")
         -- A state file from before 0.7.0 has no count for the slot: keep the old one.
         local n = state.slotItems[save.slot]
         if n and not same then setApplied(n, "slot " .. save.slot .. " holds") end
-    elseif save.slot == nil and next(state.slots) == nil then
+    elseif save.slot == nil and next(state.slots) == nil and not titleReady then
         -- A new game that was never saved, and the session has no save yet: link it. It joins
-        -- a slot the first time it is saved. It holds none of the session's items yet.
+        -- a slot the first time it is saved. It holds none of the session's items yet. Only
+        -- without the Archipelago title entry: with it, plain New Game stays vanilla.
         setOk(true)
         if not same then setApplied(0, "a new game") end
         saveState()
@@ -475,7 +493,8 @@ local function judgeSave()
     else
         setOk(false)
         notify("Archipelago is paused: this save is not linked to the seed. Load the linked save, " ..
-            "start a new game, or use /bind in the client to link this one.")
+            (titleReady and "start one from Archipelago on the title menu" or "start a new game") ..
+            ", or use /bind in the client to link this one.")
     end
 end
 
@@ -517,6 +536,14 @@ local function followSave()
             log("story " .. story .. ": a new game, although its timestamp matches slot " .. save.slot)
             save.slot = nil
         end
+        -- The new game the Archipelago title entry started (any other load uses up the mark).
+        if state.apNewGame then
+            state.apNewGame = false
+            if save.slot == nil and story and story <= NEW_GAME_STORY then
+                save.apObj, save.autoWait, save.autoDone = obj, 0, false
+                log("an Archipelago new game")
+            end
+        end
         log("save loaded: slot " .. tostring(save.slot) .. ", session slots [" .. slotsText(true) .. "]")
         judgeSave()
     elseif ticks ~= save.ticks then
@@ -539,6 +566,111 @@ local function followSave()
                 notify("Archipelago: slot " .. slot .. " now holds another game and is no longer linked")
             end
         end
+    end
+end
+
+-- -------------------------------------------------------------------------------------------
+-- The Archipelago new game: the title entry and the prologue skip (IDEAS.md, ideas 2 and 6)
+-- -------------------------------------------------------------------------------------------
+
+-- The title menu's entries are ETitleFunctionType values; the Archipelago entry is type 5, a
+-- copy of New Game (game.AddTitleEntry). A hook on ExecuteEntry, run before the game's own
+-- code, marks the next new game as an Archipelago one and turns type 5 into New Game (round 12).
+local titleHooked = false
+local function hookTitle()
+    if titleHooked then return true end
+    local ok, err = pcall(function()
+        RegisterHook("/Script/mucha.CPP_VM_Title:ExecuteEntry", function(_, inType)
+            local t
+            pcall(function() t = inType:get() end)
+            log("title: entry " .. tostring(t) .. " chosen")
+            if t == game.TITLE_ARCHIPELAGO then
+                state.apNewGame = true
+                pcall(function() inType:set(game.TITLE_NEW_GAME) end)
+                notify(state.seed and "Archipelago: starting a new game for the seed"
+                    or "Archipelago: starting a new game (connect the client to link it to a seed)")
+            end
+        end)
+    end)
+    titleHooked = ok
+    if not ok then log("title: could not hook ExecuteEntry: " .. tostring(err)) end
+    return ok
+end
+
+-- Keeps the title entry in place: added at start-up, before the menu first reads the asset,
+-- and checked again now and then in case the game reloads the asset. Loads the asset only
+-- outside a game.
+local function titleTick()
+    if state.ticks ~= 1 and state.ticks % TITLE_EVERY ~= 0 then return end
+    local ok, detail = game.AddTitleEntry(not game.InGame())
+    if ok and hookTitle() then
+        if not titleReady then log("title: Archipelago entry ready (" .. tostring(detail) .. ")") end
+        titleReady = true
+    elseif ok and not titleReady then
+        log("title: the entry is in, but the choice could not be hooked")
+    end
+end
+
+-- The prologue skip (see ffrap_skip). Applied again right before saving: round 8 showed the
+-- opening scene can change flags and the position after a skip. Every step but the inventory
+-- sets an absolute value; the inventory changes are relative, so they are made once per save.
+local skipped = nil    -- the save object the skip was applied to
+local function runSkip(slot, why)
+    local obj, story = game.SaveObjectName(), game.StoryCounter()
+    if skipped ~= obj and (not story or story > game.SKIP_FROM_MAX) then
+        notify("ffrap_skip works on a new game only (story " .. tostring(story) .. ", must be "
+            .. game.SKIP_FROM_MAX .. " or lower)")
+        return false
+    end
+    if skipped ~= obj and story < game.SKIP_FROM_MIN then
+        notify("Wait until you can move (story " .. game.SKIP_FROM_MIN .. ", now " .. story .. "): a skip during "
+            .. "the opening movie leaves you without menus or movement")
+        return false
+    end
+    local again = skipped == obj
+    local okRun, ok, report = pcall(game.SkipPrologue, { inventory = not again })
+    if not okRun then
+        notify("Prologue skip raised an error: " .. tostring(ok))
+        return false
+    end
+    for _, line in ipairs(report) do log("skip" .. (again and " (again)" or "") .. ": " .. line) end
+    skipped = obj
+    if not slot then
+        notify("Prologue skip " .. (ok and "applied" or "applied with failures (see the log)")
+            .. ". Nothing saved yet: ffrap_skip <slot> saves and reloads")
+        return true
+    end
+    if not ok then notify("Prologue skip had failures (see the log); saving anyway") end
+    -- The reload makes a new save object from this slot, so a linked session must own the slot
+    -- first, or the reloaded game would look like someone else's.
+    if state.seed and save.ok then
+        linkSlot(slot, state.applied)
+        saveState()
+        log("skip: slot " .. slot .. " linked before the reload: session slots [" .. slotsText(true) .. "]")
+    end
+    local saved, detail = game.SaveAndReload(slot)
+    log("skip (" .. why .. "): " .. detail)
+    notify(saved and ("Prologue skipped: " .. detail) or ("Prologue skip: " .. detail))
+    return saved
+end
+
+-- The automatic skip on an Archipelago new game: once the player can move (story 1005) and the
+-- game has made its first autosave (so the save has a slot), wait a moment and skip into that
+-- slot. One try per game: if it fails, ffrap_skip is still there.
+local function autoSkip()
+    if save.autoDone or not save.apObj or save.apObj ~= save.obj or skipped == save.obj then return end
+    local story = game.StoryCounter()
+    if not story or story < game.SKIP_FROM_MIN or save.slot == nil then return end
+    if story > game.SKIP_FROM_MAX then
+        save.autoDone = true
+        log("skip: the story is past " .. game.SKIP_FROM_MAX .. ", so the prologue is not skipped")
+        return
+    end
+    save.autoWait = save.autoWait + 1
+    if save.autoWait < AUTO_SKIP_WAIT then return end
+    save.autoDone = true
+    if not runSkip(save.slot, "automatic") then
+        notify("The automatic prologue skip did not finish: ffrap_skip " .. save.slot .. " tries again")
     end
 end
 
@@ -581,6 +713,7 @@ end
 local function tick()
     state.ticks = state.ticks + 1
     readInbox(false)
+    titleTick()
     if not game.InGame() then
         if state.inGameTicks > 0 then log("left the game (title screen or loading)") end
         state.inGameTicks = 0
@@ -595,6 +728,7 @@ local function tick()
                 state.bindPending = false
                 bindLoaded()
             end
+            autoSkip()
             -- Chests and shinies are still recorded in seen.tsv for any save; scanLoot reports
             -- them only for the session's save (see opened).
             if state.ticks % CHEST_EVERY == 0 then scanLoot() end
@@ -691,33 +825,12 @@ local FUNCTION_CLASSES = {
     "CPP_MuchaSaveDataManager", "CPP_MuchaGameSaveData",
 }
 
--- ffrap_title [list|add]: the experimental Archipelago title entry (IDEAS.md, idea 6). Choosing
--- it starts a normal new game and marks it as an Archipelago one. The automatic skip that should
--- follow is not built yet.
-local titleHooked = false
-local function hookTitle()
-    if titleHooked then return true end
-    local ok, err = pcall(function()
-        RegisterHook("/Script/mucha.CPP_VM_Title:ExecuteEntry", function(_, inType)
-            local t
-            pcall(function() t = inType:get() end)
-            log("title: entry " .. tostring(t) .. " chosen")
-            if t == game.TITLE_ARCHIPELAGO then
-                state.apNewGame = true
-                pcall(function() inType:set(game.TITLE_NEW_GAME) end)
-                notify("Archipelago: starting a new game for the seed")
-            end
-        end)
-    end)
-    titleHooked = ok
-    if not ok then log("title: could not hook ExecuteEntry: " .. tostring(err)) end
-    return ok
-end
-
+-- ffrap_title [list|add]: the Archipelago title entry (IDEAS.md, idea 6). The mod adds it at
+-- start-up; `add` does it again by hand, `list` logs what the menu shows.
 command("ffrap_title", function(p)
     local what = (p and p[1]) or "list"
     if what == "add" then
-        local ok, detail = game.AddTitleEntry()
+        local ok, detail = game.AddTitleEntry(not game.InGame())
         log("title: add: " .. tostring(detail))
         local hooked = hookTitle()
         notify("Title entry: " .. tostring(detail) .. (hooked and "" or "; the choice hook failed (see the log)"))
@@ -824,7 +937,6 @@ end)
 -- a skip, turned flags 1 and 8 back on, and its autosave wrote the player's real position (the
 -- prologue map) over the arrival point. Every step sets an absolute value, so applying it twice
 -- is safe.
-local skipped = nil    -- the save object the skip was applied to
 command("ffrap_skip", function(p)
     local slot = p and p[1] and tonumber(p[1])
     if p and p[1] and not slot then
@@ -836,45 +948,7 @@ command("ffrap_skip", function(p)
         return
     end
     followSave()
-    local obj, story = game.SaveObjectName(), game.StoryCounter()
-    if skipped ~= obj and (not story or story > game.SKIP_FROM_MAX) then
-        notify("ffrap_skip works on a new game only (story " .. tostring(story) .. ", must be "
-            .. game.SKIP_FROM_MAX .. " or lower)")
-        return
-    end
-    if skipped ~= obj and story < game.SKIP_FROM_MIN then
-        notify("Wait until you can move (story " .. game.SKIP_FROM_MIN .. ", now " .. story .. "): a skip during "
-            .. "the opening movie leaves you without menus or movement")
-        return
-    end
-    local again = skipped == obj
-    -- The inventory changes are relative (an Archipelago item may share an id with the
-    -- starter gear), so they are made once per save.
-    local okRun, ok, report = pcall(game.SkipPrologue, { inventory = not again })
-    if not okRun then
-        notify("Prologue skip raised an error: " .. tostring(ok))
-        return
-    end
-    for _, line in ipairs(report) do log("skip" .. (again and " (again)" or "") .. ": " .. line) end
-    skipped = obj
-    if not slot then
-        notify("Prologue skip " .. (ok and "applied" or "applied with failures (see the log)")
-            .. ". Nothing saved yet: ffrap_skip <slot> saves and reloads")
-        return
-    end
-    if not ok then
-        notify("Prologue skip had failures (see the log); saving anyway")
-    end
-    -- The reload makes a new save object from this slot, so a linked session must own the slot
-    -- first, or the reloaded game would look like someone else's.
-    if state.seed and save.ok then
-        linkSlot(slot, state.applied)
-        saveState()
-        log("skip: slot " .. slot .. " linked before the reload: session slots [" .. slotsText(true) .. "]")
-    end
-    local saved, detail = game.SaveAndReload(slot)
-    log("skip: " .. detail)
-    notify(saved and ("Prologue skipped: " .. detail) or ("Prologue skip: " .. detail))
+    runSkip(slot, "command")
 end)
 
 command("ffrap_reset", function()

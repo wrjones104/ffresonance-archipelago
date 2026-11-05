@@ -17,7 +17,7 @@ AI use: this project is built with Claude Code. [DISCLOSURE.md](DISCLOSURE.md) s
 
 The world is tested off-line: Archipelago's general tests pass with it, its own tests pass, and a client end-to-end run against a local server passes, with a script standing in for the game. Round 5 played a full seed in the real game, up to the goal and a release (see "Test results so far").
 
-1. **Mod.** Copy `FFRArchipelago/Scripts` over the installed mod (0.7.3). Delete the old `ap_in.txt`, `ap_out.txt` and `ap_state.txt`, and keep `seen.tsv`. Keep FFRRandomizer disabled.
+1. **Mod.** Copy `FFRArchipelago/Scripts` over the installed mod (0.8.0). Delete the old `ap_in.txt`, `ap_out.txt` and `ap_state.txt`, and keep `seen.tsv`. Keep FFRRandomizer disabled.
 2. **World.** Run `python tools/build_apworld.py`, then copy `dist/ff_resonance.apworld` into your Archipelago `custom_worlds` folder. Or, from source, copy `apworld/ff_resonance` into `worlds/`.
 3. **Seed.**
    - Copy `apworld/Final Fantasy Resonance.yaml` into Archipelago's `Players` folder and set a name.
@@ -103,7 +103,7 @@ At run time the mod writes these files into its own folder: `ap_out.txt`, `ap_st
 | `ffrap_skip [slot]` | Skip the prologue on a new game, once you can move Fina (story 1005). Without a slot it only changes the loaded save; with one it applies the skip again, saves there and reloads. Testing only for now (IDEAS.md, idea 2). |
 | `ffrap_inspect <class or path>` | One object's fields and functions to `inspect_<name>.tsv`: a class name gives its first live instance (else its default object), and a path gives that object (IDEAS.md, idea 6). |
 | `ffrap_find <text>` | Every game class or struct, native or Blueprint, whose name or one of its functions or fields holds the text, to `find_<text>.txt`. Walks every object, so the game pauses for a moment. Run it in game: at the title screen it crashed the game once (round 11). |
-| `ffrap_title [list\|add]` | Experimental. `list` logs the entries the title menu shows. `add` adds an Archipelago entry (type 5, a copy of New Game) and hooks the choice: picking it starts a normal new game marked as an Archipelago one. |
+| `ffrap_title [list\|add]` | `list` logs the entries the title menu shows. `add` adds the Archipelago entry again by hand: the mod adds it at start-up and keeps it there. |
 | `ffrap_bind` | Link the loaded save to the client's session, in place of any earlier one. The same as `/bind` in the client. |
 | `ffrap_reset` | Set the loaded save's applied-item count to 0. Re-grants everything to it! |
 
@@ -214,20 +214,27 @@ Rounds 6 to 9 (2026-11-05) worked out and tested the prologue skip; their result
 
 **Round 11 (mod 0.7.2, world 0.1.3, 2026-11-05): passed.** With the current apworld installed, the session key had the seed's number, `/bind` linked an older save, and that save received every item. The title-screen probes ran: see IDEAS.md, idea 6.
 
-## Round 12 test plan (mod 0.7.3, world 0.1.3)
+**Round 12 (mod 0.7.3, 2026-11-05): the title entry works.**
+- `ffrap_title add` added row 5. The menu showed it (as a second "New Game", at the bottom) only after a trip into a game and back: the menu reads its list when it is made.
+- Every choice logged `title: entry <n> chosen` (Continue 0, Load 1, Options 3, Quit 4). Choosing row 5 logged `entry 5`, showed "starting a new game for the seed" and started a normal new game. It was paused, because the session already had a save. 0.8.0 links it.
+- The row's fields are `EntryName` (the label), `DisplayProperty` (`bCheckSaveData`, `bCheckPlatform`, `DisplayPlatformMap`) and `SystemActionTag`.
+- `ffrap_find Opening` found `IsOpeningProcess` only on widgets (the finger cursor, menu titles, a combo box): a widget's open animation, not the game's opening. `ffrap_find NewGame` found the class `CPP_Task_NewGame`. No crash in game.
 
-This round tries the experimental Archipelago entry on the title menu (IDEAS.md, idea 6). Keep FFRRandomizer disabled.
+## Round 13 test plan (mod 0.8.0, world 0.1.3)
 
-1. **Install.** Copy `FFRArchipelago/Scripts` over the installed mod. The log should say `version 0.7.3 loaded`.
-2. **At the title screen:**
-   - Run `ffrap_title list`. The log line `title: shown [...], map keys [...]` shows which entries the menu displays.
-   - Run `ffrap_title add`. Expected: `title: add: copied from the New Game row`, and the map keys now end in 5.
-   - Look for a second "New Game" entry. If none shows, open Options and close it, or start a game and return to the title, then look again and run `ffrap_title list` once more.
-3. **Choose entries.** Pick any entry. The log should say `title: entry <n> chosen`. If the second New Game shows, pick it. Expected: `title: entry 5 chosen`, the "starting a new game for the seed" message, and a normal new game.
-4. **The entry fields.** At the title screen, run `ffrap_inspect CPP_DA_Title` again. With 0.7.3 the `EntryPropertyMap` rows should show their fields, not addresses. I need these to label the entry "Archipelago".
-5. **Finds, in game only** (at the title screen `ffrap_find` crashed the game in round 11): `ffrap_find Opening`, `ffrap_find NewGame`. The game pauses for a moment each time.
+This round tests the Archipelago new game from start to finish (IDEAS.md, idea 6). Keep FFRRandomizer disabled.
 
-Send `UE4SS.log` (the `[FFRAP]` lines), `inspect_CPP_DA_Title.tsv` and the `find_*.txt` files, and say what the title menu showed.
+1. **Install.** Copy `FFRArchipelago/Scripts` over the installed mod. The log should say `version 0.8.0 loaded`.
+2. **The entry at start-up.** Start the game. Expected: `title: Archipelago entry ready` in the log, and an "Archipelago" entry at the bottom of the title menu on the first title screen, with no command.
+3. **Plain New Game stays vanilla.** Connect the client, choose New Game. Expected: "Archipelago is paused", no items, vanilla chests. Return to the title.
+4. **The Archipelago new game.** Choose Archipelago. Expected:
+   - "starting a new game for the seed", then "this new game is linked to the seed", and the seed's items arrive.
+   - The opening movie plays. Once Fina can move and the game has autosaved, it waits about 2 seconds, then skips by itself: `skip (automatic): saved to slot 0 (map 3001, flag 1 false), reloading`.
+   - You arrive at the Earth Shrine with Rain and Lasswell, menus and movement working.
+5. **Save and reload.** Save to a slot and load it. Expected: no items granted again.
+6. **Without the client.** Close the client and choose Archipelago again. Expected: "connect the client to link it to a seed", and the skip still happens.
+
+Send `UE4SS.log` (the `[FFRAP]` lines) and say how it looked.
 
 ## Open questions
 

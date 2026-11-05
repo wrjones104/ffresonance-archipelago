@@ -962,10 +962,30 @@ function G.TitleEntries()
     return "shown [" .. table.concat(shown, ",") .. "], map keys [" .. table.concat(keys, ",") .. "]"
 end
 
--- Adds the Archipelago row to the title data asset as a copy of the New Game row. Returns ok
--- and a detail. Tries passing the New Game row's struct as the value first, then an empty table.
-function G.AddTitleEntry()
+G.TITLE_LABEL = "Archipelago"
+
+-- The title data asset, loaded when asked to and not loaded yet (as FFRSLib loads the System Menu
+-- one: the menu reads its asset when it is made, so a row added later shows only next time).
+local function TitleAsset(load)
     local da = Find(TITLE_DA)
+    if da or not load then return da end
+    pcall(function()
+        local ksl = Find("/Script/Engine.Default__KismetSystemLibrary")
+        ksl:LoadAsset_Blocking(ksl:Conv_SoftObjPathToSoftObjRef(ksl:MakeSoftObjectPath(TITLE_DA)))
+    end)
+    da = Find(TITLE_DA)
+    if not da and LoadAsset then
+        pcall(function() LoadAsset(TITLE_DA) end)
+        da = Find(TITLE_DA)
+    end
+    return da
+end
+
+-- Adds the Archipelago row to the title data asset as a copy of the New Game row, labelled
+-- "Archipelago". Returns ok and a detail ("already there" when it is). With load set, loads the
+-- asset first. Tries passing the New Game row's struct as the value first, then an empty table.
+function G.AddTitleEntry(load)
+    local da = TitleAsset(load)
     if not da then return false, "DA_Title is not loaded (go to the title screen)" end
     local map = da.EntryPropertyMap
     local have, newGame = false, nil
@@ -974,7 +994,21 @@ function G.AddTitleEntry()
         if key == G.TITLE_ARCHIPELAGO then have = true end
         if key == G.TITLE_NEW_GAME then newGame = v:get() end
     end)
-    if have then return true, "already there" end
+    local function label()
+        -- An FText in a Lua table is dropped, so the name is set on the stored row (FFRSLib does
+        -- the same for its System Menu entry).
+        local okLabel = false
+        map:ForEach(function(k, v)
+            if Int(k:get()) == G.TITLE_ARCHIPELAGO then
+                okLabel = pcall(function() v:get().EntryName = FText(G.TITLE_LABEL) end)
+            end
+        end)
+        return okLabel
+    end
+    if have then
+        label()
+        return true, "already there"
+    end
     if not newGame then return false, "no New Game row to copy" end
     local how
     if pcall(function() map:Add(G.TITLE_ARCHIPELAGO, newGame) end) then
@@ -986,6 +1020,7 @@ function G.AddTitleEntry()
     end
     local now = false
     map:ForEach(function(k) if Int(k:get()) == G.TITLE_ARCHIPELAGO then now = true end end)
+    if now and not label() then how = how .. " (the label could not be set)" end
     return now, how .. (now and "" or ", but the row is not in the map afterwards")
 end
 
