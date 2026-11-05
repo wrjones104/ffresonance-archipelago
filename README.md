@@ -22,7 +22,7 @@ The world is tested off-line: Archipelago's general tests pass with it, its own 
 - **ModSettings** (a Blueprint mod in `Content/Paks/LogicMods`, from the same modding tools as FFRSLib) is optional. On-screen messages ("Received ...", "Sent ...", "Archipelago is paused", "Prologue skipped") go to ModSettings' Toast panel. The mod's own item feed (`ffrap_feed on`) is meant to replace it in the field, but it crashed the game in round 18 and is off by default while it is tested. Without ModSettings the messages only go to `UE4SS.log`, and the Archipelago client shows items coming and going.
 - **FFRSLib, FFRS_QoL, FFRBestiary and FFRRandomizer are not needed.** Their code is where the game calls come from (see "Where the game calls come from"), but this mod calls the game directly. FFRRandomizer should stay disabled (IDEAS.md, idea 10).
 
-1. **Mod.** Copy `FFRArchipelago/Scripts` and `FFRArchipelago/Assets` over the installed mod (0.9.1). Delete the old `ap_in.txt`, `ap_out.txt` and `ap_state.txt`, and keep `seen.tsv`. Keep FFRRandomizer disabled.
+1. **Mod.** Copy `FFRArchipelago/Scripts` and `FFRArchipelago/Assets` over the installed mod (0.9.2). Delete the old `ap_in.txt`, `ap_out.txt` and `ap_state.txt`, and keep `seen.tsv`. Keep FFRRandomizer disabled.
 2. **World.** Run `python tools/build_apworld.py`, then copy `dist/ff_resonance.apworld` into your Archipelago `custom_worlds` folder. Or, from source, copy `apworld/ff_resonance` into `worlds/`.
 3. **Seed.**
    - Copy `apworld/Final Fantasy Resonance.yaml` into Archipelago's `Players` folder and set a name.
@@ -112,7 +112,7 @@ At run time the mod writes these files into its own folder: `ap_out.txt`, `ap_st
 | `ffrap_notice [text]` | Experimental: tries to show the text with the game's quest-notice banner, in the field. |
 | `ffrap_logo` | Puts the Archipelago logo at the end of the mod's line on the title screen. The mod does this by itself; the command is for trying it again by hand. |
 | `ffrap_layout <text>` | Logs the chain of panels holding the on-screen text that holds `<text>`, up to the screen's root layout. For finding where new HUD elements can go. |
-| `ffrap_feed [on\|off\|test [plain]]` | The item feed at the bottom right of the field HUD: off by default (messages go to ModSettings' Toast) while it is tested, kept in `ap_state.txt`. `test` shows three sample lines and logs each step before it runs (`feed step: ...`), so a crash's last line names the call. `test plain` leaves out the styling. |
+| `ffrap_feed [on\|off\|test [plain]]` | The item feed at the bottom right of the field HUD: off by default (messages go to ModSettings' Toast) while it is tested, kept in `ap_state.txt` as `itemfeed`. `test` shows three sample lines. Every step the feed takes is logged before it runs (`feed step: ...`), so a crash's last line names the call. `test plain` leaves out the styling. |
 | `ffrap_bind` | Link the loaded save to the client's session, in place of any earlier one. The same as `/bind` in the client. |
 | `ffrap_reset` | Set the loaded save's applied-item count to 0. Re-grants everything to it! |
 
@@ -258,15 +258,17 @@ Rounds 6 to 9 (2026-11-05) worked out and tested the prologue skip; their result
 
 **Round 18 (mod 0.9.0, 2026-11-05): the game crashed.** Continue, Load Game and New Game all ended in "Fatal error!". In each run the last log line was "Archipelago is paused": the first message after the load, and in 0.9.0 the first time the feed made its box on the field HUD. Only the feed is new there, so it is the cause. A crash in the engine stops the Lua before it can log, so the log does not say which call. 0.9.1 turns the feed off by default and logs each step before it runs.
 
-## Round 19 test plan (mod 0.9.1, world 0.1.3)
+**Round 19 (mod 0.9.1, 2026-11-05): still crashed.** The feed was meant to be off, but it was on. 0.9.0 had written `feed 1` to `ap_state.txt` by itself, because it was on by default, and 0.9.1 read that as switched on. The second run logged one "Received ..." line per item, which only happens with the feed on. Those five items came during the opening movie, before the field HUD existed, so they waited in the feed's queue. The game crashed after story 1005, when the HUD appeared and the queue was shown. The step logging only ran for `ffrap_feed test`, so the log did not name the call. 0.9.2 ignores the old `feed` line (the switch is now `itemfeed`) and logs the feed's steps every time.
 
-1. **Install.** Copy `FFRArchipelago/Scripts` and `FFRArchipelago/Assets` over the installed mod. The log should say `version 0.9.1 loaded`.
-2. **Playable again:** load a save and start a new game. No crash, and messages show with ModSettings' Toast as before 0.9.0.
-3. **The feed, without styling, in the field:** run `ffrap_feed test plain`. Each step logs `feed step: ...` before it runs.
+## Round 20 test plan (mod 0.9.2, world 0.1.3)
+
+1. **Install.** Copy `FFRArchipelago/Scripts` and `FFRArchipelago/Assets` over the installed mod. The log should say `version 0.9.2 loaded`. No need to edit `ap_state.txt`: the old `feed` line is ignored.
+2. **Playable again:** load a save, and start a New Game (Archipelago) with items to receive. No crash. The messages show with ModSettings' Toast, and there are no `feed step:` lines.
+3. **The feed, without styling, in the field:** run `ffrap_feed test plain`.
    - If the game crashes, send `UE4SS.log`: the last `feed step:` line names the call that crashed.
-   - If it works, three plain lines (default font) should show at the bottom right. Send a screenshot.
-4. **With styling:** only if step 3 worked, restart the game and run `ffrap_feed test`. Same as above: a crash's last `feed step:` line is the answer.
-5. Leave the feed off (the default) for normal play until this is sorted out.
+   - If it works, three plain lines show at the bottom right. Send a screenshot.
+4. **With styling:** only if step 3 worked, restart the game and run `ffrap_feed test`. A crash's last `feed step:` line is again the answer.
+5. Leave the feed off for normal play.
 
 ## Open questions
 

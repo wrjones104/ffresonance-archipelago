@@ -37,7 +37,7 @@
 -- follows the save slots the linked game is saved to. While any other save is loaded, the mod
 -- grants nothing, reports nothing and leaves the chests vanilla.
 
-local VERSION = "0.9.1"
+local VERSION = "0.9.2"
 local PROTOCOL = 1        -- the bridge protocol; the apworld's MOD_PROTOCOL
 
 local MOD_DIR = (debug.getinfo(1, "S").source:gsub("^@", ""):gsub("\\", "/"):match("^(.*/)Scripts/[^/]+$"))
@@ -69,6 +69,11 @@ local FEED_QUEUE_MAX = 20
 local feedOn = false         -- ffrap_feed on|off; kept in ap_state.txt
 local feedQueue = {}
 local feedClock = 0          -- seconds, from the tick count
+
+-- Every step the feed takes is logged before it runs, whether from ffrap_feed test or from a
+-- message: a crash in the engine ends the game before Lua can log, so the last `feed step:`
+-- line in UE4SS.log names the call (round 19).
+game.feedTrace = function(what) log("feed step: " .. what) end
 
 local function show(msg)
     if feedOn and game.InGame() then
@@ -194,7 +199,10 @@ local function loadState()
         local key, value = line:match("^(%w+)\t(.*)$")
         if key == "applied" then state.applied = tonumber(value) or 0 end
         if key == "blank" then state.blank = value == "1" end
-        if key == "feed" then feedOn = value == "1" end
+        -- "itemfeed", written only by ffrap_feed on|off. 0.9.0 wrote "feed 1" by itself (it
+        -- was on by default), and 0.9.1 took that as switched on and crashed (round 19), so the
+        -- old key is ignored.
+        if key == "itemfeed" then feedOn = value == "1" end
         if key == "seed" and value ~= "" then state.seed = value end
         if key == "slots" then
             for slot in value:gmatch("%d+") do state.slots[tonumber(slot)] = true end
@@ -212,7 +220,7 @@ local function saveState()
     if not f then return end
     f:write("applied\t", state.applied, "\n")
     f:write("blank\t", state.blank and "1" or "0", "\n")
-    f:write("feed\t", feedOn and "1" or "0", "\n")
+    f:write("itemfeed\t", feedOn and "1" or "0", "\n")
     f:write("seed\t", state.seed or "", "\n")
     f:write("slots\t", slotsText(), "\n")
     f:write("slotItems\t", slotsText(true), "\n")
@@ -953,13 +961,11 @@ command("ffrap_feed", function(p)
         -- UE4SS.log names the call. `test plain` leaves out the styling.
         local plain = p[2] == "plain"
         log("feed test" .. (plain and " (plain)" or "") .. ": starting")
-        game.feedTrace = function(what) log("feed step: " .. what) end
         local results = {}
         for _, msg in ipairs({ "Received Potion from Bob", "Sent Ether to Alice", "Received Rod of Focus" }) do
             local ok, why = game.FeedLine(msg, feedClock, { plain = plain })
             results[#results + 1] = ok and "ok" or tostring(why)
         end
-        game.feedTrace = nil
         log("feed test: " .. table.concat(results, ", "))
     else
         notify("Item feed is " .. (feedOn and "on" or "off") .. " (ffrap_feed on|off|test)")

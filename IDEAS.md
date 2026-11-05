@@ -488,4 +488,6 @@ Plan: build option 1 first, because it is known to work. Then try option 2 as an
 
 **0.9.1:** the feed is off by default. `ffrap_feed test` logs each step before it runs, and `test plain` leaves out the styling, so round 19 can tell which call it is.
 
+**Round 19:** 0.9.1 still crashed, because the feed was still on: 0.9.0 had saved `feed 1` by itself, and 0.9.1 read it as on. The items that arrived during the opening movie waited for the HUD and were shown at story 1005, and the game crashed then. 0.9.2 uses a new key (`itemfeed`, written only by `ffrap_feed on|off`) and logs the feed's steps every time.
+
 **Still to tune, once it works:** the size, the place and the time on screen.
