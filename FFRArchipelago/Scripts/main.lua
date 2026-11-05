@@ -24,7 +24,7 @@
 --   ffrap_notice [text]          experimental: show text with the game's quest-notice banner
 --   ffrap_logo                   the Archipelago logo on the mod's title line, by hand
 --   ffrap_layout <text>          the panels holding some on-screen text, to the log
---   ffrap_feed [on|off|test]     the item feed at the bottom right of the field HUD
+--   ffrap_feed [on|off|test [plain]]  the item feed at the bottom right of the field HUD (off by default)
 --   ffrap_find <text>            game classes, functions and fields named like the text, to find_<text>.txt
 --   ffrap_blank [on|off]         chests that are Archipelago locations give 1 gil instead
 --   ffrap_sync                   report every known location the save says is looted
@@ -37,7 +37,7 @@
 -- follows the save slots the linked game is saved to. While any other save is loaded, the mod
 -- grants nothing, reports nothing and leaves the chests vanilla.
 
-local VERSION = "0.9.0"
+local VERSION = "0.9.1"
 local PROTOCOL = 1        -- the bridge protocol; the apworld's MOD_PROTOCOL
 
 local MOD_DIR = (debug.getinfo(1, "S").source:gsub("^@", ""):gsub("\\", "/"):match("^(.*/)Scripts/[^/]+$"))
@@ -65,7 +65,8 @@ end
 -- the HUD is there. Otherwise they wait in a short queue for the HUD (loading, a map change),
 -- and off the field (the title screen) they go to ModSettings' Toast as before.
 local FEED_QUEUE_MAX = 20
-local feedOn = true          -- ffrap_feed on|off; kept in ap_state.txt
+-- Off unless switched on: round 18 crashed the game the first time 0.9.0 made the feed.
+local feedOn = false         -- ffrap_feed on|off; kept in ap_state.txt
 local feedQueue = {}
 local feedClock = 0          -- seconds, from the tick count
 
@@ -193,7 +194,7 @@ local function loadState()
         local key, value = line:match("^(%w+)\t(.*)$")
         if key == "applied" then state.applied = tonumber(value) or 0 end
         if key == "blank" then state.blank = value == "1" end
-        if key == "feed" then feedOn = value ~= "0" end
+        if key == "feed" then feedOn = value == "1" end
         if key == "seed" and value ~= "" then state.seed = value end
         if key == "slots" then
             for slot in value:gmatch("%d+") do state.slots[tonumber(slot)] = true end
@@ -937,7 +938,9 @@ command("ffrap_logo", function()
     notify("Logo: " .. tostring(result or "not added") .. " (" .. tostring(detail) .. ")")
 end)
 
--- ffrap_feed [on|off|test]: the item feed on the field HUD. `test` shows three sample lines.
+-- ffrap_feed [on|off|test [plain]]: the item feed on the field HUD (off by default while it is
+-- tested). `test` shows three sample lines, logging each step first; `test plain` leaves out
+-- the styling.
 command("ffrap_feed", function(p)
     local what = p and p[1]
     if what == "on" or what == "off" then
@@ -946,11 +949,17 @@ command("ffrap_feed", function(p)
         log("feed: " .. what)
         game.Toast("Item feed " .. what)
     elseif what == "test" then
+        -- Each step is logged before it runs: if the game crashes, the last `feed step:` line in
+        -- UE4SS.log names the call. `test plain` leaves out the styling.
+        local plain = p[2] == "plain"
+        log("feed test" .. (plain and " (plain)" or "") .. ": starting")
+        game.feedTrace = function(what) log("feed step: " .. what) end
         local results = {}
         for _, msg in ipairs({ "Received Potion from Bob", "Sent Ether to Alice", "Received Rod of Focus" }) do
-            local ok, why = game.FeedLine(msg, feedClock)
+            local ok, why = game.FeedLine(msg, feedClock, { plain = plain })
             results[#results + 1] = ok and "ok" or tostring(why)
         end
+        game.feedTrace = nil
         log("feed test: " .. table.concat(results, ", "))
     else
         notify("Item feed is " .. (feedOn and "on" or "off") .. " (ffrap_feed on|off|test)")

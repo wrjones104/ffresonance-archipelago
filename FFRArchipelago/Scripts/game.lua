@@ -1320,6 +1320,14 @@ local FEED_FONT_SIZE = 20
 local ALIGN_RIGHT, ALIGN_BOTTOM, JUSTIFY_RIGHT = 2, 3, 2
 local feed = { box = nil, host = nil, tree = nil, lines = {}, made = 0 }
 
+-- Round 18: 0.9.0 crashed the game the first time it made the feed in the field. A crash in the
+-- engine ends the game before the Lua can log anything, so while the feed is being tested every
+-- risky call is announced through G.feedTrace first: the last line in UE4SS.log names the call.
+G.feedTrace = nil
+local function step(what)
+    if G.feedTrace then G.feedTrace(what) end
+end
+
 -- The field HUD's overlay and the widget tree to make widgets in, or nil off the field.
 local function FeedHost()
     local list = Live("WBP_FieldFuncList2_C")
@@ -1338,6 +1346,7 @@ end
 
 -- The feed's box in the current HUD, made when needed. Returns the box or nil and why not.
 local function FeedBox()
+    step("find the field HUD")
     local host, tree = FeedHost()
     if not host then return nil, "no field HUD" end
     local hostName
@@ -1346,11 +1355,14 @@ local function FeedBox()
     local cls = Find("/Script/UMG.VerticalBox")
     if not cls then return nil, "no VerticalBox class" end
     local box
+    step("make the box (StaticConstructObject VerticalBox)")
     local okNew, err = pcall(function() box = StaticConstructObject(cls, tree, FeedName()) end)
     if not (okNew and box and box:IsValid()) then return nil, "could not make the box: " .. tostring(err) end
     local slot
+    step("add the box to the HUD (AddChildToOverlay)")
     local okAdd, errAdd = pcall(function() slot = host:AddChildToOverlay(box) end)
     if not (okAdd and slot) then return nil, "AddChildToOverlay failed: " .. tostring(errAdd) end
+    step("place the box (alignment, padding)")
     pcall(function() slot:SetHorizontalAlignment(ALIGN_RIGHT) end)
     pcall(function() slot:SetVerticalAlignment(ALIGN_BOTTOM) end)
     pcall(function() slot:SetPadding(FEED_PADDING) end)
@@ -1361,37 +1373,48 @@ end
 -- Makes the text look like the HUD's own: the key guide's font (its Text_Name, as FFRSLib reads
 -- it) at FEED_FONT_SIZE, white with a dark shadow, right-justified.
 local function StyleLine(tb)
+    step("style: copy the key guide's font")
     pcall(function()
         local guide = Live("WBP_KeyGuide_C")
         if guide then tb:SetFont(guide.Text_Name.Font) end
     end)
+    step("style: font size")
     pcall(function()
         local font = tb.Font
         font.Size = FEED_FONT_SIZE
         tb:SetFont(font)
     end)
+    step("style: colour")
     pcall(function() tb:SetColorAndOpacity({ SpecifiedColor = { R = 1, G = 1, B = 1, A = 1 }, ColorUseRule = 0 }) end)
+    step("style: shadow")
     pcall(function() tb:SetShadowOffset({ X = 1.5, Y = 1.5 }) end)
     pcall(function() tb:SetShadowColorAndOpacity({ R = 0, G = 0, B = 0, A = 0.85 }) end)
+    step("style: justification")
     pcall(function() tb:SetJustification(JUSTIFY_RIGHT) end)
 end
 
--- Adds a line to the feed; `now` is the caller's clock in seconds. Returns true, or false and
--- why not (off the field, say), so the caller can show the text another way.
-function G.FeedLine(text, now)
+-- Adds a line to the feed; `now` is the caller's clock in seconds. opts.plain leaves out the
+-- styling (font, colour, shadow, justification). Returns true, or false and why not (off the
+-- field, say), so the caller can show the text another way.
+function G.FeedLine(text, now, opts)
     local box, why = FeedBox()
     if not box then return false, why end
     local cls = Find("/Script/UMG.TextBlock")
     if not cls then return false, "no TextBlock class" end
     local tb
+    step("make a line (StaticConstructObject TextBlock)")
     local okNew, err = pcall(function() tb = StaticConstructObject(cls, feed.tree, FeedName()) end)
     if not (okNew and tb and tb:IsValid()) then return false, "could not make a line: " .. tostring(err) end
+    step("set the line's text")
     pcall(function() tb:SetText(FText(text)) end)
-    StyleLine(tb)
+    if not (opts and opts.plain) then StyleLine(tb) end
     local slot
+    step("add the line to the box (AddChildToVerticalBox)")
     local okAdd, errAdd = pcall(function() slot = box:AddChildToVerticalBox(tb) end)
     if not (okAdd and slot) then return false, "AddChildToVerticalBox failed: " .. tostring(errAdd) end
+    step("align the line")
     pcall(function() slot:SetHorizontalAlignment(ALIGN_RIGHT) end)
+    step("line done")
     feed.lines[#feed.lines + 1] = { tb = tb, born = now }
     while #feed.lines > G.FEED_MAX do
         pcall(function() feed.lines[1].tb:RemoveFromParent() end)

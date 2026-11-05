@@ -481,4 +481,11 @@ Plan: build option 1 first, because it is known to work. Then try option 2 as an
 - **Waiting:** messages that come while the HUD is not there (loading, a battle) wait in a queue of up to 20. More than five show as the last four and "and N more".
 - **Off the field, or with `ffrap_feed off`:** ModSettings' Toast, as before.
 
-**Still to tune:** the size, the place and the time on screen, from round 18.
+**Round 18:** 0.9.0 crashed the game on Continue, Load Game and New Game, each time just after the first message following the load ("Archipelago is paused"). That was the feed's first box on the field HUD. The title logo is made the same way and works, so the difference is one of these:
+- the field HUD (made while the map loads) versus the title layout,
+- the `VerticalBox` and `TextBlock` classes versus `Image`,
+- the styling (the key guide's `CommonTextBlock` font struct passed to `SetFont`, the `FSlateColor` from a Lua table).
+
+**0.9.1:** the feed is off by default. `ffrap_feed test` logs each step before it runs, and `test plain` leaves out the styling, so round 19 can tell which call it is.
+
+**Still to tune, once it works:** the size, the place and the time on screen.
