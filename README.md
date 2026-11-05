@@ -17,6 +17,11 @@ AI use: this project is built with Claude Code. [DISCLOSURE.md](DISCLOSURE.md) s
 
 The world is tested off-line: Archipelago's general tests pass with it, its own tests pass, and a client end-to-end run against a local server passes, with a script standing in for the game. Round 5 played a full seed in the real game, up to the goal and a release (see "Test results so far").
 
+**What the mod needs:**
+- **UE4SS**, the only thing it needs to run. ConsoleEnablerMod and BPModLoaderMod come with UE4SS. The console is only for the `ffrap_*` commands.
+- **ModSettings** (a Blueprint mod in `Content/Paks/LogicMods`, from the same modding tools as FFRSLib) is optional. Every on-screen message ("Received ...", "Archipelago is paused", "Prologue skipped") is drawn with its Toast panel, because the game's own on-screen text call is compiled out. Without it the mod works the same, but the messages only go to `UE4SS.log`.
+- **FFRSLib, FFRS_QoL, FFRBestiary and FFRRandomizer are not needed.** Their code is where the game calls come from (see "Where the game calls come from"), but this mod calls the game directly. FFRRandomizer should stay disabled (IDEAS.md, idea 10).
+
 1. **Mod.** Copy `FFRArchipelago/Scripts` over the installed mod (0.8.0). Delete the old `ap_in.txt`, `ap_out.txt` and `ap_state.txt`, and keep `seen.tsv`. Keep FFRRandomizer disabled.
 2. **World.** Run `python tools/build_apworld.py`, then copy `dist/ff_resonance.apworld` into your Archipelago `custom_worlds` folder. Or, from source, copy `apworld/ff_resonance` into `worlds/`.
 3. **Seed.**
@@ -220,21 +225,11 @@ Rounds 6 to 9 (2026-11-05) worked out and tested the prologue skip; their result
 - The row's fields are `EntryName` (the label), `DisplayProperty` (`bCheckSaveData`, `bCheckPlatform`, `DisplayPlatformMap`) and `SystemActionTag`.
 - `ffrap_find Opening` found `IsOpeningProcess` only on widgets (the finger cursor, menu titles, a combo box): a widget's open animation, not the game's opening. `ffrap_find NewGame` found the class `CPP_Task_NewGame`. No crash in game.
 
-## Round 13 test plan (mod 0.8.0, world 0.1.3)
-
-This round tests the Archipelago new game from start to finish (IDEAS.md, idea 6). Keep FFRRandomizer disabled.
-
-1. **Install.** Copy `FFRArchipelago/Scripts` over the installed mod. The log should say `version 0.8.0 loaded`.
-2. **The entry at start-up.** Start the game. Expected: `title: Archipelago entry ready` in the log, and an "Archipelago" entry at the bottom of the title menu on the first title screen, with no command.
-3. **Plain New Game stays vanilla.** Connect the client, choose New Game. Expected: "Archipelago is paused", no items, vanilla chests. Return to the title.
-4. **The Archipelago new game.** Choose Archipelago. Expected:
-   - "starting a new game for the seed", then "this new game is linked to the seed", and the seed's items arrive.
-   - The opening movie plays. Once Fina can move and the game has autosaved, it waits about 2 seconds, then skips by itself: `skip (automatic): saved to slot 0 (map 3001, flag 1 false), reloading`.
-   - You arrive at the Earth Shrine with Rain and Lasswell, menus and movement working.
-5. **Save and reload.** Save to a slot and load it. Expected: no items granted again.
-6. **Without the client.** Close the client and choose Archipelago again. Expected: "connect the client to link it to a seed", and the skip still happens.
-
-Send `UE4SS.log` (the `[FFRAP]` lines) and say how it looked.
+**Round 13 (mod 0.8.0, 2026-11-05): passed.**
+- **The entry:** "title: Archipelago entry ready" came half a second after the mod loaded, and the entry was on the first title screen.
+- **Plain New Game:** it was paused, with the message pointing at the Archipelago entry.
+- **The Archipelago new game:** it linked to the new seed. The game autosaved to slot 0 two seconds after story 1005, and the skip ran by itself 1.5 seconds later (`skip (automatic): saved to slot 0 (map 3001, flag 1 false)`). It landed at the Earth Shrine, ready to play.
+- **Checks and items:** the two chests in map 3001 sent their checks and brought 400 Gil and an Ether. Loading slot 0 (saved before they arrived) granted both again, as it should.
 
 ## Open questions
 

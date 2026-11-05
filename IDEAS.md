@@ -323,6 +323,7 @@ Plan: build option 1 first, because it is known to work. Then try option 2 as an
 **Still open:**
 - **Skipping the movie outright:** find what the opening holds the player's input with. `CPP_Task_NewGame` is the place to start (`ffrap_inspect` while a new game is starting).
 - **The logo and version text on the title screen:** find the title layout widget (`ffrap_find TitleLayout` or `ffrap_find WBP_Title`, in game) and add an `Image` and a `TextBlock`.
+- **Our own on-screen text:** messages go through ModSettings' Toast panel, so without that mod a player sees nothing. Making our own message widget is the same work as the title text and logo (an `Image` and a `TextBlock` added to a widget we create). Doing both together removes the last optional dependency.
 
 ## 7. Enemy randomization
 
