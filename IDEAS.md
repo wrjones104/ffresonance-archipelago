@@ -13,6 +13,7 @@ The chapter-by-chapter progression (party, vehicles, gates, Visions, Espers) is 
 - Shards seem to be a special shiny class, `BP_MapGimmick_FieldItem_Medal_C`:
   - Map 2015, uid 4, item 25004, in `data/shinies.tsv`.
   - Medal spots 13 and 14 on map 3180 in the round 2 log.
+  - Map 2020, uid 5, item 25004, found in round 5.
 - They are found mostly in towns and dungeons, not on the world map. The progression overview says there are 99, across almost every town, dungeon and overworld segment.
 - There is a place in the game where you turn shards in for incremental rewards.
 
@@ -71,15 +72,20 @@ The chapter-by-chapter progression (party, vehicles, gates, Visions, Espers) is 
 - FFRS_QoL's item spawner leaves out key items (type 2) and artifacts (type 4). Its comment says they "unlock story features", with the chocobo saddle as the example. So owning the item may be the gate.
 - The story gates we have seen read `{progress:N}` and `{flag:N}`. A vehicle could check either: the item, a flag, or the story counter.
 
+**Round 5 results:**
+- **Chocobo: item-gated.** `ffrap_grant item 30002` (Choboco Saddle) on a story-1130 save made the chocobo rideable. So "Chocobo" can be a plain Archipelago progression item: grant 30002.
+- **29520 Magitek Airship Passkey is cosmetic.** It changes how the airship looks and does not unlock it. You had one already, from a pre-registration reward. So the airship unlock is still unknown, and probably a story flag or the story counter.
+- **30011 Chocobo Saddle-Bike did nothing visible.** Its description says it turns a mounted chocobo into a motorcycle. It may be unused, or it may need a condition, for example granting it while riding, or after a map change.
+
 **To find out:**
-1. **Item test.** On a chapter 1 save before Kol, grant the saddle with `ffrap_grant item 30002`. Does riding a chocobo work? Then grant the Passkey (29520) on a pre-airship save. Does the airship appear or answer the board button?
-2. **Flag test.** If the item alone does nothing, diff the flags around the vanilla unlock. Snapshot the flag array before and after resting at the Kol inn, and before and after the chapter 4 ending. The flags that flip are the vehicle's.
-3. **Where the airship is.** Even with the flag set, the airship may need placing on the world map (its map and point). The save's map data (`Map.mapId` plus a point id, per FFRSLib's travel notes) is where to look.
+1. **Airship flag test.** On a save just before the chapter 4 ending, snapshot the flag array before and after the airship unlock. The flags that flip are the candidates. This needs a new console command that dumps the flags (or the changed ones) to a file.
+2. **Where the airship is.** Even with the flag set, the airship may need placing on the world map (its map and point). The save's map data (`Map.mapId` plus a point id, per FFRSLib's travel notes) is where to look.
+3. **Saddle-Bike.** Try 30011 again while riding a chocobo, and after a map change.
 4. **What this means for the apworld:**
-   - If a vehicle is an item or a flag, it becomes a progression item ("Chocobo", "Airship").
-   - Locations become gated by it: Kolobos and Felicitas behind the Chocobo; Sanctums, volcanoes, ice islands and Whirlpool Hollow behind the Airship.
+   - "Chocobo" (item 30002) becomes a progression item now. Locations become gated by it: Kolobos and Felicitas.
+   - "Airship" becomes a progression item once its flag is known: Sanctums, volcanoes, ice islands and Whirlpool Hollow.
    - Radar tiers gate the world-map treasures.
-   - This pairs with the open-world mode (idea 3).
+   - This pairs with the open-world mode (idea 3). In story mode, if the story hands out the saddle, that vanilla grant would need blocking for the item to matter.
 
 ## 5. Key items and gates from the item table
 

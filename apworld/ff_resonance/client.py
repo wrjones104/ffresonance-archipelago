@@ -65,6 +65,7 @@ class FFResonanceContext(CommonContext):
         self.mod_folder = ""
         self.set_mod_folder(mod_folder)
         self.session_key: str | None = None   # "<seed name>:<team>:<slot>" once connected
+        self.room_seed_name: str | None = None  # RoomInfo's seed name, kept here because 0.6.7 does not store it
         self.goal = 8050
         self.items_written = 0                # item lines already in ap_in.txt for this session
         self.out_offset = 0
@@ -166,11 +167,20 @@ class FFResonanceContext(CommonContext):
         await self.send_connect()
 
     def on_package(self, cmd: str, args: dict) -> None:
-        if cmd == "Connected":
+        if cmd == "RoomInfo":
+            self.room_seed_name = args.get("seed_name")
+        elif cmd == "Connected":
             slot_data = args.get("slot_data") or {}
             self.goal = int(slot_data.get("goal_story_checkpoint", 8050))
-            # RoomInfo's seed name; 0.6.7+ keeps it in server_seed_name (seed_name stays None).
-            seed = getattr(self, "server_seed_name", None) or self.seed_name or "unknown"
+            # The 0.6.7 release never stores RoomInfo's seed name (seed_name stays None), so it is
+            # captured above; later versions also keep it in server_seed_name.
+            seed = getattr(self, "server_seed_name", None) or self.room_seed_name or self.seed_name
+            if not seed:
+                # Without a seed name every seed would share one session key, and the mod would
+                # skip a new seed's items as already applied. Stay off the bridge instead.
+                self.session_key = None
+                logger.error("The server sent no seed name, so the game is not connected. Reconnect to try again.")
+                return
             self.session_key = f"{seed}:{self.team}:{self.slot}"
             self.max_story = 0
             self.start_session()
@@ -184,6 +194,7 @@ class FFResonanceContext(CommonContext):
     def reset_server_state(self) -> None:
         super().reset_server_state()
         self.session_key = None
+        self.room_seed_name = None
 
     def make_gui(self):
         ui = super().make_gui()

@@ -15,7 +15,7 @@ AI use: this project is built with Claude Code. [DISCLOSURE.md](DISCLOSURE.md) s
 
 ## Playing the MVP
 
-The world is tested off-line: Archipelago's general tests pass with it, its own tests pass, and a client end-to-end run against a local server passes, with a script standing in for the game. It has not been played in the real game yet.
+The world is tested off-line: Archipelago's general tests pass with it, its own tests pass, and a client end-to-end run against a local server passes, with a script standing in for the game. Round 5 played a full seed in the real game, up to the goal and a release (see "Test results so far").
 
 1. **Mod.** Copy `FFRArchipelago/Scripts` over the installed mod (0.4.0). Delete the old `ap_in.txt`, `ap_out.txt` and `ap_state.txt`, and keep `seen.tsv`. Keep FFRRandomizer disabled.
 2. **World.** Run `python tools/build_apworld.py`, then copy `dist/ff_resonance.apworld` into your Archipelago `custom_worlds` folder. Or, from source, copy `apworld/ff_resonance` into `worlds/`.
@@ -175,19 +175,30 @@ kind  map  uid  row  item  count  money  visible-condition
 - **Clean start:** deleting `ap_state.txt` but keeping `ap_in.txt` re-granted items 0 to 6. That is correct behaviour; the round 3 instructions were wrong. A clean start deletes all three `ap_*.txt` files and restarts the fake server.
 - **Not run yet:** whether the second chest gives its real item after `ffrap_blank off`.
 
-## Round 4 test plan (0.3.1)
+**Round 5 (mod 0.4.0 with the MVP apworld and client, 2026-11-05): passed.**
+This was the first real Archipelago game: a new game, a local MultiServer, the 0.6.7 Launcher and the goal set to 1130.
+- **Checks and items:** 20 chests in 5 maps were each sent as a check before the goal. Each one gave 1 gil, and its real item arrived from the server with a "Received ..." toast about 1 second later.
+- **Reconnect:** the client was closed overnight and reconnected. The mod kept the session (17 items already applied) and granted nothing twice.
+- **Goal:** story 1130 sent the goal, and the toast showed once. The server's auto release then sent the other 196 items. The mod applied them 5 at a time, every half second, with one toast per batch. All 216 were applied, including the gil items (9930 -> 13930 gil), which is the first in-game test of gil grants.
+- **Blanking restore (from round 4):** after `ffrap_blank off`, chest 2020:1 gave its real item in the same map. After `ffrap_blank on`, chest 2020:0 gave 1 gil.
+- **Sync (from round 4):** `ffrap_sync` reported "0 new checks from 137 known locations", which is correct because nothing had been missed.
+- **Shinies:** shinies are off by default, so their checks (`shiny:1000:150`, `1000:137`, `2015:4`, `1000:127`) were reported and ignored by the client. A second Tablet Shard (Medal class) was found at map 2020, uid 5.
+- **Vehicles (IDEAS.md, idea 4):**
+  - `ffrap_grant item 30002` (Choboco Saddle) made the chocobo rideable. The chocobo is gated by the item alone.
+  - 29520 (Magitek Airship Passkey) only changes how the airship looks. It does not unlock the airship. You already had one, from a pre-registration reward.
+  - 30011 (Chocobo Saddle-Bike) did nothing visible. It may be unused, or need a condition we have not found.
+- **Bug 1, seed name:** the 0.6.7 client never stores the room's seed name, so the session key was `unknown:0:1`. Every seed with the same slot would get that key, and the mod would skip a new seed's items as already applied. Fixed in the client: it reads the seed name from `RoomInfo` itself, and it does not connect to the game if there is none.
+- **Bug 2, checks from another save:** the session started while an old save (story 1095) was loaded. The sync on that load reported `shiny:1000:150` from the old save into the new session. It was ignored because shinies are off, but a chest would have been sent. See open question 8.
+- **Item names:** items 5 and 6 have no name in `item_names.tsv`, so they showed as "Item 5" and "Item 6". Their vanilla chests are Mysidia Dungeon 45 Chest 0 and Olderion Dungeon 43 Chest 4.
+
+## Round 6 test plan (client fix)
 
 Keep FFRRandomizer disabled.
 
-1. **Install.** Copy `Scripts/` over the old one. For a clean start, delete `ap_in.txt`, `ap_out.txt` and `ap_state.txt`, then restart the fake server. Keep `seen.tsv`, because 0.3.1 reads the 0.3.0 lines. The log should say `version 0.3.1 loaded`.
-2. **Blanking restore.**
-   - Run `ffrap_blank on`, then open a chest. Expected: 1 gil.
-   - Run `ffrap_blank off`, then open another chest in the same map. Expected: its real item.
-3. **Sync.**
-   - Delete `ap_out.txt` while the game runs.
-   - Go to a different map and run `ffrap_sync`.
-   - Every chest and shiny you have opened that is in `seen.tsv` should come back as a `check` line.
-4. **More of the list.** Play or fly through a few areas you have not visited yet. `seen.tsv` grows with chests and shinies, each with its save key.
+1. **Install.** Rebuild the apworld (`python tools/build_apworld.py`) and copy it over the old one in `custom_worlds`. The mod is unchanged.
+2. **Clean start.** Delete `ap_in.txt`, `ap_out.txt` and `ap_state.txt`. The old files use the `unknown` key, so with the fixed client the old seed would start a new session and grant all of its items again.
+3. **New seed.** Generate and host a new seed, load a save, then connect. The `seed` line in `ap_in.txt` must start with the seed's long number, not `unknown`.
+4. **Second seed.** Open a few chests, then host a different seed and connect to it. Expected: the mod starts a new session, and the new seed's items arrive from item 0.
 
 ## Open questions
 
@@ -197,10 +208,11 @@ Keep FFRRandomizer disabled.
 4. **Grant timing.** Is it safe to grant during battles, cutscenes and menus? So far the only guard is "save data and map manager exist" plus a 2-second settle.
 5. **Per-save item index.** The applied count is one number per install. The real mod must store it per save: in the save itself, or in a sidecar file keyed by slot, the way FFRBestiary does. Then loading an older save re-grants exactly what that save lacks. Reported checks can stay per install, because in Archipelago a location checked once stays checked.
 6. **Vanilla rewards.**
-   - Chests: blanking to 1 gil works. Restoring is being re-tested in round 4.
+   - Chests: blanking to 1 gil and restoring both work (round 5).
    - Shinies carry their reward on the actor, so the same trick should work on `m_ItemId` and `m_Money`.
    - Story events that hand out party members, visions or key items need their own approach.
-7. **Gil.** The Modding Tools can add gil, but FFRSLib has no command for it. Find that call. The chest table's `Money` field shows the game already grants gil from chests.
+7. **Gil.** Solved: `CPP_BFL_SaveDataPlayer` `GetCurrentMoney` / `SetCurrentMoney`, tested in round 5.
+8. **Checks from another save.** The sync on a save load reports every looted chest and shiny in that save. If the save is not the one this seed is played on, it sends checks the player did not earn in this seed. The session should belong to one save: record the save slot when the session starts, and only sync that save.
 
 ## After the POC
 
