@@ -37,7 +37,7 @@
 -- follows the save slots the linked game is saved to. While any other save is loaded, the mod
 -- grants nothing, reports nothing and leaves the chests vanilla.
 
-local VERSION = "0.10.0"
+local VERSION = "0.10.1"
 local PROTOCOL = 1        -- the bridge protocol; the apworld's MOD_PROTOCOL
 
 local MOD_DIR = (debug.getinfo(1, "S").source:gsub("^@", ""):gsub("\\", "/"):match("^(.*/)Scripts/[^/]+$"))
@@ -71,11 +71,15 @@ local FEED_WAIT_MAX = 10     -- seconds messages wait for the feed before they g
 local feedOn = true          -- ffrap_feed on|off; kept in ap_state.txt
 local feedQueue = {}
 local feedQueueSince = nil   -- when the oldest waiting message came
+local feedShown = false      -- the feed has shown a line in this run
 local feedClock = 0          -- seconds, from the tick count
 
 local function show(msg)
     if feedOn and game.InGame() then
-        if #feedQueue == 0 and game.FeedLine(msg, feedClock) then return end
+        if #feedQueue == 0 and game.FeedLine(msg, feedClock) then
+            feedShown = true
+            return
+        end
         if #feedQueue == 0 then feedQueueSince = feedClock end
         if #feedQueue < FEED_QUEUE_MAX then feedQueue[#feedQueue + 1] = msg end
         return
@@ -92,9 +96,11 @@ end
 -- how many more there were.
 local function flushFeed()
     if #feedQueue == 0 then return end
-    -- Waited too long (the feed cannot find a HUD on screen, round 22): the Toast takes them, so
-    -- no message is lost from the screen.
-    if feedQueueSince and feedClock - feedQueueSince > FEED_WAIT_MAX then
+    -- Waited too long and the feed has never shown a line this run (it cannot find a HUD on
+    -- screen, as in round 22): the Toast takes them, so no message is lost from the screen. Once
+    -- the feed has worked, messages wait for the HUD however long a pop-up or menu is open
+    -- (round 24: a chest pop-up held for 10 s sent its items to the Toast).
+    if not feedShown and feedQueueSince and feedClock - feedQueueSince > FEED_WAIT_MAX then
         log("feed: no HUD on screen for " .. FEED_WAIT_MAX .. " s; " .. #feedQueue .. " message(s) go to the Toast")
         game.Toast(#feedQueue == 1 and feedQueue[1] or table.concat(feedQueue, " / "))
         feedQueue, feedQueueSince = {}, nil
@@ -109,7 +115,9 @@ local function flushFeed()
         table.insert(lines, 1, "and " .. more .. " more")
     end
     for i, msg in ipairs(lines) do
-        if not game.FeedLine(msg, feedClock) then
+        if game.FeedLine(msg, feedClock) then
+            feedShown = true
+        else
             -- The HUD went away again: keep what is left for next time.
             local rest = {}
             for j = i, #lines do rest[#rest + 1] = lines[j] end
@@ -418,8 +426,8 @@ local function newVisit(mapId)
 end
 
 -- The chest pop-up ("You obtained the following:") is up while a chest's check is reported, so
--- the first chest check of a run starts a short look for its text, and the panels holding it are
--- logged once (IDEAS.md, idea 13: what is needed to put the Archipelago item in the pop-up).
+-- each chest check starts a look for its text (15 s) until it has been found once in this run;
+-- the panels holding it are logged once (IDEAS.md, idea 13).
 local DIALOG_TEXT = "obtained"
 local dialogProbe = { ticks = 0, done = false }
 
@@ -431,8 +439,7 @@ local function probeDialog()
         dialogProbe.done = true
         for i, line in ipairs(chain) do log("chest pop-up layout " .. i .. ": " .. line) end
     elseif dialogProbe.ticks == 0 then
-        dialogProbe.done = true
-        log("chest pop-up: no on-screen text holding \"" .. DIALOG_TEXT .. "\" was found")
+        log("chest pop-up: no on-screen text holding \"" .. DIALOG_TEXT .. "\" was found; the next chest tries again")
     end
 end
 
@@ -440,7 +447,7 @@ local function opened(key)
     if not sessionSave() then return end
     if report("check", key) then
         log("check " .. key)
-        if not dialogProbe.done and dialogProbe.ticks == 0 and key:find("^chest:") then dialogProbe.ticks = 10 end
+        if not dialogProbe.done and dialogProbe.ticks == 0 and key:find("^chest:") then dialogProbe.ticks = 30 end
     end
 end
 
@@ -565,7 +572,8 @@ local function judgeSave()
         if not same then setApplied(0, "an Archipelago new game") end
         if save.slot ~= nil then linkSlot(save.slot, state.applied) end
         saveState()
-        notify("Archipelago: this new game is linked to the seed")
+        -- Only logged: the player chose the Archipelago entry, so it says nothing new (round 24).
+        log("Archipelago: this new game is linked to the seed")
     elseif save.slot ~= nil and state.slots[save.slot] then
         setOk(true)
         log("save slot " .. save.slot .. " is the session's save")
@@ -771,7 +779,13 @@ local function runSkip(slot, why)
     end
     local saved, detail = game.SaveAndReload(slot)
     log("skip (" .. why .. "): " .. detail)
-    notify(saved and ("Prologue skipped: " .. detail) or ("Prologue skip: " .. detail))
+    -- The automatic skip is part of starting an Archipelago game, so it is only logged when it
+    -- works (round 24); a failure, or a skip by command, is shown.
+    if saved and why == "automatic" then
+        log("Prologue skipped: " .. detail)
+    else
+        notify(saved and ("Prologue skipped: " .. detail) or ("Prologue skip: " .. detail))
+    end
     return saved
 end
 

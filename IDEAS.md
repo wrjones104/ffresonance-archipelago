@@ -454,7 +454,9 @@ Plan: build option 1 first, because it is known to work. Then try option 2 as an
 3. Received items still come to the feed as now, so a batch never means a pile of pop-ups.
 
 **To find out:**
-- Which widget draws the pop-up, and which of its texts and images hold the item. 0.10.0 logs the panels around the "obtained" text by itself, once per run, the first time a chest check is reported (round 24).
+- Which widget draws the pop-up, and which of its texts and images hold the item. 0.10.0 logs the panels around the "obtained" text by itself, the first time a chest check is reported.
+  - **Round 24:** nothing was found. The item line, "(gil icon) 1", is text with an icon in it, which is a `RichTextBlock`, and only TextBlocks were searched.
+  - **0.10.1** searches both, and tries on each chest (15 s) until it has found it once in a run.
 - Whether the text can be changed while the pop-up is up (the feed showed that field writes before a widget is drawn are safe; this is a widget already drawn, so `SetText` it is).
 
 ## 14. An item feed on the HUD
@@ -527,5 +529,7 @@ The "Back" prompt that menus and the chest pop-up show at the bottom right also 
 - Each line is shown 10 seconds, then fades over 2.
 - 6 px under each line.
 - The `feed step:` logging only runs during `ffrap_feed test`.
+
+**Round 24:** feels right. A pop-up held 10 s sent its items to the Toast, so in 0.10.1 the Toast fallback only applies until the feed has shown its first line in a run. After that, messages wait for the HUD however long a pop-up or menu is up.
 
 **Still to tune:** the size, the place, colours (Archipelago's item colours for progression, useful and trap items need the item flags from the client), and whether the time on screen feels right.

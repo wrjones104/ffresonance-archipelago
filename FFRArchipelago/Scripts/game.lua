@@ -1269,19 +1269,25 @@ function G.TitleLogo(path, line)
         okPad and "" or ", padding not set")
 end
 
--- The chain of panels holding the first on-screen TextBlock whose text holds `text`, from
--- the block up to the root, for the log: where a HUD element (the item feed) could go.
+-- The chain of panels holding the first on-screen text widget whose text holds `text`, from
+-- the widget up to the root, for the log: where a HUD element (the item feed) could go. Text
+-- with icons in it is a RichTextBlock, which is not a TextBlock (round 24: the chest pop-up's
+-- "(gil icon) 1"), so both kinds are searched.
+local TEXT_CLASSES = { "TextBlock", "RichTextBlock" }
 function G.LayoutOf(text)
     local tb
-    local ok, all = pcall(FindAllOf, "TextBlock")
-    if ok and all then
-        for _, b in ipairs(all) do
-            if Alive(b) then
-                local t
-                pcall(function() t = b:GetText():ToString() end)
-                if t and t:find(text, 1, true) then tb = b break end
+    for _, cls in ipairs(TEXT_CLASSES) do
+        local ok, all = pcall(FindAllOf, cls)
+        if ok and all then
+            for _, b in ipairs(all) do
+                if Alive(b) then
+                    local t
+                    pcall(function() t = b:GetText():ToString() end)
+                    if t and t:find(text, 1, true) then tb = b break end
+                end
             end
         end
+        if tb then break end
     end
     if not tb then return nil end
     local chain, w = {}, tb

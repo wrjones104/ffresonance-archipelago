@@ -19,10 +19,10 @@ The world is tested off-line: Archipelago's general tests pass with it, its own 
 
 **What the mod needs:**
 - **UE4SS**, the only thing it needs to run. ConsoleEnablerMod and BPModLoaderMod come with UE4SS. The console is only for the `ffrap_*` commands.
-- **ModSettings** (a Blueprint mod in `Content/Paks/LogicMods`, from the same modding tools as FFRSLib) is optional. In the field, messages ("Received ...", "Sent ...", "Archipelago is paused", "Prologue skipped") go to the mod's own item feed at the bottom right of the HUD (since 0.10.0, on by default). ModSettings' Toast panel takes them off the field (the title screen), when no HUD is on screen for 10 seconds, and with `ffrap_feed off`. Without ModSettings those few only go to `UE4SS.log`.
+- **ModSettings** (a Blueprint mod in `Content/Paks/LogicMods`, from the same modding tools as FFRSLib) is optional. In the field, messages ("Received ...", "Sent ...", "Archipelago is paused", "Prologue skipped") go to the mod's own item feed at the bottom right of the HUD (since 0.10.0, on by default). ModSettings' Toast panel takes them off the field (the title screen), when the feed has not been able to show anything for 10 seconds since the game started, and with `ffrap_feed off`. Without ModSettings those few only go to `UE4SS.log`.
 - **FFRSLib, FFRS_QoL, FFRBestiary and FFRRandomizer are not needed.** Their code is where the game calls come from (see "Where the game calls come from"), but this mod calls the game directly. FFRRandomizer should stay disabled (IDEAS.md, idea 10).
 
-1. **Mod.** Copy `FFRArchipelago/Scripts` and `FFRArchipelago/Assets` over the installed mod (0.10.0). Delete the old `ap_in.txt`, `ap_out.txt` and `ap_state.txt`, and keep `seen.tsv`. Keep FFRRandomizer disabled.
+1. **Mod.** Copy `FFRArchipelago/Scripts` and `FFRArchipelago/Assets` over the installed mod (0.10.1). Delete the old `ap_in.txt`, `ap_out.txt` and `ap_state.txt`, and keep `seen.tsv`. Keep FFRRandomizer disabled.
 2. **World.** Run `python tools/build_apworld.py`, then copy `dist/ff_resonance.apworld` into your Archipelago `custom_worlds` folder. Or, from source, copy `apworld/ff_resonance` into `worlds/`.
 3. **Seed.**
    - Copy `apworld/Final Fantasy Resonance.yaml` into Archipelago's `Players` folder and set a name.
@@ -286,17 +286,18 @@ Rounds 6 to 9 (2026-11-05) worked out and tested the prologue skip; their result
 - **Chest items:** a chest's item line waits in the queue while the chest pop-up is up, and shows once it is closed: Monk's Prayer Beads arrived at 15:33:12.98 and its line was made at 15:33:13.48. So the feed never meets the pop-up's "Back" prompt.
 - **Your notes:** a little more space between lines, and a little longer on screen (you prefer them fading out over staying, as in TUNIC and Hollow Knight).
 
-## Round 24 test plan (mod 0.10.0, world 0.1.3)
+**Round 24 (mod 0.10.0, 2026-11-05):**
+- **The feed:** on by default, with the new spacing and time, and it feels right. Chest items showed after the pop-up was closed ("Received Mist Hi-Potion x2", "Received Dreadwing Mallet", "Received Stout Armor").
+- **Messages that should be quiet:** "Prologue skipped ..." showed on a new game. The new game's "linked to the seed" went to the Toast during the opening movie.
+- **The pop-up probe:** it found no text holding "obtained", though the pop-up was up: twice the HUD stayed hidden for more than 10 s after a chest. The item line, "(gil icon) 1", is text with an icon in it, which in UE is a `RichTextBlock`, not a `TextBlock`. The probe only searched TextBlocks.
+- **The 10-second fallback misfired:** a chest pop-up held for 10 s sent its items to the Toast.
 
-1. **Install.** Copy `FFRArchipelago/Scripts` and `FFRArchipelago/Assets` over the installed mod. The log should say `version 0.10.0 loaded`.
-2. **The feed, on by default:**
-   - Lines have 6 px between them and stay 10 seconds, then fade over 2.
-   - There are no more `feed step:` lines in the log, except during `ffrap_feed test`.
-   - If you had switched it off, `ffrap_feed on`.
-3. **The chest pop-up's layout (for IDEAS.md, idea 13):** open a chest that is an Archipelago location, and leave the pop-up up for a few seconds before pressing OK.
-   - The mod looks for the pop-up's text by itself (once per run) and logs `chest pop-up layout 1:`, `2:` and so on.
-   - Send those lines. If it logs `no on-screen text holding "obtained" was found`, say what language the game is in.
-4. Say whether the spacing and the time on screen feel right now.
+## Round 25 test plan (mod 0.10.1, world 0.1.3)
+
+1. **Install.** Copy `FFRArchipelago/Scripts` and `FFRArchipelago/Assets` over the installed mod. The log should say `version 0.10.1 loaded`.
+2. **New Game (Archipelago):** no "linked to the seed" and no "Prologue skipped" on screen. Both are still in the log.
+3. **The chest pop-up's layout:** open a chest and leave the pop-up up for a few seconds. The probe now searches rich text too, and tries again on each chest until it finds it. Send the `chest pop-up layout` lines.
+4. **Holding a pop-up:** keep a chest's pop-up up for 15 seconds or more. Its item should still go to the feed once you close it, not to the Toast.
 
 ## Open questions
 
