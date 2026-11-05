@@ -849,6 +849,183 @@ function G.ListFunctions(className, out)
     return n
 end
 
+-- -------------------------------------------------------------------------------------------
+-- Prologue skip (IDEAS.md, idea 2)
+-- -------------------------------------------------------------------------------------------
+-- Makes a new game's save look like the start of chapter 1 in front of the Earth Shrine: the
+-- fields the prologue changes, measured by save snapshots on 2026-11-05 (new game at story
+-- 1000 against chapter 1 at story 1030). Fields are written straight into the save object,
+-- because the skip ends with a save and a reload and the save object is what gets written.
+-- The game's own calls are used where a direct write is awkward (inventory, visited maps).
+
+G.SKIP_FROM_MAX = 1005    -- a save up to this story counter is still at the prologue's start
+G.SKIP_STORY = 1030
+local SKIP_FLAGS_ON = { 14, 15, 16, 18, 19, 22, 23, 26, 27, 30, 32, 33, 105, 106, 108, 110, 124, 125,
+                        1164, 1225, 1226 }
+local SKIP_FLAGS_OFF = { 1, 8 }     -- on between story 1000 and 1005, off again by 1030
+local SKIP_PARTY = { 1001, 1002 }   -- Rain, Lasswell
+local SKIP_INVENTORY = {            -- item id, count. Fina's prologue gear goes; the others' comes
+    { 10100, 1 }, { 10200, 1 }, { 11000, 2 }, { 12000, 2 }, { 10699, 0 }, { 11301, 0 }, { 12029, 0 },
+}
+local SKIP_MAPS = { 5010, 2013, 20000, 3001 }   -- known and visited
+G.SKIP_ARRIVAL = { map = 3001, x = -5775.0, y = 0.0, z = -197.85, direction = 2 }
+
+-- The unitParameterList entry for a unit id, or nil.
+local function UnitEntry(sd, unitId)
+    local found
+    pcall(function()
+        local list = sd.unitParameterList
+        for i = 1, #list do
+            if Int(list[i].UnitId) == unitId then found = list[i] break end
+        end
+    end)
+    return found
+end
+
+-- Writes one field and reads it back. Returns true when the value read back is `want`.
+local function Put(target, field, want)
+    local ok = pcall(function() target[field] = want end)
+    local now
+    pcall(function() now = target[field] end)
+    if type(want) == "number" then now = Int(now) end
+    return ok and now == want
+end
+
+-- Applies the skip to the loaded save. Saves nothing. Returns ok and a list of report lines,
+-- one per step ("ok ..." or "FAIL ..."). ok is false when any step failed.
+function G.SkipPrologue()
+    local report, failed = {}, false
+    local function step(ok, what)
+        report[#report + 1] = (ok and "ok   " or "FAIL ") .. what
+        if not ok then failed = true end
+    end
+    local sd = G.SaveData()
+    if not sd then return false, { "FAIL no save loaded" } end
+
+    -- The story counter, as FFRSLib's ffrs_story_set writes it.
+    local okStory = pcall(function() sd.Progress.Progress[1] = G.SKIP_STORY end)
+    step(okStory and G.StoryCounter() == G.SKIP_STORY, "story counter -> " .. G.SKIP_STORY)
+
+    -- Event flags: eventFlag is 0-based in the snapshots, so flag i is Lua element i + 1.
+    local flags = nil
+    pcall(function() flags = sd.Progress.eventFlag end)
+    local bad = {}
+    local function setFlag(i, on)
+        local okSet = pcall(function() flags[i + 1] = on end)
+        local now
+        pcall(function() now = flags[i + 1] end)
+        if not okSet or now ~= on then bad[#bad + 1] = i end
+    end
+    if flags then
+        for _, i in ipairs(SKIP_FLAGS_ON) do setFlag(i, true) end
+        for _, i in ipairs(SKIP_FLAGS_OFF) do setFlag(i, false) end
+    end
+    step(flags ~= nil and #bad == 0, "event flags: " .. #SKIP_FLAGS_ON .. " on, " .. #SKIP_FLAGS_OFF .. " off"
+        .. (#bad > 0 and (" (failed: " .. table.concat(bad, " ") .. ")") or ""))
+    -- Whether the game's own {flag:N} agrees with the array index, for the record.
+    local libSays = G.GetFlag(SKIP_FLAGS_ON[1])
+    report[#report + 1] = "     the game reads flag " .. SKIP_FLAGS_ON[1] .. " as " .. tostring(libSays)
+        .. " (should be true if its numbering matches the array's)"
+
+    -- The party: Rain and Lasswell. Reading one past the end grows the array (see UnlockVision).
+    local okParty = pcall(function()
+        local list = sd.Party.partyList
+        for i, id in ipairs(SKIP_PARTY) do
+            if #list < i then local _ = list[i] end
+            list[i] = id
+        end
+    end)
+    local partyNow = {}
+    pcall(function()
+        local list = sd.Party.partyList
+        for i = 1, #list do partyNow[#partyNow + 1] = tostring(Int(list[i])) end
+    end)
+    step(okParty and table.concat(partyNow, ",") == "1001,1002", "party -> [" .. table.concat(partyNow, ", ") .. "]")
+
+    -- Join status: Rain and Lasswell in (0), Fina out (2).
+    local rain, lasswell, fina = UnitEntry(sd, 1001), UnitEntry(sd, 1002), UnitEntry(sd, 1006)
+    step(rain and lasswell and fina and Put(rain, "JoinStatus", 0) and Put(lasswell, "JoinStatus", 0)
+        and Put(fina, "JoinStatus", 2), "join status: Rain, Lasswell 0; Fina 2")
+
+    -- Rain's baseParameterList[5] (0-based) goes 0 -> 3 in the prologue. Its meaning is unknown.
+    local okBase = false
+    if rain then pcall(function() okBase = Put(rain.baseParameterList, 6, 3) end) end
+    step(okBase, "Rain baseParameterList[5] -> 3")
+
+    -- Fina back to her chapter 1 self: level 1, her own weapon, no armor, accessories or skills.
+    local okFina = fina ~= nil
+    if fina then
+        for _, kv in ipairs({ { "Experience", 0 }, { "HitPoint", 200 }, { "MagicPoint", 70 },
+                              { "EquipWeaponId", 10600 }, { "EquipArmorId", -1 } }) do
+            okFina = Put(fina, kv[1], kv[2]) and okFina
+        end
+        for _, field in ipairs({ "EquipAccessoryIdList", "activeSkillIdList" }) do
+            local n
+            pcall(function() fina[field]:Empty() end)
+            pcall(function() n = #fina[field] end)
+            okFina = (n == 0) and okFina
+        end
+    end
+    step(okFina, "Fina reset: Experience 0, HP 200, MP 70, weapon 10600, no armor, accessories or skills")
+
+    -- Inventory, through the game's call: equipped gear is counted in the bag.
+    local inv = Lib("CPP_BFL_SaveDataInventory")
+    local invBad = {}
+    for _, e in ipairs(SKIP_INVENTORY) do
+        local okSet = inv and pcall(function() inv:SetInventoryItem(e[1], e[2]) end)
+        local held = inv and Held(inv, e[1])
+        if not okSet or (held ~= nil and held ~= e[2]) then
+            invBad[#invBad + 1] = e[1] .. " (holds " .. tostring(held) .. ")"
+        end
+    end
+    step(inv ~= nil and #invBad == 0, "inventory: starter gear in, Fina's prologue gear out"
+        .. (#invBad > 0 and (" (wrong: " .. table.concat(invBad, ", ") .. ")") or ""))
+
+    -- The guest unit's HP and MP, and the battles-won counter.
+    step(Put(sd.unitGuest, "HitPoint", 9999) and Put(sd.unitGuest, "MagicPoint", 9999), "guest unit HP, MP -> 9999")
+    step(Put(sd.Player, "WinNum", 3), "battles won -> 3")
+
+    -- Maps passed through: known and visited.
+    local perMap = Lib("CPP_BFL_SaveData_PerMap")
+    local mapBad = {}
+    for _, m in ipairs(SKIP_MAPS) do
+        local okAdd = perMap and pcall(function() perMap:AddKnownMap(m); perMap:AddVisitedMap(m) end)
+        local visited
+        pcall(function() visited = perMap:IsVisited(m) end)
+        if not okAdd or visited ~= true then mapBad[#mapBad + 1] = tostring(m) end
+    end
+    step(perMap ~= nil and #mapBad == 0, "maps known and visited: " .. table.concat(SKIP_MAPS, ", ")
+        .. (#mapBad > 0 and (" (failed: " .. table.concat(mapBad, ", ") .. ")") or ""))
+
+    -- Where the reload puts the player: in front of the Earth Shrine.
+    local a = G.SKIP_ARRIVAL
+    local okMap = pcall(function()
+        sd.Map.mapId = a.map
+        sd.Map.unitLocation.X = a.x
+        sd.Map.unitLocation.Y = a.y
+        sd.Map.unitLocation.Z = a.z
+        sd.Map.unitDirection = a.direction
+    end)
+    step(okMap and G.MapId() == a.map, "arrival: map " .. a.map .. " at " .. a.x .. ", " .. a.y .. ", " .. a.z)
+
+    return not failed, report
+end
+
+-- Writes the loaded save to a slot and starts the field from that slot, as FFRSLib's
+-- ffrs_travel does. Returns ok and a detail.
+function G.SaveAndReload(slot)
+    local lib = Lib("CPP_BFL_SaveData")
+    if not (lib and lib.SaveGameData) then return false, "CPP_BFL_SaveData not found" end
+    local ok, err = pcall(function() lib:SaveGameData(slot) end)
+    if not ok then return false, "SaveGameData(" .. slot .. ") raised: " .. tostring(err) end
+    local mgr = Live("CPP_MapManager")
+    if not mgr then return false, "saved to slot " .. slot .. ", but no map manager to reload with: load the slot by hand" end
+    if not pcall(function() mgr:MapTestStartByChoiceSlotLoadSaveData(slot) end) then
+        return false, "saved to slot " .. slot .. ", but the reload did not start: load the slot by hand"
+    end
+    return true, "saved to slot " .. slot .. ", reloading"
+end
+
 -- The property of an object's class (or a parent class) named `field`, or nil.
 local function FindProperty(obj, field)
     local found

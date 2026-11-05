@@ -18,6 +18,7 @@
 --   ffrap_export                 every chest table row to chests.tsv
 --   ffrap_snapshot [name]        every field of the loaded save to snap_<name>.tsv (tools/snapdiff.py)
 --   ffrap_functions [class ...]  the functions of game classes to functions.txt (default: save-data classes)
+--   ffrap_skip [slot]            skip the prologue on a new game; with a slot, save there and reload
 --   ffrap_blank [on|off]         chests that are Archipelago locations give 1 gil instead
 --   ffrap_sync                   report every known location the save says is looted
 --   ffrap_bind                   link the loaded save to the client's session (also /bind in the client)
@@ -28,7 +29,7 @@
 -- follows the save slots the linked game is saved to. While any other save is loaded, the mod
 -- grants nothing, reports nothing and leaves the chests vanilla.
 
-local VERSION = "0.5.4"
+local VERSION = "0.6.0"
 local PROTOCOL = 1        -- the bridge protocol; the apworld's MOD_PROTOCOL
 
 local MOD_DIR = (debug.getinfo(1, "S").source:gsub("^@", ""):gsub("\\", "/"):match("^(.*/)Scripts/[^/]+$"))
@@ -681,6 +682,52 @@ command("ffrap_bind", function()
     end
     followSave()
     bindLoaded()
+end)
+
+-- ffrap_skip [slot]: skip the prologue on a new game (IDEAS.md, idea 2). Without a slot it only
+-- changes the loaded save, so a snapshot can check it; with one it also saves to that slot and
+-- reloads from it. Running it again with a slot on the same save only saves and reloads.
+local skipped = nil    -- the save object the skip was applied to
+command("ffrap_skip", function(p)
+    local slot = p and p[1] and tonumber(p[1])
+    if p and p[1] and not slot then
+        notify("Usage: ffrap_skip [slot]   (0 is the autosave)")
+        return
+    end
+    if not game.InGame() then
+        notify("Start a new game first")
+        return
+    end
+    followSave()
+    local obj, story = game.SaveObjectName(), game.StoryCounter()
+    if skipped ~= obj then
+        if not story or story > game.SKIP_FROM_MAX then
+            notify("ffrap_skip works on a new game only (story " .. tostring(story) .. ", must be "
+                .. game.SKIP_FROM_MAX .. " or lower)")
+            return
+        end
+        local okRun, ok, report = pcall(game.SkipPrologue)
+        if not okRun then
+            notify("Prologue skip raised an error: " .. tostring(ok))
+            return
+        end
+        for _, line in ipairs(report) do log("skip: " .. line) end
+        skipped = obj
+        notify("Prologue skip " .. (ok and "applied" or "applied with failures (see the log)")
+            .. (slot and "" or ". Nothing saved yet: ffrap_skip <slot> saves and reloads"))
+    end
+    if slot then
+        -- The reload makes a new save object from this slot, so a linked session must own the
+        -- slot first, or the reloaded game would look like someone else's.
+        if state.seed and save.ok and not state.slots[slot] then
+            state.slots[slot] = true
+            saveState()
+            log("skip: slot " .. slot .. " linked before the reload: session slots [" .. slotsText() .. "]")
+        end
+        local ok, detail = game.SaveAndReload(slot)
+        log("skip: " .. detail)
+        notify(ok and ("Prologue skipped: " .. detail) or ("Prologue skip: " .. detail))
+    end
 end)
 
 command("ffrap_reset", function()

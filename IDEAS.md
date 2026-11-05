@@ -145,6 +145,27 @@ Left out: `inventoryProcedure` (probably the "new item" marks) and the scan data
 
 **When it runs.** On a new game that the mod links to a session whose slot data has `skip_prologue` on: as soon as the save settles at story 1000 on map 10040, during the opening movie. Before that, a console command `ffrap_skip` can test the same code on any new game.
 
+**Built: `ffrap_skip [slot]` (mod 0.6.0).** The recipe above, as a console command for testing:
+- `ffrap_skip` changes the loaded save and saves nothing, so a snapshot can check it against `ch1`. It works only up to story 1005, so on a new game only.
+- `ffrap_skip <slot>` also writes the save to that slot and reloads from it, with the same two calls as FFRSLib's `ffrs_travel` (`SaveGameData`, then `MapTestStartByChoiceSlotLoadSaveData`). Run after a plain `ffrap_skip` on the same save, it only saves and reloads.
+- Fields are written straight into the save object, because the save object is what `SaveGameData` writes. The game's calls are used for the inventory (`SetInventoryItem`) and the visited maps (`AddKnownMap`, `AddVisitedMap`).
+- Each step logs `skip: ok ...` or `skip: FAIL ...`, and a failed step does not stop the rest. One line checks whether the game's `GetFlag(14)` agrees with array element 14.
+- With a linked session, the slot is linked before the reload, so the reloaded game is the session's.
+- Left out on purpose: map 2014's four open chest rows, `inventoryProcedure` and the scan data.
+
+**Step 5: test the skip in game.** Do this without the client connected, so that no seed is linked.
+1. Copy `FFRArchipelago/Scripts` over the installed mod. The log should say `version 0.6.0 loaded`.
+2. Start a new game. As soon as the console works (during the opening movie is fine), run `ffrap_skip`. In `UE4SS.log`, every `skip:` line should start with `ok`.
+3. Run `ffrap_snapshot skip`.
+4. Run `ffrap_skip 0`. This overwrites the autosave slot and reloads from it. If the reload does not start, go to the title screen and load the autosave.
+5. Look around:
+   - Do you stand in front of the Earth Shrine, with Rain and Lasswell in the party?
+   - Do the menus open (party, equipment, items, visions, map)? Does the quest log show the Earth Shrine?
+   - Walk into the shrine. Does the story carry on, and does any cutscene from the prologue play again?
+   - Does Fina show up anywhere she should not?
+6. Run `ffrap_snapshot skip_loaded`.
+7. Send `snap_skip.tsv`, `snap_skip_loaded.tsv` and `UE4SS.log`, plus what you saw. I compare both snapshots with `ch1`.
+
 **Save linking, found on the way (mod 0.5.4).**
 - A new game can carry the timestamp of the autosave slot it is about to overwrite. In the second run, a new game showed up as linked slot 0. A save at story 1000 or lower now always counts as a new game.
 - A new game autosaves into slot 0 and overwrites whatever autosave is there. An Archipelago game that lives only in the autosave slot is lost when you start a new game, so keep it in a manual slot too.
