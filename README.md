@@ -292,12 +292,7 @@ Rounds 6 to 9 (2026-11-05) worked out and tested the prologue skip; their result
 - **The pop-up probe:** it found no text holding "obtained", though the pop-up was up: twice the HUD stayed hidden for more than 10 s after a chest. The item line, "(gil icon) 1", is text with an icon in it, which in UE is a `RichTextBlock`, not a `TextBlock`. The probe only searched TextBlocks.
 - **The 10-second fallback misfired:** a chest pop-up held for 10 s sent its items to the Toast.
 
-## Round 25 test plan (mod 0.10.1, world 0.1.3)
-
-1. **Install.** Copy `FFRArchipelago/Scripts` and `FFRArchipelago/Assets` over the installed mod. The log should say `version 0.10.1 loaded`.
-2. **New Game (Archipelago):** no "linked to the seed" and no "Prologue skipped" on screen. Both are still in the log.
-3. **The chest pop-up's layout:** open a chest and leave the pop-up up for a few seconds. The probe now searches rich text too, and tries again on each chest until it finds it. Send the `chest pop-up layout` lines.
-4. **Holding a pop-up:** keep a chest's pop-up up for 15 seconds or more. Its item should still go to the feed once you close it, not to the Toast.
+**Round 25 (mod 0.10.1, 2026-11-05): passed.** The new game showed neither "linked to the seed" nor "Prologue skipped", and a chest pop-up held open still sent its item to the feed once closed. The `chest pop-up layout` lines from this round's log are still to be read (IDEAS.md, idea 13).
 
 ## Open questions
 
