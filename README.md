@@ -11,6 +11,8 @@ Two parts:
 
 `tools/fake_ap.py` still plays the server's part for testing the mod alone.
 
+AI use: this project is built with Claude Code. [DISCLOSURE.md](DISCLOSURE.md) says what was AI-written, what I did, and how much has been reviewed.
+
 ## Playing the MVP
 
 The world is tested off-line: Archipelago's general tests pass with it, its own tests pass, and a client end-to-end run against a local server passes, with a script standing in for the game. It has not been played in the real game yet.
