@@ -179,10 +179,24 @@ For the automatic skip, this means it should save and reload in the same moment 
 
 **Retest (mod 0.6.1).** Same as step 5, with the seed connected or not:
 1. Copy `FFRArchipelago/Scripts` over the installed mod. The log should say `version 0.6.1 loaded`.
-2. Start a new game and run `ffrap_skip 0` straight away, with no plain `ffrap_skip` first.
+2. Start a new game and run `ffrap_skip 0` straight away, with no plain `ffrap_skip` first. (Round 9: wait until you can move Fina. Mod 0.6.2 refuses before that.)
 3. The log should show `skip:` lines, then `saved to slot 0 (map 3001, flag 1 false), reloading`.
 4. Check that you stand in front of the Earth Shrine. Walk into the shrine and see whether the story carries on.
 5. Run `ffrap_snapshot skip_loaded` and send it with the log.
+
+**Round 9 results (2026-11-05, mod 0.6.1).** The arrival works. `SaveGameData` keeps the arrival point (the log said `map 3001, flag 1 false`), and the reload put the player in front of the Earth Shrine.
+- **Skip during the opening movie (story 1000):** the game loaded at the shrine with no menus and no movement, so the movie's input lock outlives the reload.
+- **Skip once Fina can move (story 1005, just after the game's first autosave):** everything came up right: party, movement, menus.
+- Mod 0.6.2 refuses `ffrap_skip` before story 1005, with a message that says to wait until you can move.
+
+**The automatic skip, from this.** On a linked new game with `skip_prologue` on:
+1. Wait for story 1005, which is when the player first controls Fina.
+2. Wait for the game's first autosave after that. The mod already sees it as the save's timestamp changing, and it shows the scene has finished saving.
+3. Wait a moment more, then apply, save and reload in one go. Applying again just before saving (0.6.1) covers anything the opening scene changes in between.
+
+Still to decide: whether to show a message first ("Skipping the prologue…"), and what to do if the player opts out.
+
+**Second run of round 9: a new game while the session already has a game.** The session was linked to slot 0, the first run's skipped game. A second new game was paused, as designed. Its autosave then overwrote slot 0 ("slot 0 now holds another game and is no longer linked"), and the session was left with no save at all. The skip on the paused game worked, but the reloaded game stayed paused. Linking it would be right only if it also gets every item the session has handed out. That again needs the per-save item index (README, open question 5).
 
 **Save linking, found on the way (mod 0.5.4).**
 - A new game can carry the timestamp of the autosave slot it is about to overwrite. In the second run, a new game showed up as linked slot 0. A save at story 1000 or lower now always counts as a new game.

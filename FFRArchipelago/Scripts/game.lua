@@ -859,6 +859,10 @@ end
 -- The game's own calls are used where a direct write is awkward (inventory, visited maps).
 
 G.SKIP_FROM_MAX = 1005    -- a save up to this story counter is still at the prologue's start
+-- Round 9: a skip during the opening movie (story 1000) reloads into the shrine with no menus
+-- and no movement; the movie's input lock outlives the reload. From 1005, when the player first
+-- controls Fina (the game autosaves there), the reload comes up clean.
+G.SKIP_FROM_MIN = 1005
 G.SKIP_STORY = 1030
 local SKIP_FLAGS_ON = { 14, 15, 16, 18, 19, 22, 23, 26, 27, 30, 32, 33, 105, 106, 108, 110, 124, 125,
                         1164, 1225, 1226 }
