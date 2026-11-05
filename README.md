@@ -17,7 +17,7 @@ AI use: this project is built with Claude Code. [DISCLOSURE.md](DISCLOSURE.md) s
 
 The world is tested off-line: Archipelago's general tests pass with it, its own tests pass, and a client end-to-end run against a local server passes, with a script standing in for the game. Round 5 played a full seed in the real game, up to the goal and a release (see "Test results so far").
 
-1. **Mod.** Copy `FFRArchipelago/Scripts` over the installed mod (0.7.2). Delete the old `ap_in.txt`, `ap_out.txt` and `ap_state.txt`, and keep `seen.tsv`. Keep FFRRandomizer disabled.
+1. **Mod.** Copy `FFRArchipelago/Scripts` over the installed mod (0.7.3). Delete the old `ap_in.txt`, `ap_out.txt` and `ap_state.txt`, and keep `seen.tsv`. Keep FFRRandomizer disabled.
 2. **World.** Run `python tools/build_apworld.py`, then copy `dist/ff_resonance.apworld` into your Archipelago `custom_worlds` folder. Or, from source, copy `apworld/ff_resonance` into `worlds/`.
 3. **Seed.**
    - Copy `apworld/Final Fantasy Resonance.yaml` into Archipelago's `Players` folder and set a name.
@@ -102,7 +102,8 @@ At run time the mod writes these files into its own folder: `ap_out.txt`, `ap_st
 | `ffrap_functions [class ...]` | The functions of game classes, with their parameters, to `functions.txt`. With no class it lists the save-data, debug and new-game classes (IDEAS.md, idea 2). |
 | `ffrap_skip [slot]` | Skip the prologue on a new game, once you can move Fina (story 1005). Without a slot it only changes the loaded save; with one it applies the skip again, saves there and reloads. Testing only for now (IDEAS.md, idea 2). |
 | `ffrap_inspect <class or path>` | One object's fields and functions to `inspect_<name>.tsv`: a class name gives its first live instance (else its default object), and a path gives that object (IDEAS.md, idea 6). |
-| `ffrap_find <text>` | Every game class with a function or field whose name holds the text, to `find_<text>.txt`. Walks every object, so the game pauses for a moment. |
+| `ffrap_find <text>` | Every game class or struct, native or Blueprint, whose name or one of its functions or fields holds the text, to `find_<text>.txt`. Walks every object, so the game pauses for a moment. Run it in game: at the title screen it crashed the game once (round 11). |
+| `ffrap_title [list\|add]` | Experimental. `list` logs the entries the title menu shows. `add` adds an Archipelago entry (type 5, a copy of New Game) and hooks the choice: picking it starts a normal new game marked as an Archipelago one. |
 | `ffrap_bind` | Link the loaded save to the client's session, in place of any earlier one. The same as `/bind` in the client. |
 | `ffrap_reset` | Set the loaded save's applied-item count to 0. Re-grants everything to it! |
 
@@ -211,26 +212,22 @@ Rounds 6 to 9 (2026-11-05) worked out and tested the prologue skip; their result
 - **Pausing:** an older save (slot 1) and a second new game were both paused. `ffrap_skip` during the second game's opening movie was refused with the "wait until you can move" message.
 - **`/bind` not tested:** the client said "Could not find command bind". The session key was `unknown:0:1` too. Both mean the installed client was older than world 0.1.1, because the round 10 plan did not say to install the new apworld. World 0.1.3 makes this visible: the client logs its world version when it starts, and writes a `client` line to `ap_in.txt` that the mod logs (`client: world version 0.1.3`). Until the new apworld is installed, `ffrap_bind` in the game console does the same as `/bind`.
 
-## Round 11 test plan (mod 0.7.2, world 0.1.3)
+**Round 11 (mod 0.7.2, world 0.1.3, 2026-11-05): passed.** With the current apworld installed, the session key had the seed's number, `/bind` linked an older save, and that save received every item. The title-screen probes ran: see IDEAS.md, idea 6.
 
-Round 10 tested the per-save item count, but not `/bind`, because the installed client was old. This round installs the current apworld and tests what is left. Keep FFRRandomizer disabled.
+## Round 12 test plan (mod 0.7.3, world 0.1.3)
 
-1. **Install.**
-   - Copy `FFRArchipelago/Scripts` over the installed mod. The log should say `version 0.7.2 loaded`.
-   - Rebuild the apworld (`python tools/build_apworld.py`), or take `dist/ff_resonance.apworld` as it is, and copy it over the old one in your Archipelago install's `custom_worlds` folder. Then generate a new seed with it.
-   - Start the client. Its first line should say `Final Fantasy Resonance client, world version 0.1.3`. After it connects, `UE4SS.log` should say `client: world version 0.1.3`.
-   - Delete `ap_in.txt`, `ap_out.txt` and `ap_state.txt`.
-   - Check that the `seed` line in `ap_in.txt` starts with the seed's long number, not `unknown`.
-2. **A new game, skipped.**
-   - Connect the client at the title screen and start a new game. Expected: "this new game is linked to the seed", and the starting items arrive.
-   - Once you can move Fina, run `ffrap_skip 0`. Expected: a `skip: slot 0 linked before the reload` line with the count, for example `session slots [0=3]`.
-3. **Save to a manual slot.** Save the game to a free slot. Expected in the log: `saved to slot N: session slots [0=…,N=…]`, where the count is the number of items received so far.
-4. **Items after the save.** Open a few chests that hold your own items, so that new items arrive. Do not save. Note how many items you have now.
-5. **Load the older save.** Load slot N again. Expected: `items: slot N holds: … applied (was …)`, and the items from step 4 arrive again, because that save does not have them.
-6. **Save and reload.** Save to slot N, then load it. Expected: no items arrive.
-7. **`/bind` another save.** Load a save from before this seed and type `/bind`. Expected: "this save is linked to the seed", `items: a newly linked save: 0 applied`, and every item of the seed arrives. Do this last, because it moves the seed onto that save.
+This round tries the experimental Archipelago entry on the title menu (IDEAS.md, idea 6). Keep FFRRandomizer disabled.
 
-Send `UE4SS.log` (the `[FFRAP]` lines), `ap_status.txt` and the three `ap_*.txt` files.
+1. **Install.** Copy `FFRArchipelago/Scripts` over the installed mod. The log should say `version 0.7.3 loaded`.
+2. **At the title screen:**
+   - Run `ffrap_title list`. The log line `title: shown [...], map keys [...]` shows which entries the menu displays.
+   - Run `ffrap_title add`. Expected: `title: add: copied from the New Game row`, and the map keys now end in 5.
+   - Look for a second "New Game" entry. If none shows, open Options and close it, or start a game and return to the title, then look again and run `ffrap_title list` once more.
+3. **Choose entries.** Pick any entry. The log should say `title: entry <n> chosen`. If the second New Game shows, pick it. Expected: `title: entry 5 chosen`, the "starting a new game for the seed" message, and a normal new game.
+4. **The entry fields.** At the title screen, run `ffrap_inspect CPP_DA_Title` again. With 0.7.3 the `EntryPropertyMap` rows should show their fields, not addresses. I need these to label the entry "Archipelago".
+5. **Finds, in game only** (at the title screen `ffrap_find` crashed the game in round 11): `ffrap_find Opening`, `ffrap_find NewGame`. The game pauses for a moment each time.
+
+Send `UE4SS.log` (the `[FFRAP]` lines), `inspect_CPP_DA_Title.tsv` and the `find_*.txt` files, and say what the title menu showed.
 
 ## Open questions
 

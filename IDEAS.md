@@ -295,13 +295,30 @@ Plan: build option 1 first, because it is known to work. Then try option 2 as an
 
 **The logo and text.**
 - **Name and version:** a text block on the title widget is the easy part. Find the title layout (`UI.Layout.Title`) and add a `TextBlock`, or change an existing one.
-- **The logo:** UE can make a texture from an image file at run time (`KismetRenderingLibrary.ImportFileAsTexture2D`). The mod can ship a PNG and show it in an `Image` widget. Check Archipelago's guidance on using its logo first.
+- **The logo:** UE can make a texture from an image file at run time (`KismetRenderingLibrary.ImportFileAsTexture2D`). The mod can ship a PNG and show it in an `Image` widget. The Archipelago logo is free to use with credit for unpaid projects. The credit goes in the README and in DISCLOSURE.md's credits.
 
-**To find out (probes in mod 0.7.2):** run these at the title screen and send the files.
-- `ffrap_inspect CPP_VM_Title` and `ffrap_inspect CPP_DA_Title`: the title menu's entries and what choosing one calls.
-- `ffrap_inspect CPP_TitleController`.
-- `ffrap_find Opening`, and then `ffrap_find NewGame`: which classes own the opening process and the new-game task, and what they can be asked to do.
-- Run `ffrap_find InputMapping` once in game as well: what switches the control scheme.
+**Round 11 probes (mod 0.7.2, 2026-11-05):**
+- **The title view model** (`VM_Title_C`, a Blueprint on `CPP_VM_Title`) has `GetDisplayEntryList`, `ExecuteEntry(InType)`, `GetTitleDA` and `IsEnableBGMovie`. Its data asset is `/Game/UI/Title/Data/DA_Title.DA_Title`. The background movie is `/Game/Movies/Event/C01/MV_Title`.
+- **The data asset** (`CPP_DA_Title`) holds `EntryPropertyMap` with keys 0 to 4 and `DifficultyPropertyMap` with keys 0 to 2. It also holds `EntryDecideEvent` (`Delegate.Title.List.Decide`), `QuitGameDialog`, the title BGM (`BGM_PP_MAINTHEME_02`) and switches for the opening animation and the movie.
+- **The entry types** come from the executable: `ETitleFunctionType` is Continue 0, LoadGame 1, NewGame 2, Option 3, QuitGame 4 (and Max 5). `ETitleEntryBehavior` is None, PushWidget or OpenDialog. The row structs are `TitleEntryProperty`, `TitleEntryDisplay` and `TitleEntryBehavior`.
+- **`CPP_TitleController`** is an actor in the title map with `InputMenu` and nothing else of its own.
+- **`ffrap_find`:**
+  - It crashed the game at the title screen but worked in game.
+  - `Opening` found only `UNIT_PARAMETER_CALC_DATA.openingProgressId`.
+  - `NewGame` found nothing, because 0.7.2 matched function and field names only, not class names (`CPP_Task_NewGame`), and skipped Blueprint classes. The opening's names (`IsOpeningProcess`, `BeforeOpeningInputMappingContext`) are probably on a Blueprint class.
+  - `InputMapping` found `CPP_InputManager.RegisterInputMappingContext`, `CPP_DA_MUCHA_INPUT.pInputMappingContextList` and `CPP_PlayerMappableKeysSubsystem.GetInputMappingContextList`: the places a control scheme gets switched.
+
+**The entry, as built (mod 0.7.3, experimental):**
+- `ffrap_title add` adds row 5 to `EntryPropertyMap` as a copy of the New Game row.
+- A hook on `CPP_VM_Title:ExecuteEntry` runs before the game's own code. When the type is 5, it marks the new game as an Archipelago one and changes the argument to 2, so the game runs its own New Game.
+- Open: whether the menu shows a row it has no enum name for. `GetDisplayEntryList` may build its list from the map, or from the enum values 0 to 4. If the row does not show, the next try is a hook that adds 5 to the list that `GetDisplayEntryList` returns.
+- The label is still "New Game". The next inspect of `DA_Title` shows the row's fields, and then the label can be set (FFRSLib sets its System Menu label the same way).
+- `ffrap_find` 0.7.3 also matches class and struct names, looks in Blueprint classes under `/Game`, and skips objects that are being destroyed.
+
+**Next, once the entry shows and works:**
+1. On an Archipelago new game: link it to the seed even if the session already has a save, wait for story 1005 and the first autosave, then skip.
+2. Then try ending the opening early (the control-scheme switch).
+3. Add the entry at start-up without a command, and add the logo and version text.
 
 ## 7. Enemy randomization
 
@@ -347,7 +364,7 @@ Plan: build option 1 first, because it is known to work. Then try option 2 as an
 
 **Known so far:**
 - **FFRRandomizer** patches the same chest table (`CDT_MapGimmickTreasureBox`) that chest blanking changes. Every test plan says to keep it disabled.
-- **FFRBestiary** reads the same save state (slots, timestamps, visited maps). Its notes mention a start-up crash once. Still to write down: what went wrong when you ran it with this mod.
+- **FFRBestiary** reads the same save state (slots, timestamps, visited maps). Nothing has gone wrong running it with this mod: it is a neighbour, not a known conflict. Its notes mention a start-up crash once, in its own code.
 - **FFRSLib** adds entries to the System Menu data asset and hooks its view model. A title-menu entry (idea 6) works the same way on a different asset, so both should be able to live together. Two mods writing the same list at once could still clash.
 - Any mod that edits the save while we skip the prologue, or that grants items, can confuse the per-save item count.
 
@@ -356,3 +373,30 @@ Plan: build option 1 first, because it is known to work. Then try option 2 as an
 - **Shared tables:** patch them through one place. Offer a small shared helper, or agree on an order with the other mod authors.
 - **A compatibility list** in the README: tested together, works, or known problems.
 - The other conflicts you have seen outside this project: which mods, and what happened.
+
+## 11. Archipelago details on the save-slot cards
+
+**Idea:** the Load and Save screens show, on each slot's card, that it is an Archipelago save: the server (host:port) and the slot name.
+
+**Known so far:**
+- The mod already knows which slots belong to the session (`slots` in `ap_state.txt`). It does not keep that for older sessions.
+- The game's slot summaries are `MuchaGameSaveDataSummary` rows in `CPP_MuchaSaveDataManager.GameSaveDataSummaryMap`. The cards are probably drawn from them.
+
+**What it needs:**
+- **The client** writes the server address and the slot name into `ap_in.txt` (`server <host:port>`, `player <name>`), next to the `seed` line.
+- **The mod** keeps a per-slot record that outlives the session: slot, seed, host:port, slot name. It is updated when a linked game saves, and cleared when another game saves over the slot.
+- **The card itself:** find the card widget on the Load screen (an `ffrap_find` and an inspect), and add a text line, or change the location text.
+
+## 12. The client inside the game
+
+**Idea:** no separate client window. The player types the server, slot name and password in the game and connects from there.
+
+**What is realistic:**
+- **UE4SS Lua has no sockets.** The mod can read and write files, start programs and call the game's functions, but cannot open a websocket. That is why the client is a Python program and the two talk through files.
+- **Option A, a UE4SS C++ mod.** UE4SS also loads C++ mods (DLLs). APCpp, the C++ Archipelago client library that several PC ports use, could be built into one and called from Lua. That is a real in-game client. The cost: a C++ build against the matching UE4SS version, websocket and TLS libraries, and more to fix when the game or UE4SS updates.
+- **Option B, start the existing client from the game.** An in-game connect screen writes host, slot and password to a file. The mod then starts the Archipelago client without its window, using `os.execute` or the launcher with the component's arguments. The player never touches the client, but the Archipelago install is still needed. Generating seeds needs it anyway.
+- **Recommendation:** B first, because it reuses the tested client and the file bridge. Then A, if the separate install is still a sticking point. With A the connect screen from B stays, and only what is behind it changes.
+
+**To find out:**
+- For B: whether the launcher can start our client with no window and connection arguments, and how to find the install folder (a setting in the mod's config).
+- For A: whether APCpp builds against UE4SS's C++ template, and how big a release that makes.

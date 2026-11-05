@@ -687,13 +687,19 @@ local SAVE_STRUCT_NAMES = {
     "UI_MiniMap", "Unit", "UnitBtlCmdData", "UnitBtlCmdDataBundle", "UnitGuest", "UnitParameter",
     "Vision",
 }
+-- Other struct types that map values can have, by their full short name: the title menu's
+-- entries (round 11 probes; the names come from the executable).
+local OTHER_STRUCT_NAMES = { "TitleEntryProperty", "TitleEntryDisplay", "TitleEntryBehavior" }
 local saveStructs
 local function SaveStructs()
     if saveStructs then return saveStructs end
     saveStructs = {}
-    for _, short in ipairs(SAVE_STRUCT_NAMES) do
+    local names = {}
+    for _, short in ipairs(SAVE_STRUCT_NAMES) do names[#names + 1] = "SaveData_" .. short end
+    for _, full in ipairs(OTHER_STRUCT_NAMES) do names[#names + 1] = full end
+    for _, short in ipairs(names) do
         pcall(function()
-            local s = StaticFindObject("/Script/mucha.SaveData_" .. short)
+            local s = StaticFindObject("/Script/mucha." .. short)
             if not (s and s:IsValid()) then return end
             local names = {}
             pcall(function() s:ForEachProperty(function(p) names[#names + 1] = p:GetFName():ToString() end) end)
@@ -893,31 +899,94 @@ function G.Inspect(target, out)
     return true
 end
 
--- Every /Script/mucha class with a function or field whose name holds `text` (any case), as
--- lines through out(line). Walks every object once, so the game pauses for a moment. Returns the
--- number of matches.
+-- The kinds of type object FindNames looks in: native classes and structs, and the classes
+-- Blueprints make (round 11: the opening's names were not on any native class).
+local TYPE_KINDS = { Class = true, ScriptStruct = true, BlueprintGeneratedClass = true,
+                     WidgetBlueprintGeneratedClass = true, AnimBlueprintGeneratedClass = true }
+
+-- Every game class or struct (/Script/mucha, or a Blueprint under /Game) whose own name, or the
+-- name of one of its functions or fields, holds `text` (any case), as lines through out(line).
+-- Walks every object once, so the game pauses for a moment. Objects being destroyed are skipped
+-- (round 11: the walk crashed the game at the title screen). Returns the number of matches.
 function G.FindNames(text, out)
     local want, n = text:lower(), 0
     local function match(kind, owner, name)
         if name:lower():find(want, 1, true) then
             n = n + 1
-            out(kind .. "\t" .. owner .. "." .. name)
+            out(kind .. "\t" .. owner .. (name ~= owner and ("." .. name) or ""))
         end
     end
     pcall(function()
         ForEachUObject(function(obj)
+            if not Alive(obj) then return end
             local kind
             pcall(function() kind = obj:GetClass():GetFName():ToString() end)
-            if kind ~= "Class" and kind ~= "ScriptStruct" then return end
+            if not TYPE_KINDS[kind] then return end
             local full
             pcall(function() full = obj:GetFullName() end)
-            if not (full and full:find(" /Script/mucha.", 1, true)) then return end
+            if not (full and (full:find(" /Script/mucha.", 1, true) or full:find(" /Game/", 1, true))) then return end
             local owner = obj:GetFName():ToString()
+            match(kind == "ScriptStruct" and "struct" or "class", owner, owner)
             pcall(function() obj:ForEachFunction(function(fn) match("function", owner, fn:GetFName():ToString()) end) end)
             pcall(function() obj:ForEachProperty(function(p) match("field", owner, p:GetFName():ToString()) end) end)
         end)
     end)
     return n
+end
+
+-- -------------------------------------------------------------------------------------------
+-- Title menu (IDEAS.md, idea 6). Experimental.
+-- -------------------------------------------------------------------------------------------
+-- The title menu's entries are ETitleFunctionType values (Continue 0, LoadGame 1, NewGame 2,
+-- Option 3, QuitGame 4, Max 5), with one row each in DA_Title.EntryPropertyMap, and choosing one
+-- calls CPP_VM_Title:ExecuteEntry(type) (round 11 probes). The Archipelago entry is type 5: a
+-- copy of the New Game row. A hook on ExecuteEntry turns it into New Game (main.lua).
+
+G.TITLE_NEW_GAME = 2
+G.TITLE_ARCHIPELAGO = 5
+local TITLE_DA = "/Game/UI/Title/Data/DA_Title.DA_Title"
+
+-- The entry types the title menu shows, from its view model, and the keys of the data asset's
+-- entry map, as text for the log.
+function G.TitleEntries()
+    local shown, keys = {}, {}
+    pcall(function()
+        local vm = Live("CPP_VM_Title")
+        local list = vm and vm:GetDisplayEntryList()
+        if list then for i = 1, #list do shown[#shown + 1] = tostring(Int(list[i]) or list[i]) end end
+    end)
+    pcall(function()
+        local da = Find(TITLE_DA)
+        if da then da.EntryPropertyMap:ForEach(function(k) keys[#keys + 1] = tostring(Int(k:get())) end) end
+    end)
+    return "shown [" .. table.concat(shown, ",") .. "], map keys [" .. table.concat(keys, ",") .. "]"
+end
+
+-- Adds the Archipelago row to the title data asset as a copy of the New Game row. Returns ok
+-- and a detail. Tries passing the New Game row's struct as the value first, then an empty table.
+function G.AddTitleEntry()
+    local da = Find(TITLE_DA)
+    if not da then return false, "DA_Title is not loaded (go to the title screen)" end
+    local map = da.EntryPropertyMap
+    local have, newGame = false, nil
+    map:ForEach(function(k, v)
+        local key = Int(k:get())
+        if key == G.TITLE_ARCHIPELAGO then have = true end
+        if key == G.TITLE_NEW_GAME then newGame = v:get() end
+    end)
+    if have then return true, "already there" end
+    if not newGame then return false, "no New Game row to copy" end
+    local how
+    if pcall(function() map:Add(G.TITLE_ARCHIPELAGO, newGame) end) then
+        how = "copied from the New Game row"
+    elseif pcall(function() map:Add(G.TITLE_ARCHIPELAGO, {}) end) then
+        how = "added empty (the copy was refused)"
+    else
+        return false, "EntryPropertyMap:Add refused both ways"
+    end
+    local now = false
+    map:ForEach(function(k) if Int(k:get()) == G.TITLE_ARCHIPELAGO then now = true end end)
+    return now, how .. (now and "" or ", but the row is not in the map afterwards")
 end
 
 -- -------------------------------------------------------------------------------------------

@@ -20,7 +20,8 @@
 --   ffrap_functions [class ...]  the functions of game classes to functions.txt (default: save-data classes)
 --   ffrap_skip [slot]            skip the prologue on a new game; with a slot, save there and reload
 --   ffrap_inspect <class|path>   one object's fields and functions to inspect_<name>.tsv
---   ffrap_find <text>            game classes with a function or field named like the text, to find_<text>.txt
+--   ffrap_title [list|add]       experimental: the Archipelago entry on the title menu
+--   ffrap_find <text>            game classes, functions and fields named like the text, to find_<text>.txt
 --   ffrap_blank [on|off]         chests that are Archipelago locations give 1 gil instead
 --   ffrap_sync                   report every known location the save says is looted
 --   ffrap_bind                   link the loaded save to the client's session (also /bind in the client)
@@ -31,7 +32,7 @@
 -- follows the save slots the linked game is saved to. While any other save is loaded, the mod
 -- grants nothing, reports nothing and leaves the chests vanilla.
 
-local VERSION = "0.7.2"
+local VERSION = "0.7.3"
 local PROTOCOL = 1        -- the bridge protocol; the apworld's MOD_PROTOCOL
 
 local MOD_DIR = (debug.getinfo(1, "S").source:gsub("^@", ""):gsub("\\", "/"):match("^(.*/)Scripts/[^/]+$"))
@@ -77,6 +78,7 @@ local state = {
     live = nil,        -- "<save object>|<timestamp>" of the session's save the count is for, so a
                        -- reloaded mod (the game still running) knows it is the same save
     bindPending = false, -- the client asked to link the loaded save
+    apNewGame = false, -- the Archipelago title entry started this new game (experimental)
 }
 
 -- The loaded save, and whether it is the session's. Not kept across game restarts: save data
@@ -688,6 +690,42 @@ local FUNCTION_CLASSES = {
     "CPP_DM_EventShortcutData", "CPP_DM_SaveDataManager", "CPP_DM_BFL_SaveData", "CPP_Task_NewGame",
     "CPP_MuchaSaveDataManager", "CPP_MuchaGameSaveData",
 }
+
+-- ffrap_title [list|add]: the experimental Archipelago title entry (IDEAS.md, idea 6). Choosing
+-- it starts a normal new game and marks it as an Archipelago one. The automatic skip that should
+-- follow is not built yet.
+local titleHooked = false
+local function hookTitle()
+    if titleHooked then return true end
+    local ok, err = pcall(function()
+        RegisterHook("/Script/mucha.CPP_VM_Title:ExecuteEntry", function(_, inType)
+            local t
+            pcall(function() t = inType:get() end)
+            log("title: entry " .. tostring(t) .. " chosen")
+            if t == game.TITLE_ARCHIPELAGO then
+                state.apNewGame = true
+                pcall(function() inType:set(game.TITLE_NEW_GAME) end)
+                notify("Archipelago: starting a new game for the seed")
+            end
+        end)
+    end)
+    titleHooked = ok
+    if not ok then log("title: could not hook ExecuteEntry: " .. tostring(err)) end
+    return ok
+end
+
+command("ffrap_title", function(p)
+    local what = (p and p[1]) or "list"
+    if what == "add" then
+        local ok, detail = game.AddTitleEntry()
+        log("title: add: " .. tostring(detail))
+        local hooked = hookTitle()
+        notify("Title entry: " .. tostring(detail) .. (hooked and "" or "; the choice hook failed (see the log)"))
+    end
+    local entries = game.TitleEntries()
+    log("title: " .. entries)
+    if what ~= "add" then notify("Title menu: " .. entries) end
+end)
 
 -- ffrap_inspect <class or path>: one object's fields and functions to inspect_<name>.tsv.
 command("ffrap_inspect", function(p)
