@@ -7,6 +7,7 @@
 --   ap_in.txt   client -> game
 --     item <index> <kind> <id> <count> <label>    kind: item | vision | unit | flag
 --     msg  <text>                                 shown on screen, not stored
+--     client <world version>                      the client that wrote the file (0.7.1)
 --
 --   ap_out.txt  game -> client
 --     hello <mod version>                         the mod started

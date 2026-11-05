@@ -13,7 +13,9 @@ The mod and this client talk through two text files in the mod folder (see the r
 from __future__ import annotations
 
 import asyncio
+import json
 import os
+import pkgutil
 import sys
 from typing import Any
 
@@ -29,6 +31,16 @@ GAME = "Final Fantasy Resonance"
 POLL_SECONDS = 0.5
 GOAL_MESSAGE = "Goal complete!"
 GOAL_MESSAGE_LINE = f"msg\t{GOAL_MESSAGE}"
+
+
+def world_version() -> str:
+    """The world_version from this package's archipelago.json. pkgutil reads it from a folder or
+    from inside an .apworld zip alike."""
+    try:
+        data = pkgutil.get_data(__package__ or "ff_resonance", "archipelago.json")
+        return str(json.loads(data.decode("utf-8")).get("world_version", "?")) if data else "?"
+    except Exception:  # a broken install should still start the client
+        return "?"
 
 
 def clean(text: Any) -> str:
@@ -115,6 +127,9 @@ class FFResonanceContext(CommonContext):
             self.write_line("cfg", "blank", 1)
             self.items_written = 0
             self.goal_announced = False
+        # Which client this is, for the mod's log: round 10 ran an old client without anyone
+        # noticing.
+        self.write_line("client", world_version())
         self.out_offset = 0
         self.out_scope = None
 
@@ -248,6 +263,7 @@ def launch_client(*args: str) -> None:
 
     async def main(parsed) -> None:
         ctx = FFResonanceContext(parsed.connect, parsed.password, parsed.modfolder or default_mod_folder())
+        logger.info(f"Final Fantasy Resonance client, world version {world_version()}")
         if parsed.name:
             ctx.auth = parsed.name
         ctx.server_task = asyncio.create_task(server_loop(ctx), name="server loop")

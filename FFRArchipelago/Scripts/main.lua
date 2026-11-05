@@ -29,7 +29,7 @@
 -- follows the save slots the linked game is saved to. While any other save is loaded, the mod
 -- grants nothing, reports nothing and leaves the chests vanilla.
 
-local VERSION = "0.7.0"
+local VERSION = "0.7.1"
 local PROTOCOL = 1        -- the bridge protocol; the apworld's MOD_PROTOCOL
 
 local MOD_DIR = (debug.getinfo(1, "S").source:gsub("^@", ""):gsub("\\", "/"):match("^(.*/)Scripts/[^/]+$"))
@@ -229,6 +229,12 @@ local function readInbox(initial)
                     label = (f[6] and f[6] ~= "") and f[6] or (f[3] .. " " .. f[4]) }
             else
                 log("bad item line: " .. table.concat(f, " | "))
+            end
+        elseif f[1] == "client" then
+            -- The client's world version, written each time it connects.
+            if f[2] ~= state.clientVersion then
+                state.clientVersion = f[2]
+                log("client: world version " .. tostring(f[2]))
             end
         elseif f[1] == "msg" then
             -- Messages from before this game session started are old news.

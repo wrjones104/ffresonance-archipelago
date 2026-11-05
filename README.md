@@ -17,7 +17,7 @@ AI use: this project is built with Claude Code. [DISCLOSURE.md](DISCLOSURE.md) s
 
 The world is tested off-line: Archipelago's general tests pass with it, its own tests pass, and a client end-to-end run against a local server passes, with a script standing in for the game. Round 5 played a full seed in the real game, up to the goal and a release (see "Test results so far").
 
-1. **Mod.** Copy `FFRArchipelago/Scripts` over the installed mod (0.7.0). Delete the old `ap_in.txt`, `ap_out.txt` and `ap_state.txt`, and keep `seen.tsv`. Keep FFRRandomizer disabled.
+1. **Mod.** Copy `FFRArchipelago/Scripts` over the installed mod (0.7.1). Delete the old `ap_in.txt`, `ap_out.txt` and `ap_state.txt`, and keep `seen.tsv`. Keep FFRRandomizer disabled.
 2. **World.** Run `python tools/build_apworld.py`, then copy `dist/ff_resonance.apworld` into your Archipelago `custom_worlds` folder. Or, from source, copy `apworld/ff_resonance` into `worlds/`.
 3. **Seed.**
    - Copy `apworld/Final Fantasy Resonance.yaml` into Archipelago's `Players` folder and set a name.
@@ -201,13 +201,24 @@ This was the first real Archipelago game: a new game, a local MultiServer, the 0
 - **Bug 2, checks from another save:** the session started while an old save (story 1095) was loaded. The sync on that load reported `shiny:1000:150` from the old save into the new session. It was ignored because shinies are off, but a chest would have been sent. See open question 8.
 - **Item names:** items 5 and 6 have no name in `item_names.tsv`, so they showed as "Item 5" and "Item 6". Their vanilla chests are Mysidia Dungeon 45 Chest 0 and Olderion Dungeon 43 Chest 4.
 
-## Round 10 test plan (mod 0.7.0, world 0.1.2)
+Rounds 6 to 9 (2026-11-05) worked out and tested the prologue skip; their results are in IDEAS.md, idea 2.
 
-Rounds 6 to 9 covered the seed name, pausing, new-game linking and the prologue skip. This round tests the per-save item count (open question 5). Keep FFRRandomizer disabled.
+**Round 10 (mod 0.7.0, 2026-11-05): per-save item count passed; `/bind` not tested.**
+- **New game and skip:** the new game linked itself. `ffrap_skip 0` ran after the first autosave, and the reload linked slot 0 with 0 items.
+- **Per-save count:** the game was saved to slot 3 (`3=0`), and two chests in map 3001 then sent their checks and brought Briar Edge and Nodachi. Loading slot 3 again logged `slot 3 holds: 0 applied (was 2)` and granted both again. Saving to slot 4 recorded `4=2`, and loading slot 4 granted nothing. Loading slot 3 later granted both again, as it should.
+- **Pausing:** an older save (slot 1) and a second new game were both paused. `ffrap_skip` during the second game's opening movie was refused with the "wait until you can move" message.
+- **`/bind` not tested:** the client said "Could not find command bind". The session key was `unknown:0:1` too. Both mean the installed client was older than world 0.1.1, because the round 10 plan did not say to install the new apworld. World 0.1.3 makes this visible: the client logs its world version when it starts, and writes a `client` line to `ap_in.txt` that the mod logs (`client: world version 0.1.3`). Until the new apworld is installed, `ffrap_bind` in the game console does the same as `/bind`.
+
+## Round 11 test plan (mod 0.7.1, world 0.1.3)
+
+Round 10 tested the per-save item count, but not `/bind`, because the installed client was old. This round installs the current apworld and tests what is left. Keep FFRRandomizer disabled.
 
 1. **Install.**
-   - Copy `FFRArchipelago/Scripts` over the installed mod. The log should say `version 0.7.0 loaded`.
-   - Delete `ap_in.txt`, `ap_out.txt` and `ap_state.txt`, and use a new seed. Older state files have no per-slot counts.
+   - Copy `FFRArchipelago/Scripts` over the installed mod. The log should say `version 0.7.1 loaded`.
+   - Rebuild the apworld (`python tools/build_apworld.py`), or take `dist/ff_resonance.apworld` as it is, and copy it over the old one in your Archipelago install's `custom_worlds` folder. Then generate a new seed with it.
+   - Start the client. Its first line should say `Final Fantasy Resonance client, world version 0.1.3`. After it connects, `UE4SS.log` should say `client: world version 0.1.3`.
+   - Delete `ap_in.txt`, `ap_out.txt` and `ap_state.txt`.
+   - Check that the `seed` line in `ap_in.txt` starts with the seed's long number, not `unknown`.
 2. **A new game, skipped.**
    - Connect the client at the title screen and start a new game. Expected: "this new game is linked to the seed", and the starting items arrive.
    - Once you can move Fina, run `ffrap_skip 0`. Expected: a `skip: slot 0 linked before the reload` line with the count, for example `session slots [0=3]`.
