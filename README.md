@@ -22,7 +22,7 @@ The world is tested off-line: Archipelago's general tests pass with it, its own 
 - **ModSettings** (a Blueprint mod in `Content/Paks/LogicMods`, from the same modding tools as FFRSLib) is optional. Every on-screen message ("Received ...", "Archipelago is paused", "Prologue skipped") is drawn with its Toast panel, because the game's own on-screen text call is compiled out. Without it the mod works the same, but the messages only go to `UE4SS.log`.
 - **FFRSLib, FFRS_QoL, FFRBestiary and FFRRandomizer are not needed.** Their code is where the game calls come from (see "Where the game calls come from"), but this mod calls the game directly. FFRRandomizer should stay disabled (IDEAS.md, idea 10).
 
-1. **Mod.** Copy `FFRArchipelago/Scripts` over the installed mod (0.8.2). Delete the old `ap_in.txt`, `ap_out.txt` and `ap_state.txt`, and keep `seen.tsv`. Keep FFRRandomizer disabled.
+1. **Mod.** Copy `FFRArchipelago/Scripts` and `FFRArchipelago/Assets` over the installed mod (0.8.3). Delete the old `ap_in.txt`, `ap_out.txt` and `ap_state.txt`, and keep `seen.tsv`. Keep FFRRandomizer disabled.
 2. **World.** Run `python tools/build_apworld.py`, then copy `dist/ff_resonance.apworld` into your Archipelago `custom_worlds` folder. Or, from source, copy `apworld/ff_resonance` into `worlds/`.
 3. **Seed.**
    - Copy `apworld/Final Fantasy Resonance.yaml` into Archipelago's `Players` folder and set a name.
@@ -110,6 +110,7 @@ At run time the mod writes these files into its own folder: `ap_out.txt`, `ap_st
 | `ffrap_find <text>` | Every game class or struct, native or Blueprint, whose name or one of its functions or fields holds the text, to `find_<text>.txt`. Walks every object, so the game pauses for a moment. Run it in game: at the title screen it crashed the game once (round 11). |
 | `ffrap_title [list\|add]` | `list` logs the entries the title menu shows. `add` adds the Archipelago entry again by hand: the mod adds it at start-up and keeps it there. |
 | `ffrap_notice [text]` | Experimental: tries to show the text with the game's quest-notice banner, in the field. |
+| `ffrap_logo` | Experimental: puts the Archipelago logo (`Assets/archipelago_logo.png`) above the mod's line on the title screen. Run it at the title screen. |
 | `ffrap_bind` | Link the loaded save to the client's session, in place of any earlier one. The same as `/bind` in the client. |
 | `ffrap_reset` | Set the loaded save's applied-item count to 0. Re-grants everything to it! |
 
@@ -238,16 +239,22 @@ Rounds 6 to 9 (2026-11-05) worked out and tested the prologue skip; their result
 - **New Game (Archipelago)** linked, delivered the seed's items, and skipped the prologue by itself. Three chests in map 3000 sent their checks.
 - **Notice probes:** `ffrap_find Notice` found 42 names, and `CPP_VM_QuestNotice` was inspected (IDEAS.md, idea 6).
 
-## Round 15 test plan (mod 0.8.2, world 0.1.3)
+**Round 15 (mod 0.8.2, 2026-11-05): passed.**
+- **The title corner:** "FFRArchipelago 0.8.2" and "1.0.1.0" now both start at the left edge, in line with the copyright lines.
+- **The layout line:** the version text is `Text_ApplicationVersion` in an `OverlaySlot` of the `Overlay` `Overlay_UI`. Its siblings are `TextBlock_1` and `WidgetSwitcher_0`, the grandparent is `Overlay_3`, and it is all in `WBP_TitleLayout_C`.
+- **Messages:** the cyan line under the quest tracker in the recording ("Received Resonate Staff", and FFRS_QoL's "Normal speed") is this mod's message, drawn with ModSettings' Toast. `ffrap_notice` was not run.
+- **Functions:** `CPP_BFL_Chat.Notice` takes a chat event id (`InEventId`), not text, so it cannot show our messages.
 
-1. **Install.** Copy `FFRArchipelago/Scripts` over the installed mod. The log should say `version 0.8.2 loaded`.
-2. **The title.**
-   - "FFRArchipelago 0.8.2" and "1.0.1.0" should both start at the left edge, in line with the copyright lines.
-   - The log should have one `title: version text layout: ...` line. Send it: the logo's place depends on it.
-3. **The quest banner, in the field:** run `ffrap_notice Received Potion from Bob`. Watch for the "new quest" banner, and look at the log's `notice:` line. Say what showed: our text, an empty banner, or nothing.
-4. **Function lists, in game:** run `ffrap_functions` and send `functions.txt`. It now lists `CPP_BFL_Chat` (its `Notice` call), `CPP_ChatSubsystem`, `CPP_QuestSubsystem` and `CPP_VM_QuestNotice`.
+## Round 16 test plan (mod 0.8.3, world 0.1.3)
 
-Send `UE4SS.log` (the `[FFRAP]` lines), `functions.txt` and a screenshot of the title corner.
+1. **Install.** Copy `FFRArchipelago/Scripts` **and `FFRArchipelago/Assets`** over the installed mod. The log should say `version 0.8.3 loaded`.
+2. **The logo, at the title screen:** run `ffrap_logo`.
+   - Expected: the Archipelago logo, about two lines high, just above "FFRArchipelago 0.8.3".
+   - The log's `logo:` line gives the alignment, padding and text height used. Send it, and a screenshot of the corner, wherever the logo landed.
+   - If the game crashes, say so: the start-up version will then take a different route.
+3. **The quest banner, in the field:** run `ffrap_notice Received Potion from Bob`. Say what showed: our text in the banner, an empty banner, or nothing. Send the `notice:` line.
+
+Send `UE4SS.log` (the `[FFRAP]` lines) and the screenshots.
 
 ## Open questions
 

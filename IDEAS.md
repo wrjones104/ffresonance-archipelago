@@ -337,10 +337,14 @@ Plan: build option 1 first, because it is known to work. Then try option 2 as an
 
 **Round 14:** the order and the version line worked. The version block is right-justified, so "1.0.1.0" moved right under our longer line. 0.8.2 sets it to left-justified and logs the block's layout (its slot, parent panel and that panel's children) once per run.
 
-**Where the logo goes:** small, about two text lines high, just left of "FFRArchipelago <version>" in the bottom-left corner.
+**Where the logo goes:** small, about two text lines high, just above "FFRArchipelago <version>" in the bottom-left corner. To its left there is not enough room: the corner text starts about 47 px from the screen's edge.
 - It sits next to the text it belongs to and stays clear of the game's artwork and the menu (which the game makes again).
-- How it is placed depends on the layout line from round 15: an `Image` added to the same panel (a canvas slot can take a position, a vertical box cannot), or a horizontal box holding the logo and the text.
-- The picture: `FFRArchipelago/Assets/archipelago_logo.png`, loaded with `KismetRenderingLibrary.ImportFileAsTexture2D` and set with `Image.SetBrushFromTexture`.
+- **Round 15's layout line:** the version text is in an `Overlay` (`Overlay_UI`, in `WBP_TitleLayout_C`).
+- **How 0.8.3's `ffrap_logo` places it:**
+  1. It makes an `Image` in the title layout's widget tree (`StaticConstructObject`, with a fresh name each time).
+  2. It loads the PNG with `KismetRenderingLibrary.ImportFileAsTexture2D` and sets it with `SetBrushFromTexture` and `SetDesiredSizeOverride` (39 x 40).
+  3. It adds the image with `Overlay_UI:AddChildToOverlay`, gives it the version text's alignment, and adds the text's height plus 6 px to the bottom padding, so it sits above the text.
+- Once it shows in the right place, it runs at start-up the way the version line does.
 
 **Still open:**
 - **Skipping the movie outright:** find what the opening holds the player's input with. `CPP_Task_NewGame` is the place to start (`ffrap_inspect` while a new game is starting).
@@ -433,3 +437,15 @@ Plan: build option 1 first, because it is known to work. Then try option 2 as an
 **To find out:**
 - For B: whether the launcher can start our client with no window and connection arguments, and how to find the install folder (a setting in the mod's config).
 - For A: whether APCpp builds against UE4SS's C++ template, and how big a release that makes.
+
+## 13. Archipelago text in the chest pop-up
+
+**Idea:** a chest that is an Archipelago location gives 1 gil, so the game's pop-up says "You obtained the following: 1" with a gil icon (round 15 recording). It should say what was found, and for whom: "Found Rod of Focus for Jones".
+
+**Known so far:**
+- The client knows the item and the player once the server answers the check. `LocationInfo` scouting can tell it before the chest is opened.
+- The pop-up is the game's item-get dialog. It shows the chest row's item and count, which blanking set to gil 1.
+
+**To find out:**
+- Which widget or view model draws the dialog (`ffrap_find Obtain`, or inspect while it is open), and whether its text can be set before it shows.
+- How the client gets the text to the mod in time: scout every location at connect and write `scout <location> <item> <player>` lines to `ap_in.txt`.

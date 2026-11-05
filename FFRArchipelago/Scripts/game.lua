@@ -1173,6 +1173,84 @@ function G.DescribeWidget(w)
     return table.concat(parts, "; ")
 end
 
+-- The Archipelago logo above the mod's line in the title screen's corner. Round 15 found the
+-- version text (Text_ApplicationVersion) in an Overlay (Overlay_UI) of WBP_TitleLayout, so
+-- an Image added to that overlay can share the text's alignment and sit above it by padding.
+-- The picture is loaded from the mod's PNG at run time. Experimental: ffrap_logo runs it.
+local LOGO_PREFIX = "FFRAP_Logo"
+local LOGO_SIZE = { X = 39, Y = 40 }   -- the PNG is 280 x 291
+local logoCount = 0
+
+local function VersionBlock(line)
+    local ok, all = pcall(FindAllOf, "TextBlock")
+    if not ok or not all then return nil end
+    for _, tb in ipairs(all) do
+        if Alive(tb) then
+            local text
+            pcall(function() text = tb:GetText():ToString() end)
+            if text and text:find(line, 1, true) then return tb end
+        end
+    end
+    return nil
+end
+
+-- Returns "added" or "already" and a detail, or nil and why not.
+function G.TitleLogo(path, line)
+    local tb = VersionBlock(line)
+    if not tb then return nil, "the mod's version line is not on screen" end
+    local parent
+    pcall(function() parent = tb:GetParent() end)
+    if not (parent and Alive(parent)) then return nil, "the version text has no parent panel" end
+    local n = 0
+    pcall(function() n = parent:GetChildrenCount() end)
+    for i = 0, n - 1 do
+        local name
+        pcall(function() name = parent:GetChildAt(i):GetFName():ToString() end)
+        if name and name:find(LOGO_PREFIX, 1, true) == 1 then return "already", name end
+    end
+    local krl = Find("/Script/Engine.Default__KismetRenderingLibrary")
+    if not krl then return nil, "KismetRenderingLibrary not found" end
+    local tex
+    local okTex, errTex = pcall(function() tex = krl:ImportFileAsTexture2D(PlayerController() or tb, path) end)
+    if not (okTex and tex and tex:IsValid()) then
+        return nil, "could not load " .. path .. (okTex and "" or (": " .. tostring(errTex)))
+    end
+    local imageClass = Find("/Script/UMG.Image")
+    local tree
+    pcall(function() tree = tb:GetOuter() end)
+    if not (imageClass and tree) then return nil, "no Image class or widget tree" end
+    -- A fresh name each time: constructing over an existing object's name is not safe.
+    logoCount = logoCount + 1
+    local img
+    local okNew, errNew = pcall(function()
+        img = StaticConstructObject(imageClass, tree, FName(LOGO_PREFIX .. "_" .. logoCount))
+    end)
+    if not (okNew and img and img:IsValid()) then return nil, "could not make the Image: " .. tostring(errNew) end
+    pcall(function() img:SetBrushFromTexture(tex, false) end)
+    pcall(function() img:SetDesiredSizeOverride(LOGO_SIZE) end)
+    local slot
+    local okAdd, errAdd = pcall(function() slot = parent:AddChildToOverlay(img) end)
+    if not (okAdd and slot) then return nil, "AddChildToOverlay failed: " .. tostring(errAdd) end
+    -- Same alignment as the version text, raised above it by the text's height.
+    local h, v, pad = "?", "?", nil
+    pcall(function() h = tb.Slot.HorizontalAlignment end)
+    pcall(function() v = tb.Slot.VerticalAlignment end)
+    pcall(function() pad = tb.Slot.Padding end)
+    local height = 0
+    pcall(function() height = tb:GetDesiredSize().Y end)
+    if not height or height <= 0 then height = 44 end
+    pcall(function() slot:SetHorizontalAlignment(h) end)
+    pcall(function() slot:SetVerticalAlignment(v) end)
+    local left, top, right, bottom = 0, 0, 0, 0
+    pcall(function() left, top, right, bottom = pad.Left, pad.Top, pad.Right, pad.Bottom end)
+    local okPad = pcall(function()
+        slot:SetPadding({ Left = left, Top = top, Right = right, Bottom = bottom + height + 6 })
+    end)
+    return "added", string.format("alignment %s/%s, text padding %s,%s,%s,%s, text height %s%s",
+        tostring(h), tostring(v), tostring(left), tostring(top), tostring(right), tostring(bottom),
+        tostring(height), okPad and "" or ", padding not set")
+end
+
 -- Tries to show `text` with the game's quest-notice banner (the "new quest" pop-up): the
 -- banner's view model holds NoticeData.NoticeTitle and ExecuteNotics(bool) (round 14 probes).
 -- Experimental: returns ok and a detail.

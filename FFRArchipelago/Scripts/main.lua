@@ -22,6 +22,7 @@
 --   ffrap_inspect <class|path>   one object's fields and functions to inspect_<name>.tsv
 --   ffrap_title [list|add]       the Archipelago entry on the title menu (added at start-up)
 --   ffrap_notice [text]          experimental: show text with the game's quest-notice banner
+--   ffrap_logo                   experimental: the Archipelago logo above the mod's title line
 --   ffrap_find <text>            game classes, functions and fields named like the text, to find_<text>.txt
 --   ffrap_blank [on|off]         chests that are Archipelago locations give 1 gil instead
 --   ffrap_sync                   report every known location the save says is looted
@@ -34,7 +35,7 @@
 -- follows the save slots the linked game is saved to. While any other save is loaded, the mod
 -- grants nothing, reports nothing and leaves the chests vanilla.
 
-local VERSION = "0.8.2"
+local VERSION = "0.8.3"
 local PROTOCOL = 1        -- the bridge protocol; the apworld's MOD_PROTOCOL
 
 local MOD_DIR = (debug.getinfo(1, "S").source:gsub("^@", ""):gsub("\\", "/"):match("^(.*/)Scripts/[^/]+$"))
@@ -863,6 +864,14 @@ command("ffrap_title", function(p)
     local entries = game.TitleEntries()
     log("title: " .. entries)
     if what ~= "add" then notify("Title menu: " .. entries) end
+end)
+
+-- ffrap_logo: put the Archipelago logo above the mod's line on the title screen (experimental;
+-- IDEAS.md, idea 6). Run it at the title screen.
+command("ffrap_logo", function()
+    local result, detail = game.TitleLogo(MOD_DIR .. "Assets/archipelago_logo.png", TITLE_LINE)
+    log("logo: " .. tostring(result) .. ": " .. tostring(detail))
+    notify("Logo: " .. tostring(result or "not added") .. " (" .. tostring(detail) .. ")")
 end)
 
 -- ffrap_notice <text>: try the game's quest-notice banner with our own text (experimental).
