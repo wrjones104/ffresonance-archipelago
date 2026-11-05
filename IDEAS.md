@@ -562,3 +562,21 @@ The "Back" prompt that menus and the chest pop-up show at the bottom right also 
 **Round 24:** feels right. A pop-up held 10 s sent its items to the Toast, so in 0.10.1 the Toast fallback only applies until the feed has shown its first line in a run. After that, messages wait for the HUD however long a pop-up or menu is up.
 
 **Still to tune:** the size, the place, colours (Archipelago's item colours for progression, useful and trap items need the item flags from the client), and whether the time on screen feels right.
+
+## 15. A chest pop-up of our own, and no 1 gil
+
+**Idea (2026-11-05):** today the mod rewrites the game's own pop-up a moment after it shows, and the chest still gives 1 gil. Better: the chest gives nothing of its own, and the player sees an Archipelago pop-up from the start.
+
+**Why it looks this way now:** chest blanking gives 1 gil because that is the shape of the game's own gil chests (`ItemId -1, Money N`). An empty chest (`Money 0`) was never tried. The pop-up is the game's, so it shows the game's reward until the mod changes it.
+
+**Ways to get there, cheapest first:**
+1. **Empty chests (one in-game test).** Blank a row to `ItemId -1, Money 0` and open that chest. If it opens with no pop-up, the mod can show its own: a line in the item feed, or a pop-up drawn the way the feed is. Then the 1 gil is gone too.
+
+   It might instead show "obtained 0", refuse to open, or not be marked open in the save. In those cases this way is out.
+2. **Change the text before it is drawn.** Hook the call that sets the pop-up's message (`RichTextBlock:SetText`, if the dialog calls it through a UFunction, the way `ExecuteEntry` is called on the title menu) and write the Archipelago text in the same frame. The gil line is collapsed in the same moment. The player never sees the game's version, but the 1 gil stays. This needs a guard so the hook does not catch the mod's own `SetText`.
+3. **An "Archipelago item" in the game's item table.** Add a row to the item data table at start-up (FFRSLib adds rows to its menu tables the same way), with the logo as its icon. Every Archipelago chest then holds that item, and its name is set per chest just before the chest is opened. Then the pop-up shows it natively, which is how many Archipelago ports do it. This is the biggest piece of work:
+   - the item's text and icon,
+   - the item landing in the bag (it would need removing),
+   - knowing which chest is about to be opened, not just opened.
+
+**Verdict:** worth one cheap test (way 1), when there is time. If chests can be empty, the rest follows from what the feed already does. If not, way 2 is a small, safe polish, and way 3 waits until long after progression logic.
