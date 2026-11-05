@@ -490,4 +490,6 @@ Plan: build option 1 first, because it is known to work. Then try option 2 as an
 
 **Round 19:** 0.9.1 still crashed, because the feed was still on: 0.9.0 had saved `feed 1` by itself, and 0.9.1 read it as on. The items that arrived during the opening movie waited for the HUD and were shown at story 1005, and the game crashed then. 0.9.2 uses a new key (`itemfeed`, written only by `ffrap_feed on|off`) and logs the feed's steps every time.
 
+**Round 20:** the plain test worked; the styled one crashed twice at `style: copy the key guide's font`, which is `tb:SetFont(guide.Text_Name.Font)`. Passing an `FSlateFontInfo` (or an `FSlateColor`) from Lua to a function loses the struct's engine-only parts. A lesson for all UI work here: write a widget's fields before it goes on screen; never hand a font or Slate colour struct to a setter. 0.9.3 does that: the font object, typeface, size, shadow colour and justification are field writes on the new line, before it is added to the box. The text keeps the default white.
+
 **Still to tune, once it works:** the size, the place and the time on screen.

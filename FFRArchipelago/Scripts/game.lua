@@ -1371,26 +1371,33 @@ local function FeedBox()
 end
 
 -- Makes the text look like the HUD's own: the key guide's font (its Text_Name, as FFRSLib reads
--- it) at FEED_FONT_SIZE, white with a dark shadow, right-justified.
+-- it) at FEED_FONT_SIZE, with a dark shadow, right-justified. The text stays the default white.
+--
+-- Round 20: `tb:SetFont(guide.Text_Name.Font)` crashed the game. A font (FSlateFontInfo) or a
+-- Slate colour (FSlateColor) holds engine-only parts that a struct passed from Lua does not
+-- carry, so no function here is given one. Each field is written into the new line's own
+-- properties instead (plain values, an object and a name), before the line is added to the box:
+-- the engine builds the on-screen text from these properties when the line is added.
 local function StyleLine(tb)
-    step("style: copy the key guide's font")
+    local guideFont
     pcall(function()
         local guide = Live("WBP_KeyGuide_C")
-        if guide then tb:SetFont(guide.Text_Name.Font) end
+        if guide then guideFont = guide.Text_Name.Font end
     end)
-    step("style: font size")
+    step("style: font object and typeface (field writes)")
+    if guideFont then
+        pcall(function() tb.Font.FontObject = guideFont.FontObject end)
+        pcall(function() tb.Font.TypefaceFontName = guideFont.TypefaceFontName end)
+    end
+    step("style: font size (field write)")
+    pcall(function() tb.Font.Size = FEED_FONT_SIZE end)
+    step("style: shadow colour (field writes)")
     pcall(function()
-        local font = tb.Font
-        font.Size = FEED_FONT_SIZE
-        tb:SetFont(font)
+        local c = tb.ShadowColorAndOpacity
+        c.R, c.G, c.B, c.A = 0, 0, 0, 0.85
     end)
-    step("style: colour")
-    pcall(function() tb:SetColorAndOpacity({ SpecifiedColor = { R = 1, G = 1, B = 1, A = 1 }, ColorUseRule = 0 }) end)
-    step("style: shadow")
-    pcall(function() tb:SetShadowOffset({ X = 1.5, Y = 1.5 }) end)
-    pcall(function() tb:SetShadowColorAndOpacity({ R = 0, G = 0, B = 0, A = 0.85 }) end)
-    step("style: justification")
-    pcall(function() tb:SetJustification(JUSTIFY_RIGHT) end)
+    step("style: justification (field write)")
+    pcall(function() tb.Justification = JUSTIFY_RIGHT end)
 end
 
 -- Adds a line to the feed; `now` is the caller's clock in seconds. opts.plain leaves out the
