@@ -463,6 +463,19 @@ Plan: build option 1 first, because it is known to work. Then try option 2 as an
   - **Still to find:** what is inside `Overlay_Custom`, the item line's widgets. A probe that lists its children, with their text, finds it. Then either:
     - write the Archipelago item into the item line's text and hide the gil icon, or
     - write it into `Text_Message` ("You found Rod of Focus for Jones") and hide `Overlay_Custom`.
+
+**Built (mod 0.11.0, world 0.1.4):**
+- **The client** sends `LocationScouts` for the slot's locations once per session (`create_as_hint` 0, so no hints are made). From the `LocationInfo` answer it writes `scout <location key> <item> <player> <flags> <own>` lines to `ap_in.txt`. A reconnect to the same session finds them in the file and does not ask again.
+- **The mod** keeps the scouts by location key. When it reports a scouted chest's check, it looks over a few ticks for an on-screen rich text holding "obtained" (the pop-up's `Text_Message`). It sets the text with `SetText`:
+  - your own item: "You obtained the following:" plus the item's name;
+  - another player's: "You found the following for <player>:" plus the item's name.
+
+  It collapses the `Overlay_Custom` beside it (the gil line). The dialog box is shared with other pop-ups, so the line's visibility is put back once the message is off screen.
+- **Limits:**
+  - The pop-up is found by the English word "obtained".
+  - The text can change a moment after the pop-up appears, because chests are scanned every second.
+  - The chest still gives its 1 gil.
+  - Progression, useful and trap items look the same; the flags are in the scout line for later, for colours.
 - Whether the text can be changed while the pop-up is up (the feed showed that field writes before a widget is drawn are safe; this is a widget already drawn, so `SetText` it is).
 
 ## 14. An item feed on the HUD

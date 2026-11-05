@@ -37,7 +37,7 @@
 -- follows the save slots the linked game is saved to. While any other save is loaded, the mod
 -- grants nothing, reports nothing and leaves the chests vanilla.
 
-local VERSION = "0.10.1"
+local VERSION = "0.11.0"
 local PROTOCOL = 1        -- the bridge protocol; the apworld's MOD_PROTOCOL
 
 local MOD_DIR = (debug.getinfo(1, "S").source:gsub("^@", ""):gsub("\\", "/"):match("^(.*/)Scripts/[^/]+$"))
@@ -149,6 +149,7 @@ local state = {
     live = nil,        -- "<save object>|<timestamp>" of the session's save the count is for, so a
                        -- reloaded mod (the game still running) knows it is the same save
     bindPending = false, -- the client asked to link the loaded save
+    scouts = {},       -- location key -> { item, player, flags, own }: what it holds (client scouts)
     apNewGame = false, -- the Archipelago title entry was just chosen: the next new game is one
 }
 
@@ -280,6 +281,7 @@ local function newSession(key)
     state.seed, state.applied, state.items, state.reported = key, 0, {}, {}
     state.syncPending = true
     state.slots, state.slotItems, state.bindPending, state.live = {}, {}, false, nil
+    state.scouts = {}
     save.obj = nil     -- judge the loaded save again for this session
     saveState()
     local f = io.open(bridge.outPath, "w")
@@ -312,6 +314,12 @@ local function readInbox(initial)
                     label = (f[6] and f[6] ~= "") and f[6] or (f[3] .. " " .. f[4]) }
             else
                 log("bad item line: " .. table.concat(f, " | "))
+            end
+        elseif f[1] == "scout" then
+            -- What a location holds, for the chest pop-up (0.11.0).
+            if f[2] and f[3] then
+                state.scouts[f[2]] = { item = f[3], player = f[4] or "", flags = tonumber(f[5]) or 0,
+                                       own = f[6] == "1" }
             end
         elseif f[1] == "client" then
             -- The client's world version, written each time it connects.
@@ -425,21 +433,30 @@ local function newVisit(mapId)
     visit = { mapId = mapId, scans = 0, recorded = {} }
 end
 
--- The chest pop-up ("You obtained the following:") is up while a chest's check is reported, so
--- each chest check starts a look for its text (15 s) until it has been found once in this run;
--- the panels holding it are logged once (IDEAS.md, idea 13).
-local DIALOG_TEXT = "obtained"
-local dialogProbe = { ticks = 0, done = false }
+-- The chest pop-up (IDEAS.md, idea 13): the pop-up is up while the chest's check is reported,
+-- so a check for a chest the client scouted asks for the pop-up to say what the chest held for
+-- Archipelago. The pop-up is looked for over a few ticks, as it can come up a moment later.
+local POPUP_TRIES = 8
+local popup = nil   -- { text, key, tries }
 
-local function probeDialog()
-    if dialogProbe.done or dialogProbe.ticks <= 0 then return end
-    dialogProbe.ticks = dialogProbe.ticks - 1
-    local chain = game.LayoutOf(DIALOG_TEXT)
-    if chain then
-        dialogProbe.done = true
-        for i, line in ipairs(chain) do log("chest pop-up layout " .. i .. ": " .. line) end
-    elseif dialogProbe.ticks == 0 then
-        log("chest pop-up: no on-screen text holding \"" .. DIALOG_TEXT .. "\" was found; the next chest tries again")
+local function popupText(s)
+    if s.own then return "You obtained the following:\n" .. s.item end
+    return "You found the following for " .. s.player .. ":\n" .. s.item
+end
+
+local function popupTick()
+    pcall(game.ChestPopupRestore)
+    if not popup then return end
+    local ok, detail = game.ChestPopup(popup.text)
+    if ok then
+        log("chest pop-up for " .. popup.key .. ": " .. detail)
+        popup = nil
+        return
+    end
+    popup.tries = popup.tries - 1
+    if popup.tries <= 0 then
+        log("chest pop-up for " .. popup.key .. ": " .. tostring(detail))
+        popup = nil
     end
 end
 
@@ -447,7 +464,8 @@ local function opened(key)
     if not sessionSave() then return end
     if report("check", key) then
         log("check " .. key)
-        if not dialogProbe.done and dialogProbe.ticks == 0 and key:find("^chest:") then dialogProbe.ticks = 30 end
+        local s = state.scouts[key]
+        if s and key:find("^chest:") then popup = { text = popupText(s), key = key, tries = POPUP_TRIES } end
     end
 end
 
@@ -869,7 +887,7 @@ local function tick()
                 bindLoaded()
             end
             autoSkip()
-            pcall(probeDialog)
+            pcall(popupTick)
             -- Chests and shinies are still recorded in seen.tsv for any save; scanLoot reports
             -- them only for the session's save (see opened).
             if state.ticks % CHEST_EVERY == 0 then scanLoot() end

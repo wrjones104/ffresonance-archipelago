@@ -8,6 +8,7 @@
 --     item <index> <kind> <id> <count> <label>    kind: item | vision | unit | flag
 --     msg  <text>                                 shown on screen, not stored
 --     client <world version>                      the client that wrote the file (0.7.1)
+--     scout <location key> <item> <player> <flags> <own>   what a location holds (0.11.0)
 --
 --   ap_out.txt  game -> client
 --     hello <mod version>                         the mod started

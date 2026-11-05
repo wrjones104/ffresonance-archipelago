@@ -5,6 +5,8 @@ The mod and this client talk through two text files in the mod folder (see the r
   * writes every item the server sends into ap_in.txt, numbered by its Archipelago index, after a
     `seed` line naming the seed and slot, plus `cfg blank 1` so the mod blanks vanilla chest
     rewards;
+  * scouts the slot's locations once per session (no hints are made) and writes a `scout` line
+    for each, so the mod can say in the chest pop-up what a chest holds and for whom;
   * reads ap_out.txt and sends each `check` the mod reports as a LocationCheck, and the goal once
     a `story` report reaches the goal checkpoint. Only lines after the mod's own `seed` line for
     this seed and slot count, so checks from another seed or from before connecting are ignored.
@@ -22,10 +24,12 @@ from typing import Any
 import Utils
 from CommonClient import (ClientCommandProcessor, CommonContext, get_base_parser, gui_enabled, handle_url_arg,
                           logger, server_loop)
-from NetUtils import ClientStatus
+from NetUtils import ClientStatus, NetworkItem
 
 from .data import ITEMS
 from .locations import LOCATION_KEY_TO_ID
+
+LOCATION_ID_TO_KEY = {location_id: key for key, location_id in LOCATION_KEY_TO_ID.items()}
 
 GAME = "Final Fantasy Resonance"
 POLL_SECONDS = 0.5
@@ -94,6 +98,7 @@ class FFResonanceContext(CommonContext):
         self.max_story = 0
         self.mod_version: str | None = None
         self.goal_announced = False           # the in-game toast was sent; a reconnect re-sends only the status
+        self.scouts_written = False           # scout lines are in ap_in.txt for this session
 
     # -- files ------------------------------------------------------------------------------------
 
@@ -119,6 +124,7 @@ class FFResonanceContext(CommonContext):
         if existing and existing[0] == header:
             self.items_written = sum(1 for line in existing if line.startswith("item\t"))
             self.goal_announced = GOAL_MESSAGE_LINE in existing
+            self.scouts_written = any(line.startswith("scout\t") for line in existing)
         else:
             if existing:
                 logger.info("ap_in.txt belonged to another seed or slot; starting it over.")
@@ -127,6 +133,7 @@ class FFResonanceContext(CommonContext):
             self.write_line("cfg", "blank", 1)
             self.items_written = 0
             self.goal_announced = False
+            self.scouts_written = False
         # Which client this is, for the mod's log: round 10 ran an old client without anyone
         # noticing.
         self.write_line("client", world_version())
@@ -182,6 +189,36 @@ class FFResonanceContext(CommonContext):
                 story = max(story or 0, int(fields[1]))
         return checks, story
 
+    def write_scouts(self, items: list) -> int:
+        """A `scout` line per location of this slot: what it holds and for whom.
+
+            scout <location key> <item name> <player name> <flags> <own: 1 or 0>
+        """
+        if self.session_key is None or not os.path.isdir(self.mod_folder):
+            return 0
+        written = 0
+        for raw in items:
+            item = raw if isinstance(raw, NetworkItem) else NetworkItem(*raw)
+            key = LOCATION_ID_TO_KEY.get(item.location)
+            if key is None:
+                continue
+            name = self.item_names.lookup_in_slot(item.item, item.player)
+            player = self.player_names.get(item.player, f"player {item.player}")
+            self.write_line("scout", key, name, player, item.flags, 1 if item.player == self.slot else 0)
+            written += 1
+        if written:
+            self.scouts_written = True
+        return written
+
+    def scout_locations(self) -> None:
+        """Ask the server what this slot's locations hold, without making hints, once per session."""
+        if self.scouts_written or self.session_key is None:
+            return
+        locations = sorted(set(self.server_locations) & set(LOCATION_ID_TO_KEY))
+        if locations:
+            asyncio.create_task(self.send_msgs([{"cmd": "LocationScouts", "locations": locations,
+                                                 "create_as_hint": 0}]))
+
     # -- server -----------------------------------------------------------------------------------
 
     async def server_auth(self, password_requested: bool = False) -> None:
@@ -208,7 +245,12 @@ class FFResonanceContext(CommonContext):
             self.session_key = f"{seed}:{self.team}:{self.slot}"
             self.max_story = 0
             self.start_session()
+            self.scout_locations()
             logger.info(f"Goal: story checkpoint {self.goal}. Mod folder: {self.mod_folder}")
+        elif cmd == "LocationInfo":
+            written = self.write_scouts(args.get("locations") or [])
+            if written:
+                logger.info(f"Told the game what {written} location(s) hold, for its chest pop-up")
         elif cmd == "PrintJSON" and args.get("type") == "ItemSend" and self.slot is not None:
             item, receiver = args.get("item"), args.get("receiving")
             if item is not None and item.player == self.slot and receiver != self.slot:

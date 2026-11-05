@@ -1546,6 +1546,74 @@ function G.FeedTick(now)
     return #keep
 end
 
+-- -------------------------------------------------------------------------------------------
+-- The chest pop-up (IDEAS.md, idea 13)
+-- -------------------------------------------------------------------------------------------
+-- A chest that is an Archipelago location gives 1 gil, so its pop-up says "You obtained the
+-- following:" over a "(gil icon) 1" line. Round 25 found the pop-up: the game's general dialog
+-- box (WBP_DialogBox_C), whose message is a CommonRichTextBlock (Text_Message) beside an
+-- Overlay (Overlay_Custom) that holds the item line. The message is rewritten with what the
+-- chest held for Archipelago, and the item line is collapsed. The dialog box is used by other
+-- pop-ups too, so the line is made visible again once this pop-up has closed.
+
+local POPUP_MARKER = "obtained"       -- in the game's English chest message
+local POPUP_ITEM_LINE = "Overlay_Custom"
+local COLLAPSED = 1                   -- ESlateVisibility: Visible 0, Collapsed 1, Hidden 2, ...
+local popupHidden = nil               -- { line = widget, message = widget, visibility = n }
+
+-- The chest pop-up's message on screen, or nil.
+local function PopupMessage()
+    local ok, all = pcall(FindAllOf, "RichTextBlock")
+    if not ok or not all then return nil end
+    for _, b in ipairs(all) do
+        if Alive(b) and Shown(b) then
+            local t
+            pcall(function() t = b:GetText():ToString() end)
+            if t and t:find(POPUP_MARKER, 1, true) then return b end
+        end
+    end
+    return nil
+end
+
+-- Writes `text` into the chest pop-up on screen and collapses its item line. Returns true and a
+-- detail, or false and why not (no pop-up on screen yet).
+function G.ChestPopup(text)
+    local msg = PopupMessage()
+    if not msg then return false, "no chest pop-up on screen" end
+    if not pcall(function() msg:SetText(FText(text)) end) then return false, "SetText failed" end
+    local parent
+    pcall(function() parent = msg:GetParent() end)
+    local n = 0
+    pcall(function() n = parent:GetChildrenCount() end)
+    for i = 0, n - 1 do
+        local child, name
+        pcall(function() child = parent:GetChildAt(i) end)
+        pcall(function() name = child:GetFName():ToString() end)
+        if name == POPUP_ITEM_LINE and Alive(child) then
+            local was = 0
+            pcall(function() was = child:GetVisibility() end)
+            if pcall(function() child:SetVisibility(COLLAPSED) end) then
+                popupHidden = { line = child, message = msg, visibility = was }
+                return true, "text set, item line hidden"
+            end
+        end
+    end
+    return true, "text set (no item line found to hide)"
+end
+
+-- Makes the item line visible again once the pop-up has closed. Call every tick.
+function G.ChestPopupRestore()
+    if not popupHidden then return end
+    if not Alive(popupHidden.line) then
+        popupHidden = nil
+        return
+    end
+    if Alive(popupHidden.message) and Shown(popupHidden.message) then return end
+    local v = popupHidden.visibility
+    pcall(function() popupHidden.line:SetVisibility(v) end)
+    popupHidden = nil
+end
+
 -- Tries to show `text` with the game's quest-notice banner (the "new quest" pop-up): the
 -- banner's view model holds NoticeData.NoticeTitle and ExecuteNotics(bool) (round 14 probes).
 -- Experimental: returns ok and a detail.

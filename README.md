@@ -22,7 +22,7 @@ The world is tested off-line: Archipelago's general tests pass with it, its own 
 - **ModSettings** (a Blueprint mod in `Content/Paks/LogicMods`, from the same modding tools as FFRSLib) is optional. In the field, messages ("Received ...", "Sent ...", "Archipelago is paused", "Prologue skipped") go to the mod's own item feed at the bottom right of the HUD (since 0.10.0, on by default). ModSettings' Toast panel takes them off the field (the title screen), when the feed has not been able to show anything for 10 seconds since the game started, and with `ffrap_feed off`. Without ModSettings those few only go to `UE4SS.log`.
 - **FFRSLib, FFRS_QoL, FFRBestiary and FFRRandomizer are not needed.** Their code is where the game calls come from (see "Where the game calls come from"), but this mod calls the game directly. FFRRandomizer should stay disabled (IDEAS.md, idea 10).
 
-1. **Mod.** Copy `FFRArchipelago/Scripts` and `FFRArchipelago/Assets` over the installed mod (0.10.1). Delete the old `ap_in.txt`, `ap_out.txt` and `ap_state.txt`, and keep `seen.tsv`. Keep FFRRandomizer disabled.
+1. **Mod.** Copy `FFRArchipelago/Scripts` and `FFRArchipelago/Assets` over the installed mod (0.11.0). Delete the old `ap_in.txt`, `ap_out.txt` and `ap_state.txt`, and keep `seen.tsv`. Keep FFRRandomizer disabled.
 2. **World.** Run `python tools/build_apworld.py`, then copy `dist/ff_resonance.apworld` into your Archipelago `custom_worlds` folder. Or, from source, copy `apworld/ff_resonance` into `worlds/`.
 3. **Seed.**
    - Copy `apworld/Final Fantasy Resonance.yaml` into Archipelago's `Players` folder and set a name.
@@ -293,6 +293,22 @@ Rounds 6 to 9 (2026-11-05) worked out and tested the prologue skip; their result
 - **The 10-second fallback misfired:** a chest pop-up held for 10 s sent its items to the Toast.
 
 **Round 25 (mod 0.10.1, 2026-11-05): passed.** The new game showed neither "linked to the seed" nor "Prologue skipped", and a chest pop-up held open still sent its item to the feed once closed. The `chest pop-up layout` lines from this round's log are still to be read (IDEAS.md, idea 13).
+
+## Round 26 test plan (mod 0.11.0, world 0.1.4)
+
+This round tests the chest pop-up (IDEAS.md, idea 13).
+
+1. **Install both.**
+   - Copy `FFRArchipelago/Scripts` and `FFRArchipelago/Assets` over the installed mod. The log should say `version 0.11.0 loaded`.
+   - Copy `dist/ff_resonance.apworld` (world 0.1.4) over the one in Archipelago's `custom_worlds`, and generate a new seed with it. A seed with a second player shows the "for Alice" text.
+2. **Connect.** The client should log "Told the game what N location(s) hold, for its chest pop-up", and `ap_in.txt` gets `scout` lines.
+3. **Open chests.**
+   - **Your own item:** the pop-up should change from the gil line to "You obtained the following:" and the item's name.
+   - **Another player's item:** "You found the following for <player>:" and the item's name.
+   - The gil icon and "1" should disappear. The log says `chest pop-up for chest:...: text set, item line hidden`.
+   - The text may change a moment after the pop-up appears.
+4. **Other pop-ups:** after a chest, open something else that uses a pop-up (a vanilla chest in a save that is not linked, or the Quit dialog). Its own content should show normally.
+5. Send `UE4SS.log` (the `[FFRAP]` lines) and a screenshot of each kind of pop-up.
 
 ## Open questions
 
