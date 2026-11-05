@@ -17,7 +17,7 @@ AI use: this project is built with Claude Code. [DISCLOSURE.md](DISCLOSURE.md) s
 
 The world is tested off-line: Archipelago's general tests pass with it, its own tests pass, and a client end-to-end run against a local server passes, with a script standing in for the game. Round 5 played a full seed in the real game, up to the goal and a release (see "Test results so far").
 
-1. **Mod.** Copy `FFRArchipelago/Scripts` over the installed mod (0.5.2). Delete the old `ap_in.txt`, `ap_out.txt` and `ap_state.txt`, and keep `seen.tsv`. Keep FFRRandomizer disabled.
+1. **Mod.** Copy `FFRArchipelago/Scripts` over the installed mod (0.5.3). Delete the old `ap_in.txt`, `ap_out.txt` and `ap_state.txt`, and keep `seen.tsv`. Keep FFRRandomizer disabled.
 2. **World.** Run `python tools/build_apworld.py`, then copy `dist/ff_resonance.apworld` into your Archipelago `custom_worlds` folder. Or, from source, copy `apworld/ff_resonance` into `worlds/`.
 3. **Seed.**
    - Copy `apworld/Final Fantasy Resonance.yaml` into Archipelago's `Players` folder and set a name.
@@ -99,6 +99,7 @@ At run time the mod writes these files into its own folder: `ap_out.txt`, `ap_st
 | `ffrap_blank [on\|off]` | Chests that are Archipelago locations give 1 gil instead of their vanilla reward. Chests with items at id 13000 and up (visions, key items) keep theirs. It is remembered across restarts. The client turns it on. |
 | `ffrap_sync` | Report every location in `seen.tsv` that the save says is looted, from anywhere in the game (re-sync). Only in the session's save. |
 | `ffrap_snapshot [name]` | Every field of the loaded save to `snap_<name>.tsv`. Compare two with `python tools/snapdiff.py snap_a.tsv snap_b.tsv` (IDEAS.md, idea 2). |
+| `ffrap_functions [class ...]` | The functions of game classes, with their parameters, to `functions.txt`. With no class it lists the save-data, debug and new-game classes (IDEAS.md, idea 2). |
 | `ffrap_bind` | Link the loaded save to the client's session, in place of any earlier one. The same as `/bind` in the client. |
 | `ffrap_reset` | Forget the applied-item count. Re-grants everything! |
 
@@ -199,12 +200,12 @@ This was the first real Archipelago game: a new game, a local MultiServer, the 0
 - **Bug 2, checks from another save:** the session started while an old save (story 1095) was loaded. The sync on that load reported `shiny:1000:150` from the old save into the new session. It was ignored because shinies are off, but a chest would have been sent. See open question 8.
 - **Item names:** items 5 and 6 have no name in `item_names.tsv`, so they showed as "Item 5" and "Item 6". Their vanilla chests are Mysidia Dungeon 45 Chest 0 and Olderion Dungeon 43 Chest 4.
 
-## Round 6 test plan (mod 0.5.2, world 0.1.2)
+## Round 6 test plan (mod 0.5.3, world 0.1.2)
 
 This round tests the two round 5 fixes: the seed name, and linking each session to one save. Keep FFRRandomizer disabled.
 
 1. **Install.**
-   - Copy `FFRArchipelago/Scripts` over the installed mod. The log should say `version 0.5.2 loaded`.
+   - Copy `FFRArchipelago/Scripts` over the installed mod. The log should say `version 0.5.3 loaded`.
    - Rebuild the apworld (`python tools/build_apworld.py`) and copy it over the old one in `custom_worlds`.
 2. **Clean start.** Delete `ap_in.txt`, `ap_out.txt` and `ap_state.txt`. The old files use the `unknown` key, so with the fixed client the old seed would start a new session and grant all of its items again.
 3. **An existing save pauses.**

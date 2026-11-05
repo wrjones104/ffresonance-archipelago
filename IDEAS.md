@@ -90,12 +90,40 @@ What the prologue changes (`start` → `ch1`), all inside the save:
 
 Mod 0.5.1 wrote struct values inside maps (`mapGimmick`, `perMapSaveDataMap`, `colosseumProgress`) as memory addresses. UE4SS's Lua can't ask a map for its value type, so 0.5.2 matches each value to one of the game's save struct types by field names. The `live.saveStructs` line says how many types it had to choose from. Snapdiff now leaves out changes where only the address moved, and it prints Japanese keys.
 
-**Next:** redo the snapshots with mod 0.5.2.
-- `new`: on a new game, as early as you can, before the story moves to 1005 (about 13 s in, this time).
-- `ch1`: in front of the Earth Shrine, as before.
-- `base`: load the base save again.
+**Step 1, second run (2026-11-05, mod 0.5.2).** Snapshots `new` (story 1000, map 10040), `ch1` and `base`.
+- `new` → `ch1` matches the first run, with two corrections:
+  - eventFlag 105 also turns on.
+  - Flags 1 and 8 are already off at story 1000. They turn on between 1000 and 1005 and off again by 1030, so they belong to the prologue only and the skip leaves them alone.
+- `ch1` → `base`: only the position, flags 1165 and 1228, and one scan entry, as before.
+- `live.saveStructs` was 0, so the map contents are still unread. `FindAllOf("ScriptStruct")` returns nothing in game. The game's executable names the types (`SaveData_PerMap`, `SaveData_MapGimmick`, `SaveData_Colosseum_ProgressSaveData`, ...), so mod 0.5.3 looks each one up by path with `StaticFindObject`.
 
-The skip recipe is then "make these fields match `ch1`". Steps 2 (the debug menu) and 3 (the skip by hand) are still worth doing, but step 3 will miss the party and gear changes for sure.
+**The skip recipe so far.** Apply it on a new game at story 1000, then save and reload:
+
+| Field | Set to |
+|---|---|
+| `Progress.Progress[0]` | 1030 |
+| `Progress.eventFlag` | on: 14 15 16 18 19 22 23 26 27 30 32 33 105 106 108 110 124 125 1164 1225 1226 |
+| `Party.partyList` | [1001, 1002] |
+| `unitParameterList[0]`, `[1]` | JoinStatus 0. Also `[0].baseParameterList[5]` = 3 |
+| `unitParameterList[5]` (Fina) | JoinStatus 2, Experience 0, HP 200, MP 70, weapon 10600, armor -1, no accessories, no skills |
+| `inventory` | 10699 → 10100, 11301 → 11000 ×2, 12029 → 12000 ×2, add 10200 ×1 |
+| `inventoryProcedure.itemDatas` | the same four items (maybe only the "new item" marks) |
+| `unitGuest` | HitPoint 9999, MagicPoint 9999 |
+| `Player.WinNum` | 3 (only a counter) |
+| `Map` | mapId 3001, unitLocation (-5775, 0, -197.85), unitDirection 2 |
+| `Map.perMapSaveDataMap` | add 5010, 2013, 20000, 3001. Contents to come from 0.5.3 |
+| `Map.mapGimmick` | add 2014, 3001. Contents to come from 0.5.3 |
+
+**Leads from the executable.** The game has its own tools for this. Each one could replace part of the recipe:
+- A debug "event shortcut" system: `CPP_DM_EventShortcutData`, `DM_EventShortcutSaveData`, `GetEventShortcutMap`, `m_EventShortcutList`. It may be a jump to a story event with its save state already made. Look for it in `ffrs_debug_menu` (step 2).
+- A new-game task and its starting data: `CPP_Task_NewGame`, `InitGameSaveData`, `SaveData_InitGameData`, `InitPlayableUnitSaveData`.
+- Save-data function libraries: `CPP_BFL_SaveDataParty`, `CPP_BFL_SaveDataUnit`, `CPP_BFL_SaveDataInventory`, `CPP_BFL_SaveData_PerMap`, `CPP_BFL_SaveDataProgress`, `CPP_BFL_SaveDataMap`. Calling these is safer than writing arrays and maps from Lua, because the game keeps its own data in step.
+- `MapTestStartByLoadSaveData`, and the `playableChapterStart` / `playableChapterEnd` fields.
+
+**Next:**
+1. With mod 0.5.3, take `ffrap_snapshot ch1` again at the Earth Shrine. `live.saveStructs` should now be above 0, and the `perMapSaveDataMap` and `mapGimmick` lines should show fields. If your `ch1` save is in a slot, loading it is enough.
+2. Step 2: `ffrs_debug_menu`. Look for an event shortcut page.
+3. Run `ffrap_functions` once in game. It writes the functions of the classes above, with their parameters, to `functions.txt`. The build can then call them where possible.
 
 **Still to find out:**
 - What the prologue changes outside the save object. The reload in step 4 rebuilds what the game derives from the save at load time, but not anything that is never saved.

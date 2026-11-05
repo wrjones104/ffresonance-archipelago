@@ -17,6 +17,7 @@
 --   ffrap_dump [rows]            chest and shiny discovery dump to ffrap_dump.txt
 --   ffrap_export                 every chest table row to chests.tsv
 --   ffrap_snapshot [name]        every field of the loaded save to snap_<name>.tsv (tools/snapdiff.py)
+--   ffrap_functions [class ...]  the functions of game classes to functions.txt (default: save-data classes)
 --   ffrap_blank [on|off]         chests that are Archipelago locations give 1 gil instead
 --   ffrap_sync                   report every known location the save says is looted
 --   ffrap_bind                   link the loaded save to the client's session (also /bind in the client)
@@ -27,7 +28,7 @@
 -- follows the save slots the linked game is saved to. While any other save is loaded, the mod
 -- grants nothing, reports nothing and leaves the chests vanilla.
 
-local VERSION = "0.5.2"
+local VERSION = "0.5.3"
 local PROTOCOL = 1        -- the bridge protocol; the apworld's MOD_PROTOCOL
 
 local MOD_DIR = (debug.getinfo(1, "S").source:gsub("^@", ""):gsub("\\", "/"):match("^(.*/)Scripts/[^/]+$"))
@@ -612,6 +613,32 @@ command("ffrap_snapshot", function(p)
     else
         notify("No save loaded: nothing to snapshot")
     end
+end)
+
+-- Classes worth knowing for the prologue skip (IDEAS.md, idea 2): the save-data libraries, the
+-- debug event shortcuts and the new-game task.
+local FUNCTION_CLASSES = {
+    "CPP_BFL_SaveData", "CPP_BFL_SaveDataProgress", "CPP_BFL_SaveDataParty", "CPP_BFL_SaveDataUnit",
+    "CPP_BFL_SaveDataInventory", "CPP_BFL_SaveDataMap", "CPP_BFL_SaveData_PerMap",
+    "CPP_BFL_SaveDataPlayer", "CPP_BFL_DBG_FlagSaveData", "CPP_BFL_Scenario", "CPP_ScenarioSubsystem",
+    "CPP_DM_EventShortcutData", "CPP_DM_SaveDataManager", "CPP_DM_BFL_SaveData", "CPP_Task_NewGame",
+    "CPP_MuchaSaveDataManager", "CPP_MuchaGameSaveData",
+}
+
+command("ffrap_functions", function(p)
+    local classes = (p and p[1]) and p or FUNCTION_CLASSES
+    local f = io.open(MOD_DIR .. "functions.txt", "w")
+    if not f then
+        notify("Could not write functions.txt")
+        return
+    end
+    local found, total = 0, 0
+    for _, className in ipairs(classes) do
+        local n = game.ListFunctions(tostring(className), function(line) f:write(line, "\n") end)
+        if n then found, total = found + 1, total + n else f:write("-- not found: ", tostring(className), "\n") end
+    end
+    f:close()
+    notify("functions.txt: " .. total .. " functions from " .. found .. " of " .. #classes .. " classes")
 end)
 
 command("ffrap_export", function()

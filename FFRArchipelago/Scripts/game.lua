@@ -671,23 +671,35 @@ end
 
 local SnapStruct
 
--- The game's struct types with "Save" in the name, with the names of their own fields. Found
--- once, on the first snapshot that needs them.
+-- The game's save struct types, with the names of their own fields. Found once, on the first
+-- snapshot. The names come from the game's executable (2026-11-05); FindAllOf("ScriptStruct")
+-- returns nothing in game, so each one is looked up by its path.
+local SAVE_STRUCT_NAMES = {
+    "Artifact", "Battle", "Bounty", "Chat", "ChatData", "Chocobo", "Colosseum",
+    "Colosseum_ProgressData", "Colosseum_ProgressSaveData", "Colosseum_PromotionMatchData",
+    "Colosseum_RematchBattleProgress", "DLC", "Demo", "InitGameData", "InitUnitData", "Inventory",
+    "InventoryProcedure", "Keyboard", "LastRideRaft", "Map", "MapGimmick", "MapGimmickState",
+    "MapGimmick_Switch", "MapGimmick_SwitchSequence", "MapUnderworld", "Map_PingerPoint",
+    "MiniGame", "MiniGame_Nawatobi_Data", "Mixture", "MixtureCombine", "Party", "PerMap", "Player",
+    "Progress", "Quest", "QuestBoard", "Race", "Request", "RequestData", "ShopItem",
+    "Sound_BGMData", "Sound_SaveData", "Timer", "TransferInventoryList", "TransferTargetInventory",
+    "TransferTargetInventoryByMap", "TreasureBox", "TreasureBoxList", "UI", "UI_Field",
+    "UI_MiniMap", "Unit", "UnitBtlCmdData", "UnitBtlCmdDataBundle", "UnitGuest", "UnitParameter",
+    "Vision",
+}
 local saveStructs
 local function SaveStructs()
     if saveStructs then return saveStructs end
     saveStructs = {}
-    pcall(function()
-        for _, s in ipairs(FindAllOf("ScriptStruct") or {}) do
-            local full
-            pcall(function() full = s:GetFullName() end)
-            if full and full:find("/Script/mucha.", 1, true) and full:lower():find("save", 1, true) then
-                local names = {}
-                pcall(function() s:ForEachProperty(function(p) names[#names + 1] = p:GetFName():ToString() end) end)
-                if #names > 0 then saveStructs[#saveStructs + 1] = { struct = s, names = names } end
-            end
-        end
-    end)
+    for _, short in ipairs(SAVE_STRUCT_NAMES) do
+        pcall(function()
+            local s = StaticFindObject("/Script/mucha.SaveData_" .. short)
+            if not (s and s:IsValid()) then return end
+            local names = {}
+            pcall(function() s:ForEachProperty(function(p) names[#names + 1] = p:GetFName():ToString() end) end)
+            if #names > 0 then saveStructs[#saveStructs + 1] = { struct = s, names = names } end
+        end)
+    end
     return saveStructs
 end
 
@@ -807,6 +819,34 @@ function G.Snapshot(out)
     pcall(function() cls = sd:GetClass() end)
     if cls then SnapStruct(cls, sd, "save", SNAP_DEPTH, out) end
     return true
+end
+
+-- The functions of a /Script/mucha class, as "Class.Function(param: Kind, ...)" lines through
+-- out(line). Struct parameters name their struct. Returns the number of functions, or nil when
+-- the class is not found.
+function G.ListFunctions(className, out)
+    local cls = StaticFindObject("/Script/mucha." .. className)
+    if not (cls and cls:IsValid()) then return nil end
+    local n = 0
+    pcall(function()
+        cls:ForEachFunction(function(fn)
+            n = n + 1
+            local params = {}
+            pcall(function()
+                fn:ForEachProperty(function(p)
+                    local kind = PropKind(p)
+                    if kind == "StructProperty" then
+                        pcall(function() kind = kind .. "<" .. p:GetStruct():GetFName():ToString() .. ">" end)
+                    end
+                    params[#params + 1] = p:GetFName():ToString() .. ": " .. kind
+                end)
+            end)
+            local name = "?"
+            pcall(function() name = fn:GetFName():ToString() end)
+            out(className .. "." .. name .. "(" .. table.concat(params, ", ") .. ")")
+        end)
+    end)
+    return n
 end
 
 -- The property of an object's class (or a parent class) named `field`, or nil.
