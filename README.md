@@ -17,16 +17,17 @@ AI use: this project is built with Claude Code. [DISCLOSURE.md](DISCLOSURE.md) s
 
 The world is tested off-line: Archipelago's general tests pass with it, its own tests pass, and a client end-to-end run against a local server passes, with a script standing in for the game. Round 5 played a full seed in the real game, up to the goal and a release (see "Test results so far").
 
-1. **Mod.** Copy `FFRArchipelago/Scripts` over the installed mod (0.4.0). Delete the old `ap_in.txt`, `ap_out.txt` and `ap_state.txt`, and keep `seen.tsv`. Keep FFRRandomizer disabled.
+1. **Mod.** Copy `FFRArchipelago/Scripts` over the installed mod (0.5.0). Delete the old `ap_in.txt`, `ap_out.txt` and `ap_state.txt`, and keep `seen.tsv`. Keep FFRRandomizer disabled.
 2. **World.** Run `python tools/build_apworld.py`, then copy `dist/ff_resonance.apworld` into your Archipelago `custom_worlds` folder. Or, from source, copy `apworld/ff_resonance` into `worlds/`.
 3. **Seed.**
    - Copy `apworld/Final Fantasy Resonance.yaml` into Archipelago's `Players` folder and set a name.
    - For a first test, set `goal_story_checkpoint` to a value a little past your save, e.g. 1130.
    - Run `Generate.py`, then host the seed (`MultiServer.py <zip>`, or the website).
 4. **Play.**
-   - Start the game and load a save (a new game is best).
    - In the Launcher, open **Final Fantasy Resonance Client** and connect.
-   - The client writes `seed` and `cfg blank 1` into `ap_in.txt`. The mod starts a fresh session, and every Archipelago chest gives 1 gil from then on.
+   - The client writes `seed` and `cfg blank 1` into `ap_in.txt`, and the mod starts a fresh session.
+   - Start a **new game**: the mod links it to the seed, and every Archipelago chest gives 1 gil from then on. To play an existing save instead, load it and type `/bind` in the client.
+   - While any other save is loaded, the mod pauses: it grants nothing, reports nothing, and the chests are vanilla.
    - Open a chest: its real item comes from the server, with a "Received ..." message.
 5. **Goal.** When the story counter reaches the goal, the client sends the goal status.
 
@@ -54,6 +55,7 @@ The engine calls are already measured by mods installed in this game folder:
 | Opened chests | `CPP_BFL_SaveDataMap:IsOpenTreasureBox(mapId, uid)`; live `CPP_MapGimmick_TreasureBox.m_Id` / `m_IsOpen` | FFRS_QoL, FFRRandomizer probe |
 | Shinies | `BP_MapGimmick_FieldItem*` actors with `m_UniqueId`; looted state through the same `IsOpenTreasureBox` | FFRS_QoL markers (based on ZArkadia's Item and Chest Markers, Nexus mod 25) |
 | Chest table patching | `CDT_MapGimmickTreasureBox` and its parent tables | FFRRandomizer (`tableFamily`) |
+| Which save is loaded | save data object name; `Player.SavedDateTime.Ticks`; `GameSaveDataSummaryMap` slot summaries with the same ticks | FFRBestiary (`game.slotForTicks`) |
 | On-screen text | `BP_ModSettings:Toast(msg, seconds, hue, worldContext)` | FFRSLib |
 
 FFRSLib is FFR Modding Tools' in-game library by Kanaruu. This mod is separate code that calls the same functions, and it needs neither mod to run. The one exception is on-screen text, which needs the ModSettings panel. Before you publish anything, check the Modding Tools' and ZArkadia's permissions on Nexus and credit the work properly.
@@ -94,7 +96,8 @@ At run time the mod writes these files into its own folder: `ap_out.txt`, `ap_st
 | `ffrap_dump [rows]` | Chest and shiny discovery dump to `ffrap_dump.txt` |
 | `ffrap_export` | Every chest table row to `chests.tsv` |
 | `ffrap_blank [on\|off]` | Chests that are Archipelago locations give 1 gil instead of their vanilla reward. Chests with items at id 13000 and up (visions, key items) keep theirs. It is remembered across restarts. The client turns it on. |
-| `ffrap_sync` | Report every location in `seen.tsv` that the save says is looted, from anywhere in the game (re-sync) |
+| `ffrap_sync` | Report every location in `seen.tsv` that the save says is looted, from anywhere in the game (re-sync). Only in the session's save. |
+| `ffrap_bind` | Link the loaded save to the client's session, in place of any earlier one. The same as `/bind` in the client. |
 | `ffrap_reset` | Forget the applied-item count. Re-grants everything! |
 
 ## Bridge format
@@ -108,7 +111,10 @@ cfg   blank  <0|1>                               chest blanking
 item  <index>  <kind>  <id>  <count>  <label>    kind: item | gil | vision | unit | flag
 msg   <text>                                     shown on screen
 sync                                             report everything the save says is looted
+bind                                             link the loaded save to this session (0.5.0)
 ```
+
+**Which save a session belongs to (0.5.0).** The mod links each session to one save. A new game started during the session, never saved yet, is linked at once. An existing save is linked by `bind`. The session then remembers every slot the linked game is saved to (`slots` in `ap_state.txt`), and forgets a slot when another game is saved over it. While a save that is not linked is loaded, the mod grants nothing, writes no `check` or `story` lines and turns chest blanking off. Older mods ignore the `bind` line, so the protocol stays 1.
 
 `ap_out.txt` (game to client):
 ```
@@ -191,14 +197,27 @@ This was the first real Archipelago game: a new game, a local MultiServer, the 0
 - **Bug 2, checks from another save:** the session started while an old save (story 1095) was loaded. The sync on that load reported `shiny:1000:150` from the old save into the new session. It was ignored because shinies are off, but a chest would have been sent. See open question 8.
 - **Item names:** items 5 and 6 have no name in `item_names.tsv`, so they showed as "Item 5" and "Item 6". Their vanilla chests are Mysidia Dungeon 45 Chest 0 and Olderion Dungeon 43 Chest 4.
 
-## Round 6 test plan (client fix)
+## Round 6 test plan (mod 0.5.0, world 0.1.2)
 
-Keep FFRRandomizer disabled.
+This round tests the two round 5 fixes: the seed name, and linking each session to one save. Keep FFRRandomizer disabled.
 
-1. **Install.** Rebuild the apworld (`python tools/build_apworld.py`) and copy it over the old one in `custom_worlds`. The mod is unchanged.
+1. **Install.**
+   - Copy `FFRArchipelago/Scripts` over the installed mod. The log should say `version 0.5.0 loaded`.
+   - Rebuild the apworld (`python tools/build_apworld.py`) and copy it over the old one in `custom_worlds`.
 2. **Clean start.** Delete `ap_in.txt`, `ap_out.txt` and `ap_state.txt`. The old files use the `unknown` key, so with the fixed client the old seed would start a new session and grant all of its items again.
-3. **New seed.** Generate and host a new seed, load a save, then connect. The `seed` line in `ap_in.txt` must start with the seed's long number, not `unknown`.
-4. **Second seed.** Open a few chests, then host a different seed and connect to it. Expected: the mod starts a new session, and the new seed's items arrive from item 0.
+3. **An existing save pauses.**
+   - Generate and host a seed. Start the game, and connect the client at the title screen.
+   - Check that the `seed` line in `ap_in.txt` starts with the seed's long number, not `unknown`.
+   - Load an existing save. Expected: an "Archipelago is paused" message, no items, and chests with their vanilla contents. `ap_out.txt` gets no `check` or `story` lines.
+4. **A new game links itself.** Go back to the title and start a new game. Expected: "this new game is linked to the seed", the items arrive, and chests give 1 gil.
+5. **The link follows the save slot.**
+   - Save the new game to a slot. The `save:` line in `ap_status.txt` should list that slot (and maybe 0, the autosave).
+   - Quit to the title and load that slot. Expected: no "paused" message, and play carries on.
+   - Load a different slot. Expected: paused again.
+6. **`/bind`.** With a different existing save loaded, type `/bind` in the client. Expected: "this save is linked to the seed", and its looted chests are sent as checks. Do this last, because it moves the seed onto that save.
+7. **Second seed.** Host a different seed and connect to it. Expected: the mod starts a new session, and the new seed's items arrive from item 0 once you start a new game or use `/bind`.
+
+Send `UE4SS.log` (the `[FFRAP]` lines), `ap_status.txt` and the three `ap_*.txt` files.
 
 ## Open questions
 
@@ -212,7 +231,7 @@ Keep FFRRandomizer disabled.
    - Shinies carry their reward on the actor, so the same trick should work on `m_ItemId` and `m_Money`.
    - Story events that hand out party members, visions or key items need their own approach.
 7. **Gil.** Solved: `CPP_BFL_SaveDataPlayer` `GetCurrentMoney` / `SetCurrentMoney`, tested in round 5.
-8. **Checks from another save.** The sync on a save load reports every looted chest and shiny in that save. If the save is not the one this seed is played on, it sends checks the player did not earn in this seed. The session should belong to one save: record the save slot when the session starts, and only sync that save.
+8. **Checks from another save.** Fixed in 0.5.0 and tested off-line only: each session is linked to one save (see "Bridge format"), and every other save is paused. Not tested in game yet: that a new game has no slot until it is saved, and that a save's timestamp matches its slot summary in this game version. FFRBestiary relies on both.
 
 ## After the POC
 

@@ -123,6 +123,49 @@ function G.MapId()
     return Int(v)
 end
 
+-- -------------------------------------------------------------------------------------------
+-- Which save is loaded
+-- -------------------------------------------------------------------------------------------
+-- The approach is FFRBestiary's (installed in this game folder), which keeps its data per save
+-- slot: a load or a new game makes a new save data object, the loaded save's timestamp changes
+-- when the game saves, and the slot summaries carry the same timestamp.
+
+-- The loaded save data object's full name. Its unique number differs for every object, so a
+-- change of name means a load or a new game.
+function G.SaveObjectName()
+    local sd = G.SaveData()
+    if not sd then return nil end
+    local ok, name = pcall(function() return sd:GetFullName() end)
+    if ok and name then return tostring(name) end
+    return nil
+end
+
+-- The loaded save's timestamp (FDateTime ticks), as text so the 64-bit value compares exactly.
+function G.SavedTicks()
+    local sd = G.SaveData()
+    if not sd then return nil end
+    local ok, t = pcall(function() return sd.Player.SavedDateTime.Ticks end)
+    if ok and t ~= nil then return tostring(t) end
+    return nil
+end
+
+-- The save slot whose summary has this timestamp (0 is the autosave), or nil: a new game that
+-- was never saved, or a summary that has not caught up with a save yet. Read from the manager's
+-- own summary map, as FFRBestiary does: FindGameSaveDataSummary's out-param struct comes back as
+-- wrappers into memory that is freed after the call.
+function G.SlotForTicks(ticks)
+    local mgr = Live("CPP_MuchaSaveDataManager")
+    if not (mgr and ticks) then return nil end
+    local found
+    pcall(function()
+        mgr.GameSaveDataSummaryMap:ForEach(function(key, value)
+            local sum = value:get()
+            if not found and sum.bExists and tostring(sum.DateTime.Ticks) == ticks then found = Int(key:get()) end
+        end)
+    end)
+    return found
+end
+
 -- True when a save is loaded and the field is running. This is a guess at "safe to grant":
 -- save data exists and the map manager exists. The title screen may also have save data, so
 -- the map manager is the stronger signal. Verify this in the test plan (README, step 3).

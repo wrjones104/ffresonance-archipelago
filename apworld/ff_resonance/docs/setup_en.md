@@ -20,13 +20,17 @@
 
 ## Connecting
 
-1. Start the game and load the save you will play on. A new game is best.
+1. Start the game.
 2. Open the Archipelago Launcher and start **Final Fantasy Resonance Client**.
 3. Connect to the server with your slot name.
+4. Start a new game. The mod links it to the seed by itself. To play an existing save instead, load it and type `/bind` in the client.
+
+The mod pauses while any other save is loaded: it gives no items, sends no checks, and the chests are vanilla.
 
 The client finds the mod folder through `ff_resonance_options.mod_folder` in `host.yaml`. It defaults to the usual Steam path. To use another folder for one session, run `/modfolder <path>` in the client.
 
 ## Client commands
 
 - `/modfolder [path]`: show or set the mod folder.
+- `/bind`: link the save loaded in the game to this seed.
 - `/resync`: ask the mod to report every chest and shiny the save says is looted, and resend all checks.

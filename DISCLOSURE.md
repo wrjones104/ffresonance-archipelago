@@ -47,4 +47,5 @@ Every change was tested in the real game, apart from the items marked "not teste
 
 - **FFR-Randomizer** by LordMikoda (MIT): the item names in `data/item_names.tsv` and `data.py`. See `data/LICENSE-FFR-Randomizer.txt`.
 - **FFR Modding Tools (FFRSLib)** by Kanaruu, and **FFRS_QoL**: the engine calls this mod uses. No code is copied, but the calls follow theirs. Their permissions are still to be checked; see `README.md`.
+- **FFRBestiary**: how the mod tells which save slot is loaded (0.5.0).
 - **Item and Chest Markers** by ZArkadia (Nexus mod 25): FFRS_QoL's shiny markers are based on it.

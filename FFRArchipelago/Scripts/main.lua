@@ -18,9 +18,15 @@
 --   ffrap_export                 every chest table row to chests.tsv
 --   ffrap_blank [on|off]         chests that are Archipelago locations give 1 gil instead
 --   ffrap_sync                   report every known location the save says is looted
+--   ffrap_bind                   link the loaded save to the client's session (also /bind in the client)
 --   ffrap_reset                  forget the applied-item count (re-grants everything!)
+--
+-- Each client session belongs to one save. A new game started during a session is linked to
+-- it at once; an existing save is linked with ffrap_bind or the client's /bind. The link
+-- follows the save slots the linked game is saved to. While any other save is loaded, the mod
+-- grants nothing, reports nothing and leaves the chests vanilla.
 
-local VERSION = "0.4.0"
+local VERSION = "0.5.0"
 local PROTOCOL = 1        -- the bridge protocol; the apworld's MOD_PROTOCOL
 
 local MOD_DIR = (debug.getinfo(1, "S").source:gsub("^@", ""):gsub("\\", "/"):match("^(.*/)Scripts/[^/]+$"))
@@ -59,7 +65,32 @@ local state = {
     blank = false,     -- chest blanking (ffrap_blank, or the client's "cfg blank 1")
     seed = nil,        -- the client session ("<seed name>:<slot>") this state belongs to
     syncPending = false, -- report everything the save says is looted, once in game
+    slots = {},        -- save slot -> true: the slots the session's save is in (empty: none yet)
+    bindPending = false, -- the client asked to link the loaded save
 }
+
+-- The loaded save, and whether it is the session's. Not kept across game restarts: save data
+-- objects are new each run.
+local save = {
+    obj = nil,         -- the save data object's name (G.SaveObjectName)
+    ticks = nil,       -- its timestamp when last seen
+    slot = nil,        -- the slot it was loaded from, or nil for an unsaved new game
+    pending = nil,     -- a timestamp the game just saved with, until its slot is known
+    ok = false,        -- true when this is the session's save
+}
+
+-- True when the loaded save is the session's. With no client session (fake_ap.py testing)
+-- every save counts, as before 0.5.0.
+local function sessionSave()
+    return state.seed == nil or save.ok
+end
+
+local function slotsText()
+    local list = {}
+    for slot in pairs(state.slots) do list[#list + 1] = slot end
+    table.sort(list)
+    return table.concat(list, ",")
+end
 
 local STATE_PATH = MOD_DIR .. "ap_state.txt"
 local STATUS_PATH = MOD_DIR .. "ap_status.txt"
@@ -75,6 +106,9 @@ local function loadState()
         if key == "applied" then state.applied = tonumber(value) or 0 end
         if key == "blank" then state.blank = value == "1" end
         if key == "seed" and value ~= "" then state.seed = value end
+        if key == "slots" then
+            for slot in value:gmatch("%d+") do state.slots[tonumber(slot)] = true end
+        end
     end
     f:close()
 end
@@ -85,6 +119,7 @@ local function saveState()
     f:write("applied\t", state.applied, "\n")
     f:write("blank\t", state.blank and "1" or "0", "\n")
     f:write("seed\t", state.seed or "", "\n")
+    f:write("slots\t", slotsText(), "\n")
     f:close()
 end
 
@@ -123,6 +158,8 @@ local function newSession(key)
     log("new session " .. key .. (state.seed and (" (was " .. state.seed .. ")") or ""))
     state.seed, state.applied, state.queue, state.reported = key, 0, {}, {}
     state.syncPending = true
+    state.slots, state.bindPending = {}, false
+    save.obj = nil     -- judge the loaded save again for this session
     saveState()
     local f = io.open(bridge.outPath, "w")
     if f then f:close() end
@@ -139,11 +176,14 @@ local function readInbox(initial)
             if want ~= state.blank then
                 state.blank = want
                 saveState()
-                if game.InGame() then game.BlankChests(want) end
+                if game.InGame() then game.BlankChests(want and sessionSave()) end
                 log("chest blanking " .. (want and "on" or "off") .. " (client)")
             end
         elseif f[1] == "sync" then
             if not initial then state.syncPending = true end
+        elseif f[1] == "bind" then
+            -- Only a request made while the game runs: an old one would link whatever loads first.
+            if not initial then state.bindPending = true end
         elseif f[1] == "item" then
             local index, id = tonumber(f[2]), tonumber(f[4])
             if index and id then
@@ -257,6 +297,7 @@ local function newVisit(mapId)
 end
 
 local function opened(key)
+    if not sessionSave() then return end
     if report("check", key) then log("check " .. key) end
 end
 
@@ -334,7 +375,7 @@ local function scanLoot()
     if mapId ~= visit.mapId then
         log("map " .. tostring(visit.mapId) .. " -> " .. mapId .. " (save's Map.mapId " .. tostring(game.MapId()) .. ")")
         newVisit(mapId)
-        if state.blank then
+        if state.blank and sessionSave() then
             log("chest blanking: " .. game.BlankChests(true) .. " rows set to 1 gil")
         end
     end
@@ -350,6 +391,86 @@ local function watchStory()
         if state.lastStory then log("story " .. state.lastStory .. " -> " .. n) end
         state.lastStory = n
         report("story", n)
+    end
+end
+
+-- -------------------------------------------------------------------------------------------
+-- The session's save
+-- -------------------------------------------------------------------------------------------
+
+-- Turns chest blanking on or off when the loaded save stops or starts being the session's.
+local function setOk(ok)
+    local was = save.ok
+    save.ok = ok
+    if state.blank and was ~= ok then
+        log("chest blanking " .. (ok and "on" or "off") .. " for this save: " .. game.BlankChests(ok) .. " rows changed")
+    end
+end
+
+-- Decides whether a save that was just loaded (or a new game) is the session's.
+local function judgeSave()
+    if not state.seed then setOk(true); return end
+    if save.slot ~= nil and state.slots[save.slot] then
+        setOk(true)
+        log("save slot " .. save.slot .. " is the session's save")
+    elseif save.slot == nil and next(state.slots) == nil then
+        -- A new game that was never saved, and the session has no save yet: link it. It joins
+        -- a slot the first time it is saved.
+        setOk(true)
+        notify("Archipelago: this new game is linked to the seed")
+    else
+        setOk(false)
+        notify("Archipelago is paused: this save is not linked to the seed. Load the linked save, " ..
+            "start a new game, or use /bind in the client to link this one.")
+    end
+end
+
+-- Links the loaded save to the session, in place of any earlier one.
+local function bindLoaded()
+    if not state.seed then
+        notify("No Archipelago session: connect the client first")
+        return
+    end
+    if not save.obj then
+        notify("Load a save first, then link it")
+        return
+    end
+    state.slots = {}
+    if save.slot ~= nil then state.slots[save.slot] = true end
+    saveState()
+    setOk(true)
+    state.syncPending = true   -- whatever this save has already looted counts
+    notify("Archipelago: this save is linked to the seed" .. (save.slot and (" (slot " .. save.slot .. ")") or ""))
+end
+
+-- Follows the loaded save: a new save object is a load or a new game, and a new timestamp on
+-- the same object means the game just saved. A save by the session's game adds its slot to the
+-- session; a save by any other game takes that slot away, because it now holds another game.
+local function followSave()
+    local obj, ticks = game.SaveObjectName(), game.SavedTicks()
+    if not obj then return end
+    if obj ~= save.obj then
+        save.obj, save.ticks, save.pending = obj, ticks, nil
+        save.slot = game.SlotForTicks(ticks)
+        log("save loaded: slot " .. tostring(save.slot) .. ", session slots [" .. slotsText() .. "]")
+        judgeSave()
+    elseif ticks ~= save.ticks then
+        save.ticks, save.pending = ticks, ticks
+    end
+    if save.pending then
+        local slot = game.SlotForTicks(save.pending)   -- the summary can catch up a moment later
+        if slot ~= nil then
+            save.pending, save.slot = nil, slot
+            if state.seed and save.ok and not state.slots[slot] then
+                state.slots[slot] = true
+                saveState()
+                log("saved to slot " .. slot .. ": session slots [" .. slotsText() .. "]")
+            elseif state.seed and not save.ok and state.slots[slot] then
+                state.slots[slot] = nil
+                saveState()
+                notify("Archipelago: slot " .. slot .. " now holds another game and is no longer linked")
+            end
+        end
     end
 end
 
@@ -372,6 +493,8 @@ local function statusLines()
         "party: " .. (party and table.concat(party, ", ") or "?"),
         "items applied: " .. state.applied .. "   queued: " .. queued(),
         "chest blanking: " .. (state.blank and "on" or "off") .. "   session: " .. tostring(state.seed),
+        "save: slot " .. tostring(save.slot) .. ", session slots [" .. slotsText() .. "], " ..
+            (sessionSave() and "linked" or "not linked (paused)"),
         "last: " .. state.lastResult,
     }
 end
@@ -394,20 +517,32 @@ local function tick()
         if state.inGameTicks > 0 then log("left the game (title screen or loading)") end
         state.inGameTicks = 0
         state.lastStory = nil
+        save.obj = nil
     else
         state.inGameTicks = state.inGameTicks + 1
         if state.inGameTicks == 1 then log("save loaded, map " .. tostring(game.CurrentMap())) end
         if state.inGameTicks > SETTLE_TICKS then
-            applyItems()
-            watchStory()
-            if state.ticks % CHEST_EVERY == 0 then scanLoot() end
-            if state.syncPending then
-                state.syncPending = false
-                log("sync from save: " .. syncFromSave() .. " new checks")
+            followSave()
+            if state.bindPending then
+                state.bindPending = false
+                bindLoaded()
             end
-            -- The tables can be rebuilt while the game runs, so blanking is applied again now
-            -- and then; rows already blank are skipped.
-            if state.blank and state.ticks % STATUS_EVERY == 0 then game.BlankChests(true) end
+            -- Chests and shinies are still recorded in seen.tsv for any save; scanLoot reports
+            -- them only for the session's save (see opened).
+            if state.ticks % CHEST_EVERY == 0 then scanLoot() end
+            if sessionSave() then
+                applyItems()
+                watchStory()
+                if state.syncPending then
+                    state.syncPending = false
+                    log("sync from save: " .. syncFromSave() .. " new checks")
+                end
+                -- The tables can be rebuilt while the game runs, so blanking is applied again
+                -- now and then; rows already blank are skipped.
+                if state.blank and state.ticks % STATUS_EVERY == 0 then game.BlankChests(true) end
+            else
+                state.lastStory = nil   -- report the story again once the session's save is back
+            end
         end
     end
     if state.ticks % STATUS_EVERY == 0 then writeStatus() end
@@ -470,8 +605,21 @@ end)
 
 -- Reports every location in seen.tsv that the save says is looted (see syncFromSave).
 command("ffrap_sync", function()
+    if not sessionSave() then
+        notify("Not synced: this save is not linked to the seed (ffrap_bind links it)")
+        return
+    end
     local new = syncFromSave()
     notify("Sync from save: " .. new .. " new checks from " .. #seenList .. " known locations")
+end)
+
+command("ffrap_bind", function()
+    if not game.InGame() then
+        notify("Load a save first, then link it")
+        return
+    end
+    followSave()
+    bindLoaded()
 end)
 
 command("ffrap_reset", function()

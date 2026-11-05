@@ -53,6 +53,15 @@ class FFResonanceCommandProcessor(ClientCommandProcessor):
         self.output("Resync requested.")
         return True
 
+    def _cmd_bind(self) -> bool:
+        """Link the save that is loaded in the game to this seed. A new game is linked by itself."""
+        if self.ctx.session_key is None:
+            self.output("Connect to the server first.")
+            return False
+        self.ctx.write_line("bind")
+        self.output("Asked the mod to link the loaded save to this seed. Watch for the message in game.")
+        return True
+
 
 class FFResonanceContext(CommonContext):
     game = GAME
