@@ -457,6 +457,12 @@ Plan: build option 1 first, because it is known to work. Then try option 2 as an
 - Which widget draws the pop-up, and which of its texts and images hold the item. 0.10.0 logs the panels around the "obtained" text by itself, the first time a chest check is reported.
   - **Round 24:** nothing was found. The item line, "(gil icon) 1", is text with an icon in it, which is a `RichTextBlock`, and only TextBlocks were searched.
   - **0.10.1** searches both, and tries on each chest (15 s) until it has found it once in a run.
+  - **Round 25 found it.** The chest pop-up is the game's general dialog box, `WBP_DialogBox_C`, shown in the dialog layer (`WBP_DialogLayout_C` in `WBP_OverAllLayout_C`). Inside its window:
+    - `VerticalBox_0` holds `Text_Message`, a `CommonRichTextBlock` with "You obtained the following:", and `Overlay_Custom`, the dialog's custom content. The "(gil icon) 1" item line is most likely drawn in `Overlay_Custom`.
+    - The chain up from the text: `VerticalBox_0`, `SizeBox_2`, `Overlay_141`, `Window_Content` (a NamedSlot of `WBP_Cmn_Window_C`), then `WBP_DialogBox_C`.
+  - **Still to find:** what is inside `Overlay_Custom`, the item line's widgets. A probe that lists its children, with their text, finds it. Then either:
+    - write the Archipelago item into the item line's text and hide the gil icon, or
+    - write it into `Text_Message` ("You found Rod of Focus for Jones") and hide `Overlay_Custom`.
 - Whether the text can be changed while the pop-up is up (the feed showed that field writes before a widget is drawn are safe; this is a widget already drawn, so `SetText` it is).
 
 ## 14. An item feed on the HUD
