@@ -6,6 +6,7 @@ FFRArchipelago/ap_status.txt
 FFRArchipelago/ffrap_dump.txt
 FFRArchipelago/chests.tsv
 FFRArchipelago/seen.tsv
+FFRArchipelago/snap_*.tsv
 
 # Python
 __pycache__/

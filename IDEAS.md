@@ -35,10 +35,34 @@ The chapter-by-chapter progression (party, vehicles, gates, Visions, Espers) is 
 - Setting the counter alone does not replay what the skipped story did. FFRSLib warns that flags set by later story stay set when going backwards, so going forwards presumably leaves the prologue's flags unset.
 - The tools to fill the gap exist: story flags (`SetFlag`), party (`AddUnit`), visions, items, gil, and map travel (`ffrs_travel` / `LoadMapId`).
 
-**To find out:**
-- Which flags, party members, visions, items and tutorials the prologue sets or gives. Diff the save before and after playing it: the flag array, unit list, vision list and inventory.
-- Where a new game should land (map and spawn point) so the next story event triggers normally.
-- When the mod should do it: on the first load of a fresh save, once per session.
+- The prologue is a tutorial on its own maps (round 5 log: maps 10040 and 10041, story 1000 to 1010), with a temporary Lv. 55 Dark Fina. Chapter 1 begins with Rain and Lasswell in Grandshelt.
+- FFRSLib notes that the level cap is 99 only while story flag 1 is on, and 15 without it. That is one example of state the skip has to get right.
+- FFRSLib's travel (`ffrs_travel <map> <slot> x y z`) writes the map and arrival point into the save, saves to a slot and reloads the field from it. Its story knob (`ffrs_story_set`) says "save and reload to apply". So the skip can work the same way: change the save, save to a slot, reload.
+- The game ships its own debug menu (`ffrs_debug_menu`), and its code has a debug progress editor (`CPP_BFL_DBG_FlagSaveData` `SetProgressList` / `GetProgressList`). If the menu has a chapter jump, it sets things up the way the developers expect.
+
+**Plan (2026-11-05).** Steps 1 to 3 are yours in game; step 4 is the build.
+
+0. **Stop-gap for testing now:** copy your base save for each seed.
+   - Connect the client, load the base save, run `ffrs_save <free slot>` (FFRSLib), then type `/bind` in the client.
+   - The seed now lives in the new slot, and the base save stays clean.
+   - The order matters. If you bind first, the base save's slot is linked too.
+1. **What the prologue changes: save snapshots.** Mod 0.5.1's `ffrap_snapshot <name>` writes every field of the loaded save to `snap_<name>.tsv`, and `tools/snapdiff.py` compares two of them.
+   1. Start a new game. As soon as the console works in the first battlefield map, run `ffrap_snapshot start`.
+   2. After the Iron Giant fight, at the first moment you control Rain, run `ffrap_snapshot after_giant`. This one is optional: it separates the prologue's changes from the start of chapter 1.
+   3. At the point where your base save is, run `ffrap_snapshot ch1`. Then save the game to a free slot.
+   4. Load your base save and run `ffrap_snapshot base`. Comparing it with `ch1` shows which differences are only noise.
+   5. Send the four `snap_*.tsv` files and `UE4SS.log`. Also say which map and spot chapter 1 begins at, and whether a cutscene plays when you arrive.
+2. **The game's debug menu.** Run `ffrs_debug_menu` at the title screen and in game, and take a screenshot of each page. Look for a chapter select, a story or scenario jump, a flag or progress editor, or "new game from ...".
+3. **A skip by hand.** On a fresh new game, try the simple version with FFRSLib's tools, using the base save's values from `snap_base.tsv` (`live.story`, `live.map`, `live.pawn`):
+   - `ffrs_story_set <story>`
+   - `ffrs_travel <map> <free slot> <x> <y> <z>`. This overwrites that slot.
+
+   Then note what is wrong: Dark Fina still in the party, Rain or Lasswell missing, a level cap of 15, a cutscene that repeats, or a tutorial that pops up.
+4. **The build.** On a new game linked to an Archipelago session, the mod applies the prologue's changes from the diff: story values, flags, party, visions and items. Then it sets the arrival map and point, saves to a slot and reloads. The apworld gets a `skip_prologue` option (on by default), sent in slot data.
+
+**Still to find out:**
+- What the prologue changes outside the save object. The reload in step 4 rebuilds what the game derives from the save at load time, but not anything that is never saved.
+- Which slot the skip should save to. It must not overwrite a save the player cares about.
 
 ## 3. Non-story ("open world") mode
 

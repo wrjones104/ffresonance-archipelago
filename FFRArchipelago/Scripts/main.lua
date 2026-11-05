@@ -16,6 +16,7 @@
 --   ffrap_grant <kind> <id> [n]  grant directly, without the bridge: item, gil, vision, unit, flag
 --   ffrap_dump [rows]            chest and shiny discovery dump to ffrap_dump.txt
 --   ffrap_export                 every chest table row to chests.tsv
+--   ffrap_snapshot [name]        every field of the loaded save to snap_<name>.tsv (tools/snapdiff.py)
 --   ffrap_blank [on|off]         chests that are Archipelago locations give 1 gil instead
 --   ffrap_sync                   report every known location the save says is looted
 --   ffrap_bind                   link the loaded save to the client's session (also /bind in the client)
@@ -26,7 +27,7 @@
 -- follows the save slots the linked game is saved to. While any other save is loaded, the mod
 -- grants nothing, reports nothing and leaves the chests vanilla.
 
-local VERSION = "0.5.0"
+local VERSION = "0.5.1"
 local PROTOCOL = 1        -- the bridge protocol; the apworld's MOD_PROTOCOL
 
 local MOD_DIR = (debug.getinfo(1, "S").source:gsub("^@", ""):gsub("\\", "/"):match("^(.*/)Scripts/[^/]+$"))
@@ -587,6 +588,30 @@ command("ffrap_dump", function(p)
     game.DumpFieldItems(out)
     f:close()
     notify("Chest and shiny dump written to ffrap_dump.txt")
+end)
+
+-- Every field of the loaded save to snap_<name>.tsv, to compare two points in the game with
+-- tools/snapdiff.py (the prologue investigation, IDEAS.md idea 2).
+command("ffrap_snapshot", function(p)
+    local name = tostring(p[1] or os.date("%H%M%S")):gsub("[^%w_%-]", "")
+    if name == "" then name = os.date("%H%M%S") end
+    local path = MOD_DIR .. "snap_" .. name .. ".tsv"
+    local f = io.open(path, "w")
+    if not f then
+        notify("Could not write snap_" .. name .. ".tsv")
+        return
+    end
+    local lines = 0
+    local ok = game.Snapshot(function(key, value)
+        f:write(key, "\t", (tostring(value):gsub("[\t\r\n]", " ")), "\n")
+        lines = lines + 1
+    end)
+    f:close()
+    if ok then
+        notify("Snapshot snap_" .. name .. ".tsv: " .. lines .. " lines")
+    else
+        notify("No save loaded: nothing to snapshot")
+    end
 end)
 
 command("ffrap_export", function()

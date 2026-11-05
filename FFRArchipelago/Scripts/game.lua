@@ -653,6 +653,111 @@ local function DumpStruct(struct, value, indent, depth, out)
     end)
 end
 
+-- -------------------------------------------------------------------------------------------
+-- Save snapshot, for finding out what a stretch of play changes (the prologue, say)
+-- -------------------------------------------------------------------------------------------
+-- Every field of the loaded save object, as "path<TAB>value" lines: structs are walked, arrays
+-- are written element by element (0-based, like the engine), maps and sets key by key. Two
+-- snapshots compare line by line with tools/snapdiff.py.
+
+local SNAP_DEPTH = 8          -- struct levels to walk
+local SNAP_ELEMENTS = 20000   -- elements written per array
+
+local function PropKind(prop)
+    local kind
+    pcall(function() kind = prop:GetClass():GetFName():ToString() end)
+    return kind or "?"
+end
+
+local SnapStruct
+
+local function SnapValue(prop, v, path, depth, out)
+    local kind = PropKind(prop)
+    if kind == "StructProperty" then
+        local s
+        pcall(function() s = prop:GetStruct() end)
+        if s and v ~= nil and depth > 0 then
+            SnapStruct(s, v, path, depth - 1, out)
+        else
+            out(path, "<struct>")
+        end
+    elseif kind == "ArrayProperty" then
+        local inner, n = nil, 0
+        pcall(function() inner = prop:GetInner() end)
+        pcall(function() n = v:GetArrayNum() end)
+        out(path .. ".#", n)
+        if inner and n > 0 then
+            pcall(function()
+                v:ForEach(function(index, element)
+                    local i = index - 1
+                    if i >= SNAP_ELEMENTS then return end
+                    local ev
+                    pcall(function() ev = element:get() end)
+                    SnapValue(inner, ev, path .. "[" .. i .. "]", depth, out)
+                end)
+            end)
+        end
+    elseif kind == "MapProperty" or kind == "SetProperty" then
+        local n = 0
+        pcall(function()
+            v:ForEach(function(key, value)
+                n = n + 1
+                local k, e
+                pcall(function() k = key:get() end)
+                if value ~= nil then pcall(function() e = value:get() end) end
+                out(path .. "{" .. Show(k) .. "}", value ~= nil and Show(e) or "")
+            end)
+        end)
+        out(path .. ".#", n)
+    elseif kind == "ObjectProperty" or kind == "ClassProperty" or kind == "SoftObjectProperty"
+        or kind == "WeakObjectProperty" then
+        local name = "nil"
+        pcall(function() if v and v:IsValid() then name = v:GetFullName() end end)
+        out(path, name)
+    else
+        out(path, Show(v))
+    end
+end
+
+SnapStruct = function(struct, value, path, depth, out)
+    local s = struct
+    while s do
+        local current = s
+        pcall(function()
+            current:ForEachProperty(function(prop)
+                local name = prop:GetFName():ToString()
+                local v
+                pcall(function() v = value[name] end)
+                SnapValue(prop, v, path .. "." .. name, depth, out)
+            end)
+        end)
+        local super
+        pcall(function() super = current:GetSuperStruct() end)
+        local superName
+        pcall(function() superName = super and super:IsValid() and super:GetFName():ToString() end)
+        if superName and superName ~= "Object" then s = super else s = nil end
+    end
+end
+
+-- Writes the snapshot through out(path, value). Returns false when no save is loaded.
+function G.Snapshot(out)
+    local sd = G.SaveData()
+    if not sd then return false end
+    out("live.time", os.date("%Y-%m-%d %H:%M:%S"))
+    out("live.map", tostring(G.CurrentMap()))
+    out("live.story", tostring(G.StoryCounter()))
+    pcall(function()
+        local loc = PlayerController():K2_GetPawn():K2_GetActorLocation()
+        out("live.pawn", string.format("%.1f %.1f %.1f", loc.X, loc.Y, loc.Z))
+    end)
+    out("live.object", tostring(G.SaveObjectName()))
+    out("live.slot", tostring(G.SlotForTicks(G.SavedTicks())))
+    local cls
+    pcall(function() cls = sd:GetClass() end)
+    if cls then SnapStruct(cls, sd, "save", SNAP_DEPTH, out) end
+    return true
+end
+
 -- The property of an object's class (or a parent class) named `field`, or nil.
 local function FindProperty(obj, field)
     local found
