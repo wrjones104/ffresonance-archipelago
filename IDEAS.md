@@ -483,6 +483,8 @@ Plan: build option 1 first, because it is known to work. Then try option 2 as an
 - The dialog box is made once and used again, so the mod keeps its message widget once found.
 - Ten times a second, a cheap check asks only that widget whether a chest pop-up has just come up. When one has, the chests in the map are scanned at once and the pop-up is rewritten in the same pass, within about 0.1 s.
 - The first pop-up of a session still takes the slower path (a search of all rich text), because the widget is not known yet.
+- **Round 27:** fast, and no stutter. But chests opened again after reloading an older save kept "1 gil": only a chest's first report asked for the pop-up text. Other Archipelago games show the item at pickup whether or not the server already has the check, and that is the rule here too.
+- **0.11.2:** each map visit keeps the chests it has seen closed. One of those that is later seen open was opened in front of the player, so its pop-up is rewritten, whether its check is new or not. A first report still asks too, for a chest opened before the map's first scan.
 - **If 0.1 s is still visible:** hook the call that sets the message text (`RichTextBlock:SetText`, if the dialog calls it through a UFunction, as `ExecuteEntry` is called) and rewrite it in the same frame. That would need a guard against the hook seeing our own `SetText`.
 - Whether the text can be changed while the pop-up is up (the feed showed that field writes before a widget is drawn are safe; this is a widget already drawn, so `SetText` it is).
 

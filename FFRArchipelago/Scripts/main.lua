@@ -37,7 +37,7 @@
 -- follows the save slots the linked game is saved to. While any other save is loaded, the mod
 -- grants nothing, reports nothing and leaves the chests vanilla.
 
-local VERSION = "0.11.1"
+local VERSION = "0.11.2"
 local PROTOCOL = 1        -- the bridge protocol; the apworld's MOD_PROTOCOL
 
 local MOD_DIR = (debug.getinfo(1, "S").source:gsub("^@", ""):gsub("\\", "/"):match("^(.*/)Scripts/[^/]+$"))
@@ -379,7 +379,7 @@ local MAP_SETTLE_SCANS = 3
 
 -- This map visit: which map, how many scans it has held, and which chests and shinies were
 -- already recorded.
-local visit = { mapId = nil, scans = 0, recorded = {} }
+local visit = { mapId = nil, scans = 0, recorded = {}, closed = {} }
 
 -- Everything seen so far, across sessions: our own location list, and the map from each
 -- location to the key the save knows it by. One line each in seen.tsv:
@@ -431,7 +431,7 @@ local function recordSeen(kind, mapId, uid, row, itemId, itemNum, money, visible
 end
 
 local function newVisit(mapId)
-    visit = { mapId = mapId, scans = 0, recorded = {} }
+    visit = { mapId = mapId, scans = 0, recorded = {}, closed = {} }
 end
 
 -- The chest pop-up (IDEAS.md, idea 13): the pop-up is up while the chest's check is reported,
@@ -461,10 +461,16 @@ local function popupTick()
     end
 end
 
-local function opened(key)
+-- `fresh`: the chest was seen closed in this map visit and is open now, so it was just opened in
+-- front of the player. Its pop-up is rewritten whether or not the server has the check already
+-- (round 27: after reloading an older save, chests opened again kept "1 gil", because only a
+-- first report asked for the pop-up). A first report asks too, for a chest opened before the
+-- map's first scan.
+local function opened(key, fresh)
     if not sessionSave() then return end
-    if report("check", key) then
-        log("check " .. key)
+    local new = report("check", key)
+    if new then log("check " .. key) end
+    if new or fresh then
         local s = state.scouts[key]
         if s and key:find("^chest:") then popup = { text = popupText(s), key = key, tries = POPUP_TRIES } end
     end
@@ -495,7 +501,14 @@ local function scanChests(mapId)
                 recordSeen(hasRow and "chest" or "xchest", mapId, c.uniqueId,
                     hasRow and (c.rowMap .. ":" .. c.rowId) or "", c.itemId, c.itemNum, c.money, "")
             end
-            if key and (c.open or game.IsChestOpenInSave(mapId, c.uniqueId)) then opened(key) end
+            local id = "c" .. c.uniqueId
+            if c.open or game.IsChestOpenInSave(mapId, c.uniqueId) then
+                local fresh = visit.closed[id] == true
+                visit.closed[id] = nil
+                if key then opened(key, fresh) end
+            else
+                visit.closed[id] = true   -- seen closed: opening it later is "in front of the player"
+            end
         end
     end
 end

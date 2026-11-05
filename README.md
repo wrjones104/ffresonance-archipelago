@@ -22,7 +22,7 @@ The world is tested off-line: Archipelago's general tests pass with it, its own 
 - **ModSettings** (a Blueprint mod in `Content/Paks/LogicMods`, from the same modding tools as FFRSLib) is optional. In the field, messages ("Received ...", "Sent ...", "Archipelago is paused", "Prologue skipped") go to the mod's own item feed at the bottom right of the HUD (since 0.10.0, on by default). ModSettings' Toast panel takes them off the field (the title screen), when the feed has not been able to show anything for 10 seconds since the game started, and with `ffrap_feed off`. Without ModSettings those few only go to `UE4SS.log`.
 - **FFRSLib, FFRS_QoL, FFRBestiary and FFRRandomizer are not needed.** Their code is where the game calls come from (see "Where the game calls come from"), but this mod calls the game directly. FFRRandomizer should stay disabled (IDEAS.md, idea 10).
 
-1. **Mod.** Copy `FFRArchipelago/Scripts` and `FFRArchipelago/Assets` over the installed mod (0.11.1). Delete the old `ap_in.txt`, `ap_out.txt` and `ap_state.txt`, and keep `seen.tsv`. Keep FFRRandomizer disabled.
+1. **Mod.** Copy `FFRArchipelago/Scripts` and `FFRArchipelago/Assets` over the installed mod (0.11.2). Delete the old `ap_in.txt`, `ap_out.txt` and `ap_state.txt`, and keep `seen.tsv`. Keep FFRRandomizer disabled.
 2. **World.** Run `python tools/build_apworld.py`, then copy `dist/ff_resonance.apworld` into your Archipelago `custom_worlds` folder. Or, from source, copy `apworld/ff_resonance` into `worlds/`.
 3. **Seed.**
    - Copy `apworld/Final Fantasy Resonance.yaml` into Archipelago's `Players` folder and set a name.
@@ -299,15 +299,15 @@ Rounds 6 to 9 (2026-11-05) worked out and tested the prologue skip; their result
 - Items from other players arrived in the feed ("Received Anti-Magic Gear from Rat1", "Received Phoenix Down x3 from Rat3"). Items that came during a menu waited until it closed.
 - **The wait:** the pop-up changed 0.5 to 1.5 s after it came up (chests are scanned once a second, and the text was set on the next half-second tick): "the wait is real".
 
-## Round 27 test plan (mod 0.11.1, world 0.1.4)
+**Round 27 (mod 0.11.1, 2026-11-05):**
+- **The fast check:** from the second chest on, the check and the pop-up text came in the same pass (for example, both at 16:33:11.23). No stutter.
+- **Found:** after reloading an older save (slot 0), chests opened again kept "1 gil". Their checks were already reported, and only a first report asked for the pop-up text, though the scouts were there.
 
-1. **Install.** Copy `FFRArchipelago/Scripts` over the installed mod. The log should say `version 0.11.1 loaded`. The apworld stays 0.1.4.
-2. **Chests.**
-   - The first chest of a session works as before: a short wait, while the mod finds the pop-up.
-   - From the second chest on, the text should change within about 0.1 s, maybe while the pop-up is still opening.
-   - The log has `check chest:...` and `chest pop-up for chest:...` within a tenth of a second of each other.
-3. **Other dialogs:** the Quit dialog and other pop-ups still look normal.
-4. Say whether there is any stutter in the field. The new check runs ten times a second, but asks only one widget.
+## Round 28 test plan (mod 0.11.2, world 0.1.4)
+
+1. **Install.** Copy `FFRArchipelago/Scripts` over the installed mod. The log should say `version 0.11.2 loaded`.
+2. **Chests again after a reload:** open a few chests, go back to the title without saving (or load an older save), and open the same chests again. Each pop-up should say what the chest held, with no new `check` line in the log.
+3. **New chests** work as before.
 
 ## Open questions
 
