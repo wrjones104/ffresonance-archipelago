@@ -318,12 +318,31 @@ Plan: build option 1 first, because it is known to work. Then try option 2 as an
 - **Choosing Archipelago** marks the next new game. That game links to the seed even when the seed has other saves: with per-save item counts, several saves for one seed are safe. If it autosaved before the client connected, its slot is linked when the session starts.
 - **Plain New Game stays vanilla** once the entry is in place: it no longer links itself.
 - **The automatic skip:** on an Archipelago game, once the story is at 1005 and the game has autosaved (so the save has a slot), it waits 2 seconds and runs the same skip as `ffrap_skip <that slot>`. It makes one try per game. If that fails, the message says to run `ffrap_skip`.
-- The entry is at the bottom of the list. Moving it up to sit under New Game would mean rebuilding the map in a new order. That is possible, but it risks the game's own rows, so it waits.
+- The entry is at the bottom of the list.
+
+**Round 13:** all of the above worked in game.
+
+**Built (mod 0.8.1, from the round 13 screenshot):**
+- **The label** is "New Game (Archipelago)".
+- **The order:** the menu lists rows in the map's own order, and a map keeps the order rows were added in only when it starts empty. So the mod:
+  1. Reads every row (label text, the save-data and platform checks, the platform list, the action tag).
+  2. Checks that the map takes an empty row.
+  3. Empties the map.
+  4. Adds the rows back as Continue, Load Game, New Game, New Game (Archipelago), Options, Quit Game.
+  5. Fills in each row's fields.
+
+  If the map cannot be emptied, the spare row is taken out again and the entry stays at the bottom. The labels are written back as the text they show, so they stay in the current language, but they do not follow a language change until the next start.
+- **The mod's name and version on the title:** the game's version ("1.0.1.0", bottom left) is a TextBlock. The mod writes "FFRArchipelago <version>" in front of it on a line of its own, so it shows above the version if the block grows upwards. The title widget is made again each time the title shows, so this is checked every 3 seconds while not in a game.
+- **The logo** is saved as `FFRArchipelago/Assets/archipelago_logo.png` (from the Archipelago community; free with credit for unpaid projects). Showing it needs an `Image` widget made at run time, with the texture loaded from the file (`KismetRenderingLibrary.ImportFileAsTexture2D`). That is the next step after the text.
 
 **Still open:**
 - **Skipping the movie outright:** find what the opening holds the player's input with. `CPP_Task_NewGame` is the place to start (`ffrap_inspect` while a new game is starting).
-- **The logo and version text on the title screen:** find the title layout widget (`ffrap_find TitleLayout` or `ffrap_find WBP_Title`, in game) and add an `Image` and a `TextBlock`.
-- **Our own on-screen text:** messages go through ModSettings' Toast panel, so without that mod a player sees nothing. Making our own message widget is the same work as the title text and logo (an `Image` and a `TextBlock` added to a widget we create). Doing both together removes the last optional dependency.
+- **The logo on the title:** see above.
+- **Our own on-screen text:** messages go through ModSettings' Toast panel, so without that mod a player sees nothing. Two ways:
+  - **Use one of the game's own notices.** The executable names `CPP_VM_QuestNotice` and `CPP_DA_QuestNotice` (quest pop-ups), `CPP_WBP_ChatNotice` (`UI.Layout.Chat.Notice`) and `CPP_VM_BattleResult_Notification`. If one of them takes plain text, our messages look like the game's.
+  - **Make our own widget:** a `TextBlock` (and later the logo) on a widget we create. This is the same work as the logo.
+
+  The round 14 probes look at the first way.
 
 ## 7. Enemy randomization
 

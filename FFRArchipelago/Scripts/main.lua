@@ -33,7 +33,7 @@
 -- follows the save slots the linked game is saved to. While any other save is loaded, the mod
 -- grants nothing, reports nothing and leaves the chests vanilla.
 
-local VERSION = "0.8.0"
+local VERSION = "0.8.1"
 local PROTOCOL = 1        -- the bridge protocol; the apworld's MOD_PROTOCOL
 
 local MOD_DIR = (debug.getinfo(1, "S").source:gsub("^@", ""):gsub("\\", "/"):match("^(.*/)Scripts/[^/]+$"))
@@ -48,6 +48,7 @@ local MAX_GRANTS_PER_TICK = 5
 local NEW_GAME_STORY = 1000   -- the story counter of a new game, until the first scene ends
 local TITLE_EVERY = 6         -- ticks between checks that the title entry is still there
 local AUTO_SKIP_WAIT = 4      -- ticks to wait after the first autosave before the automatic skip
+local TITLE_LINE = "FFRArchipelago " .. VERSION   -- shown above the game's version on the title
 local CHEST_EVERY = 2         -- ticks between chest scans
 local STATUS_EVERY = 10       -- ticks between status file writes
 
@@ -600,14 +601,29 @@ end
 -- Keeps the title entry in place: added at start-up, before the menu first reads the asset,
 -- and checked again now and then in case the game reloads the asset. Loads the asset only
 -- outside a game.
+local orderLogged = nil   -- the last order result logged, so each new one is logged once
 local function titleTick()
     if state.ticks ~= 1 and state.ticks % TITLE_EVERY ~= 0 then return end
-    local ok, detail = game.AddTitleEntry(not game.InGame())
+    local inGame = game.InGame()
+    local ok, detail = game.AddTitleEntry(not inGame)
     if ok and hookTitle() then
         if not titleReady then log("title: Archipelago entry ready (" .. tostring(detail) .. ")") end
         titleReady = true
     elseif ok and not titleReady then
         log("title: the entry is in, but the choice could not be hooked")
+    end
+    if ok then
+        local okOrder, how = game.OrderTitleEntries()
+        local text = (okOrder and "" or "could not order: ") .. tostring(how)
+        if okOrder and how == "already in order" then text = nil end
+        if text and text ~= orderLogged then
+            log("title: entry order " .. text)
+            orderLogged = text
+        end
+    end
+    if not inGame then
+        local shown = game.TitleVersionLine(TITLE_LINE)
+        if shown == "added" then log("title: \"" .. TITLE_LINE .. "\" shown above the version text") end
     end
 end
 

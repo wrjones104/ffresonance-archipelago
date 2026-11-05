@@ -962,7 +962,10 @@ function G.TitleEntries()
     return "shown [" .. table.concat(shown, ",") .. "], map keys [" .. table.concat(keys, ",") .. "]"
 end
 
-G.TITLE_LABEL = "Archipelago"
+G.TITLE_LABEL = "New Game (Archipelago)"
+-- The menu lists the rows in the map's own order, so the Archipelago row goes under New Game
+-- by rebuilding the map in this order (OrderTitleEntries).
+local TITLE_ORDER = { 0, 1, 2, 5, 3, 4 }
 
 -- The title data asset, loaded when asked to and not loaded yet (as FFRSLib loads the System Menu
 -- one: the menu reads its asset when it is made, so a row added later shows only next time).
@@ -1022,6 +1025,103 @@ function G.AddTitleEntry(load)
     map:ForEach(function(k) if Int(k:get()) == G.TITLE_ARCHIPELAGO then now = true end end)
     if now and not label() then how = how .. " (the label could not be set)" end
     return now, how .. (now and "" or ", but the row is not in the map afterwards")
+end
+
+-- One title row's fields, as plain Lua values: everything TitleEntryProperty holds (round 12
+-- inspect). The label is kept as the text it shows, in the current language.
+local function ReadTitleRow(v)
+    local list = v.DisplayProperty.DisplayPlatformMap
+    local platforms = {}
+    for i = 1, #list do platforms[i] = Int(list[i]) end
+    return {
+        name = v.EntryName:ToString(),
+        checkSave = v.DisplayProperty.bCheckSaveData == true,
+        checkPlatform = v.DisplayProperty.bCheckPlatform == true,
+        platforms = platforms,
+        action = v.SystemActionTag.TagName:ToString(),
+    }
+end
+
+-- Puts the Archipelago row under New Game. The menu shows the rows in the map's order, and a
+-- map keeps the order rows were added in only when it starts empty, so: read every row, empty
+-- the map, add the rows back in TITLE_ORDER, and fill in each row's fields. Before emptying
+-- anything it checks that the map takes an empty row, so a refusal leaves the menu as it was.
+-- Returns ok and a detail.
+function G.OrderTitleEntries()
+    local da = Find(TITLE_DA)
+    if not da then return false, "DA_Title is not loaded" end
+    local map = da.EntryPropertyMap
+    local keys, rows = {}, {}
+    local okRead, err = pcall(function()
+        map:ForEach(function(k, v)
+            local key = Int(k:get())
+            keys[#keys + 1] = key
+            rows[key] = ReadTitleRow(v:get())
+        end)
+    end)
+    if not okRead then return false, "could not read the rows: " .. tostring(err) end
+    if table.concat(keys, ",") == table.concat(TITLE_ORDER, ",") then return true, "already in order" end
+    for _, k in ipairs(TITLE_ORDER) do
+        if not rows[k] then return false, "row " .. k .. " is missing, so the order is left alone" end
+    end
+    rows[G.TITLE_ARCHIPELAGO].name = G.TITLE_LABEL
+    -- A spare key proves an empty row is accepted; emptying the map removes it again.
+    if not pcall(function() map:Add(#TITLE_ORDER, {}) end) then
+        return false, "the map refused an empty row, so the order is left alone"
+    end
+    if not pcall(function() map:Empty() end) then
+        pcall(function() map:Remove(#TITLE_ORDER) end)   -- take the spare row out again
+        return false, "the map could not be emptied, so the order is left alone"
+    end
+    local bad = {}
+    for _, k in ipairs(TITLE_ORDER) do
+        if not pcall(function() map:Add(k, {}) end) then bad[#bad + 1] = k .. " (add)" end
+    end
+    map:ForEach(function(k, v)
+        local key = Int(k:get())
+        local r = rows[key]
+        if not r then return end
+        local okFill = pcall(function()
+            local row = v:get()
+            row.EntryName = FText(r.name)
+            row.DisplayProperty.bCheckSaveData = r.checkSave
+            row.DisplayProperty.bCheckPlatform = r.checkPlatform
+            row.SystemActionTag.TagName = FName(r.action)
+            local list = row.DisplayProperty.DisplayPlatformMap
+            for i, p in ipairs(r.platforms) do
+                if #list < i then local _ = list[i] end   -- reading one past the end grows it
+                list[i] = p
+            end
+        end)
+        if not okFill then bad[#bad + 1] = key .. " (fields)" end
+    end)
+    local now = {}
+    map:ForEach(function(k) now[#now + 1] = tostring(Int(k:get())) end)
+    if #bad > 0 then return false, "rebuilt as [" .. table.concat(now, ",") .. "] with problems: " .. table.concat(bad, ", ") end
+    return true, "rebuilt as [" .. table.concat(now, ",") .. "]"
+end
+
+-- Writes `line` above the game's version text in the title screen's corner ("1.0.1.0", then
+-- the copyright lines). The version is a TextBlock whose text starts with four dotted numbers;
+-- the new line goes in front of it, so it shows above when the block grows upwards. The title
+-- widget is made again each time the title shows, so this is checked again now and then.
+-- Returns "added", "already" or nil when no version text is on screen.
+function G.TitleVersionLine(line)
+    local ok, all = pcall(FindAllOf, "TextBlock")
+    if not ok or not all then return nil end
+    for _, tb in ipairs(all) do
+        if Alive(tb) then
+            local text
+            pcall(function() text = tb:GetText():ToString() end)
+            if text then
+                if text:find(line, 1, true) then return "already" end
+                if text:match("^%d+%.%d+%.%d+%.%d+") then
+                    if pcall(function() tb:SetText(FText(line .. "\n" .. text)) end) then return "added" end
+                end
+            end
+        end
+    end
+    return nil
 end
 
 -- -------------------------------------------------------------------------------------------
