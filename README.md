@@ -19,10 +19,10 @@ The world is tested off-line: Archipelago's general tests pass with it, its own 
 
 **What the mod needs:**
 - **UE4SS**, the only thing it needs to run. ConsoleEnablerMod and BPModLoaderMod come with UE4SS. The console is only for the `ffrap_*` commands.
-- **ModSettings** (a Blueprint mod in `Content/Paks/LogicMods`, from the same modding tools as FFRSLib) is optional, but recommended for now. Every on-screen message ("Received ...", "Archipelago is paused", "Prologue skipped") is drawn with its Toast panel, because the game's own on-screen text call is compiled out. Without it the mod works the same, but the messages only go to `UE4SS.log`, and you have to watch the Archipelago client to see items come and go. The mod's own item feed (IDEAS.md, idea 14) is meant to replace this.
+- **ModSettings** (a Blueprint mod in `Content/Paks/LogicMods`, from the same modding tools as FFRSLib) is optional. In the field, messages ("Received ...", "Sent ...", "Archipelago is paused", "Prologue skipped") go to the mod's own item feed at the bottom right of the HUD (since 0.9.0). Off the field (the title screen), and with the feed switched off, they go to ModSettings' Toast panel. Without ModSettings those few only go to `UE4SS.log`.
 - **FFRSLib, FFRS_QoL, FFRBestiary and FFRRandomizer are not needed.** Their code is where the game calls come from (see "Where the game calls come from"), but this mod calls the game directly. FFRRandomizer should stay disabled (IDEAS.md, idea 10).
 
-1. **Mod.** Copy `FFRArchipelago/Scripts` and `FFRArchipelago/Assets` over the installed mod (0.8.4). Delete the old `ap_in.txt`, `ap_out.txt` and `ap_state.txt`, and keep `seen.tsv`. Keep FFRRandomizer disabled.
+1. **Mod.** Copy `FFRArchipelago/Scripts` and `FFRArchipelago/Assets` over the installed mod (0.9.0). Delete the old `ap_in.txt`, `ap_out.txt` and `ap_state.txt`, and keep `seen.tsv`. Keep FFRRandomizer disabled.
 2. **World.** Run `python tools/build_apworld.py`, then copy `dist/ff_resonance.apworld` into your Archipelago `custom_worlds` folder. Or, from source, copy `apworld/ff_resonance` into `worlds/`.
 3. **Seed.**
    - Copy `apworld/Final Fantasy Resonance.yaml` into Archipelago's `Players` folder and set a name.
@@ -112,6 +112,7 @@ At run time the mod writes these files into its own folder: `ap_out.txt`, `ap_st
 | `ffrap_notice [text]` | Experimental: tries to show the text with the game's quest-notice banner, in the field. |
 | `ffrap_logo` | Puts the Archipelago logo at the end of the mod's line on the title screen. The mod does this by itself; the command is for trying it again by hand. |
 | `ffrap_layout <text>` | Logs the chain of panels holding the on-screen text that holds `<text>`, up to the screen's root layout. For finding where new HUD elements can go. |
+| `ffrap_feed [on\|off\|test]` | The item feed at the bottom right of the field HUD: on (the default) or off (messages go to ModSettings' Toast), kept in `ap_state.txt`. `test` shows three sample lines. |
 | `ffrap_bind` | Link the loaded save to the client's session, in place of any earlier one. The same as `/bind` in the client. |
 | `ffrap_reset` | Set the loaded save's applied-item count to 0. Re-grants everything to it! |
 
@@ -250,20 +251,23 @@ Rounds 6 to 9 (2026-11-05) worked out and tested the prologue skip; their result
 - **The logo:** `ffrap_logo` worked with no crash. It put the logo above "FFRArchipelago 0.8.3" (`alignment 1/3, text padding 60,0,50,97, text height 43.2`). You asked for it on the same line as the version, so 0.8.4 puts it at the end of that line, one line high.
 - **The quest banner:** `ffrap_notice` showed nothing. The banner is likely driven by quest data and its own animation, not the title text. Dropped in favour of an item feed (IDEAS.md, idea 14).
 
-## Round 17 test plan (mod 0.8.4, world 0.1.3)
+**Round 17 (mod 0.8.4, 2026-11-05): passed.**
+- **The logo** was added by itself at the end of "FFRArchipelago 0.8.4" (`24x25 at left 264.6, bottom 116.9`), and came back on the next title.
+- **The field HUD:** `ffrap_layout Quests` reached `WBP_FieldLayout_C`'s `Overlay_66`, which holds the minimap, the key list (`WBP_FieldFuncList2`), the quest tracker (`WBP_FieldQuestLayout`) and the place name. Two screenshots show the fullest HUDs: the bottom right is empty in both.
+- **The save card:** `ffrap_layout Tranquility` (on the Load screen) found `WBP_SaveData_Entry_C` with `Text_ChapterName`, `Text_PlaceName` and `Text_PlayLevel` (IDEAS.md, idea 11).
 
-1. **Install.** Copy `FFRArchipelago/Scripts` and `FFRArchipelago/Assets` over the installed mod. The log should say `version 0.8.4 loaded`.
-2. **The title, with no command.**
-   - About 3 seconds after the version line appears, the log should say `title: logo added: ...`.
-   - The logo should sit at the end of "FFRArchipelago 0.8.4", about as tall as the text.
-   - Go into a game and back to the title. The logo should come back.
-   - Send a screenshot of the corner and the `title: logo` line.
-3. **Where the feed can go, in the field:**
-   - Run `ffrap_layout Investigate`, using any words of the quest tracker's text at the top left.
-   - Then run `ffrap_layout` with a few words from the minimap's area, or any other text on the field screen.
-   - Each one logs `layout 1:`, `layout 2:` and so on, up to the screen's root layout. Send those lines.
+## Round 18 test plan (mod 0.9.0, world 0.1.3)
 
-Send `UE4SS.log` (the `[FFRAP]` lines) and the screenshot.
+This round tests the item feed (IDEAS.md, idea 14).
+
+1. **Install.** Copy `FFRArchipelago/Scripts` and `FFRArchipelago/Assets` over the installed mod. The log should say `version 0.9.0 loaded`.
+2. **A test, in the field:** run `ffrap_feed test`. Three lines should appear at the bottom right, in the HUD's font: "Received Potion from Bob", "Sent Ether to Alice" and "Received Rod of Focus". After about 6 seconds they fade out over 1.5 seconds. The log's `feed test:` line should read `ok, ok, ok`. Send a screenshot while they show.
+3. **Real items:** open chests with your own items, and send an item to someone else if your seed has another player. Each should get its own line. ModSettings' cyan line should no longer show for them.
+4. **Many at once:** with several items waiting (for example, reload an older save of the seed), the feed should show the last 4 and "and N more", or a line for each if there are 5 or fewer.
+5. **Across maps:** go through a door or onto the world map. The feed should still work there.
+6. **Switching it off:** `ffrap_feed off` sends messages back to ModSettings' Toast. `ffrap_feed on` turns the feed on again.
+
+Send `UE4SS.log` (the `[FFRAP]` lines) and the screenshots. Say whether the size, the place or the time on screen should change.
 
 ## Open questions
 

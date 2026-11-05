@@ -24,6 +24,7 @@
 --   ffrap_notice [text]          experimental: show text with the game's quest-notice banner
 --   ffrap_logo                   the Archipelago logo on the mod's title line, by hand
 --   ffrap_layout <text>          the panels holding some on-screen text, to the log
+--   ffrap_feed [on|off|test]     the item feed at the bottom right of the field HUD
 --   ffrap_find <text>            game classes, functions and fields named like the text, to find_<text>.txt
 --   ffrap_blank [on|off]         chests that are Archipelago locations give 1 gil instead
 --   ffrap_sync                   report every known location the save says is looted
@@ -36,7 +37,7 @@
 -- follows the save slots the linked game is saved to. While any other save is loaded, the mod
 -- grants nothing, reports nothing and leaves the chests vanilla.
 
-local VERSION = "0.8.4"
+local VERSION = "0.9.0"
 local PROTOCOL = 1        -- the bridge protocol; the apworld's MOD_PROTOCOL
 
 local MOD_DIR = (debug.getinfo(1, "S").source:gsub("^@", ""):gsub("\\", "/"):match("^(.*/)Scripts/[^/]+$"))
@@ -60,9 +61,50 @@ local function log(msg)
     print("[FFRAP] " .. tostring(msg) .. "\n")
 end
 
+-- On-screen messages go to the item feed on the field HUD (IDEAS.md, idea 14) when it is on and
+-- the HUD is there. Otherwise they wait in a short queue for the HUD (loading, a map change),
+-- and off the field (the title screen) they go to ModSettings' Toast as before.
+local FEED_QUEUE_MAX = 20
+local feedOn = true          -- ffrap_feed on|off; kept in ap_state.txt
+local feedQueue = {}
+local feedClock = 0          -- seconds, from the tick count
+
+local function show(msg)
+    if feedOn and game.InGame() then
+        if #feedQueue == 0 and game.FeedLine(msg, feedClock) then return end
+        if #feedQueue < FEED_QUEUE_MAX then feedQueue[#feedQueue + 1] = msg end
+        return
+    end
+    game.Toast(msg)
+end
+
 local function notify(msg)
     log(msg)
-    game.Toast(msg)
+    show(msg)
+end
+
+-- Shows what waited for the HUD. A long wait (a login with many items) shows the last few and
+-- how many more there were.
+local function flushFeed()
+    if #feedQueue == 0 then return end
+    local lines = feedQueue
+    if #lines > game.FEED_MAX then
+        local more = #lines - (game.FEED_MAX - 1)
+        local tail = {}
+        for i = #lines - game.FEED_MAX + 2, #lines do tail[#tail + 1] = lines[i] end
+        lines = tail
+        table.insert(lines, 1, "and " .. more .. " more")
+    end
+    for i, msg in ipairs(lines) do
+        if not game.FeedLine(msg, feedClock) then
+            -- The HUD went away again: keep what is left for next time.
+            local rest = {}
+            for j = i, #lines do rest[#rest + 1] = lines[j] end
+            feedQueue = rest
+            return
+        end
+    end
+    feedQueue = {}
 end
 
 -- -------------------------------------------------------------------------------------------
@@ -151,6 +193,7 @@ local function loadState()
         local key, value = line:match("^(%w+)\t(.*)$")
         if key == "applied" then state.applied = tonumber(value) or 0 end
         if key == "blank" then state.blank = value == "1" end
+        if key == "feed" then feedOn = value ~= "0" end
         if key == "seed" and value ~= "" then state.seed = value end
         if key == "slots" then
             for slot in value:gmatch("%d+") do state.slots[tonumber(slot)] = true end
@@ -168,6 +211,7 @@ local function saveState()
     if not f then return end
     f:write("applied\t", state.applied, "\n")
     f:write("blank\t", state.blank and "1" or "0", "\n")
+    f:write("feed\t", feedOn and "1" or "0", "\n")
     f:write("seed\t", state.seed or "", "\n")
     f:write("slots\t", slotsText(), "\n")
     f:write("slotItems\t", slotsText(true), "\n")
@@ -281,7 +325,10 @@ local function applyItems()
         done = done + 1
         saveState()
     end
-    if #names == 1 then
+    if feedOn and game.InGame() then
+        -- The feed has a line per item.
+        for _, name in ipairs(names) do notify("Received " .. name) end
+    elseif #names == 1 then
         notify("Received " .. names[1])
     elseif #names > 1 then
         notify("Received " .. #names .. " items: " .. table.concat(names, ", "))
@@ -750,6 +797,11 @@ local function tick()
     state.ticks = state.ticks + 1
     readInbox(false)
     titleTick()
+    feedClock = state.ticks * TICK_MS / 1000
+    if game.InGame() then
+        pcall(flushFeed)
+        pcall(game.FeedTick, feedClock)
+    end
     if not game.InGame() then
         if state.inGameTicks > 0 then log("left the game (title screen or loading)") end
         state.inGameTicks = 0
@@ -883,6 +935,26 @@ command("ffrap_logo", function()
     local result, detail = game.TitleLogo(LOGO_PATH, TITLE_LINE)
     log("logo: " .. tostring(result) .. ": " .. tostring(detail))
     notify("Logo: " .. tostring(result or "not added") .. " (" .. tostring(detail) .. ")")
+end)
+
+-- ffrap_feed [on|off|test]: the item feed on the field HUD. `test` shows three sample lines.
+command("ffrap_feed", function(p)
+    local what = p and p[1]
+    if what == "on" or what == "off" then
+        feedOn = what == "on"
+        saveState()
+        log("feed: " .. what)
+        game.Toast("Item feed " .. what)
+    elseif what == "test" then
+        local results = {}
+        for _, msg in ipairs({ "Received Potion from Bob", "Sent Ether to Alice", "Received Rod of Focus" }) do
+            local ok, why = game.FeedLine(msg, feedClock)
+            results[#results + 1] = ok and "ok" or tostring(why)
+        end
+        log("feed test: " .. table.concat(results, ", "))
+    else
+        notify("Item feed is " .. (feedOn and "on" or "off") .. " (ffrap_feed on|off|test)")
+    end
 end)
 
 -- ffrap_layout <text>: the chain of panels holding the on-screen text that holds <text>, to

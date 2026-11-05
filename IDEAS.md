@@ -424,7 +424,7 @@ Plan: build option 1 first, because it is known to work. Then try option 2 as an
 **What it needs:**
 - **The client** writes the server address and the slot name into `ap_in.txt` (`server <host:port>`, `player <name>`), next to the `seed` line.
 - **The mod** keeps a per-slot record that outlives the session: slot, seed, host:port, slot name. It is updated when a linked game saves, and cleared when another game saves over the slot.
-- **The card itself:** find the card widget on the Load screen (an `ffrap_find` and an inspect), and add a text line, or change the location text.
+- **The card itself:** round 17's `ffrap_layout` found it: `WBP_SaveData_Entry_C`, with `Text_ChapterName` and `Text_PlaceName` in a `VerticalBox` (`Vertical_Mid`), and `Text_PlayLevel` beside them in `Overlay_Content`. A line could go in `Vertical_Mid` under the place name, the way the feed's lines are added.
 
 ## 12. The client inside the game
 
@@ -470,3 +470,15 @@ Plan: build option 1 first, because it is known to work. Then try option 2 as an
   - Each line stays about 5 seconds, then fades. Five lines at most. When more arrive at once: "and 15 more".
 - **Sent items:** the client sees them in the server's `PrintJSON` messages (`ItemSend`, where we are the sender). It writes `feed <text>` lines to `ap_in.txt` for those, alongside the item lines the mod already turns into "Received ...".
 - **Fallback:** if the feed cannot be made (a game update moves the HUD), messages go to ModSettings' Toast as now, or only to the log.
+
+**Round 17:** `ffrap_layout` found the field HUD's overlay: `WBP_FieldLayout_C`'s `Overlay_66`, holding `WBP_MiniMapLayout`, `WBP_FieldFuncList2` (the key list), `WBP_FieldQuestLayout` (the quest tracker) and `WBP_FieldName`. In the fullest HUDs (an enlarged minimap, a long quest list, the key list with Mount Chocobo and Active Time Chat) the bottom right stays empty.
+
+**Built (mod 0.9.0):**
+- **Where:** a `VerticalBox` added to that overlay (found through the key list's parent), aligned right and bottom with 48 px right and 96 px bottom padding. It is made in the field layout's widget tree, the way the title logo is.
+- **Lines:** a `TextBlock` per line, in the key guide's font (`WBP_KeyGuide_C.Text_Name.Font`) at size 20, white with a dark shadow, right-justified. Five at most, each shown 6 seconds and then faded over 1.5 seconds.
+- **When the HUD is made again** (a load or a map change), a new box is made in the new overlay.
+- **What goes there:** every message while in a game. Received items get a line each ("Received Potion from Bob"). The client already labels other players' items "from <sender>" and writes "Sent <item> to <player>".
+- **Waiting:** messages that come while the HUD is not there (loading, a battle) wait in a queue of up to 20. More than five show as the last four and "and N more".
+- **Off the field, or with `ffrap_feed off`:** ModSettings' Toast, as before.
+
+**Still to tune:** the size, the place and the time on screen, from round 18.
