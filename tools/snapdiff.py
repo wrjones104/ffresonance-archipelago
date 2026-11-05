@@ -18,6 +18,7 @@ from collections import OrderedDict, defaultdict
 
 NOISY = re.compile(r"(^live\.|PlayTime|playTime|DateTime|Ticks|Date\b|Time$|Timer)", re.IGNORECASE)
 ELEMENT = re.compile(r"^(.*)\[(\d+)\]$")
+ADDRESS = re.compile(r"^UScriptStruct: [0-9A-F]+$")  # a struct the snapshot could not walk
 
 
 def load(path: str) -> "OrderedDict[str, str]":
@@ -36,6 +37,7 @@ def group_of(path: str) -> str:
 
 
 def main(argv: list[str]) -> int:
+    sys.stdout.reconfigure(encoding="utf-8")  # map keys can be Japanese
     args = [a for a in argv if not a.startswith("--")]
     show_all = "--all" in argv
     if len(args) != 2:
@@ -51,6 +53,8 @@ def main(argv: list[str]) -> int:
         old, new = a.get(key), b.get(key)
         if old == new or (not show_all and NOISY.search(key)):
             continue
+        if old and new and ADDRESS.match(old) and ADDRESS.match(new):
+            continue  # only the address moved; says nothing about the contents
         m = ELEMENT.match(key)
         if m and {old, new} <= {"true", "false", None} and (old == "true" or new == "true"):
             (flags_on if new == "true" else flags_off)[m.group(1)].append(int(m.group(2)))

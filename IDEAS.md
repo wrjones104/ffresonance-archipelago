@@ -60,6 +60,43 @@ The chapter-by-chapter progression (party, vehicles, gates, Visions, Espers) is 
    Then note what is wrong: Dark Fina still in the party, Rain or Lasswell missing, a level cap of 15, a cutscene that repeats, or a tutorial that pops up.
 4. **The build.** On a new game linked to an Archipelago session, the mod applies the prologue's changes from the diff: story values, flags, party, visions and items. Then it sets the arrival map and point, saves to a slot and reloads. The apworld gets a `skip_prologue` option (on by default), sent in slot data.
 
+**Step 1 results (2026-11-05, mod 0.5.1).** Three snapshots:
+- `start`: new game, map 10040, story 1005. It was taken about 30 s in, so it misses what happens between 1000 and 1005.
+- `ch1`: the file is named `snap_after_giant.tsv`. Map 3001, story 1030, standing in front of the Earth Shrine. This is where "the game" begins, after about 2 minutes of Rain cutscenes and walking.
+- `base`: the old base save (slot 2).
+
+The new game autosaved to slot 0 at story 1005, and the mod linked that slot.
+
+What the prologue changes (`start` → `ch1`), all inside the save:
+
+| Field | start | ch1 | Notes |
+|---|---|---|---|
+| `Progress.Progress[0]` | 1005 | 1030 | the story counter |
+| `Progress.eventFlag` | | on: 14 15 16 18 19 22 23 26 27 30 32 33 106 108 110 124 125 1164 1225 1226; off: 1 8 | 0-based. Flag 1 is probably FFRSLib's "level cap 99" flag, which the prologue's Lv. 55 Fina needs |
+| `Party.partyList` | [1006] | [1001, 1002] | Dark Fina out; Rain and Lasswell in |
+| `unitParameterList[0]`, `[1]` `.JoinStatus` | 1 | 0 | Rain and Lasswell join, so 0 seems to mean "in the party" |
+| `unitParameterList[5]` | Lv. 55 Fina | reset | JoinStatus 0 → 2, Experience → 0, HP 200, MP 70, weapon 10600, no armor, accessories or skills |
+| `unitParameterList[0].baseParameterList[5]` | 0 | 3 | not known yet |
+| `inventory` | Fina's gear 10699, 11301, 12029 | 10100, 11000 ×2, 12000 ×2, 10200 | the list counts equipped gear |
+| `inventoryProcedure.itemDatas` | 3 entries | 4 entries | the same items; possibly the "new item" marks |
+| `unitGuest.HitPoint`, `.MagicPoint` | 0 | 9999 | a guest unit (Bahamut?) |
+| `Player.WinNum` | 0 | 3 | battles won |
+| `Map.mapId`, `.unitLocation`, `.unitDirection` | 10040 | 3001, (-5775, 0, -197.85), 2 | the arrival point |
+| `Map.mapGimmick` | none | entries for 2014 and 3001 | contents not read by 0.5.1 |
+| `Map.perMapSaveDataMap` | 10040 | 10040, 5010, 2013, 20000, 3001 | holds `bIsVisited` (FFRBestiary reads it); contents not read by 0.5.1 |
+| `unitList[n].analyzedElments` | | a few elements on | Libra-style scan data; not needed |
+
+`ch1` → `base` differs only in the player's position, eventFlag 1165 and 1228 (on), and one more scan entry. So the base save is the same point in the story.
+
+Mod 0.5.1 wrote struct values inside maps (`mapGimmick`, `perMapSaveDataMap`, `colosseumProgress`) as memory addresses. UE4SS's Lua can't ask a map for its value type, so 0.5.2 matches each value to one of the game's save struct types by field names. The `live.saveStructs` line says how many types it had to choose from. Snapdiff now leaves out changes where only the address moved, and it prints Japanese keys.
+
+**Next:** redo the snapshots with mod 0.5.2.
+- `new`: on a new game, as early as you can, before the story moves to 1005 (about 13 s in, this time).
+- `ch1`: in front of the Earth Shrine, as before.
+- `base`: load the base save again.
+
+The skip recipe is then "make these fields match `ch1`". Steps 2 (the debug menu) and 3 (the skip by hand) are still worth doing, but step 3 will miss the party and gear changes for sure.
+
 **Still to find out:**
 - What the prologue changes outside the save object. The reload in step 4 rebuilds what the game derives from the save at load time, but not anything that is never saved.
 - Which slot the skip should save to. It must not overwrite a save the player cares about.

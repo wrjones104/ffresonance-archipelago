@@ -671,6 +671,41 @@ end
 
 local SnapStruct
 
+-- The game's struct types with "Save" in the name, with the names of their own fields. Found
+-- once, on the first snapshot that needs them.
+local saveStructs
+local function SaveStructs()
+    if saveStructs then return saveStructs end
+    saveStructs = {}
+    pcall(function()
+        for _, s in ipairs(FindAllOf("ScriptStruct") or {}) do
+            local full
+            pcall(function() full = s:GetFullName() end)
+            if full and full:find("/Script/mucha.", 1, true) and full:lower():find("save", 1, true) then
+                local names = {}
+                pcall(function() s:ForEachProperty(function(p) names[#names + 1] = p:GetFName():ToString() end) end)
+                if #names > 0 then saveStructs[#saveStructs + 1] = { struct = s, names = names } end
+            end
+        end
+    end)
+    return saveStructs
+end
+
+-- The struct type of a struct value from a map: the type with the most fields that all read
+-- back from the value. nil when none fits (the value is then written as one line).
+local function GuessStruct(value)
+    local best, bestN
+    for _, t in ipairs(SaveStructs()) do
+        local all = true
+        for _, name in ipairs(t.names) do
+            local ok, x = pcall(function() return value[name] end)
+            if not ok or x == nil then all = false break end
+        end
+        if all and (not bestN or #t.names > bestN) then best, bestN = t.struct, #t.names end
+    end
+    return best
+end
+
 local function SnapValue(prop, v, path, depth, out)
     local kind = PropKind(prop)
     if kind == "StructProperty" then
@@ -698,14 +733,29 @@ local function SnapValue(prop, v, path, depth, out)
             end)
         end
     elseif kind == "MapProperty" or kind == "SetProperty" then
-        local n = 0
+        -- Map values can be structs. UE4SS's Lua gives no way to ask a map for its value type,
+        -- so the type is matched by field names (GuessStruct), once per map.
+        local n, valueStruct, guessed = 0, nil, false
         pcall(function()
             v:ForEach(function(key, value)
                 n = n + 1
                 local k, e
                 pcall(function() k = key:get() end)
-                if value ~= nil then pcall(function() e = value:get() end) end
-                out(path .. "{" .. Show(k) .. "}", value ~= nil and Show(e) or "")
+                local at = path .. "{" .. Show(k) .. "}"
+                if value == nil then
+                    out(at, "")
+                    return
+                end
+                pcall(function() e = value:get() end)
+                if not guessed and tostring(e):find("^UScriptStruct") then
+                    guessed = true
+                    valueStruct = GuessStruct(e)
+                end
+                if valueStruct and depth > 0 then
+                    SnapStruct(valueStruct, e, at, depth - 1, out)
+                else
+                    out(at, Show(e))
+                end
             end)
         end)
         out(path .. ".#", n)
@@ -752,6 +802,7 @@ function G.Snapshot(out)
     end)
     out("live.object", tostring(G.SaveObjectName()))
     out("live.slot", tostring(G.SlotForTicks(G.SavedTicks())))
+    out("live.saveStructs", #SaveStructs())   -- types that map values are matched against
     local cls
     pcall(function() cls = sd:GetClass() end)
     if cls then SnapStruct(cls, sd, "save", SNAP_DEPTH, out) end
