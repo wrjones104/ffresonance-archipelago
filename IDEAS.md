@@ -273,3 +273,86 @@ Still to decide: whether to show a message first ("Skipping the prologue…"), a
 **To find out:**
 - Which of these does the game check by item, rather than by a story flag set at the same time?
 - Each one checked by item could become an Archipelago progression item. That is the start of real logic, even with the story kept.
+
+## 6. An Archipelago entry on the title screen
+
+**Idea (2026-11-05):**
+- **Archipelago entry:** add an "Archipelago" entry to the title menu next to New Game. Plain New Game stays vanilla, so a player can play without Archipelago and without removing mods.
+- **Title branding:** show the mod's name and version, and a logo, on the title screen.
+- **Automatic skip:** choosing the Archipelago entry starts a new game, links it to the seed and skips the prologue with no command.
+
+**Known so far:**
+- **FFRSLib already adds a menu entry, in the System Menu.** It appends a tag to `DA_SystemMenu.DisplayEntryList`, adds a matching `EntryPropertyMap` row with the display name, and hooks `CPP_VM_SystemMenu:ExecuteEntryEvent` to run its own action when that tag is chosen (FFRSLib `main.lua`, "System Menu entry"). The game draws the entry like its own.
+- **The title menu looks built the same way.** The executable names `CPP_DA_Title` (`GetTitleDA`, `TitleEntryDisplay`, `TitleEntryProperty`, `TitleEntryBehavior`, `ETitleEntryBehavior`, `ETitleFunctionType`), `CPP_VM_Title`, `CPP_TitleController`, `CPP_TitleTaskMain`, `UI.Layout.Title` and the delegate `Delegate.Title.List.Decide`. So the plan is FFRSLib's: copy the New Game entry under our own tag, and hook the choice.
+- **The new game itself is `CPP_Task_NewGame`.** If our entry runs the same behavior as New Game, the hook only needs to set an "Archipelago new game" flag first. The mod then links that game to the seed even if the session already has a save, and starts the skip.
+- **Why a skip during the movie lost menus and movement (round 9):** the executable names `BeforeOpeningInputMappingContext`, `AfterOpeningInputMappingContext`, `IsOpeningProcess`, `OnOpening` and `OnOpeningEvent`. The opening most likely runs with a "before opening" control scheme and switches to the normal one when it ends. Our reload during the movie skipped that switch.
+
+**The intro movie: skip it, or wait it out.** Two ways:
+1. **Wait it out (works today).** The movie and the first scene play, the game autosaves at story 1005, and then the mod runs the skip. Rounds 9 and 10 showed this comes up clean. The cost is about 15 seconds of movie the player watches each time.
+2. **Skip the movie.** Start the skip at once, and then end the opening ourselves: call whatever ends the opening process, or switch to the after-opening control scheme. If that works, the player goes from the title straight to the Earth Shrine. This needs the probes below first.
+
+Plan: build option 1 first, because it is known to work. Then try option 2 as an improvement, and fall back to option 1 when it fails.
+
+**The logo and text.**
+- **Name and version:** a text block on the title widget is the easy part. Find the title layout (`UI.Layout.Title`) and add a `TextBlock`, or change an existing one.
+- **The logo:** UE can make a texture from an image file at run time (`KismetRenderingLibrary.ImportFileAsTexture2D`). The mod can ship a PNG and show it in an `Image` widget. Check Archipelago's guidance on using its logo first.
+
+**To find out (probes in mod 0.7.2):** run these at the title screen and send the files.
+- `ffrap_inspect CPP_VM_Title` and `ffrap_inspect CPP_DA_Title`: the title menu's entries and what choosing one calls.
+- `ffrap_inspect CPP_TitleController`.
+- `ffrap_find Opening`, and then `ffrap_find NewGame`: which classes own the opening process and the new-game task, and what they can be asked to do.
+- Run `ffrap_find InputMapping` once in game as well: what switches the control scheme.
+
+## 7. Enemy randomization
+
+**Idea:** shuffle which enemies appear in each encounter, and maybe the bosses.
+
+**Known so far:**
+- Battles start from a table entry: FFRRandomizer's probe hooks `CPP_MapManager:Encount`, whose battle entry carries `battleGroupId`, `battleEventId` and `isEvent` (idea 3). FFRRandomizer already tells boss and event fights apart in the battle tables.
+- FFRBestiary maps enemies to areas from the game data (`data.entries`, `mapArea`), so the encounter and enemy tables are readable.
+
+**To find out:**
+- Which data tables hold the encounter groups (the enemies in each `battleGroupId`) and the enemy stats.
+- How to keep it fair: shuffle within a level band, or scale stats to the area.
+- Story and event battles: scripted fights (Iron Giant, bosses) may expect a certain enemy and break if swapped. Start with normal encounters only.
+- Whether FFRRandomizer already does some of this, and whether we should build on it or stay out of its way (idea 10).
+
+## 8. Stat, weakness and resistance randomization
+
+**Idea:** randomize enemy stats, elemental weaknesses and resistances, and maybe the party's growth.
+
+**Known so far:**
+- The save keeps per-enemy scan data (`unitList[n].analyzedElments{element}`), so elements are keyed per unit in the game data.
+- `CPP_BFL_SaveDataUnit` has `GetBaseParameter`, `AddBaseParameter` and `IsAnayzedElement` (from `ffrap_functions`).
+
+**To find out:**
+- Which table rows hold enemy stats and element tables, and whether a row change applies at once or needs a map change. Chest rows applied at once (rounds 3 and 4), so data-table patching is a good first guess.
+- The Libra / scan display: it should show the randomized weaknesses, or players learn wrong ones.
+
+## 9. Music randomization
+
+**Idea:** shuffle the music for each map and battle.
+
+**Known so far:**
+- The game's map data carries the BGM for each map (FFRSLib's notes on `MAP_DATA`: camera id, encounter group, battle stage, BGM, spawn points).
+- The save keeps sound settings (`SaveData_Sound_BGMData`, `SaveData_Sound_SaveData`).
+
+**To find out:**
+- The BGM ids or cue names in `MAP_DATA` and the battle tables, and whether changing one changes what plays.
+- Whether music can be swapped by table rows only, or needs a hook on the play call.
+
+## 10. Conflicts with other mods
+
+**Idea:** know where this mod can clash with others, say so to the player, and avoid the clashes we can.
+
+**Known so far:**
+- **FFRRandomizer** patches the same chest table (`CDT_MapGimmickTreasureBox`) that chest blanking changes. Every test plan says to keep it disabled.
+- **FFRBestiary** reads the same save state (slots, timestamps, visited maps). Its notes mention a start-up crash once. Still to write down: what went wrong when you ran it with this mod.
+- **FFRSLib** adds entries to the System Menu data asset and hooks its view model. A title-menu entry (idea 6) works the same way on a different asset, so both should be able to live together. Two mods writing the same list at once could still clash.
+- Any mod that edits the save while we skip the prologue, or that grants items, can confuse the per-save item count.
+
+**To find out:**
+- **A start-up check:** list the other enabled mods (`Mods/mods.txt`, `enabled.txt`) and warn about known clashes in the log and on screen.
+- **Shared tables:** patch them through one place. Offer a small shared helper, or agree on an order with the other mod authors.
+- **A compatibility list** in the README: tested together, works, or known problems.
+- The other conflicts you have seen outside this project: which mods, and what happened.

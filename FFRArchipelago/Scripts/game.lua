@@ -824,9 +824,7 @@ end
 -- The functions of a /Script/mucha class, as "Class.Function(param: Kind, ...)" lines through
 -- out(line). Struct parameters name their struct. Returns the number of functions, or nil when
 -- the class is not found.
-function G.ListFunctions(className, out)
-    local cls = StaticFindObject("/Script/mucha." .. className)
-    if not (cls and cls:IsValid()) then return nil end
+local function FunctionLines(cls, label, out)
     local n = 0
     pcall(function()
         cls:ForEachFunction(function(fn)
@@ -843,7 +841,80 @@ function G.ListFunctions(className, out)
             end)
             local name = "?"
             pcall(function() name = fn:GetFName():ToString() end)
-            out(className .. "." .. name .. "(" .. table.concat(params, ", ") .. ")")
+            out(label .. "." .. name .. "(" .. table.concat(params, ", ") .. ")")
+        end)
+    end)
+    return n
+end
+
+function G.ListFunctions(className, out)
+    local cls = StaticFindObject("/Script/mucha." .. className)
+    if not (cls and cls:IsValid()) then return nil end
+    return FunctionLines(cls, className, out)
+end
+
+-- An object to look at: a path ("/Game/UI/..."), else the first live instance of a class
+-- name, else that class's default object in /Script/mucha.
+local function InspectTarget(target)
+    if target:find("/", 1, true) then return Find(target) end
+    local ok, obj = pcall(FindFirstOf, target)
+    if ok and obj and Alive(obj) then return obj end
+    return Find("/Script/mucha.Default__" .. target)
+end
+
+-- Every field and function of one object, as "path<TAB>value" lines through out(key, value):
+-- what a screen's view model or data asset holds and can be asked to do. Object fields are
+-- written by name, not walked. Returns false when nothing matches the target.
+function G.Inspect(target, out)
+    local obj = InspectTarget(target)
+    if not obj then return false end
+    local cls
+    pcall(function() cls = obj:GetClass() end)
+    out("object", obj:GetFullName())
+    local chain, c = {}, cls
+    while c do
+        local name
+        pcall(function() name = c:IsValid() and c:GetFName():ToString() end)
+        if not name or name == "Object" then break end
+        chain[#chain + 1] = name
+        local super
+        pcall(function() super = c:GetSuperStruct() end)
+        c = super
+    end
+    out("class", table.concat(chain, " < "))
+    c = cls
+    for _, name in ipairs(chain) do
+        FunctionLines(c, name, function(line) out("function", line) end)
+        local super
+        pcall(function() super = c:GetSuperStruct() end)
+        c = super
+    end
+    if cls then SnapStruct(cls, obj, "obj", 4, out) end
+    return true
+end
+
+-- Every /Script/mucha class with a function or field whose name holds `text` (any case), as
+-- lines through out(line). Walks every object once, so the game pauses for a moment. Returns the
+-- number of matches.
+function G.FindNames(text, out)
+    local want, n = text:lower(), 0
+    local function match(kind, owner, name)
+        if name:lower():find(want, 1, true) then
+            n = n + 1
+            out(kind .. "\t" .. owner .. "." .. name)
+        end
+    end
+    pcall(function()
+        ForEachUObject(function(obj)
+            local kind
+            pcall(function() kind = obj:GetClass():GetFName():ToString() end)
+            if kind ~= "Class" and kind ~= "ScriptStruct" then return end
+            local full
+            pcall(function() full = obj:GetFullName() end)
+            if not (full and full:find(" /Script/mucha.", 1, true)) then return end
+            local owner = obj:GetFName():ToString()
+            pcall(function() obj:ForEachFunction(function(fn) match("function", owner, fn:GetFName():ToString()) end) end)
+            pcall(function() obj:ForEachProperty(function(p) match("field", owner, p:GetFName():ToString()) end) end)
         end)
     end)
     return n

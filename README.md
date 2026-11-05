@@ -17,7 +17,7 @@ AI use: this project is built with Claude Code. [DISCLOSURE.md](DISCLOSURE.md) s
 
 The world is tested off-line: Archipelago's general tests pass with it, its own tests pass, and a client end-to-end run against a local server passes, with a script standing in for the game. Round 5 played a full seed in the real game, up to the goal and a release (see "Test results so far").
 
-1. **Mod.** Copy `FFRArchipelago/Scripts` over the installed mod (0.7.1). Delete the old `ap_in.txt`, `ap_out.txt` and `ap_state.txt`, and keep `seen.tsv`. Keep FFRRandomizer disabled.
+1. **Mod.** Copy `FFRArchipelago/Scripts` over the installed mod (0.7.2). Delete the old `ap_in.txt`, `ap_out.txt` and `ap_state.txt`, and keep `seen.tsv`. Keep FFRRandomizer disabled.
 2. **World.** Run `python tools/build_apworld.py`, then copy `dist/ff_resonance.apworld` into your Archipelago `custom_worlds` folder. Or, from source, copy `apworld/ff_resonance` into `worlds/`.
 3. **Seed.**
    - Copy `apworld/Final Fantasy Resonance.yaml` into Archipelago's `Players` folder and set a name.
@@ -101,6 +101,8 @@ At run time the mod writes these files into its own folder: `ap_out.txt`, `ap_st
 | `ffrap_snapshot [name]` | Every field of the loaded save to `snap_<name>.tsv`. Compare two with `python tools/snapdiff.py snap_a.tsv snap_b.tsv` (IDEAS.md, idea 2). |
 | `ffrap_functions [class ...]` | The functions of game classes, with their parameters, to `functions.txt`. With no class it lists the save-data, debug and new-game classes (IDEAS.md, idea 2). |
 | `ffrap_skip [slot]` | Skip the prologue on a new game, once you can move Fina (story 1005). Without a slot it only changes the loaded save; with one it applies the skip again, saves there and reloads. Testing only for now (IDEAS.md, idea 2). |
+| `ffrap_inspect <class or path>` | One object's fields and functions to `inspect_<name>.tsv`: a class name gives its first live instance (else its default object), and a path gives that object (IDEAS.md, idea 6). |
+| `ffrap_find <text>` | Every game class with a function or field whose name holds the text, to `find_<text>.txt`. Walks every object, so the game pauses for a moment. |
 | `ffrap_bind` | Link the loaded save to the client's session, in place of any earlier one. The same as `/bind` in the client. |
 | `ffrap_reset` | Set the loaded save's applied-item count to 0. Re-grants everything to it! |
 
@@ -209,12 +211,12 @@ Rounds 6 to 9 (2026-11-05) worked out and tested the prologue skip; their result
 - **Pausing:** an older save (slot 1) and a second new game were both paused. `ffrap_skip` during the second game's opening movie was refused with the "wait until you can move" message.
 - **`/bind` not tested:** the client said "Could not find command bind". The session key was `unknown:0:1` too. Both mean the installed client was older than world 0.1.1, because the round 10 plan did not say to install the new apworld. World 0.1.3 makes this visible: the client logs its world version when it starts, and writes a `client` line to `ap_in.txt` that the mod logs (`client: world version 0.1.3`). Until the new apworld is installed, `ffrap_bind` in the game console does the same as `/bind`.
 
-## Round 11 test plan (mod 0.7.1, world 0.1.3)
+## Round 11 test plan (mod 0.7.2, world 0.1.3)
 
 Round 10 tested the per-save item count, but not `/bind`, because the installed client was old. This round installs the current apworld and tests what is left. Keep FFRRandomizer disabled.
 
 1. **Install.**
-   - Copy `FFRArchipelago/Scripts` over the installed mod. The log should say `version 0.7.1 loaded`.
+   - Copy `FFRArchipelago/Scripts` over the installed mod. The log should say `version 0.7.2 loaded`.
    - Rebuild the apworld (`python tools/build_apworld.py`), or take `dist/ff_resonance.apworld` as it is, and copy it over the old one in your Archipelago install's `custom_worlds` folder. Then generate a new seed with it.
    - Start the client. Its first line should say `Final Fantasy Resonance client, world version 0.1.3`. After it connects, `UE4SS.log` should say `client: world version 0.1.3`.
    - Delete `ap_in.txt`, `ap_out.txt` and `ap_state.txt`.

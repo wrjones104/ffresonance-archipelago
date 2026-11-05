@@ -8,6 +8,8 @@ FFRArchipelago/chests.tsv
 FFRArchipelago/seen.tsv
 FFRArchipelago/snap_*.tsv
 FFRArchipelago/functions.txt
+FFRArchipelago/inspect_*.tsv
+FFRArchipelago/find_*.txt
 
 # Python
 __pycache__/

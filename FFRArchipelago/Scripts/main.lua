@@ -19,6 +19,8 @@
 --   ffrap_snapshot [name]        every field of the loaded save to snap_<name>.tsv (tools/snapdiff.py)
 --   ffrap_functions [class ...]  the functions of game classes to functions.txt (default: save-data classes)
 --   ffrap_skip [slot]            skip the prologue on a new game; with a slot, save there and reload
+--   ffrap_inspect <class|path>   one object's fields and functions to inspect_<name>.tsv
+--   ffrap_find <text>            game classes with a function or field named like the text, to find_<text>.txt
 --   ffrap_blank [on|off]         chests that are Archipelago locations give 1 gil instead
 --   ffrap_sync                   report every known location the save says is looted
 --   ffrap_bind                   link the loaded save to the client's session (also /bind in the client)
@@ -29,7 +31,7 @@
 -- follows the save slots the linked game is saved to. While any other save is loaded, the mod
 -- grants nothing, reports nothing and leaves the chests vanilla.
 
-local VERSION = "0.7.1"
+local VERSION = "0.7.2"
 local PROTOCOL = 1        -- the bridge protocol; the apworld's MOD_PROTOCOL
 
 local MOD_DIR = (debug.getinfo(1, "S").source:gsub("^@", ""):gsub("\\", "/"):match("^(.*/)Scripts/[^/]+$"))
@@ -686,6 +688,46 @@ local FUNCTION_CLASSES = {
     "CPP_DM_EventShortcutData", "CPP_DM_SaveDataManager", "CPP_DM_BFL_SaveData", "CPP_Task_NewGame",
     "CPP_MuchaSaveDataManager", "CPP_MuchaGameSaveData",
 }
+
+-- ffrap_inspect <class or path>: one object's fields and functions to inspect_<name>.tsv.
+command("ffrap_inspect", function(p)
+    local target = p and p[1]
+    if not target then
+        notify("Usage: ffrap_inspect <class name or object path>")
+        return
+    end
+    local name = target:gsub("^.*[/.]", ""):gsub("[^%w_%-]", "")
+    local f = io.open(MOD_DIR .. "inspect_" .. name .. ".tsv", "w")
+    if not f then
+        notify("Could not write inspect_" .. name .. ".tsv")
+        return
+    end
+    local lines = 0
+    local ok = game.Inspect(target, function(key, value)
+        f:write(key, "\t", (tostring(value):gsub("[\t\r\n]", " ")), "\n")
+        lines = lines + 1
+    end)
+    f:close()
+    notify(ok and ("inspect_" .. name .. ".tsv: " .. lines .. " lines") or ("Nothing found for " .. target))
+end)
+
+-- ffrap_find <text>: every game class with a function or field whose name holds the text.
+command("ffrap_find", function(p)
+    local text = p and p[1]
+    if not text then
+        notify("Usage: ffrap_find <part of a function or field name>")
+        return
+    end
+    local name = text:gsub("[^%w_%-]", "")
+    local f = io.open(MOD_DIR .. "find_" .. name .. ".txt", "w")
+    if not f then
+        notify("Could not write find_" .. name .. ".txt")
+        return
+    end
+    local n = game.FindNames(text, function(line) f:write(line, "\n") end)
+    f:close()
+    notify("find_" .. name .. ".txt: " .. n .. " matches")
+end)
 
 command("ffrap_functions", function(p)
     local classes = (p and p[1]) and p or FUNCTION_CLASSES
