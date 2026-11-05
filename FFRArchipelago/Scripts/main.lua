@@ -29,7 +29,7 @@
 -- follows the save slots the linked game is saved to. While any other save is loaded, the mod
 -- grants nothing, reports nothing and leaves the chests vanilla.
 
-local VERSION = "0.6.0"
+local VERSION = "0.6.1"
 local PROTOCOL = 1        -- the bridge protocol; the apworld's MOD_PROTOCOL
 
 local MOD_DIR = (debug.getinfo(1, "S").source:gsub("^@", ""):gsub("\\", "/"):match("^(.*/)Scripts/[^/]+$"))
@@ -686,7 +686,12 @@ end)
 
 -- ffrap_skip [slot]: skip the prologue on a new game (IDEAS.md, idea 2). Without a slot it only
 -- changes the loaded save, so a snapshot can check it; with one it also saves to that slot and
--- reloads from it. Running it again with a slot on the same save only saves and reloads.
+-- reloads from it.
+--
+-- The skip is applied again right before saving. Round 8: the opening scene kept running after
+-- a skip, turned flags 1 and 8 back on, and its autosave wrote the player's real position (the
+-- prologue map) over the arrival point. Every step sets an absolute value, so applying it twice
+-- is safe.
 local skipped = nil    -- the save object the skip was applied to
 command("ffrap_skip", function(p)
     local slot = p and p[1] and tonumber(p[1])
@@ -700,34 +705,37 @@ command("ffrap_skip", function(p)
     end
     followSave()
     local obj, story = game.SaveObjectName(), game.StoryCounter()
-    if skipped ~= obj then
-        if not story or story > game.SKIP_FROM_MAX then
-            notify("ffrap_skip works on a new game only (story " .. tostring(story) .. ", must be "
-                .. game.SKIP_FROM_MAX .. " or lower)")
-            return
-        end
-        local okRun, ok, report = pcall(game.SkipPrologue)
-        if not okRun then
-            notify("Prologue skip raised an error: " .. tostring(ok))
-            return
-        end
-        for _, line in ipairs(report) do log("skip: " .. line) end
-        skipped = obj
+    if skipped ~= obj and (not story or story > game.SKIP_FROM_MAX) then
+        notify("ffrap_skip works on a new game only (story " .. tostring(story) .. ", must be "
+            .. game.SKIP_FROM_MAX .. " or lower)")
+        return
+    end
+    local again = skipped == obj
+    local okRun, ok, report = pcall(game.SkipPrologue)
+    if not okRun then
+        notify("Prologue skip raised an error: " .. tostring(ok))
+        return
+    end
+    for _, line in ipairs(report) do log("skip" .. (again and " (again)" or "") .. ": " .. line) end
+    skipped = obj
+    if not slot then
         notify("Prologue skip " .. (ok and "applied" or "applied with failures (see the log)")
-            .. (slot and "" or ". Nothing saved yet: ffrap_skip <slot> saves and reloads"))
+            .. ". Nothing saved yet: ffrap_skip <slot> saves and reloads")
+        return
     end
-    if slot then
-        -- The reload makes a new save object from this slot, so a linked session must own the
-        -- slot first, or the reloaded game would look like someone else's.
-        if state.seed and save.ok and not state.slots[slot] then
-            state.slots[slot] = true
-            saveState()
-            log("skip: slot " .. slot .. " linked before the reload: session slots [" .. slotsText() .. "]")
-        end
-        local ok, detail = game.SaveAndReload(slot)
-        log("skip: " .. detail)
-        notify(ok and ("Prologue skipped: " .. detail) or ("Prologue skip: " .. detail))
+    if not ok then
+        notify("Prologue skip had failures (see the log); saving anyway")
     end
+    -- The reload makes a new save object from this slot, so a linked session must own the slot
+    -- first, or the reloaded game would look like someone else's.
+    if state.seed and save.ok and not state.slots[slot] then
+        state.slots[slot] = true
+        saveState()
+        log("skip: slot " .. slot .. " linked before the reload: session slots [" .. slotsText() .. "]")
+    end
+    local saved, detail = game.SaveAndReload(slot)
+    log("skip: " .. detail)
+    notify(saved and ("Prologue skipped: " .. detail) or ("Prologue skip: " .. detail))
 end)
 
 command("ffrap_reset", function()

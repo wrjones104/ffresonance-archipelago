@@ -166,6 +166,24 @@ Left out: `inventoryProcedure` (probably the "new item" marks) and the scan data
 6. Run `ffrap_snapshot skip_loaded`.
 7. Send `snap_skip.tsv`, `snap_skip_loaded.tsv` and `UE4SS.log`, plus what you saw. I compare both snapshots with `ch1`.
 
+**Step 5 results (round 8, 2026-11-05, mod 0.6.0).** Run with a seed connected, so the new game linked itself.
+- Every `skip:` step logged `ok`, and the game's `GetFlag(14)` agrees with array element 14, so the numbering matches.
+- The reload started on its own. After it, the story, quest log, party and inventory were all right.
+- **The map was wrong:** the reload put the player back on the prologue map (10040). The opening scene kept running after the skip. At 11:42:25 (14 s after the skip, the point where a new game goes from story 1000 to 1005) the game autosaved, and an autosave writes the player's real position into the save. `snap_skip` was taken before `ffrap_skip 0` and already shows map 10040 at the new-game spawn.
+- The same opening event turned flags 1 and 8 on again. Flag 1 is FFRSLib's "level cap 99" flag, so this matters too.
+- `snap_skip_loaded` → `ch1` otherwise differs only in the order of the inventory, the "new item" marks, the scan data, and the chest rows that maps 2014 and 3001 create when they load.
+
+**Fix (mod 0.6.1).** `ffrap_skip <slot>` applies the whole skip again right before it saves, which is safe because every step sets an absolute value. After saving it checks the save's map. If `SaveGameData` itself wrote the real position, it says so and does not reload. The success message names the map and flag 1 after the save.
+
+For the automatic skip, this means it should save and reload in the same moment it applies the skip, before the opening scene gets to its first event.
+
+**Retest (mod 0.6.1).** Same as step 5, with the seed connected or not:
+1. Copy `FFRArchipelago/Scripts` over the installed mod. The log should say `version 0.6.1 loaded`.
+2. Start a new game and run `ffrap_skip 0` straight away, with no plain `ffrap_skip` first.
+3. The log should show `skip:` lines, then `saved to slot 0 (map 3001, flag 1 false), reloading`.
+4. Check that you stand in front of the Earth Shrine. Walk into the shrine and see whether the story carries on.
+5. Run `ffrap_snapshot skip_loaded` and send it with the log.
+
 **Save linking, found on the way (mod 0.5.4).**
 - A new game can carry the timestamp of the autosave slot it is about to overwrite. In the second run, a new game showed up as linked slot 0. A save at story 1000 or lower now always counts as a new game.
 - A new game autosaves into slot 0 and overwrites whatever autosave is there. An Archipelago game that lives only in the autosave slot is lost when you start a new game, so keep it in a manual slot too.

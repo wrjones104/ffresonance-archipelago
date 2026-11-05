@@ -1018,12 +1018,20 @@ function G.SaveAndReload(slot)
     if not (lib and lib.SaveGameData) then return false, "CPP_BFL_SaveData not found" end
     local ok, err = pcall(function() lib:SaveGameData(slot) end)
     if not ok then return false, "SaveGameData(" .. slot .. ") raised: " .. tostring(err) end
-    local mgr = Live("CPP_MapManager")
-    if not mgr then return false, "saved to slot " .. slot .. ", but no map manager to reload with: load the slot by hand" end
-    if not pcall(function() mgr:MapTestStartByChoiceSlotLoadSaveData(slot) end) then
-        return false, "saved to slot " .. slot .. ", but the reload did not start: load the slot by hand"
+    -- An autosave writes the player's real position over the save's map. If SaveGameData does
+    -- the same, the reload would land on the prologue map again, so say so.
+    local mapNow, flag1 = G.MapId(), G.GetFlag(1)
+    local kept = "map " .. tostring(mapNow) .. ", flag 1 " .. tostring(flag1)
+    if mapNow ~= G.SKIP_ARRIVAL.map then
+        return false, "saved to slot " .. slot .. ", but the save's map is " .. tostring(mapNow)
+            .. " after saving, not " .. G.SKIP_ARRIVAL.map .. " (SaveGameData wrote the real position). Not reloading"
     end
-    return true, "saved to slot " .. slot .. ", reloading"
+    local mgr = Live("CPP_MapManager")
+    if not mgr then return false, "saved to slot " .. slot .. " (" .. kept .. "), but no map manager to reload with: load the slot by hand" end
+    if not pcall(function() mgr:MapTestStartByChoiceSlotLoadSaveData(slot) end) then
+        return false, "saved to slot " .. slot .. " (" .. kept .. "), but the reload did not start: load the slot by hand"
+    end
+    return true, "saved to slot " .. slot .. " (" .. kept .. "), reloading"
 end
 
 -- The property of an object's class (or a parent class) named `field`, or nil.
