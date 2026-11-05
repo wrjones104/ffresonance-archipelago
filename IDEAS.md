@@ -344,7 +344,8 @@ Plan: build option 1 first, because it is known to work. Then try option 2 as an
   1. It makes an `Image` in the title layout's widget tree (`StaticConstructObject`, with a fresh name each time).
   2. It loads the PNG with `KismetRenderingLibrary.ImportFileAsTexture2D` and sets it with `SetBrushFromTexture` and `SetDesiredSizeOverride` (39 x 40).
   3. It adds the image with `Overlay_UI:AddChildToOverlay`, gives it the version text's alignment, and adds the text's height plus 6 px to the bottom padding, so it sits above the text.
-- Once it shows in the right place, it runs at start-up the way the version line does.
+- **Round 16:** it worked, above the text (padding 60,0,50,97, two lines 43.2 px high).
+- **0.8.4:** it is one line high, at the end of the first line ("FFRArchipelago <version>"). The block's width is that line's width, and the logo is centred on that line. It runs by itself at the title, one check after the version line, so the block has been laid out with both lines.
 
 **Still open:**
 - **Skipping the movie outright:** find what the opening holds the player's input with. `CPP_Task_NewGame` is the place to start (`ffrap_inspect` while a new game is starting).
@@ -356,6 +357,7 @@ Plan: build option 1 first, because it is known to work. Then try option 2 as an
   - `CPP_VM_QuestNotice` (the "new quest" banner, `WBP_QuestNotice` in the field layout) holds `NoticeData.NoticeTitle` (a text), `NoticeQuestData` (a quest's name, subtitle and so on) and `bDisplayNotice`. It has `ExecuteNotics(bool)`, `PlayNoticeSound` and `CloseNotice`. 0.8.2's `ffrap_notice <text>` sets the title and the quest name, then calls `ExecuteNotics(true)`.
   - `CPP_BFL_Chat.Notice` is a call in the chat library (`CPP_ChatSubsystem` keeps the notice widget, and the save keeps a `NoticeQueue`). Its parameters come with round 15's `ffrap_functions`.
   - If neither takes our text, we make our own widget (as for the logo).
+  - **Round 16:** `ffrap_notice` showed nothing, so the quest banner is out. The plan is our own item feed (idea 14).
 
 ## 7. Enemy randomization
 
@@ -449,3 +451,22 @@ Plan: build option 1 first, because it is known to work. Then try option 2 as an
 **To find out:**
 - Which widget or view model draws the dialog (`ffrap_find Obtain`, or inspect while it is open), and whether its text can be set before it shows.
 - How the client gets the text to the mod in time: scout every location at connect and write `scout <location> <item> <player>` lines to `ap_in.txt`.
+
+## 14. An item feed on the HUD
+
+**Idea (2026-11-05):** show items sent and received in a small list at the side of the screen, the way TUNIC and Hollow Knight do: the last 5 or so, each fading out after a few seconds. The player should see what arrives from other worlds without watching the Archipelago client, which in a full-screen game they won't.
+
+**Weighed against the other ways (your notes):**
+- **The chest pop-up for every received item:** too jarring while exploring. Twenty items after logging in would mean twenty pop-ups. Keep the pop-up text (idea 13) for your own chests only.
+- **The quest banner:** round 16 showed it cannot be given our text.
+- **The Archipelago client:** it always shows everything, so it stays the backup. But players won't watch it in a full-screen game.
+- **ModSettings' Toast:** this is what shows "Received ..." today. Until the feed exists, the README says the messages need it.
+
+**Plan:**
+- **The widget:** a vertical box of text lines, added to the field HUD the same way the logo was added to the title: made in the HUD layout's widget tree and added to one of its panels. `ffrap_layout` (0.8.4) finds which panel, from the quest tracker or the minimap.
+- **Lines:**
+  - "Received Potion from Bob" (or "Found Potion" for your own).
+  - "Sent Ether to Alice".
+  - Each line stays about 5 seconds, then fades. Five lines at most. When more arrive at once: "and 15 more".
+- **Sent items:** the client sees them in the server's `PrintJSON` messages (`ItemSend`, where we are the sender). It writes `feed <text>` lines to `ap_in.txt` for those, alongside the item lines the mod already turns into "Received ...".
+- **Fallback:** if the feed cannot be made (a game update moves the HUD), messages go to ModSettings' Toast as now, or only to the log.

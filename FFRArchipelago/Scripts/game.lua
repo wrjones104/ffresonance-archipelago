@@ -1173,12 +1173,17 @@ function G.DescribeWidget(w)
     return table.concat(parts, "; ")
 end
 
--- The Archipelago logo above the mod's line in the title screen's corner. Round 15 found the
--- version text (Text_ApplicationVersion) in an Overlay (Overlay_UI) of WBP_TitleLayout, so
--- an Image added to that overlay can share the text's alignment and sit above it by padding.
--- The picture is loaded from the mod's PNG at run time. Experimental: ffrap_logo runs it.
+-- The Archipelago logo at the end of the mod's line in the title screen's corner. Round 15
+-- found the version text (Text_ApplicationVersion) in an Overlay (Overlay_UI) of
+-- WBP_TitleLayout, so an Image added to that overlay can share the text's alignment and be
+-- placed by padding. Round 16 put it above the text (padding 60,0,50,97, two lines 43.2 high);
+-- now it is one line high, just right of the first line ("FFRArchipelago <version>"), whose
+-- width is the block's width because it is the longer line. The picture is loaded from the
+-- mod's PNG at run time.
 local LOGO_PREFIX = "FFRAP_Logo"
-local LOGO_SIZE = { X = 39, Y = 40 }   -- the PNG is 280 x 291
+local LOGO_ASPECT = 280 / 291   -- the PNG's width over its height
+local LOGO_SCALE = 1.15         -- the logo's height, in text lines
+local LOGO_GAP = 8              -- between the text and the logo
 local logoCount = 0
 
 local function VersionBlock(line)
@@ -1226,29 +1231,74 @@ function G.TitleLogo(path, line)
         img = StaticConstructObject(imageClass, tree, FName(LOGO_PREFIX .. "_" .. logoCount))
     end)
     if not (okNew and img and img:IsValid()) then return nil, "could not make the Image: " .. tostring(errNew) end
+    -- The text block's size and line count give the first line's place and height.
+    local width, height = 0, 0
+    pcall(function()
+        local size = tb:GetDesiredSize()
+        width, height = size.X, size.Y
+    end)
+    local text = ""
+    pcall(function() text = tb:GetText():ToString() end)
+    local lines = select(2, text:gsub("\n", "\n")) + 1
+    if not height or height <= 0 then height = 21.6 * lines end
+    local lineHeight = height / lines
+    local logoH = math.floor(lineHeight * LOGO_SCALE + 0.5)
+    local logoW = math.floor(logoH * LOGO_ASPECT + 0.5)
     pcall(function() img:SetBrushFromTexture(tex, false) end)
-    pcall(function() img:SetDesiredSizeOverride(LOGO_SIZE) end)
+    pcall(function() img:SetDesiredSizeOverride({ X = logoW, Y = logoH }) end)
     local slot
     local okAdd, errAdd = pcall(function() slot = parent:AddChildToOverlay(img) end)
     if not (okAdd and slot) then return nil, "AddChildToOverlay failed: " .. tostring(errAdd) end
-    -- Same alignment as the version text, raised above it by the text's height.
+    -- Same alignment as the version text (left, bottom); moved right past the text, and up to
+    -- the first line, centred on it.
     local h, v, pad = "?", "?", nil
     pcall(function() h = tb.Slot.HorizontalAlignment end)
     pcall(function() v = tb.Slot.VerticalAlignment end)
     pcall(function() pad = tb.Slot.Padding end)
-    local height = 0
-    pcall(function() height = tb:GetDesiredSize().Y end)
-    if not height or height <= 0 then height = 44 end
     pcall(function() slot:SetHorizontalAlignment(h) end)
     pcall(function() slot:SetVerticalAlignment(v) end)
     local left, top, right, bottom = 0, 0, 0, 0
     pcall(function() left, top, right, bottom = pad.Left, pad.Top, pad.Right, pad.Bottom end)
+    local logoLeft = left + width + LOGO_GAP
+    local logoBottom = bottom + (height - lineHeight) + (lineHeight - logoH) / 2
     local okPad = pcall(function()
-        slot:SetPadding({ Left = left, Top = top, Right = right, Bottom = bottom + height + 6 })
+        slot:SetPadding({ Left = logoLeft, Top = top, Right = 0, Bottom = logoBottom })
     end)
-    return "added", string.format("alignment %s/%s, text padding %s,%s,%s,%s, text height %s%s",
-        tostring(h), tostring(v), tostring(left), tostring(top), tostring(right), tostring(bottom),
-        tostring(height), okPad and "" or ", padding not set")
+    return "added", string.format("%dx%d at left %.1f, bottom %.1f (text %.1fx%.1f, %d lines; alignment %s/%s)%s",
+        logoW, logoH, logoLeft, logoBottom, width, height, lines, tostring(h), tostring(v),
+        okPad and "" or ", padding not set")
+end
+
+-- The chain of panels holding the first on-screen TextBlock whose text holds `text`, from
+-- the block up to the root, for the log: where a HUD element (the item feed) could go.
+function G.LayoutOf(text)
+    local tb
+    local ok, all = pcall(FindAllOf, "TextBlock")
+    if ok and all then
+        for _, b in ipairs(all) do
+            if Alive(b) then
+                local t
+                pcall(function() t = b:GetText():ToString() end)
+                if t and t:find(text, 1, true) then tb = b break end
+            end
+        end
+    end
+    if not tb then return nil end
+    local chain, w = {}, tb
+    for _ = 1, 12 do
+        chain[#chain + 1] = G.DescribeWidget(w)
+        local parent
+        pcall(function() parent = w:GetParent() end)
+        if not (parent and Alive(parent)) then
+            -- The top of a widget tree: go on from the widget that owns the tree.
+            local owner
+            pcall(function() owner = w:GetOuter():GetOuter() end)
+            if not (owner and Alive(owner)) then break end
+            parent = owner
+        end
+        w = parent
+    end
+    return chain
 end
 
 -- Tries to show `text` with the game's quest-notice banner (the "new quest" pop-up): the

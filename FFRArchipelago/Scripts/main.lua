@@ -22,7 +22,8 @@
 --   ffrap_inspect <class|path>   one object's fields and functions to inspect_<name>.tsv
 --   ffrap_title [list|add]       the Archipelago entry on the title menu (added at start-up)
 --   ffrap_notice [text]          experimental: show text with the game's quest-notice banner
---   ffrap_logo                   experimental: the Archipelago logo above the mod's title line
+--   ffrap_logo                   the Archipelago logo on the mod's title line, by hand
+--   ffrap_layout <text>          the panels holding some on-screen text, to the log
 --   ffrap_find <text>            game classes, functions and fields named like the text, to find_<text>.txt
 --   ffrap_blank [on|off]         chests that are Archipelago locations give 1 gil instead
 --   ffrap_sync                   report every known location the save says is looted
@@ -35,7 +36,7 @@
 -- follows the save slots the linked game is saved to. While any other save is loaded, the mod
 -- grants nothing, reports nothing and leaves the chests vanilla.
 
-local VERSION = "0.8.3"
+local VERSION = "0.8.4"
 local PROTOCOL = 1        -- the bridge protocol; the apworld's MOD_PROTOCOL
 
 local MOD_DIR = (debug.getinfo(1, "S").source:gsub("^@", ""):gsub("\\", "/"):match("^(.*/)Scripts/[^/]+$"))
@@ -51,6 +52,7 @@ local NEW_GAME_STORY = 1000   -- the story counter of a new game, until the firs
 local TITLE_EVERY = 6         -- ticks between checks that the title entry is still there
 local AUTO_SKIP_WAIT = 4      -- ticks to wait after the first autosave before the automatic skip
 local TITLE_LINE = "FFRArchipelago " .. VERSION   -- shown above the game's version on the title
+local LOGO_PATH = MOD_DIR .. "Assets/archipelago_logo.png"
 local CHEST_EVERY = 2         -- ticks between chest scans
 local STATUS_EVERY = 10       -- ticks between status file writes
 
@@ -605,6 +607,7 @@ end
 -- outside a game.
 local orderLogged = nil   -- the last order result logged, so each new one is logged once
 local layoutLogged = false   -- the version text's layout is logged once per run (for the logo)
+local logoLogged = nil       -- the last logo failure logged, so each one is logged once
 local function titleTick()
     if state.ticks ~= 1 and state.ticks % TITLE_EVERY ~= 0 then return end
     local inGame = game.InGame()
@@ -631,6 +634,14 @@ local function titleTick()
             if not layoutLogged and block then
                 layoutLogged = true
                 log("title: version text layout: " .. game.DescribeWidget(block))
+            end
+        elseif shown == "already" then
+            -- A check later than the one that added the line, so the text block has been laid
+            -- out with both lines and its size is right for placing the logo.
+            local logo, detail = game.TitleLogo(LOGO_PATH, TITLE_LINE)
+            if logo == "added" or (logo == nil and detail ~= logoLogged) then
+                log("title: logo " .. tostring(logo or "not added") .. ": " .. tostring(detail))
+                logoLogged = detail
             end
         end
     end
@@ -866,12 +877,29 @@ command("ffrap_title", function(p)
     if what ~= "add" then notify("Title menu: " .. entries) end
 end)
 
--- ffrap_logo: put the Archipelago logo above the mod's line on the title screen (experimental;
--- IDEAS.md, idea 6). Run it at the title screen.
+-- ffrap_logo: put the Archipelago logo on the mod's line on the title screen by hand (the mod
+-- does it by itself; IDEAS.md, idea 6).
 command("ffrap_logo", function()
-    local result, detail = game.TitleLogo(MOD_DIR .. "Assets/archipelago_logo.png", TITLE_LINE)
+    local result, detail = game.TitleLogo(LOGO_PATH, TITLE_LINE)
     log("logo: " .. tostring(result) .. ": " .. tostring(detail))
     notify("Logo: " .. tostring(result or "not added") .. " (" .. tostring(detail) .. ")")
+end)
+
+-- ffrap_layout <text>: the chain of panels holding the on-screen text that holds <text>, to
+-- the log (IDEAS.md, idea 14: where the item feed can go).
+command("ffrap_layout", function(p)
+    local text = table.concat(p or {}, " ")
+    if text == "" then
+        notify("Usage: ffrap_layout <part of some text on screen>")
+        return
+    end
+    local chain = game.LayoutOf(text)
+    if not chain then
+        notify("No text on screen holds \"" .. text .. "\"")
+        return
+    end
+    for i, line in ipairs(chain) do log("layout " .. i .. ": " .. line) end
+    notify("Layout of \"" .. text .. "\": " .. #chain .. " levels in the log")
 end)
 
 -- ffrap_notice <text>: try the game's quest-notice banner with our own text (experimental).
