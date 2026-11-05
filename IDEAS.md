@@ -476,6 +476,14 @@ Plan: build option 1 first, because it is known to work. Then try option 2 as an
   - The text can change a moment after the pop-up appears, because chests are scanned every second.
   - The chest still gives its 1 gil.
   - Progression, useful and trap items look the same; the flags are in the scout line for later, for colours.
+
+**Round 26:** it worked in a 4-player multiworld, but the text changed 0.5 to 1.5 s after the pop-up came up.
+
+**0.11.1, the fast check:**
+- The dialog box is made once and used again, so the mod keeps its message widget once found.
+- Ten times a second, a cheap check asks only that widget whether a chest pop-up has just come up. When one has, the chests in the map are scanned at once and the pop-up is rewritten in the same pass, within about 0.1 s.
+- The first pop-up of a session still takes the slower path (a search of all rich text), because the widget is not known yet.
+- **If 0.1 s is still visible:** hook the call that sets the message text (`RichTextBlock:SetText`, if the dialog calls it through a UFunction, as `ExecuteEntry` is called) and rewrite it in the same frame. That would need a guard against the hook seeing our own `SetText`.
 - Whether the text can be changed while the pop-up is up (the feed showed that field writes before a widget is drawn are safe; this is a widget already drawn, so `SetText` it is).
 
 ## 14. An item feed on the HUD

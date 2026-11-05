@@ -1560,19 +1560,55 @@ local POPUP_MARKER = "obtained"       -- in the game's English chest message
 local POPUP_ITEM_LINE = "Overlay_Custom"
 local COLLAPSED = 1                   -- ESlateVisibility: Visible 0, Collapsed 1, Hidden 2, ...
 local popupHidden = nil               -- { line = widget, message = widget, visibility = n }
+-- The dialog box is made once and used again, so its message widget is kept once found: the
+-- fast check (PopupJustOpened, ten times a second) then asks only that widget, instead of
+-- searching every rich text in the game (round 26: "the wait is real").
+local popupMsgCache = nil
+local popupWasShown = false           -- the cached message was on screen at the last check
 
--- The chest pop-up's message on screen, or nil.
+local function PopupText(b)
+    local t
+    pcall(function() t = b:GetText():ToString() end)
+    return t
+end
+
+-- The chest pop-up's message on screen, or nil. Searched for while none is cached.
 local function PopupMessage()
+    local m = popupMsgCache
+    if m and Alive(m) and Shown(m) then
+        local t = PopupText(m)
+        if t and t:find(POPUP_MARKER, 1, true) then return m end
+    end
     local ok, all = pcall(FindAllOf, "RichTextBlock")
     if not ok or not all then return nil end
     for _, b in ipairs(all) do
         if Alive(b) and Shown(b) then
-            local t
-            pcall(function() t = b:GetText():ToString() end)
-            if t and t:find(POPUP_MARKER, 1, true) then return b end
+            local t = PopupText(b)
+            if t and t:find(POPUP_MARKER, 1, true) then
+                popupMsgCache = b
+                return b
+            end
         end
     end
     return nil
+end
+
+-- True once each time a chest pop-up comes up, judged from the cached message widget alone, so
+-- it is cheap enough to call ten times a second. False until the first pop-up has been found
+-- by PopupMessage (the slower search from the regular tick).
+function G.PopupJustOpened()
+    local m = popupMsgCache
+    if not (m and Alive(m) and Shown(m)) then
+        popupWasShown = false
+        return false
+    end
+    if popupWasShown then return false end
+    local t = PopupText(m)
+    if t and t:find(POPUP_MARKER, 1, true) then
+        popupWasShown = true
+        return true
+    end
+    return false
 end
 
 -- Writes `text` into the chest pop-up on screen and collapses its item line. Returns true and a
@@ -1581,6 +1617,7 @@ function G.ChestPopup(text)
     local msg = PopupMessage()
     if not msg then return false, "no chest pop-up on screen" end
     if not pcall(function() msg:SetText(FText(text)) end) then return false, "SetText failed" end
+    popupWasShown = true   -- this pop-up is handled; the fast check waits for the next one
     local parent
     pcall(function() parent = msg:GetParent() end)
     local n = 0

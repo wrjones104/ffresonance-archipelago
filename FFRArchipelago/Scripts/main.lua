@@ -37,7 +37,7 @@
 -- follows the save slots the linked game is saved to. While any other save is loaded, the mod
 -- grants nothing, reports nothing and leaves the chests vanilla.
 
-local VERSION = "0.11.0"
+local VERSION = "0.11.1"
 local PROTOCOL = 1        -- the bridge protocol; the apworld's MOD_PROTOCOL
 
 local MOD_DIR = (debug.getinfo(1, "S").source:gsub("^@", ""):gsub("\\", "/"):match("^(.*/)Scripts/[^/]+$"))
@@ -47,6 +47,7 @@ local game = require("game")
 local bridge = require("bridge")
 
 local TICK_MS = 500
+local FAST_MS = 100           -- the chest pop-up check (fastTick)
 local SETTLE_TICKS = 4        -- wait this long after a save loads before granting
 local MAX_GRANTS_PER_TICK = 5
 local NEW_GAME_STORY = 1000   -- the story counter of a new game, until the first scene ends
@@ -1199,6 +1200,26 @@ bridge.write("hello", VERSION, PROTOCOL)
 if state.seed then bridge.write("seed", state.seed) end
 readInbox(true)
 log("version " .. VERSION .. " loaded from " .. MOD_DIR .. ", " .. state.applied .. " items already applied")
+
+-- The fast check (IDEAS.md, idea 13): ten times a second, ask the chest pop-up's message widget
+-- (kept once found) whether a pop-up has just come up. When one has, scan this map's chests at
+-- once, so the check is reported and the pop-up rewritten within about 0.1 s, not on the next
+-- one-second scan. Most passes are one widget lookup.
+local function fastTick()
+    if not game.InGame() or state.inGameTicks <= SETTLE_TICKS or not sessionSave() then return end
+    if not game.PopupJustOpened() then return end
+    local mapId = game.CurrentMap()
+    if mapId and mapId == visit.mapId and visit.scans > MAP_SETTLE_SCANS then pcall(scanChests, mapId) end
+    pcall(popupTick)
+end
+
+LoopAsync(FAST_MS, function()
+    ExecuteInGameThread(function()
+        local ok, err = pcall(fastTick)
+        if not ok then log("fast tick error: " .. tostring(err)) end
+    end)
+    return false
+end)
 
 LoopAsync(TICK_MS, function()
     ExecuteInGameThread(function()
