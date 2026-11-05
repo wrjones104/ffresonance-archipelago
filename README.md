@@ -3,7 +3,7 @@
 Two parts:
 
 - **FFRArchipelago**, a UE4SS Lua mod that does the in-game half.
-  - **Receive:** it reads items from a file and grants them in order: bag items, gil, visions, party members and story flags. Each item is applied once, tracked by its Archipelago index.
+  - **Receive:** it reads items from a file and grants them in order: bag items, gil, visions, party members and story flags. Each item is applied once per save, tracked by its Archipelago index and by how many items each save slot holds.
   - **Send:** it reports opened chests, picked-up shinies (shining spots) and changes to the story counter.
 - **`apworld/ff_resonance`**, the Archipelago world and client.
   - The world generates seeds: chests with consumables, equipment or gil are locations, and shinies are an option.
@@ -17,7 +17,7 @@ AI use: this project is built with Claude Code. [DISCLOSURE.md](DISCLOSURE.md) s
 
 The world is tested off-line: Archipelago's general tests pass with it, its own tests pass, and a client end-to-end run against a local server passes, with a script standing in for the game. Round 5 played a full seed in the real game, up to the goal and a release (see "Test results so far").
 
-1. **Mod.** Copy `FFRArchipelago/Scripts` over the installed mod (0.6.2). Delete the old `ap_in.txt`, `ap_out.txt` and `ap_state.txt`, and keep `seen.tsv`. Keep FFRRandomizer disabled.
+1. **Mod.** Copy `FFRArchipelago/Scripts` over the installed mod (0.7.0). Delete the old `ap_in.txt`, `ap_out.txt` and `ap_state.txt`, and keep `seen.tsv`. Keep FFRRandomizer disabled.
 2. **World.** Run `python tools/build_apworld.py`, then copy `dist/ff_resonance.apworld` into your Archipelago `custom_worlds` folder. Or, from source, copy `apworld/ff_resonance` into `worlds/`.
 3. **Seed.**
    - Copy `apworld/Final Fantasy Resonance.yaml` into Archipelago's `Players` folder and set a name.
@@ -102,7 +102,7 @@ At run time the mod writes these files into its own folder: `ap_out.txt`, `ap_st
 | `ffrap_functions [class ...]` | The functions of game classes, with their parameters, to `functions.txt`. With no class it lists the save-data, debug and new-game classes (IDEAS.md, idea 2). |
 | `ffrap_skip [slot]` | Skip the prologue on a new game, once you can move Fina (story 1005). Without a slot it only changes the loaded save; with one it applies the skip again, saves there and reloads. Testing only for now (IDEAS.md, idea 2). |
 | `ffrap_bind` | Link the loaded save to the client's session, in place of any earlier one. The same as `/bind` in the client. |
-| `ffrap_reset` | Forget the applied-item count. Re-grants everything! |
+| `ffrap_reset` | Set the loaded save's applied-item count to 0. Re-grants everything to it! |
 
 ## Bridge format
 
@@ -170,7 +170,7 @@ kind  map  uid  row  item  count  money  visible-condition
 - **Bug 2, actors lingering after a map change:** a map's actors outlive the map change for a moment. Fixed: nothing is judged until the map id has held for 3 scans.
 - **Bug 3, blanking restore:** after `ffrap_blank off`, chests in the current map still gave 1 gil. They had spawned while blanking was on, so their "original" snapshot was already blank. Fixed: originals are keyed by the row's `mapId:ID`, and a spawned chest restores from those.
 - **Rowless chests:** four chests had `m_Id -1` (one in 2010, three already open in 3020). 0.3.0 keys them by `m_UniqueId` and records them in `seen.tsv` to find out what they are.
-- **Switching saves:** the applied-item count and the reported checks are per install, not per save. Checks staying reported is right for Archipelago, because a location checked once stays checked. Items need a per-save index (open question 5).
+- **Switching saves:** reported checks are per install, which is right for Archipelago, because a location checked once stays checked. Since mod 0.7.0 the applied-item count is per save (open question 5).
 
 **Round 3 (0.3.0, 2026-11-04): passed the steps that were run; the chest save key is found.**
 - **Map ids:** `GetSameMapId()` was right at once on every change (2002, 2001, 2015, 5200, 1000, 3001). The save's `Map.mapId` said 3020 the whole time you were in 2002 and 2001.
@@ -201,25 +201,21 @@ This was the first real Archipelago game: a new game, a local MultiServer, the 0
 - **Bug 2, checks from another save:** the session started while an old save (story 1095) was loaded. The sync on that load reported `shiny:1000:150` from the old save into the new session. It was ignored because shinies are off, but a chest would have been sent. See open question 8.
 - **Item names:** items 5 and 6 have no name in `item_names.tsv`, so they showed as "Item 5" and "Item 6". Their vanilla chests are Mysidia Dungeon 45 Chest 0 and Olderion Dungeon 43 Chest 4.
 
-## Round 6 test plan (mod 0.6.2, world 0.1.2)
+## Round 10 test plan (mod 0.7.0, world 0.1.2)
 
-This round tests the two round 5 fixes: the seed name, and linking each session to one save. Keep FFRRandomizer disabled.
+Rounds 6 to 9 covered the seed name, pausing, new-game linking and the prologue skip. This round tests the per-save item count (open question 5). Keep FFRRandomizer disabled.
 
 1. **Install.**
-   - Copy `FFRArchipelago/Scripts` over the installed mod. The log should say `version 0.6.2 loaded`.
-   - Rebuild the apworld (`python tools/build_apworld.py`) and copy it over the old one in `custom_worlds`.
-2. **Clean start.** Delete `ap_in.txt`, `ap_out.txt` and `ap_state.txt`. The old files use the `unknown` key, so with the fixed client the old seed would start a new session and grant all of its items again.
-3. **An existing save pauses.**
-   - Generate and host a seed. Start the game, and connect the client at the title screen.
-   - Check that the `seed` line in `ap_in.txt` starts with the seed's long number, not `unknown`.
-   - Load an existing save. Expected: an "Archipelago is paused" message, no items, and chests with their vanilla contents. `ap_out.txt` gets no `check` or `story` lines.
-4. **A new game links itself.** Go back to the title and start a new game. Expected: "this new game is linked to the seed", the items arrive, and chests give 1 gil.
-5. **The link follows the save slot.**
-   - Save the new game to a slot. The `save:` line in `ap_status.txt` should list that slot (and maybe 0, the autosave).
-   - Quit to the title and load that slot. Expected: no "paused" message, and play carries on.
-   - Load a different slot. Expected: paused again.
-6. **`/bind`.** With a different existing save loaded, type `/bind` in the client. Expected: "this save is linked to the seed", and its looted chests are sent as checks. Do this last, because it moves the seed onto that save.
-7. **Second seed.** Host a different seed and connect to it. Expected: the mod starts a new session, and the new seed's items arrive from item 0 once you start a new game or use `/bind`.
+   - Copy `FFRArchipelago/Scripts` over the installed mod. The log should say `version 0.7.0 loaded`.
+   - Delete `ap_in.txt`, `ap_out.txt` and `ap_state.txt`, and use a new seed. Older state files have no per-slot counts.
+2. **A new game, skipped.**
+   - Connect the client at the title screen and start a new game. Expected: "this new game is linked to the seed", and the starting items arrive.
+   - Once you can move Fina, run `ffrap_skip 0`. Expected: a `skip: slot 0 linked before the reload` line with the count, for example `session slots [0=3]`.
+3. **Save to a manual slot.** Save the game to a free slot. Expected in the log: `saved to slot N: session slots [0=…,N=…]`, where the count is the number of items received so far.
+4. **Items after the save.** Open a few chests that hold your own items, so that new items arrive. Do not save. Note how many items you have now.
+5. **Load the older save.** Load slot N again. Expected: `items: slot N holds: … applied (was …)`, and the items from step 4 arrive again, because that save does not have them.
+6. **Save and reload.** Save to slot N, then load it. Expected: no items arrive.
+7. **`/bind` another save.** Load a save from before this seed and type `/bind`. Expected: "this save is linked to the seed", `items: a newly linked save: 0 applied`, and every item of the seed arrives. Do this last, because it moves the seed onto that save.
 
 Send `UE4SS.log` (the `[FFRAP]` lines), `ap_status.txt` and the three `ap_*.txt` files.
 
@@ -229,7 +225,13 @@ Send `UE4SS.log` (the `[FFRAP]` lines), `ap_status.txt` and the three `ap_*.txt`
 2. **Location list and save keys.** Chests and shinies are both in the save under `(GetSameMapId, m_UniqueId)`. The save answers at once and from anywhere (rounds 2 and 3). The chest table gives all 238 rows, but not their save keys. Shinies have no table at all. `seen.tsv` collects both as you play. The other options are ZArkadia's generated shiny list (197 spots across 52 maps, used with permission) or reading the level files.
 3. **Story chests and story-gated shinies.** Rowless chests with no reward look like story chests; what do they give, and through which event? Some shinies only appear under a story condition (map 3001 uid 80: `{progress:31}==20`), which the apworld's logic must respect.
 4. **Grant timing.** Is it safe to grant during battles, cutscenes and menus? So far the only guard is "save data and map manager exist" plus a 2-second settle.
-5. **Per-save item index.** The applied count is one number per install. The real mod must store it per save: in the save itself, or in a sidecar file keyed by slot, the way FFRBestiary does. Then loading an older save re-grants exactly what that save lacks. Reported checks can stay per install, because in Archipelago a location checked once stays checked. Save linking (mod 0.5.0) makes this matter sooner: `/bind` on a different save in the middle of a seed keeps the count, so that save never gets the items applied before. The prologue skip makes a new save for each seed, so it needs this first.
+5. **Per-save item index. Done in mod 0.7.0** (see below). Before that, the applied count was one number per install. The real mod must store it per save: in the save itself, or in a sidecar file keyed by slot, the way FFRBestiary does. Then loading an older save re-grants exactly what that save lacks. Reported checks can stay per install, because in Archipelago a location checked once stays checked. Save linking (mod 0.5.0) makes this matter sooner: `/bind` on a different save in the middle of a seed keeps the count, so that save never gets the items applied before. The prologue skip makes a new save for each seed, so it needs this first.
+   - **How it works:** the mod keeps every item of the session in memory, and `ap_state.txt` keeps, for each linked slot, how many of them the save in that slot holds (`slotItems 1=3,2=4`).
+   - **When the game saves:** the mod notes the count at that moment against the slot. Items granted after that and never saved are granted again when that slot is loaded.
+   - **New saves:** a new game, and a save linked with `/bind` that the session did not own before, start at 0 and get every item.
+   - **Mod reload:** the state also names the live save the count is for (`live <object>|<timestamp>`), so reloading the mod while the same save is loaded grants nothing twice.
+   - **The skip:** `ffrap_skip <slot>` links its slot with the count the save holds when it saves. Its inventory changes are now relative and made once per save, so an Archipelago item with a starter item's id is kept.
+   - **Bridge fix, found on the way:** a new seed's `ap_in.txt` that was already longer than the old one was read from the old position, so its `seed` line was missed. The mod now also starts over when the file's first line changes.
 6. **Vanilla rewards.**
    - Chests: blanking to 1 gil and restoring both work (round 5).
    - Shinies carry their reward on the actor, so the same trick should work on `m_ItemId` and `m_Money`.

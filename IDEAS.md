@@ -196,7 +196,7 @@ For the automatic skip, this means it should save and reload in the same moment 
 
 Still to decide: whether to show a message first ("Skipping the prologue…"), and what to do if the player opts out.
 
-**Second run of round 9: a new game while the session already has a game.** The session was linked to slot 0, the first run's skipped game. A second new game was paused, as designed. Its autosave then overwrote slot 0 ("slot 0 now holds another game and is no longer linked"), and the session was left with no save at all. The skip on the paused game worked, but the reloaded game stayed paused. Linking it would be right only if it also gets every item the session has handed out. That again needs the per-save item index (README, open question 5).
+**Second run of round 9: a new game while the session already has a game.** The session was linked to slot 0, the first run's skipped game. A second new game was paused, as designed. Its autosave then overwrote slot 0 ("slot 0 now holds another game and is no longer linked"), and the session was left with no save at all. The skip on the paused game worked, but the reloaded game stayed paused. Linking it would be right only if it also gets every item the session has handed out. That again needs the per-save item index (README, open question 5), done in mod 0.7.0. Linking the second new game is now safe, and a candidate for the automatic skip.
 
 **Save linking, found on the way (mod 0.5.4).**
 - A new game can carry the timestamp of the autosave slot it is about to overwrite. In the second run, a new game showed up as linked slot 0. A save at story 1000 or lower now always counts as a new game.

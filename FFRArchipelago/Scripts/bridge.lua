@@ -15,8 +15,9 @@
 --     applied <index>                             item <index> was handled
 --
 -- The client may rewrite ap_in.txt from the start (for example after it reconnects and the
--- server resends every item). A file shorter than what was already read is read again from the
--- top; items the game already applied are skipped by index, so nothing is granted twice.
+-- server resends every item). A file shorter than what was already read, or one with a new
+-- first line (a new session), is read again from the top; items are kept by index, so reading
+-- one twice grants nothing twice.
 
 local B = {}
 
@@ -41,6 +42,17 @@ function B.readNew()
     if not f then return {} end
     local size = f:seek("end")
     if size < B.offset then B.offset = 0 end
+    -- The client starts the file over for a new session with a new first line (the seed). The
+    -- new file can already be longer than what was read of the old one, so a change of first
+    -- line also means reading from the top (0.7.0).
+    -- Only a complete first line counts: one still being written has no newline after it yet.
+    f:seek("set", 0)
+    local first = f:read("L")
+    if first and first:sub(-1) == "\n" then
+        first = first:gsub("\r?\n$", "")
+        if B.first ~= nil and first ~= B.first then B.offset = 0 end
+        B.first = first
+    end
     f:seek("set", B.offset)
     local data = f:read("a") or ""
     f:close()

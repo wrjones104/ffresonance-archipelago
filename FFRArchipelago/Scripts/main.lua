@@ -22,14 +22,14 @@
 --   ffrap_blank [on|off]         chests that are Archipelago locations give 1 gil instead
 --   ffrap_sync                   report every known location the save says is looted
 --   ffrap_bind                   link the loaded save to the client's session (also /bind in the client)
---   ffrap_reset                  forget the applied-item count (re-grants everything!)
+--   ffrap_reset                  set the loaded save's applied-item count to 0 (re-grants everything to it!)
 --
 -- Each client session belongs to one save. A new game started during a session is linked to
 -- it at once; an existing save is linked with ffrap_bind or the client's /bind. The link
 -- follows the save slots the linked game is saved to. While any other save is loaded, the mod
 -- grants nothing, reports nothing and leaves the chests vanilla.
 
-local VERSION = "0.6.2"
+local VERSION = "0.7.0"
 local PROTOCOL = 1        -- the bridge protocol; the apworld's MOD_PROTOCOL
 
 local MOD_DIR = (debug.getinfo(1, "S").source:gsub("^@", ""):gsub("\\", "/"):match("^(.*/)Scripts/[^/]+$"))
@@ -59,8 +59,9 @@ end
 -- -------------------------------------------------------------------------------------------
 
 local state = {
-    applied = 0,       -- items 0 .. applied-1 are handled
-    queue = {},        -- index -> { kind, id, count, label }
+    applied = 0,       -- items 0 .. applied-1 are in the loaded session save
+    items = {},        -- index -> { kind, id, count, label }: every item of the session, kept so
+                       -- that loading an older save can grant again what it lacks
     reported = {},     -- "check|chest:2031:7" -> true: already written to ap_out.txt
     lastStory = nil,
     inGameTicks = 0,
@@ -70,6 +71,9 @@ local state = {
     seed = nil,        -- the client session ("<seed name>:<slot>") this state belongs to
     syncPending = false, -- report everything the save says is looted, once in game
     slots = {},        -- save slot -> true: the slots the session's save is in (empty: none yet)
+    slotItems = {},    -- save slot -> how many of the session's items the save in it holds
+    live = nil,        -- "<save object>|<timestamp>" of the session's save the count is for, so a
+                       -- reloaded mod (the game still running) knows it is the same save
     bindPending = false, -- the client asked to link the loaded save
 }
 
@@ -80,6 +84,7 @@ local save = {
     ticks = nil,       -- its timestamp when last seen
     slot = nil,        -- the slot it was loaded from, or nil for an unsaved new game
     pending = nil,     -- a timestamp the game just saved with, until its slot is known
+    pendingItems = nil, -- the applied count when that save happened
     ok = false,        -- true when this is the session's save
 }
 
@@ -89,19 +94,41 @@ local function sessionSave()
     return state.seed == nil or save.ok
 end
 
-local function slotsText()
+local function slotsText(withItems)
     local list = {}
     for slot in pairs(state.slots) do list[#list + 1] = slot end
     table.sort(list)
+    if withItems then
+        for i, slot in ipairs(list) do list[i] = slot .. "=" .. tostring(state.slotItems[slot] or "?") end
+    end
     return table.concat(list, ",")
+end
+
+-- The session's save is in `slot`, holding `items` of the session's items.
+local function linkSlot(slot, items)
+    state.slots[slot] = true
+    state.slotItems[slot] = items
+end
+
+local function unlinkSlot(slot)
+    state.slots[slot] = nil
+    state.slotItems[slot] = nil
+end
+
+-- The loaded save holds `n` items of the session: grant from there on. Lower than before when
+-- an older save is loaded, and the items it lacks are granted again.
+local function setApplied(n, why)
+    if n ~= state.applied then
+        log("items: " .. why .. ": " .. n .. " applied (was " .. state.applied .. ")")
+        state.applied = n
+    end
 end
 
 local STATE_PATH = MOD_DIR .. "ap_state.txt"
 local STATUS_PATH = MOD_DIR .. "ap_status.txt"
 
--- POC: one counter for the whole install. The real mod must keep it per save (Archipelago
--- resends items by index, and loading an older save must re-grant what that save lacks).
--- Open question 4 in the README.
+-- The applied count is per save (0.7.0): each linked slot keeps how many items the save in it
+-- holds, and `applied` is the loaded save's.
 local function loadState()
     local f = io.open(STATE_PATH, "r")
     if not f then return end
@@ -112,6 +139,10 @@ local function loadState()
         if key == "seed" and value ~= "" then state.seed = value end
         if key == "slots" then
             for slot in value:gmatch("%d+") do state.slots[tonumber(slot)] = true end
+        end
+        if key == "live" and value ~= "" then state.live = value end
+        if key == "slotItems" then
+            for slot, n in value:gmatch("(%d+)=(%d+)") do state.slotItems[tonumber(slot)] = tonumber(n) end
         end
     end
     f:close()
@@ -124,6 +155,9 @@ local function saveState()
     f:write("blank\t", state.blank and "1" or "0", "\n")
     f:write("seed\t", state.seed or "", "\n")
     f:write("slots\t", slotsText(), "\n")
+    f:write("slotItems\t", slotsText(true), "\n")
+    if save.ok and save.obj then state.live = save.obj .. "|" .. tostring(save.ticks) end
+    f:write("live\t", state.live or "", "\n")
     f:close()
 end
 
@@ -160,9 +194,9 @@ end
 -- sends an old seed's checks. Then everything the save already has is reported once in game.
 local function newSession(key)
     log("new session " .. key .. (state.seed and (" (was " .. state.seed .. ")") or ""))
-    state.seed, state.applied, state.queue, state.reported = key, 0, {}, {}
+    state.seed, state.applied, state.items, state.reported = key, 0, {}, {}
     state.syncPending = true
-    state.slots, state.bindPending = {}, false
+    state.slots, state.slotItems, state.bindPending, state.live = {}, {}, false, nil
     save.obj = nil     -- judge the loaded save again for this session
     saveState()
     local f = io.open(bridge.outPath, "w")
@@ -191,8 +225,8 @@ local function readInbox(initial)
         elseif f[1] == "item" then
             local index, id = tonumber(f[2]), tonumber(f[4])
             if index and id then
-                if index >= state.applied then state.queue[index] = { kind = f[3], id = id, count = tonumber(f[5]) or 1,
-                    label = (f[6] and f[6] ~= "") and f[6] or (f[3] .. " " .. f[4]) } end
+                state.items[index] = { kind = f[3], id = id, count = tonumber(f[5]) or 1,
+                    label = (f[6] and f[6] ~= "") and f[6] or (f[3] .. " " .. f[4]) }
             else
                 log("bad item line: " .. table.concat(f, " | "))
             end
@@ -206,7 +240,7 @@ end
 local function applyItems()
     local done, names = 0, {}
     while done < MAX_GRANTS_PER_TICK do
-        local it = state.queue[state.applied]
+        local it = state.items[state.applied]
         if not it then break end
         local code, detail = grant(it)
         if code == "retry" then
@@ -221,7 +255,6 @@ local function applyItems()
         else
             notify("Could not apply " .. it.label .. ": " .. tostring(detail))
         end
-        state.queue[state.applied] = nil
         state.applied = state.applied + 1
         state.lastResult = it.label .. ": " .. code
         done = done + 1
@@ -414,13 +447,20 @@ end
 -- Decides whether a save that was just loaded (or a new game) is the session's.
 local function judgeSave()
     if not state.seed then setOk(true); return end
+    -- The same save the count was for, still loaded (the mod was reloaded): keep the count.
+    local same = state.live ~= nil and state.live == (tostring(save.obj) .. "|" .. tostring(save.ticks))
     if save.slot ~= nil and state.slots[save.slot] then
         setOk(true)
         log("save slot " .. save.slot .. " is the session's save")
+        -- A state file from before 0.7.0 has no count for the slot: keep the old one.
+        local n = state.slotItems[save.slot]
+        if n and not same then setApplied(n, "slot " .. save.slot .. " holds") end
     elseif save.slot == nil and next(state.slots) == nil then
         -- A new game that was never saved, and the session has no save yet: link it. It joins
-        -- a slot the first time it is saved.
+        -- a slot the first time it is saved. It holds none of the session's items yet.
         setOk(true)
+        if not same then setApplied(0, "a new game") end
+        saveState()
         notify("Archipelago: this new game is linked to the seed")
     else
         setOk(false)
@@ -439,8 +479,11 @@ local function bindLoaded()
         notify("Load a save first, then link it")
         return
     end
-    state.slots = {}
-    if save.slot ~= nil then state.slots[save.slot] = true end
+    -- A save that was already the session's keeps its count; any other holds none of the
+    -- session's items, so it gets all of them.
+    if not save.ok then setApplied(0, "a newly linked save") end
+    state.slots, state.slotItems = {}, {}
+    if save.slot ~= nil then linkSlot(save.slot, state.applied) end
     saveState()
     setOk(true)
     state.syncPending = true   -- whatever this save has already looted counts
@@ -464,21 +507,24 @@ local function followSave()
             log("story " .. story .. ": a new game, although its timestamp matches slot " .. save.slot)
             save.slot = nil
         end
-        log("save loaded: slot " .. tostring(save.slot) .. ", session slots [" .. slotsText() .. "]")
+        log("save loaded: slot " .. tostring(save.slot) .. ", session slots [" .. slotsText(true) .. "]")
         judgeSave()
     elseif ticks ~= save.ticks then
-        save.ticks, save.pending = ticks, ticks
+        -- The game saved. Grants happen after this check in the same tick, so the count now is
+        -- what the save holds.
+        save.ticks, save.pending, save.pendingItems = ticks, ticks, state.applied
     end
     if save.pending then
         local slot = game.SlotForTicks(save.pending)   -- the summary can catch up a moment later
         if slot ~= nil then
             save.pending, save.slot = nil, slot
-            if state.seed and save.ok and not state.slots[slot] then
-                state.slots[slot] = true
+            if state.seed and save.ok then
+                local new = not state.slots[slot]
+                linkSlot(slot, save.pendingItems or state.applied)
                 saveState()
-                log("saved to slot " .. slot .. ": session slots [" .. slotsText() .. "]")
+                if new then log("saved to slot " .. slot .. ": session slots [" .. slotsText(true) .. "]") end
             elseif state.seed and not save.ok and state.slots[slot] then
-                state.slots[slot] = nil
+                unlinkSlot(slot)
                 saveState()
                 notify("Archipelago: slot " .. slot .. " now holds another game and is no longer linked")
             end
@@ -492,7 +538,7 @@ end
 
 local function queued()
     local n = 0
-    for _ in pairs(state.queue) do n = n + 1 end
+    for index in pairs(state.items) do if index >= state.applied then n = n + 1 end end
     return n
 end
 
@@ -505,7 +551,7 @@ local function statusLines()
         "party: " .. (party and table.concat(party, ", ") or "?"),
         "items applied: " .. state.applied .. "   queued: " .. queued(),
         "chest blanking: " .. (state.blank and "on" or "off") .. "   session: " .. tostring(state.seed),
-        "save: slot " .. tostring(save.slot) .. ", session slots [" .. slotsText() .. "], " ..
+        "save: slot " .. tostring(save.slot) .. ", session slots [" .. slotsText(true) .. "], " ..
             (sessionSave() and "linked" or "not linked (paused)"),
         "last: " .. state.lastResult,
     }
@@ -716,7 +762,9 @@ command("ffrap_skip", function(p)
         return
     end
     local again = skipped == obj
-    local okRun, ok, report = pcall(game.SkipPrologue)
+    -- The inventory changes are relative (an Archipelago item may share an id with the
+    -- starter gear), so they are made once per save.
+    local okRun, ok, report = pcall(game.SkipPrologue, { inventory = not again })
     if not okRun then
         notify("Prologue skip raised an error: " .. tostring(ok))
         return
@@ -733,10 +781,10 @@ command("ffrap_skip", function(p)
     end
     -- The reload makes a new save object from this slot, so a linked session must own the slot
     -- first, or the reloaded game would look like someone else's.
-    if state.seed and save.ok and not state.slots[slot] then
-        state.slots[slot] = true
+    if state.seed and save.ok then
+        linkSlot(slot, state.applied)
         saveState()
-        log("skip: slot " .. slot .. " linked before the reload: session slots [" .. slotsText() .. "]")
+        log("skip: slot " .. slot .. " linked before the reload: session slots [" .. slotsText(true) .. "]")
     end
     local saved, detail = game.SaveAndReload(slot)
     log("skip: " .. detail)

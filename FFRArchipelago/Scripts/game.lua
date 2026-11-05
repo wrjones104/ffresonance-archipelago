@@ -868,8 +868,8 @@ local SKIP_FLAGS_ON = { 14, 15, 16, 18, 19, 22, 23, 26, 27, 30, 32, 33, 105, 106
                         1164, 1225, 1226 }
 local SKIP_FLAGS_OFF = { 1, 8 }     -- on between story 1000 and 1005, off again by 1030
 local SKIP_PARTY = { 1001, 1002 }   -- Rain, Lasswell
-local SKIP_INVENTORY = {            -- item id, count. Fina's prologue gear goes; the others' comes
-    { 10100, 1 }, { 10200, 1 }, { 11000, 2 }, { 12000, 2 }, { 10699, 0 }, { 11301, 0 }, { 12029, 0 },
+local SKIP_INVENTORY = {            -- item id, change. Fina's prologue gear goes; the others' comes
+    { 10100, 1 }, { 10200, 1 }, { 11000, 2 }, { 12000, 2 }, { 10699, -1 }, { 11301, -1 }, { 12029, -1 },
 }
 local SKIP_MAPS = { 5010, 2013, 20000, 3001 }   -- known and visited
 G.SKIP_ARRIVAL = { map = 3001, x = -5775.0, y = 0.0, z = -197.85, direction = 2 }
@@ -897,7 +897,11 @@ end
 
 -- Applies the skip to the loaded save. Saves nothing. Returns ok and a list of report lines,
 -- one per step ("ok ..." or "FAIL ..."). ok is false when any step failed.
-function G.SkipPrologue()
+-- opts.inventory = false leaves the inventory alone. Its changes are relative, so that an
+-- Archipelago item granted before the skip with the same id as a starter item is kept, and they
+-- must be made once per save. Every other step sets an absolute value and can run again.
+function G.SkipPrologue(opts)
+    local doInventory = not (opts and opts.inventory == false)
     local report, failed = {}, false
     local function step(ok, what)
         report[#report + 1] = (ok and "ok   " or "FAIL ") .. what
@@ -973,17 +977,23 @@ function G.SkipPrologue()
     step(okFina, "Fina reset: Experience 0, HP 200, MP 70, weapon 10600, no armor, accessories or skills")
 
     -- Inventory, through the game's call: equipped gear is counted in the bag.
-    local inv = Lib("CPP_BFL_SaveDataInventory")
-    local invBad = {}
-    for _, e in ipairs(SKIP_INVENTORY) do
-        local okSet = inv and pcall(function() inv:SetInventoryItem(e[1], e[2]) end)
-        local held = inv and Held(inv, e[1])
-        if not okSet or (held ~= nil and held ~= e[2]) then
-            invBad[#invBad + 1] = e[1] .. " (holds " .. tostring(held) .. ")"
+    if doInventory then
+        local inv = Lib("CPP_BFL_SaveDataInventory")
+        local invBad = {}
+        for _, e in ipairs(SKIP_INVENTORY) do
+            local before = inv and Held(inv, e[1])
+            local want = math.max(0, (before or 0) + e[2])
+            local okSet = before ~= nil and pcall(function() inv:SetInventoryItem(e[1], want) end)
+            local held = inv and Held(inv, e[1])
+            if not okSet or held ~= want then
+                invBad[#invBad + 1] = e[1] .. " (" .. tostring(before) .. " -> " .. tostring(held) .. ")"
+            end
         end
+        step(inv ~= nil and #invBad == 0, "inventory: starter gear in, Fina's prologue gear out"
+            .. (#invBad > 0 and (" (wrong: " .. table.concat(invBad, ", ") .. ")") or ""))
+    else
+        report[#report + 1] = "     inventory left alone (already changed for this save)"
     end
-    step(inv ~= nil and #invBad == 0, "inventory: starter gear in, Fina's prologue gear out"
-        .. (#invBad > 0 and (" (wrong: " .. table.concat(invBad, ", ") .. ")") or ""))
 
     -- The guest unit's HP and MP, and the battles-won counter.
     step(Put(sd.unitGuest, "HitPoint", 9999) and Put(sd.unitGuest, "MagicPoint", 9999), "guest unit HP, MP -> 9999")
