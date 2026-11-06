@@ -89,9 +89,9 @@ Filled from progression.md and IDEAS.md idea 5. **Your call:** which ones go in,
 | Ruby Fragment (×3) | 20030 | Carbuncle | unknown | no | |
 | Broken Sword Hilt, Blade | 20031, 20032 | Odin (Iron Splitter) | unknown | no | |
 | Tablet Shards | 25004 | the Tablet Shard turn-in (idea 1) | unknown | no | |
-| Party members | units 1001–1008 | battle strength; maybe story events | the story expects them | no | |
+| Party members | units 1001–1008 (guests: 1013 Ignis, 1014 Alluvion, 1016 Charlotte) | battle strength; maybe story events | the story expects them | no | |
 | Blocker passes (our own) | new | the choke points we block (idea 16) | the mod, since the gate is ours | no: needs idea 16 first | |
-| Visions (26), Espers (9) | various | battle strength | — | no | |
+| Visions (26), summons (10 units; Bahamut has two) | 13017–13130; units 10451–10460 | battle strength | — | no | |
 
 **Things to weigh:**
 - **Story items in story mode.** A key item the story itself needs (a key on the main path) cannot be taken out of its place, or the story can stall until another player sends it. That may be fine, or it may be miserable. *Suggestion:* in v1, only shuffle gates on optional content, and keep main-path keys where they are.
@@ -115,6 +115,13 @@ The location regions today, with where each opens in the story:
 | Pharm | 11 | chapter 7 | | |
 | Crystal Tower | 10 | chapter 8 | | |
 | World Map (shinies) | 83 | varies | airship, radar tiers | |
+
+**What the game data dump gives this section (2026-11-06).** `data/game/` (README, "The game data dump") is read from the game's own files:
+- **The map graph.** `transitions.tsv` has 640 map exits on 143 maps, with the map and point each leads to. 18 of them have a condition (`{progress:N}` or `{flag:N}`). Logic regions can be built from it, not by hand.
+- **The game's own blockers.** `gimmicks.tsv` has 282 blocking boxes, 43 no-entry zones and 41 blocking bases. Many have a condition such as `!{flag:928}`. These show where the game already gates the map, and which flag opens each gate (idea 16).
+- **Airship landing points.** 81 on the world map, each with a destination id (idea 17).
+- **Field items.** 197 field items hold an item: 94 on the world map and 103 elsewhere. Today the world has 83 world-map shinies, from what was seen in game. All 95 rows in `data/shinies.tsv` match the dump.
+- **Chests.** The 238 chest table rows match `data/chests.tsv` exactly. 17 rows have no placed box on any map, for example all of `02Lan_41`, which ships only a background level. Some may be cut content. Check them in game before they count as locations.
 
 **Your call, and facts to fill in:**
 - Where is **Lan**, and when does it open?

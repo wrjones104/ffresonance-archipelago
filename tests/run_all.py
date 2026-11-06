@@ -11,6 +11,7 @@ Tests that cannot run say why and count as skipped, not passed.
 """
 
 import os
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -51,6 +52,20 @@ def main() -> int:
             failed += not run(py, test)
     else:
         skipped.append("mod tests: no Python with lupa (python -m venv .venv-tests, then pip install lupa)")
+    # The data tools: plain Python, no setup.
+    for test in sorted((HERE / "tools").glob("test_*.py")):
+        failed += not run(Path(sys.executable), test)
+    # The game dump tool only has to build: running it needs the game installed.
+    if shutil.which("dotnet"):
+        build = subprocess.run(["dotnet", "build", "tools/dump_game", "-nologo", "-v", "q"], capture_output=True,
+                               text=True, encoding="utf-8", errors="replace", cwd=str(paths.REPO))
+        ok = build.returncode == 0
+        print(("ok  " if ok else "FAIL") + " tools/dump_game (build)")
+        if not ok:
+            print("\n".join("     " + l for l in build.stdout.splitlines()[-25:]))
+        failed += not ok
+    else:
+        skipped.append("tools/dump_game build: no dotnet SDK")
     if paths.AP_PYTHON.exists() and (paths.APTEST / "CommonClient.py").exists():
         for test in sorted((HERE / "client").glob("test_*.py")):
             failed += not run(paths.AP_PYTHON, test)

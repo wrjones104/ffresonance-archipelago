@@ -82,9 +82,12 @@ tools/gen_apworld_data.py  data/*.tsv -> apworld/ff_resonance/data.py
 tools/build_apworld.py     apworld/ff_resonance -> dist/ff_resonance.apworld
 tools/import_item_names.py FFR-Randomizer's ItemNames.lua -> data/item_names.tsv
 tools/snapdiff.py          compares two ffrap_snapshot files
+tools/dump_game/           C# (CUE4Parse): the game's pak files -> dump/ (JSON; git ignores it)
+tools/gen_from_dump.py     dump/ -> data/game/*.tsv, and --check against data/*.tsv
 data/chests.tsv            every chest table row (ffrap_export): the chest location table
 data/shinies.tsv           shinies seen in game (the mod's seen.tsv)
 data/item_names.tsv        item id -> name, from FFR-Randomizer by LordMikoda (MIT)
+data/game/                 tables made from the game's own files (see "The game data dump")
 docs/progression.md        the game's progression, chapter by chapter
 docs/logic.md              the progression logic design (draft)
 tests/                     every test; run them all with python tests/run_all.py (tests/README.md)
@@ -95,6 +98,33 @@ FFRArchipelago/Assets/     the Archipelago logo for the title screen
 After `data/*.tsv` changes, run `python tools/gen_apworld_data.py` and commit the regenerated `data.py`.
 
 Ideas that are not on the test plan yet (Tablet Shards, skipping the prologue, an open-world mode) are in [IDEAS.md](IDEAS.md). The progression logic is being designed in [docs/logic.md](docs/logic.md).
+
+## The game data dump
+
+`tools/dump_game` reads the game's pak files directly, without starting the game, and writes the data as JSON to `dump/`. `tools/gen_from_dump.py` turns that into tables in `data/game/`. These tables are the reference for items, characters, maps and placements. The other files in `data/` came from FFR-Randomizer or from in-game exports.
+
+```
+dotnet run --project tools/dump_game -- all
+python tools/gen_from_dump.py --check
+```
+
+- **Needs:** the .NET 10 SDK, a `Mappings.usmap` and the Oodle DLL. The tool takes the newest usmap from FFR Modding Tools (`%LOCALAPPDATA%\FFR Modding Tools\workspace\mappings`) or from `FFRS\Binaries\Win64\Mappings.usmap`, and the Oodle DLL from FFR Modding Tools' `workspace\tools\oodle`. `--usmap`, `--oodle`, `--game` and `--out` change these paths.
+- **After a game patch:** make a new usmap first. Turn on UE4SS's `UsmapDumperMod`, start the game and wait 30 seconds at the title screen. Then turn the mod off again.
+- **Only the shipped game.** It reads the base paks, not `~mods` or `LogicMods`. The pak files are not encrypted.
+- **`dump/` stays out of git.** It is the game's own data, about 110 MB. Commit only the tables in `data/game/`.
+- **Commands:** `all`, `files`, `enums`, `text`, `tables [filter]`, `maps [filter] [--classes regex]`, `assets <path prefix>`. In Git Bash, set `MSYS_NO_PATHCONV=1` before passing a filter that starts with `/`.
+
+| File in `data/game/` | What it is |
+|---|---|
+| `items.tsv` | All 589 items in the six item tables: id, table, type, equipment detail, name, prices |
+| `units.tsv` | All 643 units: 11 playable (the 8 party members, and the guests Ignis, Alluvion and Charlotte), 26 visions, 10 summons (category `Beast`), enemies and bosses |
+| `maps.tsv` | All 186 maps: id, key (`01Gra_40`), English name, island, group |
+| `chests.tsv` | Every treasure box table row, in the columns of `data/chests.tsv` |
+| `treasure_actors.tsv` | Every treasure box placed on a map, with its `m_Id`, level and position |
+| `field_items.tsv` | Every field item placed on a map, in the columns of `data/shinies.tsv`, plus events, level and position |
+| `transitions.tsv` | Every map exit: from map, to map and point, and its condition. This is the map graph |
+| `gimmicks.tsv` | Blockers, no-entry zones, doors, event triggers, save points and airship landing points, with their conditions |
+| `shops.tsv` | Every shop's stock, one row per item |
 
 At run time the mod writes these files into its own folder: `ap_out.txt`, `ap_state.txt`, `ap_status.txt`, `ffrap_dump.txt`, `chests.tsv` and `seen.tsv`. The fake server writes `ap_in.txt`.
 

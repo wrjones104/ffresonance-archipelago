@@ -1,0 +1,1264 @@
+map	level	uid	class	id	description	condition	events	x	y	z
+10200	Com_00Com_200	0	BP_MapGimmick_EventTrigger_C			!{flag:1000}	Int_LegendEV_10_01[!{flag:1000}&!{flag:1017}] Int_LegendEV_10_01_Short[!{flag:1000}&{flag:1017}]	5467	-458	260
+10200	Com_00Com_200	0	CPP_MapGimmick_BlockingBox					1922	56	139
+10201	Com_00Com_201	0	BP_MapGimmick_EventTrigger_C			!{flag:1001}	Int_LegendEV_06_01[!{flag:1001}&!{flag:1017}] Int_LegendEV_06_01_Short[!{flag:1001}&{flag:1017}]	5467	-458	260
+10201	Com_00Com_201	0	CPP_MapGimmick_BlockingBox					1922	56	139
+10202	Com_00Com_202	0	BP_MapGimmick_EventTrigger_C			!{flag:1002}	Int_LegendEV_15_01[!{flag:1002}&!{flag:1017}] Int_LegendEV_15_01_Short[!{flag:1002}&{flag:1017}]	5467	-458	260
+10202	Com_00Com_202	1	CPP_MapGimmick_BlockingBox					1922	56	139
+10203	Com_00Com_203	0	CPP_MapGimmick_BlockingBox					1922	56	139
+10203	Com_00Com_203	2	BP_MapGimmick_EventTrigger_C			!{flag:1003}	Int_LegendEV_01_01[!{flag:1003}&!{flag:1017}] Int_LegendEV_01_01_Short[!{flag:1003}&{flag:1017}]	5467	-458	260
+10205	Com_00Com_205	0	BP_MapGimmick_EventTrigger_C			!{flag:1007}	Int_LegendEV_02_01[!{flag:1007}&!{flag:1017}] Int_LegendEV_02_01_Short[!{flag:1007}&{flag:1017}]	5467	-458	260
+10205	Com_00Com_205	0	CPP_MapGimmick_BlockingBox					1922	56	139
+10206	Com_00Com_206	0	BP_MapGimmick_EventTrigger_C			!{flag:1009}	Int_LegendEV_09_01[!{flag:1009}&!{flag:1017}] Int_LegendEV_09_01_Short[!{flag:1009}&{flag:1017}]	5467	-458	260
+10206	Com_00Com_206	0	CPP_MapGimmick_BlockingBox					1922	56	139
+10207	Com_00Com_207	0	BP_MapGimmick_EventTrigger_C			!{flag:1008}	Int_LegendEV_03_01[!{flag:1008}&!{flag:1017}] Int_LegendEV_03_01_Short[!{flag:1008}&{flag:1017}]	5467	-458	260
+10207	Com_00Com_207	0	CPP_MapGimmick_BlockingBox					1922	56	139
+10208	Com_00Com_208	0	CPP_MapGimmick_BlockingBox					1922	56	139
+10208	Com_00Com_208	2	BP_MapGimmick_EventTrigger_C			!{flag:1005}	Int_LegendEV_07_01[!{flag:1005}&!{flag:1017}] Int_LegendEV_07_01_Short[!{flag:1005}&{flag:1017}]	5467	-458	260
+10209	Com_00Com_209	0	BP_MapGimmick_EventTrigger_C			!{flag:1006}	Int_LegendEV_08_01[!{flag:1006}&!{flag:1017}] Int_LegendEV_08_01_Short[!{flag:1006}&{flag:1017}]	5467	-458	260
+10209	Com_00Com_209	0	CPP_MapGimmick_BlockingBox					1922	56	139
+10210	Com_00Com_210	0	BP_MapGimmick_EventTrigger_C			!{flag:1010}	Int_LegendEV_11_01[!{flag:1010}&!{flag:1017}] Int_LegendEV_11_01_Short[!{flag:1010}&{flag:1017}]	5467	-458	260
+10210	Com_00Com_210	0	CPP_MapGimmick_BlockingBox					1922	56	139
+10211	Com_00Com_211	0	BP_MapGimmick_EventTrigger_C			!{flag:1011}	Int_LegendEV_04_01[!{flag:1011}&!{flag:1017}] Int_LegendEV_04_01_Short[!{flag:1011}&{flag:1017}]	5467	-458	260
+10211	Com_00Com_211	0	CPP_MapGimmick_BlockingBox					1922	56	139
+10212	Com_00Com_212	0	BP_MapGimmick_EventTrigger_C			!{flag:1012}	Int_LegendEV_14_01[!{flag:1012}&!{flag:1017}] Int_LegendEV_14_01_Short[!{flag:1012}&{flag:1017}]	5467	-458	260
+10212	Com_00Com_212	0	CPP_MapGimmick_BlockingBox					1922	56	139
+10213	Com_00Com_213	0	BP_MapGimmick_EventTrigger_C			!{flag:1013}	Int_LegendEV_05_01[!{flag:1013}&!{flag:1017}] Int_LegendEV_05_01_Short[!{flag:1013}&{flag:1017}]	5467	-458	260
+10213	Com_00Com_213	0	CPP_MapGimmick_BlockingBox					1922	56	139
+10214	Com_00Com_214	0	BP_MapGimmick_EventTrigger_C			!{flag:1014}	Int_LegendEV_13_01[!{flag:1014}&!{flag:1017}] Int_LegendEV_13_01_Short[!{flag:1014}&{flag:1017}]	5467	-458	260
+10214	Com_00Com_214	0	CPP_MapGimmick_BlockingBox					1922	56	139
+10215	Com_00Com_215	0	BP_MapGimmick_EventTrigger_C			!{flag:1015}	Int_LegendEV_12_01[!{flag:1015}&!{flag:1017}] Int_LegendEV_12_01_Short[!{flag:1015}&{flag:1017}]	5467	-458	260
+10215	Com_00Com_215	0	CPP_MapGimmick_BlockingBox					1922	56	139
+10216	Com_00Com_216	0	BP_MapGimmick_EventTrigger_C			!{flag:1016}	Int_LegendEV_16_01[!{flag:1016}&!{flag:1017}] Int_LegendEV_16_01_Short[!{flag:1016}&{flag:1017}]	5467	-458	260
+10216	Com_00Com_216	0	CPP_MapGimmick_BlockingBox					1922	56	139
+10218	Com_00Com_218	0	BP_MapGimmick_EventTrigger_C			!{flag:1018}	Str_LegendEV_07_Boss_01[!{flag:1018}]	5467	-458	260
+10218	Com_00Com_218	0	CPP_MapGimmick_BlockingBox					1922	56	139
+10220	Com_00Com_220	0	BP_MapGimmick_EventTrigger_C				Int_LegendEV_Retry_Start_10_01	5724	-597	260
+10220	Com_00Com_220	0	CPP_MapGimmick_BlockingBox					1922	56	139
+10221	Com_00Com_221	0	BP_MapGimmick_EventTrigger_C				Int_LegendEV_Retry_Start_06_01	5724	-597	260
+10221	Com_00Com_221	0	CPP_MapGimmick_BlockingBox					1922	56	139
+10222	Com_00Com_222	0	BP_MapGimmick_EventTrigger_C				Int_LegendEV_Retry_Start_15_01	5724	-597	260
+10222	Com_00Com_222	1	CPP_MapGimmick_BlockingBox					1922	56	139
+10223	Com_00Com_223	0	BP_MapGimmick_EventTrigger_C				Int_LegendEV_Retry_Start_01_01	5724	-597	260
+10223	Com_00Com_223	0	CPP_MapGimmick_BlockingBox					1922	56	139
+10225	Com_00Com_225	0	BP_MapGimmick_EventTrigger_C				Int_LegendEV_Retry_Start_02_01	5724	-597	260
+10225	Com_00Com_225	0	CPP_MapGimmick_BlockingBox					1922	56	139
+10226	Com_00Com_226	0	BP_MapGimmick_EventTrigger_C				Int_LegendEV_Retry_Start_09_01	5724	-597	260
+10226	Com_00Com_226	0	CPP_MapGimmick_BlockingBox					1922	56	139
+10227	Com_00Com_227	0	BP_MapGimmick_EventTrigger_C				Int_LegendEV_Retry_Start_03_01	5724	-597	260
+10227	Com_00Com_227	0	CPP_MapGimmick_BlockingBox					1922	56	139
+10228	Com_00Com_228	0	BP_MapGimmick_EventTrigger_C				Int_LegendEV_Retry_Start_07_01	5724	-597	260
+10228	Com_00Com_228	0	CPP_MapGimmick_BlockingBox					1922	56	139
+10229	Com_00Com_229	0	BP_MapGimmick_EventTrigger_C				Int_LegendEV_Retry_Start_08_01	5724	-597	260
+10229	Com_00Com_229	0	CPP_MapGimmick_BlockingBox					1922	56	139
+10230	Com_00Com_230	0	BP_MapGimmick_EventTrigger_C				Int_LegendEV_Retry_Start_11_01	5724	-597	260
+10230	Com_00Com_230	0	CPP_MapGimmick_BlockingBox					1922	56	139
+10231	Com_00Com_231	0	BP_MapGimmick_EventTrigger_C				Int_LegendEV_Retry_Start_04_01	5724	-597	260
+10231	Com_00Com_231	0	CPP_MapGimmick_BlockingBox					1922	56	139
+10232	Com_00Com_232	0	BP_MapGimmick_EventTrigger_C				Int_LegendEV_Retry_Start_14_01	5724	-597	260
+10232	Com_00Com_232	0	CPP_MapGimmick_BlockingBox					1922	56	139
+10233	Com_00Com_233	0	BP_MapGimmick_EventTrigger_C				Int_LegendEV_Retry_Start_05_01	5724	-597	260
+10233	Com_00Com_233	0	CPP_MapGimmick_BlockingBox					1922	56	139
+10234	Com_00Com_234	0	BP_MapGimmick_EventTrigger_C				Int_LegendEV_Retry_Start_13_01	5724	-597	260
+10234	Com_00Com_234	0	CPP_MapGimmick_BlockingBox					1922	56	139
+10235	Com_00Com_235	0	BP_MapGimmick_EventTrigger_C				Int_LegendEV_Retry_Start_12_01	5724	-597	260
+10235	Com_00Com_235	0	CPP_MapGimmick_BlockingBox					1922	56	139
+10236	Com_00Com_236	0	BP_MapGimmick_EventTrigger_C				Int_LegendEV_Retry_Start_16_01	5724	-597	260
+10236	Com_00Com_236	0	CPP_MapGimmick_BlockingBox					1922	56	139
+10040	Com_00Com_45_01	0	BlockingVolume					4402	101922	328
+10040	Com_00Com_45_01	0	BlockingVolume					9993	105531	196
+10040	Com_00Com_45_01	0	CPP_MapGimmick_EventTrigger				C01_001B[C01_001B]	4777	49997	5133
+10040	Com_00Com_45_01	1	CPP_MapGimmick_EventTrigger				C01_001D_Encount[C01_001D]	6753	49884	5333
+10040	Com_00Com_45_01	2	CPP_MapGimmick_EventTrigger				C01_001F_Encount[C01_001F]	17642	104925	232
+10040	Com_00Com_45_01	3	BP_MapGimmick_EventTrigger_C					3182	103316	200
+10041	Com_00Com_46_01	0	BP_MapGimmick_SavePoint_C			{progress:0}>=5000	SavePoint[{progress:0}>=5000]	16688	-825	203
+10041	Com_00Com_46_01	0	CPP_MapGimmick_BlockingBase				C05_537_060_01	112	-1009	3
+10041	Com_00Com_46_01	1	CPP_MapGimmick_BlockingBase				C05_537_060_02	3811	-505	199
+10041	Com_00Com_46_01	2	CPP_MapGimmick_BlockingBase				C05_537_030_01	5240	3168	199
+10041	Com_00Com_46_01	3	CPP_MapGimmick_BlockingBase				C05_537_060_03	9334	2516	1
+10041	Com_00Com_46_01	4	CPP_MapGimmick_BlockingBase				C05_537_030_02	11374	-1764	1
+10041	Com_00Com_46_01	5	CPP_MapGimmick_BlockingBase				C05_537_030_03	16336	-1994	200
+10041	Com_00Com_46_01	6	CPP_MapGimmick_EventTrigger				C01_001F_Encount[C01_001F] C05_537_Trigger[{progress:0}==5270]	17500	1450	232
+10041	Com_00Com_46_01	7	BP_MapGimmick_EventTrigger_C					3180	-50	210
+10042	Com_00Com_47_01	0	CPP_MapGimmick_BlockingBase				C05_537_060_01	112	-1009	3
+10042	Com_00Com_47_01	1	CPP_MapGimmick_BlockingBase				C05_537_060_02	3752	-487	199
+10042	Com_00Com_47_01	2	CPP_MapGimmick_BlockingBase				C05_537_030_01	5191	3155	199
+10042	Com_00Com_47_01	3	CPP_MapGimmick_BlockingBase				C05_537_060_03	9216	2494	1
+10042	Com_00Com_47_01	4	CPP_MapGimmick_BlockingBase				C05_537_030_02	11409	-1714	1
+10042	Com_00Com_47_01	5	CPP_MapGimmick_BlockingBase				C05_537_030_03	16336	-1994	200
+10042	Com_00Com_47_01	6	CPP_MapGimmick_EventTrigger				C01_001F_Encount[C01_001F] C05_537_Trigger[{progress:0}==5270]	17500	1450	232
+10042	Com_00Com_47_01	7	BP_MapGimmick_EventTrigger_C					3180	-50	210
+10042	Com_00Com_47_01	8	BP_MapGimmick_SavePoint_C				SavePoint	16688	-825	203
+10042	Com_00Com_47_01	9	CPP_MapGimmick_BlockingBox					17620	1460	290
+10043	Com_00Com_48_01	0	CPP_MapGimmick_BlockingBox					0	0	-70
+10044	Com_00Com_49_01	0	BlockingVolume					4402	101922	328
+10044	Com_00Com_49_01	0	BlockingVolume					9993	105531	196
+60000	Com_00Com_9999	0	BlockingVolume					-490	0	50
+60000	Com_00Com_9999	0	BlockingVolume					490	0	50
+60000	Com_00Com_9999	0	BlockingVolume					10	490	50
+60000	Com_00Com_9999	0	BlockingVolume					0	-490	50
+60000	Com_00Com_9999	0	BlockingVolume					0	0	0
+3000	Dng_01Gra_40	0	BP_MapGimmick_BlockingBase_C			{progress:0}>=1050 & {progress:0}<4000		13000	0	-600
+3000	Dng_01Gra_40	1	BP_MapGimmick_EventTrigger_C				C01_008_02[{progress:0}==1040]	11767	-452	-528
+3000	Dng_01Gra_40	10	BP_MapGimmick_EventTrigger_C				C01_008_02[{progress:0}==1040]	11767	457	-528
+3000	Dng_01Gra_40	11	BP_MapGimmick_BlockingBase_blackbox_C			{progress:0}>=4000		0	0	0
+3000	Dng_01Gra_40	16	BP_MapGimmick_SavePoint_C				SavePoint	11820	-1390	-536
+3000	Dng_01Gra_40	17	BP_MapGimmick_EventTrigger_C				Tutorial_Teleport[!{flag:1223}]	11820	-1390	-536
+3000	Dng_01Gra_40	2	BP_MapGimmick_NoEntry_C			{progress:0}>=4000 & {progress:3}!=10	C01_Dng01Gra40_NoEntry_01[{progress:0}>=4000 & {progress:3}!=10]	12230	-15	-550
+3000	Dng_01Gra_40	3	BP_MapGimmick_InteractEventTrigger_C				ChrEv_0030_002_01[{progress:3}==10]	12030	15	-600
+3000	Dng_01Gra_40	7	BP_MapGimmick_EventTrigger_C				C01_008_02[{progress:0}==1040]	11592	0	-528
+3000	Dng_01Gra_40	8	BP_MapGimmick_EventTrigger_C				C01_008_01_B[{progress:0}==1030]	8150	-1410	-1328
+3010	Dng_01Gra_41	0	BlockingVolume					1400	5550	1300
+3010	Dng_01Gra_41	0	BlockingVolume					3500	-17300	-200
+3010	Dng_01Gra_41	0	BlockingVolume					-1847	-6799	146
+3010	Dng_01Gra_41	0	BlockingVolume					-1803	-8094	361
+3010	Dng_01Gra_41	11	BP_MapGimmick_BlockingBox_C			!{flag:929}		-2480	-5895	90
+3010	Dng_01Gra_41	13	BP_MapGimmick_SavePoint_C				SavePoint	1765	4347	1102
+3010	Dng_01Gra_41	3	BP_MapGimmick_SavePoint_C				SavePoint	3221	-14657	-637
+3010	Dng_01Gra_41	7	BP_MapGimmick_BlockingBox_C			!{flag:928}		4640	-12650	-1120
+3020	Dng_01Gra_42_01	0	BP_MapSound_InDoorReverberation_C					-29780	-50	760
+3020	Dng_01Gra_42_01	0	BP_MapSound_InDoorReverberation_C					-13040	-50	1220
+3020	Dng_01Gra_42_01	0	BP_MapSound_InDoorReverberation_C					980	-50	1140
+3020	Dng_01Gra_42_01	0	BP_MapSound_InDoorReverberation_C					-40130	-50	760
+3020	Dng_01Gra_42_01	0	CPP_MapGimmick_BlockingBox					-27747	6550	900
+3020	Dng_01Gra_42_01	15	BP_MapGimmick_EventTrigger_C				SubEv_C01_Castle_01[{progress:15}==10]	-30819	-5567	52
+3020	Dng_01Gra_42_01	2	BP_MapGimmick_EventTrigger_C				SubEv_C01_Castle_03[{progress:15}==20]	-29868	6002	942
+3020	Dng_01Gra_42_01	23	BP_MapGimmick_Object_Door_Child007_C				AirShip	-11576	0	1248
+3020	Dng_01Gra_42_01	24	BP_MapGimmick_TriggerDoor001_C					-29980	-6000	832
+3020	Dng_01Gra_42_01	31	BP_MapGimmick_Object_Door001_C				AirShip	-37981	-2	192
+3020	Dng_01Gra_42_01	34	BP_MapGimmick_TriggerDoor001_C					-29980	6000	832
+3020	Dng_01Gra_42_01	35	BP_MapGimmick_TriggerDoor001_C					-13180	5600	1212
+3020	Dng_01Gra_42_01	36	BP_MapGimmick_TriggerDoor001_C					-12379	3200	1212
+3020	Dng_01Gra_42_01	37	BP_MapGimmick_TriggerDoor001_C					-12379	-3200	1212
+3020	Dng_01Gra_42_01	5	BP_MapGimmick_SavePoint_C			{progress:15}>=29	SavePoint	-27995	5645	865
+3020	Dng_01Gra_42_01	6	BP_MapGimmick_EventTrigger_C				SubEv_C01_Castle_05[{progress:15}==30]	-12807	457	824
+3001	Dng_01Gra_43	0	BP_MapGimmick_BlockingBase_C			{progress:0}>=1050		-6800	0	0
+3001	Dng_01Gra_43	0	BlockingVolume					-3825	1000	100
+3001	Dng_01Gra_43	1	BP_MapGimmick_BlockingBase_C			{progress:0}>=1050		-6800	0	0
+3001	Dng_01Gra_43	10	BP_MapGimmick_BlockingBase_C			{progress:0}>=1050		-6800	0	10
+3001	Dng_01Gra_43	11	BP_MapGimmick_BlockingBase_C			{progress:0}>=1050		-6800	0	10
+3001	Dng_01Gra_43	12	BP_MapGimmick_BlockingBase_C			{progress:0}>=1050		-6800	0	10
+3001	Dng_01Gra_43	13	BP_MapGimmick_BlockingBase_C			{progress:0}>=1050		-6800	0	10
+3001	Dng_01Gra_43	14	BP_MapGimmick_BlockingBase_C			{progress:0}>=1050		-6800	0	10
+3001	Dng_01Gra_43	15	BP_MapGimmick_BlockingBase_C			{progress:0}>=1050		-6800	0	10
+3001	Dng_01Gra_43	16	BP_MapGimmick_BlockingBase_C			{progress:0}>=1050		-6800	0	10
+3001	Dng_01Gra_43	2	BP_MapGimmick_BlockingBase_C			{progress:0}>=1050		-6800	0	0
+3001	Dng_01Gra_43	200	BP_MapGimmick_EventTrigger_C				Tutorial_Tent[!{flag:1228}]	-4185	5	-170
+3001	Dng_01Gra_43	22	BP_MapGimmick_NoEntry_C				C01_Dng01Gra43_NoEntry_01[!{flag:100}&!{flag:102}] C01_Dng01Gra43_NoEntry_02[{flag:100}&!{flag:102}] C01_Dng01Gra43_NoEntry_03[!{flag:102}&{flag:101}]	-7247	-83	-140
+3001	Dng_01Gra_43	25	BP_MapGimmick_SavePoint_C				SavePoint	-3862	-551	-200
+3001	Dng_01Gra_43	3	BP_MapGimmick_BlockingBase_C			{progress:0}>=1050		-6800	0	10
+3001	Dng_01Gra_43	4	BP_MapGimmick_BlockingBase_C			{progress:0}>=1050		-6800	0	0
+3001	Dng_01Gra_43	5	BP_MapGimmick_BlockingBase_C			{progress:0}>=1050		-6800	0	0
+3001	Dng_01Gra_43	6	BP_MapGimmick_BlockingBase_C			{progress:0}>=1050		-6800	0	0
+3001	Dng_01Gra_43	7	BP_MapGimmick_BlockingBase_C			{progress:0}>=1050		-6800	0	10
+3001	Dng_01Gra_43	8	BP_MapGimmick_BlockingBase_C			{progress:0}>=1050		-6520	-110	10
+3001	Dng_01Gra_43	9	BP_MapGimmick_BlockingBase_C			{progress:0}>=1050		-6800	0	0
+10001	Dng_01Gra_44_01	0	BP_MapSound_InDoorReverberation_C					2780	-70	0
+10001	Dng_01Gra_44_01	0	BP_MapSound_InDoorReverberation_C					2780	-70	0
+10001	Dng_01Gra_44_01	2	BP_MapGimmick_InteractEventTrigger_C			{progress:2}==40	ChrEv_0020_005_01[{progress:2}==40]	5260	-45	75
+10059	Dng_01Gra_46_01	1	CPP_MapGimmick_BlockingBox			!{flag:550}		5023	0	85
+3030	Dng_02Lan_40_01	0	CPP_MapGimmick_BlockingBox					-2037	295	4584
+3030	Dng_02Lan_40_01	1	CPP_MapGimmick_BlockingBox					-2036	295	3431
+3030	Dng_02Lan_40_01	12	BP_MapGimmick_Object_Door002_C				AirShip[{progress:0}>=1230] C01_Dng02Lan40_NoEntry_01[{progress:0}<=1220]	-5300	0	30
+3030	Dng_02Lan_40_01	13	BP_MapGimmick_Floor_Elevator_009_C					9750	2492	6784
+3030	Dng_02Lan_40_01	14	BP_MapGimmick_Floor_Elevator_009_C					-1855	278	4423
+3030	Dng_02Lan_40_01	15	BP_MapGimmick_InteractEventTrigger_C				ChrEv_0030_003_01[{progress:3}==20]	9395	-10	17850
+3030	Dng_02Lan_40_01	2	BP_MapGimmick_SavePoint_C				SavePoint	12689	753	6856
+3030	Dng_02Lan_40_01	3	BP_MapGimmick_BlockingBase_Child_MagicPot_C			!{flag:914}	Gim_EV_Majipot_Encount_01[!{flag:914}]	-2342	836	4431
+3030	Dng_02Lan_40_01	4	BP_MapGimmick_SavePoint_C				SavePoint	-6002	-312	-10
+10051	Dng_02Lan_42_01	0	CPP_MapGimmick_BlockingBox			!{flag:146}		5023	10	100
+10062	Dng_02Lan_43_01	1	CPP_MapGimmick_BlockingBox			!{flag:552}		5023	60	100
+3040	Dng_03Kol_40_01	1	BP_MapGimmick_InteractEventTrigger_C				C01_ColobosBridge_03[!{flag:112}]	4895	11300	-325
+3040	Dng_03Kol_40_01	13	BP_MapGimmick_EventTrigger_C				C01_ColobosBridge_Trigger[!{flag:111}]	5155	10355	-330
+3040	Dng_03Kol_40_01	2	BP_MapGimmick_BlockingBase_C			{flag:112}		4800	10700	-399
+3040	Dng_03Kol_40_11	11	BP_MapGimmick_SavePoint_C				SavePoint	7760	-245	-1535
+3040	Dng_03Kol_40_11	13	BP_MapGimmick_BlockingBox_C					6315	24000	80
+3040	Dng_03Kol_40_11	16	BP_MapGimmick_SavePoint_C				SavePoint	1400	-580	0
+3040	Dng_03Kol_40_11	4	BP_MapGimmick_BlockingBase_C			!{flag:112}		4900	11300	-380
+3040	Dng_03Kol_40_11	6	BP_MapGimmick_BlockingBox_C			!{flag:112}		4800	10530	-400
+3040	Dng_03Kol_40_11	7	BP_MapGimmick_BlockingBox_C			!{flag:112}		4800	10870	-400
+3040	Dng_03Kol_40_11	8	BP_MapGimmick_BlockingBox_C			{flag:111}		5200	10350	-300
+3040	Dng_03Kol_40_11	9	BP_MapGimmick_BlockingBox_C			{flag:111}		5200	11050	-305
+3050	Dng_04Dir_40_01	0	BP_MapGimmick_BlockingBox_C					2200	-6750	1250
+3050	Dng_04Dir_40_01	1	BP_MapGimmick_SavePoint_C				SavePoint	850	700	0
+3050	Dng_04Dir_40_01	10	CPP_MapGimmick_EventTrigger				Summon620_Ramuh_02[{progress:12}==0&!{flag:12}|{progress:12}==10&!{flag:12}]	14140	-1639	1632
+3050	Dng_04Dir_40_01	11	BP_MapGimmick_SavePoint_C				SavePoint	13743	-968	1611
+3050	Dng_04Dir_40_01	12	BP_MapGimmick_SavePoint_C				SavePoint	8818	-593	1601
+3050	Dng_04Dir_40_01	13	BP_MapGimmick_BlockingBox_C					-50	0	200
+3050	Dng_04Dir_40_01	14	BP_MapGimmick_BlockingBox_C					11200	-5760	2200
+3050	Dng_04Dir_40_01	15	BP_MapGimmick_BlockingBox_C					6040	-3960	3000
+3050	Dng_04Dir_40_01	16	BP_MapGimmick_BlockingBox_C					-320	-16390	190
+3050	Dng_04Dir_40_01	2	CPP_MapGimmick_InteractEventTrigger			{progress:0}==2040&!{flag:205}	C02_205_Retry[{progress:0}==2040&!{flag:205}]	856	-1014	56
+3050	Dng_04Dir_40_01	3	CPP_MapGimmick_EventTrigger				SubEv_C02_ThunderMountainEnemy_01[!{flag:215}]	11181	-3721	2082
+3050	Dng_04Dir_40_01	4	CPP_MapGimmick_BlockingBox					9956	-400	2462
+3050	Dng_04Dir_40_01	5	CPP_MapGimmick_BlockingBox					9156	-800	2094
+3050	Dng_04Dir_40_01	6	CPP_MapGimmick_BlockingBox					871	-1000	1299
+3050	Dng_04Dir_40_01	7	BP_MapGimmick_InteractEventTrigger_C				Summon620_Ramuh_NF[{progress:12}==0&{flag:12}|{progress:12}==10&{flag:12}]	14830	-2020	1630
+3050	Dng_04Dir_40_01	8	BP_MapGimmick_InteractEventTrigger_C			{progress:34}==10|{progress:53}==20	SubEv_C02_Silvia_02[{progress:34}==10] SubEv_C08_Flavia_03[{progress:53}==20]	3680	4160	495
+3050	Dng_04Dir_40_01	9	BP_MapGimmick_InteractEventTrigger_C			{progress:47}==40	ChrEv_0420_004_01[{progress:47}==40]	11390	-2935	2070
+3060	Dng_04Dir_41_01	0	BlockingVolume					-600	-100	100
+3060	Dng_04Dir_41_01	0	CPP_MapGimmick_InteractEventTrigger				SubEv_C02_Roy_02[{progress:32}==10]	2717	-1611	0
+3060	Dng_04Dir_41_01	17	CPP_MapGimmick_BlockingBox					-400	14020	110
+3060	Dng_04Dir_41_01	4	CPP_MapGimmick_BlockingBox					1610	7990	200
+3060	Dng_04Dir_41_01	46	BP_MapGimmick_EventTrigger_C				C02_Moburizu_002_01[{flag:206}&!{flag:207}]	972	15553	1632
+3060	Dng_04Dir_41_01	47	BP_MapGimmick_EventTrigger_C				C02_Moburizu_006_01[{flag:210}&!{flag:211}&{progress:0}==2095]	-940	12019	0
+3060	Dng_04Dir_41_01	48	BP_MapGimmick_EventTrigger_C				C02_Moburizu_001_01[{progress:0}>=2095&!{flag:206}]	415	13085	1632
+3060	Dng_04Dir_41_01	49	BP_MapGimmick_EventTrigger_C				C02_Moburizu_005_01[{flag:209}&!{flag:210}&{progress:0}==2095]	2705	-4810	25
+3060	Dng_04Dir_41_01	5	CPP_MapGimmick_BlockingBox					2390	7990	1800
+3060	Dng_04Dir_41_01	50	BP_MapGimmick_EventTrigger_C				C02_Moburizu_008_01[{progress:0}==2095]	2055	-2925	-5
+3060	Dng_04Dir_41_01	60	CPP_MapGimmick_BlockingBox					810	12000	1790
+3060	Dng_04Dir_41_01	7	CPP_MapGimmick_BlockingBox					810	12000	190
+3060	Dng_04Dir_41_01	80	BP_MapGimmick_Floor_Elevator_Interact_002_C				AirShip	-400	14400	-1620
+3060	Dng_04Dir_41_01	81	BP_MapGimmick_Floor_Elevator_Interact_002_C				AirShip	2000	8000	30
+3060	Dng_04Dir_41_01	82	BP_MapGimmick_Floor_Elevator_Interact_002_C				AirShip	1200	12000	30
+3060	Dng_04Dir_41_01	83	BP_MapGimmick_Floor_Elevator_Interact_002_C				AirShip	7600	12000	830
+3060	Dng_04Dir_41_01	84	BP_MapGimmick_EventTrigger_C			!{flag:222}	C02_Dng_04Dir_41_CanNotRetrun_01[!{flag:222}]	7205	12005	837
+3060	Dng_04Dir_41_02	0	BlockingVolume					-600	-100	100
+3060	Dng_04Dir_41_02	2	CPP_MapGimmick_BlockingBox					-400	14020	110
+3060	Dng_04Dir_41_02	3	CPP_MapGimmick_BlockingBox			!{flag:207}		400	15898	1733
+3060	Dng_04Dir_41_02	72	BP_MapGimmick_Floor_Elevator_Interact_002_C				AirShip	2000	8000	30
+3060	Dng_04Dir_41_02	73	BP_MapGimmick_Floor_Elevator_Interact_002_C				AirShip	1200	12000	1630
+3060	Dng_04Dir_41_02	74	BP_MapGimmick_Floor_Elevator_Interact_002_C				AirShip	7600	12000	830
+3060	Dng_04Dir_41_02	75	BP_MapGimmick_Floor_Elevator_Interact_002_C				AirShip	-400	14400	-1620
+3060	Dng_04Dir_41_03	29	BP_MapGimmick_SavePoint_C			{progress:0}<2095 | {progress:0}>=2120	SavePoint[{progress:0}<2095 | {progress:0}>=2120]	6905	11513	802
+3060	Dng_04Dir_41_03	59	BP_MapGimmick_SavePoint_C				SavePoint	1440	560	0
+3060	Dng_04Dir_41_03	61	BP_MapGimmick_Floor_Elevator_Interact_002_C				AirShip	5200	15200	1630
+3060	Dng_04Dir_41_03	76	CPP_MapGimmick_BlockingBox					2395	10700	890
+3060	Dng_04Dir_41_03	85	BP_MapGimmick_BlockingBase_Child_MagicPot_C			!{flag:915}	Gim_EV_Majipot_Encount_02[!{flag:915}]	6130	10205	1600
+3070	Dng_04Dir_42_01	0	BP_MapGimmick_SavePoint_C				SavePoint	14249	39935	4801
+3070	Dng_04Dir_42_01	0	BP_MapSound_InDoorReverberation_C					9030	38450	4860
+3070	Dng_04Dir_42_01	0	BP_MapSound_InDoorReverberation_C					-4010	59600	5740
+3070	Dng_04Dir_42_01	0	BP_MapSound_InDoorReverberation_C					2340	30	-1350
+3070	Dng_04Dir_42_01	0	BlockingVolume					-600	37000	100
+3070	Dng_04Dir_42_01	1	BP_MapGimmick_BlockingBox_C					-285	284	89
+3070	Dng_04Dir_42_01	10	BP_MapGimmick_BlockingBox_C					8331	41752	2089
+3070	Dng_04Dir_42_01	11	BP_MapGimmick_BlockingBox_C					7679	41754	2089
+3070	Dng_04Dir_42_01	12	BP_MapGimmick_BlockingBox_C					-283	-287	92
+3070	Dng_04Dir_42_01	13	BP_MapGimmick_BlockingBox_C					-2	-403	92
+3070	Dng_04Dir_42_01	14	BP_MapGimmick_BlockingBox_C					284	-285	92
+3070	Dng_04Dir_42_01	15	BP_MapGimmick_BlockingBox_C					7584	37827	2802
+3070	Dng_04Dir_42_01	16	BP_MapGimmick_BlockingBox_C					403	0	92
+3070	Dng_04Dir_42_01	17	BP_MapGimmick_BlockingBox_C					285	285	92
+3070	Dng_04Dir_42_01	18	BP_MapGimmick_BlockingBox_C					0	403	92
+3070	Dng_04Dir_42_01	19	BP_MapGimmick_BlockingBox_C					9544	39878	1291
+3070	Dng_04Dir_42_01	2	BP_MapGimmick_BlockingBox_C					-402	3	89
+3070	Dng_04Dir_42_01	20	BP_MapGimmick_BlockingBox_C					9544	40528	1291
+3070	Dng_04Dir_42_01	21	BP_MapGimmick_BlockingBox_C					-284	284	92
+3070	Dng_04Dir_42_01	22	BP_MapGimmick_BlockingBox_C					11229	38929	1679
+3070	Dng_04Dir_42_01	23	BP_MapGimmick_BlockingBox_C					11232	38279	1679
+3070	Dng_04Dir_42_01	24	BP_MapGimmick_BlockingBox_C					-403	0	92
+3070	Dng_04Dir_42_01	25	BP_MapGimmick_BlockingBox_C					14002	40543	2489
+3070	Dng_04Dir_42_01	26	BP_MapGimmick_BlockingBox_C					13352	40543	2489
+3070	Dng_04Dir_42_01	27	BP_MapGimmick_BlockingBox_C					-282	-287	84
+3070	Dng_04Dir_42_01	28	BP_MapGimmick_BlockingBox_C					-1	-404	84
+3070	Dng_04Dir_42_01	29	BP_MapGimmick_BlockingBox_C					286	-286	84
+3070	Dng_04Dir_42_01	3	BP_MapGimmick_BlockingBox_C					-284	-283	89
+3070	Dng_04Dir_42_01	30	BP_MapGimmick_BlockingBox_C					404	0	84
+3070	Dng_04Dir_42_01	31	BP_MapGimmick_BlockingBox_C					287	284	84
+3070	Dng_04Dir_42_01	32	BP_MapGimmick_BlockingBox_C					1	403	84
+3070	Dng_04Dir_42_01	33	BP_MapGimmick_BlockingBox_C					-282	284	84
+3070	Dng_04Dir_42_01	34	BP_MapGimmick_BlockingBox_C					-401	-1	84
+3070	Dng_04Dir_42_01	35	BP_MapGimmick_BlockingBox_C					7761	37590	3002
+3070	Dng_04Dir_42_01	36	BP_MapGimmick_BlockingBox_C					9812	39618	3390
+3070	Dng_04Dir_42_01	37	BP_MapGimmick_BlockingBox_C					8012	41786	2167
+3070	Dng_04Dir_42_01	38	BP_MapGimmick_BlockingBox_C					9565	40202	1204
+3070	Dng_04Dir_42_01	39	BP_MapGimmick_BlockingBox_C					11213	38602	1794
+3070	Dng_04Dir_42_01	4	BP_MapGimmick_BlockingBox_C					1	-402	89
+3070	Dng_04Dir_42_01	40	BP_MapGimmick_BlockingBox_C					13573	40558	2584
+3070	Dng_04Dir_42_01	41	BP_MapGimmick_Floor_Elevator_Interact2_001_C				AirShip	17585	40201	5602
+3070	Dng_04Dir_42_01	42	BP_MapGimmick_SavePoint_C				SavePoint	2429	37480	0
+3070	Dng_04Dir_42_01	43	BP_MapGimmick_ElevatorWall001_C					7198	36991	811
+3070	Dng_04Dir_42_01	44	BP_MapGimmick_ElevatorWall001_C					7198	36991	2841
+3070	Dng_04Dir_42_01	45	BP_MapGimmick_ElevatorWall001_C					14019	43389	2838
+3070	Dng_04Dir_42_01	46	BP_MapGimmick_ElevatorWall001_C					14019	43397	4801
+3070	Dng_04Dir_42_01	47	BP_MapGimmick_ElevatorWall001_C					10405	40191	1211
+3070	Dng_04Dir_42_01	48	BP_MapGimmick_ElevatorWall001_C					10405	40191	3195
+3070	Dng_04Dir_42_01	49	BP_MapGimmick_ElevatorWall001_C					10405	40191	5194
+3070	Dng_04Dir_42_01	5	BP_MapGimmick_BlockingBox_C					286	-284	89
+3070	Dng_04Dir_42_01	50	BP_MapGimmick_ElevatorWall001_C					13600	36995	1213
+3070	Dng_04Dir_42_01	51	BP_MapGimmick_ElevatorWall001_C					13600	36995	3206
+3070	Dng_04Dir_42_01	52	BP_MapGimmick_ElevatorWall001_C					13600	36995	5212
+3070	Dng_04Dir_42_01	6	BP_MapGimmick_BlockingBox_C					404	1	89
+3070	Dng_04Dir_42_01	65	BP_MapGimmick_BlockingBase_Child_MagicPot_C			!{flag:916}	Gim_EV_Majipot_Encount_03[!{flag:916}]	-4010	61435	5600
+3070	Dng_04Dir_42_01	66	BP_MapGimmick_NoEntry_C			{progress:0}<=2119	SubEv_C02_Dng04Dir42_NoEntry_01[{progress:0}<=2119]	1003	37041	0
+3070	Dng_04Dir_42_01	67	BP_MapGimmick_Floor_Elevator_Interact2_001_C				AirShip	-518	1	-1198
+3070	Dng_04Dir_42_01	68	BP_MapGimmick_Floor_Elevator_Interact2_001_C				AirShip	8000	41330	1992
+3070	Dng_04Dir_42_01	69	BP_MapGimmick_Floor_Elevator_Interact2_001_C				AirShip	8098	37882	2800
+3070	Dng_04Dir_42_01	7	BP_MapGimmick_BlockingBox_C					286	285	89
+3070	Dng_04Dir_42_01	70	BP_MapGimmick_Floor_Elevator_Interact2_001_C				AirShip	11630	38600	1592
+3070	Dng_04Dir_42_01	71	BP_MapGimmick_Floor_Elevator_Interact2_001_C				AirShip	7202	37000	802
+3070	Dng_04Dir_42_01	72	BP_MapGimmick_Floor_Elevator_Interact2_001_C				AirShip	13600	37000	1206
+3070	Dng_04Dir_42_01	73	BP_MapGimmick_Floor_Elevator_Interact2_001_C				AirShip	10400	40200	1203
+3070	Dng_04Dir_42_01	74	BP_MapGimmick_Floor_Elevator_Interact2_001_C				AirShip	14024	43404	2804
+3070	Dng_04Dir_42_01	75	CPP_MapGimmick_BlockingBox					-4325	58790	5700
+3070	Dng_04Dir_42_01	8	BP_MapGimmick_BlockingBox_C					1	403	89
+3070	Dng_04Dir_42_01	9	BP_MapGimmick_BlockingBox_C					8046	37370	2802
+3061	Dng_04Dir_43_01	0	BP_MapGimmick_Floor_Elevator_Interact_002_C				AirShip	4400	3600	-10
+3290	Dng_04Dir_45_01	0	BP_MapGimmick_SavePoint_C				SavePoint	-115	13065	100
+3290	Dng_04Dir_45_01	0	BP_MapSound_InDoorReverberation_C					4100	10	2260
+3290	Dng_04Dir_45_01	1	BP_MapGimmick_InteractEventTrigger_C				12Arms_08Whip_Check[{item:10696}==0]	2286	12800	200
+3290	Dng_04Dir_45_01	10	BP_MapGimmick_InteractEventTrigger_C				12Arms_05Book_Check[{item:10597}==0]	-1699	11731	200
+3290	Dng_04Dir_45_01	11	BP_MapGimmick_InteractEventTrigger_C				12Arms_06Gun_Check[{item:10797}==0]	-1985	12802	200
+3290	Dng_04Dir_45_01	12	BP_MapGimmick_InteractEventTrigger_C				12Arms_04Hammer_Check[{item:10496}==0]	-1699	13867	200
+3290	Dng_04Dir_45_01	2	BP_MapGimmick_InteractEventTrigger_C				12Arms_02Blade_Check[{item:10297}==0]	-915	14652	200
+3290	Dng_04Dir_45_01	25	BP_MapGimmick_EventTrigger_C			!{flag:927}	12Arms_00_02[!{flag:927}]	547	12790	265
+3290	Dng_04Dir_45_01	26	BP_MapGimmick_EventTrigger_C			!{flag:927}	12Arms_00_02[!{flag:927}]	109	13236	265
+3290	Dng_04Dir_45_01	27	BP_MapGimmick_EventTrigger_C			!{flag:927}	12Arms_00_02[!{flag:927}]	-331	12790	265
+3290	Dng_04Dir_45_01	28	BP_MapGimmick_EventTrigger_C			!{flag:927}	12Arms_00_02[!{flag:927}]	109	12347	265
+3290	Dng_04Dir_45_01	3	BP_MapGimmick_InteractEventTrigger_C				12Arms_10Armor_Check[{item:11097}==0]	150	14937	200
+3290	Dng_04Dir_45_01	4	BP_MapGimmick_InteractEventTrigger_C				12Arms_12Accessorie_Check[{item:12097}==0]	1220	14654	200
+3290	Dng_04Dir_45_01	5	BP_MapGimmick_InteractEventTrigger_C				12Arms_11Cloak_Check[{item:11597}==0]	1997	13871	200
+3290	Dng_04Dir_45_01	6	BP_MapGimmick_InteractEventTrigger_C				12Arms_03Bow_Check[{item:10397}==0]	1997	11729	200
+3290	Dng_04Dir_45_01	7	BP_MapGimmick_InteractEventTrigger_C				12Arms_09HeavyArmor_Check[{item:11397}==0]	1218	10951	200
+3290	Dng_04Dir_45_01	8	BP_MapGimmick_InteractEventTrigger_C				12Arms_01Sword_Check[{item:10197}==0]	153	10663	200
+3290	Dng_04Dir_45_01	9	BP_MapGimmick_InteractEventTrigger_C				12Arms_07Rod_Check[{item:10897}==0]	-913	10947	200
+10052	Dng_04Dir_46_01	1	CPP_MapGimmick_BlockingBox			!{flag:214}		5023	0	98
+3080	Dng_05Old_40_01	0	BP_MapGimmick_GetOffPoint_C					470	10860	35
+3080	Dng_05Old_40_01	0	BP_MapGimmick_GetOffPoint_C					1000	10850	235
+3080	Dng_05Old_40_01	0	BP_MapGimmick_GetOffPoint_C					2301	11501	15
+3080	Dng_05Old_40_01	0	BP_MapGimmick_GetOffPoint_C					1580	9620	8
+3080	Dng_05Old_40_01	0	BP_MapGimmick_GetOffPoint_C					1560	13810	5
+3080	Dng_05Old_40_01	0	BP_MapGimmick_GetOffPoint_C					105	67317	65
+3080	Dng_05Old_40_01	0	BP_MapGimmick_GetOffPoint_C					2126	66375	65
+3080	Dng_05Old_40_01	0	BP_MapGimmick_GetOffPoint_C					655	39255	30
+3080	Dng_05Old_40_01	0	BP_MapGimmick_GetOffPoint_C					2214	39375	25
+3080	Dng_05Old_40_01	0	BP_MapGimmick_GetOffPoint_C					595	67327	65
+3080	Dng_05Old_40_01	10	BP_MapGimmick_RaftVisibleChange_C					1620	13950	150
+3080	Dng_05Old_40_01	11	BP_MapGimmick_Raft_GetOff_C					635	10850	80
+3080	Dng_05Old_40_01	12	BP_MapGimmick_Raft_GetOff_C					825	57320	0
+3080	Dng_05Old_40_01	13	BP_MapGimmick_SavePoint_C				SavePoint	1101	681	4
+3080	Dng_05Old_40_01	14	BP_MapGimmick_BlockingBox_Switch_C					2405	66865	145
+3080	Dng_05Old_40_01	15	BP_MapGimmick_BlockingBox_C			{progress:0}<3080		946	-4950	37
+3080	Dng_05Old_40_01	16	BP_MapGimmick_BlockingBox_C					2399	600	850
+3080	Dng_05Old_40_01	18	CPP_MapGimmick_BlockingBox					3060	-9210	1800
+3080	Dng_05Old_40_01	19	BP_MapGimmick_SavePoint_C				SavePoint	2521	-125	800
+3080	Dng_05Old_40_01	20	BP_MapGimmick_RaftVisibleChange_C					1720	9639	39
+3080	Dng_05Old_40_01	21	BP_MapGimmick_BlockingBox_Raft_C					1515	9635	121
+3080	Dng_05Old_40_01	22	BP_MapGimmick_BlockingBox_Raft_C					1495	13850	100
+3080	Dng_05Old_40_01	23	BP_MapGimmick_BlockingBox_Raft_C					1600	13755	100
+3080	Dng_05Old_40_01	24	BP_MapGimmick_BlockingBox_Raft_C					576	10850	105
+3080	Dng_05Old_40_01	25	BP_MapGimmick_BlockingBox_Raft_C					730	39110	110
+3080	Dng_05Old_40_01	26	BP_MapGimmick_BlockingBox_Raft_C					2254	11491	58
+3080	Dng_05Old_40_01	27	BP_MapGimmick_BlockingBox_Raft_C					2122	39380	105
+3080	Dng_05Old_40_01	28	BP_MapGimmick_BlockingBox_Raft_C					90	67410	150
+3080	Dng_05Old_40_01	29	BP_MapGimmick_BlockingBox_Raft_C					640	67410	140
+3080	Dng_05Old_40_01	30	BP_MapGimmick_BlockingBox_Raft_C					2037	66384	132
+3080	Dng_05Old_40_01	4	BP_MapGimmick_RaftVisibleChange_C					2340	39395	150
+3080	Dng_05Old_40_01	43	BP_MapGimmick_Raft002_C					500	-1440	-4
+3080	Dng_05Old_40_01	44	BP_MapGimmick_Raft002_C					-553	213	0
+3080	Dng_05Old_40_01	45	BP_MapGimmick_Raft002_C					1467	1060	0
+3080	Dng_05Old_40_01	46	BP_MapGimmick_Raft002_C					1560	13651	-7
+3080	Dng_05Old_40_01	47	BP_MapGimmick_Raft002_C					65	-740	-14
+3080	Dng_05Old_40_01	48	BP_MapGimmick_Raft002_C					-160	15	-16
+3080	Dng_05Old_40_01	49	BP_MapGimmick_Raft002_C					1069	145	-19
+3080	Dng_05Old_40_01	5	BP_MapGimmick_RaftVisibleChange_C					570	39655	290
+3080	Dng_05Old_40_01	50	BP_MapGimmick_Raft002_C					1425	-1865	-14
+3080	Dng_05Old_40_01	51	BP_MapGimmick_Raft002_C					-435	-760	-14
+3080	Dng_05Old_40_01	55	BP_MapGimmick_InteractEventTrigger_C			{progress:41}==20&!{flag:323}	SubEv_C03_TreatmentGirl_04_B02[{progress:41}==20&!{flag:323}]	1746	13328	-168
+3080	Dng_05Old_40_01	56	BP_MapGimmick_RaftVisibleChange_C					1870	40455	290
+3080	Dng_05Old_40_01	57	BP_MapGimmick_RaftVisibleChange_C					405	10982	235
+3080	Dng_05Old_40_01	58	CPP_MapGimmick_BlockingBox					-1000	10	0
+3080	Dng_05Old_40_01	59	BP_MapGimmick_EventTrigger_C				SubEv_C03_TreatmentGirl_04_B01[{progress:41}==20&!{flag:328}]	-154	34	24
+3080	Dng_05Old_40_01	6	BP_MapGimmick_RaftVisibleChange_C					2445	11625	180
+3080	Dng_05Old_40_01	7	BP_MapGimmick_RaftVisibleChange_C					640	66795	435
+3080	Dng_05Old_40_01	8	BP_MapGimmick_RaftVisibleChange_C					2275	66865	310
+3080	Dng_05Old_40_01	9	BP_MapGimmick_RaftVisibleChange_C					95	67130	110
+3090	Dng_05Old_41_01	0	BP_MapGimmick_EventTrigger_C				C03_312_A_01[!{flag:305}&{progress:0}==3070]	401	-6335	-628
+3090	Dng_05Old_41_01	0	BP_MapSound_InDoorReverberation_C					3650	-4510	-240
+3090	Dng_05Old_41_01	0	BlockingVolume					0	500	100
+3090	Dng_05Old_41_01	1	BP_MapGimmick_EventTrigger_C				C03_311_01[{progress:0}==3060]	-31	-4055	-628
+3090	Dng_05Old_41_01	10	BP_MapGimmick_NoEntry_C				SubEv_05Old_Dng41_NoEntry_01[{progress:0}>=3060 & {progress:0}<3080]	0	35	25
+3090	Dng_05Old_41_01	11	BP_MapGimmick_NoEntry_C				SubEv_05Old_Dng41_NoEntry_02[{progress:0}>=3060 & {progress:0}<3080]	-10	-4635	-633
+3090	Dng_05Old_41_01	2	BP_MapGimmick_EventTrigger_C				C03_312_C_01[!{flag:307}&{progress:0}==3070]	6756	-7453	-628
+3090	Dng_05Old_41_01	3	BP_MapGimmick_EventTrigger_C				C03_312_B_01[!{flag:306}&{progress:0}==3070]	2646	-8661	-628
+3090	Dng_05Old_41_01	4	BP_MapGimmick_EventTrigger_C				C03_313_01[{progress:0}==3070]	5512	-990	-628
+3090	Dng_05Old_41_01	5	BP_MapGimmick_EventTrigger_C				C03_312_D_01[!{flag:308}&{progress:0}==3070]	4359	-3886	-616
+3090	Dng_05Old_41_01	7	BP_MapGimmick_BlockingBox_C					0	230	90
+3090	Dng_05Old_41_01	8	BP_MapGimmick_SavePoint_C				SavePoint	7281	-3265	-660
+3091	Dng_05Old_42_01	0	BP_MapGimmick_BlockingBox_C					0	230	90
+3091	Dng_05Old_42_01	0	BP_MapSound_InDoorReverberation_C					510	-2460	110
+3100	Dng_05Old_43_01	0	BP_MapSound_InDoorReverberation_C					2720	52430	-490
+3100	Dng_05Old_43_01	0	BP_MapSound_InDoorReverberation_C					-230	-14540	360
+3100	Dng_05Old_43_01	3	BP_MapGimmick_SavePoint_C				SavePoint	495	19763	5
+3100	Dng_05Old_43_01	4	BP_MapGimmick_InteractEventTrigger_C			{progress:47}==10	ChrEv_0420_002_01[{progress:47}==10]	2370	5470	50
+3100	Dng_05Old_43_01	6	BP_MapGimmick_SavePoint_C				SavePoint	670	4980	0
+3110	Dng_05Old_44_01	0	BP_MapGimmick_GetOffPoint_C					750	43350	125
+3110	Dng_05Old_44_01	0	BP_MapGimmick_GetOffPoint_C					305	50450	115
+3110	Dng_05Old_44_01	0	BP_MapGimmick_GetOffPoint_C					305	51450	105
+3110	Dng_05Old_44_01	0	BP_MapGimmick_GetOffPoint_C					305	52100	120
+3110	Dng_05Old_44_01	0	BP_MapGimmick_GetOffPoint_C					-2365	11442	130
+3110	Dng_05Old_44_01	0	BP_MapGimmick_GetOffPoint_C					-2365	12565	130
+3110	Dng_05Old_44_01	0	BP_MapGimmick_GetOffPoint_C					-870	12090	130
+3110	Dng_05Old_44_01	0	BP_MapSound_InDoorReverberation_C					940	22850	120
+3110	Dng_05Old_44_01	0	BP_MapSound_InDoorReverberation_C					3150	4740	990
+3110	Dng_05Old_44_01	0	BP_MapSound_InDoorReverberation_C					3150	45920	-2340
+3110	Dng_05Old_44_01	0	CPP_MapGimmick_EventTrigger				SubEv_05Old_Dng44_GimEv[!{flag:318}]	437	60523	-272
+3110	Dng_05Old_44_01	100	BP_MapGimmick_BlockingBase_Child_MagicPot_C			!{flag:917}	Gim_EV_Majipot_Encount_04[!{flag:917}]	-1525	12730	100
+3110	Dng_05Old_44_01	12	BP_MapGimmick_SavePoint_C				SavePoint	1500	22010	100
+3110	Dng_05Old_44_01	13	BP_MapGimmick_BlockingBox_Switch_C					-150	60020	1417
+3110	Dng_05Old_44_01	14	BP_MapGimmick_BlockingBox_Switch_C					-1200	33500	150
+3110	Dng_05Old_44_01	15	BP_MapGimmick_BlockingBox_Switch_C					-140	59980	240
+3110	Dng_05Old_44_01	16	BP_MapGimmick_BlockingBox_Switch_C					1850	13400	510
+3110	Dng_05Old_44_01	17	BP_MapGimmick_BlockingBox_Switch_C					950	60100	150
+3110	Dng_05Old_44_01	18	BP_MapGimmick_BlockingBox_Switch_C					-2100	31700	-1670
+3110	Dng_05Old_44_01	19	BP_MapGimmick_BlockingBox_Switch_C					-750	11350	550
+3110	Dng_05Old_44_01	20	BP_MapGimmick_BlockingBox_Switch_C					2040	15060	570
+3110	Dng_05Old_44_01	21	BP_MapGimmick_BlockingBox_Switch_C					100	11350	550
+3110	Dng_05Old_44_01	22	BP_MapGimmick_BlockingBox_Switch_C					-1400	11350	550
+3110	Dng_05Old_44_01	23	BP_MapGimmick_BlockingBox_Switch_C					-100	32146	-1491
+3110	Dng_05Old_44_01	24	BP_MapGimmick_BlockingBox_Switch_C					-150	60020	1417
+3110	Dng_05Old_44_01	25	BP_MapGimmick_BlockingBox_C					-55	60350	160
+3110	Dng_05Old_44_01	3	BP_MapGimmick_RaftVisibleChange_C					420	52100	340
+3110	Dng_05Old_44_01	31	BP_MapGimmick_RaftVisibleChange_C					320	50430	340
+3110	Dng_05Old_44_01	32	BP_MapGimmick_RaftVisibleChange_C					420	51440	340
+3110	Dng_05Old_44_01	33	BP_MapGimmick_BlockingBox_Raft_C					-2355	11570	189
+3110	Dng_05Old_44_01	34	BP_MapGimmick_BlockingBox_Raft_C					210	52100	200
+3110	Dng_05Old_44_01	35	BP_MapGimmick_BlockingBox_Raft_C					750	43440	150
+3110	Dng_05Old_44_01	36	BP_MapGimmick_BlockingBox_Raft_C					-2355	12427	170
+3110	Dng_05Old_44_01	37	BP_MapGimmick_BlockingBox_Raft_C					-920	12098	150
+3110	Dng_05Old_44_01	38	BP_MapGimmick_BlockingBox_Raft_C					210	50450	200
+3110	Dng_05Old_44_01	39	BP_MapGimmick_BlockingBox_Raft_C					210	51450	200
+3110	Dng_05Old_44_01	4	BP_MapGimmick_RaftVisibleChange_C					360	43160	490
+3110	Dng_05Old_44_01	5	BP_MapGimmick_RaftVisibleChange_C					-2054	12092	425
+3110	Dng_05Old_44_01	6	BP_MapGimmick_RaftVisibleChange_C					-427	12335	387
+3110	Dng_05Old_44_01	65	BP_MapGimmick_Raft002_C					750	43510	63
+3110	Dng_05Old_44_01	66	BP_MapGimmick_Raft002_C					140	50450	90
+3110	Dng_05Old_44_01	67	BP_MapGimmick_Raft002_C					140	51450	90
+3110	Dng_05Old_44_01	68	BP_MapGimmick_Raft002_C					140	52100	90
+3110	Dng_05Old_44_01	69	BP_MapGimmick_Raft002_C					-1020	12095	115
+3110	Dng_05Old_44_01	7	BP_MapGimmick_Raft_GetOff_C					750	43560	80
+3110	Dng_05Old_44_01	70	BP_MapGimmick_Raft002_C					-2360	11715	115
+3110	Dng_05Old_44_01	71	BP_MapGimmick_Raft002_C					-2370	12315	115
+3110	Dng_05Old_44_01	72	BP_MapGimmick_Floor_Elevator_Interact2_004_C				AirShip	-700	32150	-3507
+3110	Dng_05Old_44_01	77	BP_MapGimmick_BlockingBox_C					-265	60350	160
+3110	Dng_05Old_44_01	78	BP_MapGimmick_RaftVisibleChange_C					-253	11358	425
+3110	Dng_05Old_44_01	8	BP_MapGimmick_Raft_GetOff_C					-2365	11960	130
+3110	Dng_05Old_44_01	9	BP_MapGimmick_SavePoint_C				SavePoint	465	31683	-6497
+3111	Dng_05Old_45	1	BP_MapGimmick_EventTrigger_C				ChrEv_2640_003_01[{progress:29}==20]	1453	-122	0
+10053	Dng_05Old_46_01	1	CPP_MapGimmick_BlockingBox			!{flag:319}		5023	0	42
+10054	Dng_05Old_47_01	1	CPP_MapGimmick_BlockingBox			!{flag:320}		5023	0	114
+10061	Dng_05Old_48_01	0	CPP_MapGimmick_BlockingBox			!{flag:551}		5023	30	123
+3120	Dng_06Zol_40_01	10	CPP_MapGimmick_BlockingBox					-340	12781	190
+3120	Dng_06Zol_40_01	11	CPP_MapGimmick_BlockingBox					337	17397	190
+3120	Dng_06Zol_40_01	12	CPP_MapGimmick_BlockingBox					-340	17638	190
+3120	Dng_06Zol_40_01	2	BP_MapGimmick_Object_Door_Single_Slid_003_C				AirShip	760	19600	0
+3120	Dng_06Zol_40_01	5	CPP_MapGimmick_BlockingBox					337	3000	190
+3120	Dng_06Zol_40_01	6	CPP_MapGimmick_BlockingBox					-340	3000	190
+3120	Dng_06Zol_40_01	7	CPP_MapGimmick_BlockingBox					337	7889	190
+3120	Dng_06Zol_40_01	8	CPP_MapGimmick_BlockingBox					-340	7889	190
+3120	Dng_06Zol_40_01	9	CPP_MapGimmick_BlockingBox					337	12781	190
+3130	Dng_06Zol_41	0	BP_MapSound_InDoorReverberation_C					4850	13830	2580
+3130	Dng_06Zol_41	0	BP_MapSound_InDoorReverberation_C					1610	1930	210
+3130	Dng_06Zol_41	0	BP_MapSound_InDoorReverberation_C					5100	31700	540
+3130	Dng_06Zol_41_01	0	BP_MapGimmick_BlockingBase_Child_MagicPot_C			!{flag:919}	Gim_EV_Majipot_Encount_06[!{flag:919}]	3800	17360	295
+3130	Dng_06Zol_41_01	1	CPP_MapGimmick_BlockingBox					1117	11942	760
+3130	Dng_06Zol_41_01	18	BP_MapGimmick_BlockingBox_Switch_C					3250	11550	750
+3130	Dng_06Zol_41_01	19	BP_MapGimmick_BlockingBox_Switch_C					1650	9710	750
+3130	Dng_06Zol_41_01	20	BP_MapGimmick_BlockingBox_Switch_C					3060	12000	750
+3130	Dng_06Zol_41_01	21	BP_MapGimmick_BlockingBox_Switch_C					1250	13700	50
+3130	Dng_06Zol_41_01	22	BP_MapGimmick_BlockingBox_Switch_C					2960	13700	50
+3130	Dng_06Zol_41_01	23	BP_MapGimmick_BlockingBox_Switch_C					4660	13700	50
+3130	Dng_06Zol_41_01	24	BP_MapGimmick_BlockingBox_C					1180	12650	100
+3130	Dng_06Zol_41_01	28	CPP_MapGimmick_EventTrigger				C04_421_01[{progress:0}==4140]	6442	13709	32
+3130	Dng_06Zol_41_01	3	BP_MapGimmick_SavePoint_C				SavePoint	1062	12985	5
+3130	Dng_06Zol_41_01	61	BP_MapGimmick_TriggerDoor_Slid_004_large_C					7950	13700	0
+3130	Dng_06Zol_41_01	62	BP_MapGimmick_TriggerDoor_Slid_004_large_C					3400	1900	0
+3130	Dng_06Zol_41_01	63	BP_MapGimmick_InteractEventTrigger_C			{progress:48}==30	ChrEv_2630_004_01[{progress:48}==30]	7235	12850	142
+3140	Dng_06Zol_42	0	BP_MapSound_InDoorReverberation_C					-3190	3080	-190
+3140	Dng_06Zol_42_01	0	BlockingVolume					300	0	700
+3140	Dng_06Zol_42_01	1	CPP_MapGimmick_BlockingBox					-6780	7397	-720
+3140	Dng_06Zol_42_01	100	BP_MapGimmick_BlockingBase_Child_MagicPot_C			!{flag:918}	Gim_EV_Majipot_Encount_05[!{flag:918}]	-2205	12645	-1600
+3140	Dng_06Zol_42_01	17	BP_MapGimmick_Object_Door_Single_Slid_001_C				AirShip	2475	-3430	15
+3140	Dng_06Zol_42_01	18	BP_MapGimmick_Object_Door_Single_Slid_001_C				AirShip	-4600	7770	-1190
+3140	Dng_06Zol_42_01	19	BP_MapGimmick_Object_Door_Single_Slid_001_C				AirShip	-7770	14005	-790
+3140	Dng_06Zol_42_01	2	BP_MapGimmick_SavePoint_C				SavePoint	2936	-5658	-600
+3140	Dng_06Zol_42_01	20	BP_MapGimmick_Object_Door_Single_Slid_001_C			{progress:0}<=4160	AirShip	-2606	713	-590
+3140	Dng_06Zol_42_01	21	BP_MapGimmick_Object_Door_Single_Slid_001_C			{progress:0}>=4170		-2931	656	-590
+3140	Dng_06Zol_42_01	3	BP_MapGimmick_SavePoint_C				SavePoint	-10960	12205	-1400
+3140	Dng_06Zol_42_01	4	BP_MapGimmick_BlockingBox_C					2805	-6100	-500
+3140	Dng_06Zol_42_01	6	BP_MapGimmick_BlockingBox_C					415	0	100
+3150	Dng_06Zol_43	0	BP_MapSound_InDoorReverberation_C					1790	-48130	-140
+3150	Dng_06Zol_43_01	0	BP_MapGimmick_SavePoint_C				SavePoint	4210	-46760	5
+3150	Dng_06Zol_43_01	1	BP_MapGimmick_EventTrigger_C				SubEv_Dng_06Zol_43_GimEv_01[{progress:0}==4180]	3163	-97691	32
+3150	Dng_06Zol_43_01	10	BP_MapGimmick_Object_Door_Single_Slid_004_C				AirShip	440	-34328	0
+3150	Dng_06Zol_43_01	101	BP_MapGimmick_BlockingBase_Child_Paper_Zol43_C			{progress:0}>=4250	FEV_Town_06Zol_43_1730_02[{flag:1402}]	670	-74525	5
+3150	Dng_06Zol_43_01	11	BP_MapGimmick_Object_Door_Single_Slid_004_C				AirShip	440	-68728	0
+3150	Dng_06Zol_43_01	12	BP_MapGimmick_Object_Door_Single_Slid_004_C				AirShip	440	-70328	0
+3150	Dng_06Zol_43_01	13	BP_MapGimmick_Object_Door_Single_Slid_004_C				AirShip	440	-72928	0
+3150	Dng_06Zol_43_01	14	BP_MapGimmick_Object_Door_Single_Slid_004_C				AirShip	440	-74528	0
+3150	Dng_06Zol_43_01	15	BP_MapGimmick_Object_Door_Single_Slid_004_C				AirShip	3640	-80928	0
+3150	Dng_06Zol_43_01	16	BP_MapGimmick_Object_Door_Single_Slid_004_C				SubEv_Dng_06Zol_43_GimEv_04	3600	-82533	0
+3150	Dng_06Zol_43_01	17	BP_MapGimmick_Object_Door_Single_Slid_004_C				AirShip	3640	-96728	0
+3150	Dng_06Zol_43_01	18	BP_MapGimmick_Object_Door_Single_Slid_004_C					3640	-98328	0
+3150	Dng_06Zol_43_01	19	BP_MapGimmick_Object_Door_Single_Slid_004_C				AirShip	440	-10528	0
+3150	Dng_06Zol_43_01	20	BP_MapGimmick_Object_Door_Single_Slid_004_C				AirShip	440	-12128	0
+3150	Dng_06Zol_43_01	21	BP_MapGimmick_Object_Door_Single_Slid_004_C				AirShip	440	-38528	0
+3150	Dng_06Zol_43_01	22	BP_MapGimmick_Object_Door_Single_Slid_004_C				AirShip	440	-36928	0
+3150	Dng_06Zol_43_01	24	BP_MapGimmick_SavePoint_C				SavePoint	-1030	210	0
+3150	Dng_06Zol_43_01	25	CPP_MapGimmick_BlockingBox					4050	-47730	250
+3150	Dng_06Zol_43_01	8	BP_MapGimmick_Object_Door_Single_Slid_005_C				AirShip	1337	-47000	0
+3150	Dng_06Zol_43_01	9	BP_MapGimmick_Object_Door_Single_Slid_004_C					410	-32730	15
+3160	Dng_06Zol_44	0	BP_MapSound_InDoorReverberation_C					35646	5640	1968
+3160	Dng_06Zol_44_01	0	BP_MapGimmick_SavePoint_C			{progress:0}<5000	SavePoint[{progress:0}<5000]	28630	6630	400
+3160	Dng_06Zol_44_01	1	CPP_MapGimmick_InteractEventTrigger			!{flag:409}	SubEv_Dng_06Zol_44_GimEv_05_01[!{flag:409}]	31794	2801	1300
+3160	Dng_06Zol_44_01	16	BP_MapGimmick_TriggerDoor003_C					30322	3200	1215
+3160	Dng_06Zol_44_01	17	BP_MapGimmick_TriggerDoor003_C					30322	-3200	1215
+3160	Dng_06Zol_44_01	18	BP_MapGimmick_TriggerDoor003_C					29522	-6000	1215
+3160	Dng_06Zol_44_01	19	BP_MapGimmick_TriggerDoor003_C					29522	5600	1215
+3160	Dng_06Zol_44_01	20	BP_MapGimmick_EventTrigger_C				SubEv_Dng_06Zol_44_GimEv_01[!{flag:407}&{progress:0}!=0]	30703	-595	1181
+3160	Dng_06Zol_44_01	21	BP_MapGimmick_Object_Door_Child_06Zol_44_C				SubEv_Dng_06Zol_44_GimEv_01[{item:20021}==0&!{flag:407}] SubEv_Dng_06Zol_44_GimEv_02[{item:20021}==0&{flag:407}] SubEv_Dng_06Zol_44_GimEv_07[{item:20021}==1&!{flag:422}] AirShip[{flag:422}] AirShip[{progress:0}==0]	31122	0	1244
+3160	Dng_06Zol_44_01	3	BP_MapGimmick_SavePoint_C			{progress:0}<5000	SavePoint[{progress:0}<5000]	30926	-392	1180
+3160	Dng_06Zol_44_01	30	CPP_MapGimmick_InteractEventTrigger			{flag:409}&!{flag:421}	SubEv_Dng_06Zol_44_GimEv_05_02[{flag:409}&!{flag:421}]	31794	2801	1310
+3160	Dng_06Zol_44_01	4	BP_MapGimmick_SavePoint_C			{progress:0}<5000	SavePoint[{progress:0}<5000]	29656	16630	3540
+3160	Dng_06Zol_44_01	5	CPP_MapGimmick_InteractEventTrigger			{flag:409}&!{flag:421}	SubEv_Dng_06Zol_44_GimEv_06[{flag:409}&!{flag:421}]	29453	-2390	570
+3160	Dng_06Zol_44_01	6	CPP_MapGimmick_EventTrigger			{item:20021}==0	SubEv_Dng_06Zol_44_GimEv_03[{item:20021}==0]	30392	5596	1211
+3160	Dng_06Zol_44_01	7	BP_MapGimmick_EventTrigger_C				C04_430_01[{progress:0}==4200]	28683	1995	423
+3160	Dng_06Zol_44_01	8	BP_MapGimmick_NoEntry_C				C04_06Zol_02_NoEntry_02[{progress:0}<4250]	27190	-20	415
+3160	Dng_06Zol_44_01	9	BP_MapGimmick_EventTrigger_C				SubEv_Dng_06Zol_44_GimEv_01[!{flag:407}&{progress:0}!=0]	30269	3	1181
+3131	Dng_06Zol_45	0	BP_MapSound_InDoorReverberation_C					2160	49	470
+3131	Dng_06Zol_45_01	100	BP_MapGimmick_Object_Door_Slid_Child_06Zol_45_C				AirShip[{progress:0}>=4130] C04_Dng_06Zol_45_NoEntry_01[{progress:0}<4130]	2600	0	270
+10030	Dng_06Zol_46	0	BP_MapSound_InDoorReverberation_C					2380	-70	0
+3121	Dng_06Zol_47	0	BP_MapGimmick_EventTrigger_C					5	753	79
+3121	Dng_06Zol_47	1	BP_MapGimmick_EventTrigger_C			!{flag:425}		-20	0	-104
+3121	Dng_06Zol_47	2	BP_MapGimmick_EventTrigger_C			!{flag:426}		-20	0	-104
+3121	Dng_06Zol_47	3	BP_MapGimmick_EventTrigger_C			!{flag:423}		-20	0	-104
+3121	Dng_06Zol_47	4	BP_MapGimmick_EventTrigger_C			!{flag:424}		-20	0	-104
+3121	Dng_06Zol_47	5	BP_MapGimmick_EventTrigger_C			!{flag:427}		-20	0	-104
+3121	Dng_06Zol_47	6	BP_MapGimmick_EventTrigger_C			!{flag:428}		-20	0	-104
+3121	Dng_06Zol_47	7	CPP_MapGimmick_BlockingBox					-5	730	135
+3121	Dng_06Zol_47	8	CPP_MapGimmick_BlockingBox					0	5195	82
+10031	Dng_06Zol_48	0	BP_MapSound_InDoorReverberation_C					2380	-70	0
+10055	Dng_06Zol_49_01	1	CPP_MapGimmick_BlockingBox			!{flag:433}		5023	0	100
+10056	Dng_06Zol_50_01	1	CPP_MapGimmick_BlockingBox			!{flag:434}		5033	20	100
+3170	Dng_07Mys_40_01	0	BP_MapGimmick_EventTrigger_C				C05_506_01[{progress:0}==5040]	420	0	0
+3180	Dng_07Mys_41_01	0	CPP_MapGimmick_InteractEventTrigger			!{flag:521}&{flag:528}	SubEv_StoneStatue_Abyss_Choice[!{flag:521}&{flag:528}]	3530	-24701	820
+3180	Dng_07Mys_41_01	1	CPP_MapGimmick_InteractEventTrigger			!{flag:522}&{flag:528}	SubEv_StoneStatue_Sun_Choice[!{flag:522}&{flag:528}]	851	-5837	320
+3180	Dng_07Mys_41_01	19	BP_MapGimmick_TriggerDoor_Child005_C					2422	-14000	135
+3180	Dng_07Mys_41_01	2	CPP_MapGimmick_InteractEventTrigger			!{flag:523}&{flag:528}	SubEv_StoneStatue_Peace_Choice[!{flag:523}&{flag:528}]	851	-1554	320
+3180	Dng_07Mys_41_01	20	BP_MapGimmick_TriggerDoor_Child005_C					3822	-25500	715
+3180	Dng_07Mys_41_01	21	BP_MapGimmick_TriggerDoor004_C					23	-16000	135
+3180	Dng_07Mys_41_01	22	BP_MapGimmick_TriggerDoor004_C					23	-12000	135
+3180	Dng_07Mys_41_01	24	BP_MapGimmick_NoEntry_C			!{flag:520}	SubEv_BarrierReleased_02[!{flag:520}]	2094	-14001	209
+3180	Dng_07Mys_41_01	25	CPP_MapGimmick_BlockingBox					400	820	190
+3180	Dng_07Mys_41_01	26	BP_MapGimmick_SavePoint_C				SavePoint	850	-120	100
+3180	Dng_07Mys_41_01	3	BP_MapGimmick_BlockingBase_C			!{flag:527}		1492	-11975	167
+3180	Dng_07Mys_41_01	4	BP_MapGimmick_SavePoint_C				SavePoint	3495	-25880	680
+3180	Dng_07Mys_41_01	9	BP_MapGimmick_BlockingBase_C			!{flag:526}		1511	-15996	168
+3190	Dng_07Mys_42_01	0	CPP_MapGimmick_BlockingBox					31537	47142	11400
+3190	Dng_07Mys_42_01	1	BP_MapGimmick_Floor_Elevator_Child_C					29095	45410	5853
+3190	Dng_07Mys_42_01	10	BP_MapGimmick_InteractEventTrigger_C			{progress:0}>=5090&{progress:0}<5108&!{flag:533}	C05_Library_Bookshelf_D[{progress:0}>=5090&{progress:0}<5108&!{flag:533}]	28809	44602	7715
+3190	Dng_07Mys_42_01	100	BP_MapGimmick_BlockingBase_Child_MagicPot_C			!{flag:920}	Gim_EV_Majipot_Encount_07[!{flag:920}]	28060	45510	7700
+3190	Dng_07Mys_42_01	11	BP_MapGimmick_SavePoint_C				SavePoint	31217	46329	11300
+3190	Dng_07Mys_42_01	12	BP_MapGimmick_ElevatorWall001_C					30549	47942	5870
+3190	Dng_07Mys_42_01	13	BP_MapGimmick_ElevatorWall001_C					30549	47937	4075
+3190	Dng_07Mys_42_01	14	BP_MapGimmick_ElevatorWall001_C					31064	46542	4075
+3190	Dng_07Mys_42_01	15	BP_MapGimmick_ElevatorWall001_C					31059	46542	5880
+3190	Dng_07Mys_42_01	16	BP_MapGimmick_ElevatorWall001_C					29594	45317	4075
+3190	Dng_07Mys_42_01	17	BP_MapGimmick_ElevatorWall001_C					29100	45405	2285
+3190	Dng_07Mys_42_01	18	BP_MapGimmick_ElevatorWall001_C					29095	45405	5875
+3190	Dng_07Mys_42_01	19	BP_MapGimmick_ElevatorWall001_C					29605	45315	5875
+3190	Dng_07Mys_42_01	20	BP_MapGimmick_ElevatorWall001_C					29089	48192	4070
+3190	Dng_07Mys_42_01	21	BP_MapGimmick_ElevatorWall001_C					29084	48195	5875
+3190	Dng_07Mys_42_01	22	BP_MapGimmick_ElevatorWall001_C					30339	48087	2275
+3190	Dng_07Mys_42_01	23	BP_MapGimmick_ElevatorWall001_C					30339	48087	4075
+3190	Dng_07Mys_42_01	24	BP_MapGimmick_ElevatorWall001_C					30244	47882	475
+3190	Dng_07Mys_42_01	3	BP_MapGimmick_Floor_Elevator_Child_C					31057	46536	4056
+3190	Dng_07Mys_42_01	31	BP_MapGimmick_InteractEventTrigger_C			{progress:0}>=5090&{progress:0}<5108&!{flag:534}	C05_Library_Bookshelf_E[{progress:0}>=5090&{progress:0}<5108&!{flag:534}]	30386	49005	7713
+3190	Dng_07Mys_42_01	32	BP_MapGimmick_Floor_Elevator_Child_C					30335	48080	4052
+3190	Dng_07Mys_42_01	33	BP_MapGimmick_Floor_Elevator_Child_C					30552	47936	4051
+3190	Dng_07Mys_42_01	34	BP_MapGimmick_InteractEventTrigger_C			{progress:0}==5108	C05_Library_Bookshelf_Boss[{progress:0}==5108]	31974	46800	11312
+3190	Dng_07Mys_42_01	36	BP_MapGimmick_InteractEventTrigger_C			{progress:0}>=5120&{progress:0}<=5170	Gim_EV_07Mys_MagicBook_Library[{progress:0}>=5120&{progress:0}<=5170]	30646	46786	11406
+3190	Dng_07Mys_42_01	37	BP_MapGimmick_Floor_Elevator_Child_C					29092	48186	4052
+3190	Dng_07Mys_42_01	38	BP_MapGimmick_InteractEventTrigger_C			{progress:8}==10	ChrEv_0080_002_01[{progress:8}==10]	31960	46765	11312
+3190	Dng_07Mys_42_01	39	BP_MapGimmick_BlockingBase_07Mys_42_PointLight_C			{progress:0}>=5090		27555	46798	7868
+3190	Dng_07Mys_42_01	4	BP_MapGimmick_Floor_Elevator_Child_C					29600	45319	4056
+3190	Dng_07Mys_42_01	5	BP_MapGimmick_InteractEventTrigger_C			{progress:0}>=5090&{progress:0}<5108&!{flag:530}	C05_Library_Bookshelf_A[{progress:0}>=5090&{progress:0}<5108&!{flag:530}]	27745	45360	2327
+3190	Dng_07Mys_42_01	6	BP_MapGimmick_SavePoint_C				SavePoint	31740	46360	500
+3190	Dng_07Mys_42_01	8	BP_MapGimmick_InteractEventTrigger_C			{progress:0}>=5090&{progress:0}<5108&!{flag:531}	C05_Library_Bookshelf_B[{progress:0}>=5090&{progress:0}<5108&!{flag:531}]	31581	48005	2372
+3190	Dng_07Mys_42_01	9	BP_MapGimmick_InteractEventTrigger_C			{progress:0}>=5090&{progress:0}<5108&!{flag:532}	C05_Library_Bookshelf_C[{progress:0}>=5090&{progress:0}<5108&!{flag:532}]	28792	48984	5920
+3200	Dng_07Mys_43	0	BP_MapSound_InDoorReverberation_C					7560	-4050	3200
+3200	Dng_07Mys_43	0	BP_MapSound_InDoorReverberation_C					9070	-2130	3200
+3200	Dng_07Mys_43	0	BP_MapSound_InDoorReverberation_C					9890	-210	3200
+3200	Dng_07Mys_43	0	BP_MapSound_InDoorReverberation_C					9450	1870	3200
+3200	Dng_07Mys_43	0	BP_MapSound_InDoorReverberation_C					7370	2960	3340
+3200	Dng_07Mys_43	0	BP_MapSound_InDoorReverberation_C					-1570	40	440
+3200	Dng_07Mys_43_01	0	BP_MapGimmick_InteractEventTrigger_C				ChrEv_0080_003_01[{progress:8}==20]	6580	0	10860
+3200	Dng_07Mys_43_01	100	BP_MapGimmick_BlockingBase_Child_MagicPot_C			!{flag:921}	Gim_EV_Majipot_Encount_08[!{flag:921}]	3715	970	4410
+3200	Dng_07Mys_43_01	12	BP_MapGimmick_Object_Door006_C				AirShip	765	0	185
+3200	Dng_07Mys_43_01	13	BP_MapGimmick_Floor_Elevator_Interact2_004_C				AirShip	6960	0	4586
+3200	Dng_07Mys_43_01	15	BP_MapGimmick_SavePoint_C				SavePoint	410	-310	140
+3200	Dng_07Mys_43_01	16	BP_MapGimmick_BlockingBox_C					-295	279	80
+3200	Dng_07Mys_43_01	17	BP_MapGimmick_BlockingBox_C					-412	-2	80
+3200	Dng_07Mys_43_01	18	BP_MapGimmick_BlockingBox_C					-294	-288	80
+3200	Dng_07Mys_43_01	19	BP_MapGimmick_BlockingBox_C					-9	-407	80
+3200	Dng_07Mys_43_01	2	BP_MapGimmick_EventTrigger_C				C05_528_01[{progress:0}==5190]	5430	0	10806
+3200	Dng_07Mys_43_01	20	BP_MapGimmick_BlockingBox_C					276	-289	80
+3200	Dng_07Mys_43_01	21	BP_MapGimmick_BlockingBox_C					276	280	80
+3200	Dng_07Mys_43_01	22	BP_MapGimmick_BlockingBox_C					-9	398	80
+3200	Dng_07Mys_43_01	23	BP_MapGimmick_BlockingBox_C					4445	284	10851
+3200	Dng_07Mys_43_01	24	BP_MapGimmick_BlockingBox_C					4328	3	10851
+3200	Dng_07Mys_43_01	25	BP_MapGimmick_BlockingBox_C					4446	-283	10851
+3200	Dng_07Mys_43_01	26	BP_MapGimmick_BlockingBox_C					4731	-402	10851
+3200	Dng_07Mys_43_01	27	CPP_MapGimmick_InteractEventTrigger				Gim_EV_07Mys_MagicBook_Tower[{progress:0}>=5205&{progress:0}!=5290]	7408	0	10964
+3200	Dng_07Mys_43_01	28	BP_MapGimmick_BlockingBox_C					5016	-284	10851
+3200	Dng_07Mys_43_01	29	BP_MapGimmick_BlockingBox_C					5016	285	10851
+3200	Dng_07Mys_43_01	3	BP_MapGimmick_SavePoint_C			{progress:0}!=5290	SavePoint[{progress:0}!=5290]	7490	540	10910
+3200	Dng_07Mys_43_01	30	BP_MapGimmick_BlockingBox_C					4731	403	10851
+3200	Dng_07Mys_43_01	31	BP_MapGimmick_SavePoint_C			{progress:0}==5290	SavePoint[{progress:0}==5290]	7490	540	10910
+3200	Dng_07Mys_43_01	32	BP_MapGimmick_Floor_Elevator_Interact2_004_C				AirShip	4743	0	10765
+3200	Dng_07Mys_43_01	8	BP_MapGimmick_EventTrigger_C				C05_540_Retry[{progress:0}==5290]	6860	25	10950
+3210	Dng_07Mys_44_01	1	CPP_MapGimmick_InteractEventTrigger			{progress:0}<5260	C05_520_01[{progress:0}<5160] C05_536_01[{progress:0}==5260] C05_525_01[!{flag:507}&{progress:0}==5160] C05_525_01_B[{flag:507}&{progress:0}==5160]	-334	16517	32
+3210	Dng_07Mys_44_01	14	CPP_MapGimmick_EventTrigger			{progress:0}==5205	C05_530_02[{progress:0}==5205]	-1533	18864	57
+3210	Dng_07Mys_44_01	2	CPP_MapGimmick_InteractEventTrigger			{progress:0}<5210	C05_520_02[{progress:0}<=5160] C05_525_02[{progress:0}==5165]	-1551	19269	32
+3210	Dng_07Mys_44_01	23	BP_MapGimmick_BlockingBase_Chain002_C			{progress:0}>=5260		-100	16500	0
+3210	Dng_07Mys_44_01	24	BP_MapGimmick_BlockingBase_Chain004_C			{progress:0}>=5160		-100	16500	0
+3210	Dng_07Mys_44_01	25	BP_MapGimmick_SavePoint_C				SavePoint	-1700	16860	10
+3210	Dng_07Mys_44_01	27	CPP_MapGimmick_InteractEventTrigger				Gim_EV_07Mys_MagicBook_SWtoTow[{progress:0}>5180] Gim_EV_07Mys_MagicBook_SWtoLib[{progress:0}<5180]	-1480	16500	32
+3210	Dng_07Mys_44_01	3	CPP_MapGimmick_BlockingBox			{progress:0}<5210		-1550	19392	160
+3210	Dng_07Mys_44_01	6	BP_MapGimmick_BlockObject_Gate_C			{progress:0}<5260		-100	16500	0
+3210	Dng_07Mys_44_01	7	BP_MapGimmick_BlockObject_Gate_C			{progress:0}>=5260		-100	16500	745
+3210	Dng_07Mys_44_01	8	BP_MapGimmick_BlockingBase_Childbridge_C			{progress:0}>=5200		-1550	19850	5
+3211	Dng_07Mys_45	1	BP_MapGimmick_NoEntry_C			{progress:0}>=5240 & {progress:0}<5250	C05_Dng_07Mys_45_NoEntry_01[{progress:0}>=5240 & {progress:0}<5250]	-950	77360	130
+3211	Dng_07Mys_45	11	BP_MapGimmick_EventTrigger_C			!{flag:501}		-40	0	-100
+3211	Dng_07Mys_45	12	BP_MapGimmick_EventTrigger_C			!{flag:504}		-40	0	-100
+3211	Dng_07Mys_45	15	CPP_MapGimmick_EventTrigger				C05_522_01[{progress:0}==5130]	-605	-15311	81
+3211	Dng_07Mys_45	16	CPP_MapGimmick_EventTrigger				C05_523_01[{progress:0}==5140]	-278	-16082	31
+3212	Dng_07Mys_46	0	BP_MapGimmick_NoEntry_C			{progress:0}>=5230	C05_Dng_07Mys_46_NoEntry_01[{progress:0}>=5230]	-6750	42070	130
+3212	Dng_07Mys_46	19	CPP_MapGimmick_EventTrigger				C05_531_01[{progress:0}==5210]	-787	39702	132
+3212	Dng_07Mys_46	2	BP_MapGimmick_EventTrigger_C				C05_524_01[{progress:0}==5150]	-2894	-33944	38
+10057	Dng_07Mys_47_01	1	CPP_MapGimmick_BlockingBox			!{flag:548}		5063	0	100
+10058	Dng_07Mys_48_01	0	CPP_MapGimmick_BlockingBox			!{flag:549}		5023	30	100
+3220	Dng_08Gro_40_01	0	BP_MapGimmick_WarpCamera_C					419	8783	-167
+3220	Dng_08Gro_40_01	0	BP_MapGimmick_WarpCamera_C					103	6208	-167
+3220	Dng_08Gro_40_01	0	BP_MapGimmick_WarpCamera_C					-604	8908	-167
+3220	Dng_08Gro_40_01	0	BP_MapGimmick_WarpCamera_C					-603	8908	-167
+3220	Dng_08Gro_40_01	0	BP_MapGimmick_WarpCamera_C					1150	6884	-167
+3220	Dng_08Gro_40_01	0	BP_MapGimmick_WarpCamera_C					1	-2	23
+3220	Dng_08Gro_40_01	0	BP_MapGimmick_WarpCamera_C					428	9650	-167
+3220	Dng_08Gro_40_01	0	BP_MapGimmick_WarpCamera_C					1150	9650	-167
+3220	Dng_08Gro_40_01	0	BP_MapGimmick_WarpCamera_C					-850	8066	-167
+3220	Dng_08Gro_40_01	0	BP_MapGimmick_WarpCamera_C					900	9375	-167
+3220	Dng_08Gro_40_01	0	BP_MapGimmick_WarpCamera_C					-553	5650	-167
+3220	Dng_08Gro_40_01	0	BP_MapGimmick_WarpCamera_C					445	7566	-167
+3220	Dng_08Gro_40_01	0	BP_MapGimmick_WarpCamera_C					-850	9399	-167
+3220	Dng_08Gro_40_01	0	BP_MapGimmick_WarpCamera_C					-607	9650	-167
+3220	Dng_08Gro_40_01	0	BP_MapGimmick_WarpCamera_C					-178	9374	-167
+3220	Dng_08Gro_40_01	0	BP_MapGimmick_WarpCamera_C					1150	8785	-167
+3220	Dng_08Gro_40_01	0	BP_MapGimmick_WarpCamera_C					968	7526	-167
+3220	Dng_08Gro_40_01	10	BP_MapGimmick_Warp_Child04_C					1536	8785	-93
+3220	Dng_08Gro_40_01	100	BP_MapGimmick_BlockingBase_Child_MagicPot_C			!{flag:922}	Gim_EV_Majipot_Encount_09[!{flag:922}]	1620	5460	1550
+3220	Dng_08Gro_40_01	11	BP_MapGimmick_Warp_Child04_C					103	6208	-93
+3220	Dng_08Gro_40_01	12	BP_MapGimmick_Warp_Child04_C					-595	8909	-93
+3220	Dng_08Gro_40_01	13	BP_MapGimmick_Warp_Child04_C					445	7566	-93
+3220	Dng_08Gro_40_01	14	BP_MapGimmick_Warp_Child04_C					-607	9884	-93
+3220	Dng_08Gro_40_01	15	BP_MapGimmick_Warp_Child04_C					428	9943	-93
+3220	Dng_08Gro_40_01	16	BP_MapGimmick_Warp_Child04_C					1589	9947	-93
+3220	Dng_08Gro_40_01	17	BP_MapGimmick_Warp_Child03_C					260	-15808	114
+3220	Dng_08Gro_40_01	18	BP_MapGimmick_Warp_Child02_C					0	-9900	110
+3220	Dng_08Gro_40_01	19	BP_MapGimmick_Warp_Child02_C					-838	14174	210
+3220	Dng_08Gro_40_01	22	BP_MapGimmick_BlockingBox_C					1253	6007	374
+3220	Dng_08Gro_40_01	23	BP_MapGimmick_BlockingBox_C					1505	7645	-100
+3220	Dng_08Gro_40_01	31	BP_MapGimmick_InteractEventTrigger_C				C06_606_01[{progress:0}==6030]	901	27299	125
+3220	Dng_08Gro_40_01	4	BP_MapGimmick_SavePoint_C				SavePoint	810	425	5
+3220	Dng_08Gro_40_01	40	BP_MapGimmick_Object_Door_Single_Slid_001_C				AirShip	706	-5000	0
+3220	Dng_08Gro_40_01	41	BP_MapGimmick_Object_Door_Slid001_Small_C				Gim_EV_HaveKeyItemLV1	1512	-1130	60
+3220	Dng_08Gro_40_01	42	BP_MapGimmick_Object_Door_Slid001_Small_C				Gim_EV_HaveKeyItemLV2	1512	1125	60
+3220	Dng_08Gro_40_01	43	BP_MapGimmick_Object_Door_Slid001_C				Gim_EV_HaveKeyItemLV3	2644	0	70
+3220	Dng_08Gro_40_01	47	BP_MapGimmick_Floor_Elevator001_C					-160	19500	3180
+3220	Dng_08Gro_40_01	48	BP_MapGimmick_TriggerDoor_Slid_004_large_C					1649	19500	150
+3220	Dng_08Gro_40_01	49	BP_MapGimmick_TriggerDoor_Slid_002_C					-123	14500	98
+3220	Dng_08Gro_40_01	50	BP_MapGimmick_TriggerDoor_Slid_002_C					2200	24950	-700
+3220	Dng_08Gro_40_01	9	BP_MapGimmick_Warp_Child04_C					419	8783	-93
+3230	Dng_08Gro_41_01	10	BP_MapGimmick_SavePoint_C				SavePoint	-390	-470	-100
+3230	Dng_08Gro_41_01	2	BP_MapGimmick_SavePoint_C				SavePoint	7450	-10900	2550
+3230	Dng_08Gro_41_01	3	BP_MapGimmick_BlockingBox_C					370	640	-30
+3230	Dng_08Gro_41_01	4	BP_MapGimmick_BlockingBox_C					2480	-13490	2630
+3230	Dng_08Gro_41_01	5	BP_MapGimmick_EventTrigger_C				C06_611_01[{progress:0}==6080]	5501	-10523	2572
+3240	Dng_08Gro_42	0	BP_MapSound_InDoorReverberation_C					-450	13200	800
+3240	Dng_08Gro_42_01	14	BP_MapGimmick_Floor_Elevator_Interact2_002_C				AirShip	-3900	350	-5590
+3240	Dng_08Gro_42_01	15	BP_MapGimmick_SavePoint_C				SavePoint	-3905	895	-8095
+3240	Dng_08Gro_42_01	16	BP_MapGimmick_BlockingBox_C					-1645	-1900	-3200
+3240	Dng_08Gro_42_01	17	CPP_MapGimmick_BlockingBox					301	2862	-412
+3240	Dng_08Gro_42_01	18	CPP_MapGimmick_BlockingBox					521	2771	-412
+3240	Dng_08Gro_42_01	19	CPP_MapGimmick_BlockingBox					85	2770	-412
+3240	Dng_08Gro_42_01	2	CPP_MapGimmick_BlockingBox					-1500	14850	200
+3240	Dng_08Gro_42_01	20	CPP_MapGimmick_BlockingBox					-6	2552	-412
+3240	Dng_08Gro_42_01	21	CPP_MapGimmick_BlockingBox					86	2331	-412
+3240	Dng_08Gro_42_01	22	CPP_MapGimmick_BlockingBox					612	2551	-412
+3240	Dng_08Gro_42_01	23	CPP_MapGimmick_BlockingBox					521	2332	-412
+3240	Dng_08Gro_42_01	24	BP_MapGimmick_Floor_Elevator_Interact2_002_C				AirShip	300	2550	-8100
+3240	Dng_08Gro_42_01	25	CPP_MapGimmick_EventTrigger				C06_616_01[{progress:0}==6110]	-2879	350	-8036
+3240	Dng_08Gro_42_01	26	BP_MapGimmick_ElevatorWall001_C					-3900	350	-5590
+3240	Dng_08Gro_42_01	27	BP_MapGimmick_ElevatorWall001_C					-3900	350	-8073
+3240	Dng_08Gro_42_01	3	BP_MapGimmick_BlockingBox_C					-1645	1900	-3200
+3240	Dng_08Gro_42_01	4	BP_MapGimmick_SavePoint_C				SavePoint	420	12610	100
+3240	Dng_08Gro_42_01	5	BP_MapGimmick_ElevatorWall001_C					310	2550	-8100
+3240	Dng_08Gro_42_01	6	BP_MapGimmick_ElevatorWall001_C					304	2541	-525
+3250	Dng_08Gro_43	0	BP_MapSound_InDoorReverberation_C					590	37480	950
+3250	Dng_08Gro_43	0	BP_MapSound_InDoorReverberation_C					1270	-20	350
+3250	Dng_08Gro_43	0	BP_MapSound_InDoorReverberation_C					140	80430	950
+3250	Dng_08Gro_43	0	BP_MapSound_InDoorReverberation_C					840	58230	2300
+3250	Dng_08Gro_43	0	BP_MapSound_InDoorReverberation_C					-610	101830	2300
+3250	Dng_08Gro_43	0	BP_MapSound_InDoorReverberation_C					-10	-16870	2050
+3250	Dng_08Gro_43_01	0	BP_MapGimmick_BlockingBox_C					-5290	0	100
+3250	Dng_08Gro_43_01	1	BP_MapGimmick_BlockingBox_C					-3100	-950	100
+3250	Dng_08Gro_43_01	10	BP_MapGimmick_BlockingBox_C					-450	101601	3200
+3250	Dng_08Gro_43_01	100	BP_MapGimmick_InteractEventTrigger_C				C06_Dng_08Gro_43_Theme_01	730	27485	0
+3250	Dng_08Gro_43_01	101	BP_MapGimmick_InteractEventTrigger_C				C06_619_01_A[!{flag:617}] C06_Dng_08Gro_43_Theme_02[{flag:617}]	640	37820	0
+3250	Dng_08Gro_43_01	102	BP_MapGimmick_InteractEventTrigger_C				C06_619_01_B[!{flag:618}] C06_Dng_08Gro_43_Theme_03[{flag:618}]	640	48315	0
+3250	Dng_08Gro_43_01	103	BP_MapGimmick_InteractEventTrigger_C				C06_619_01_C[!{flag:619}] C06_Dng_08Gro_43_Theme_04[{flag:619}]	485	68375	170
+3250	Dng_08Gro_43_01	104	BP_MapGimmick_InteractEventTrigger_C				C06_619_01_D[!{flag:620}] C06_Dng_08Gro_43_Theme_05[{flag:620}]	495	80980	170
+3250	Dng_08Gro_43_01	105	BP_MapGimmick_InteractEventTrigger_C				C06_Dng_08Gro_43_Theme_06	-405	91250	170
+3250	Dng_08Gro_43_01	106	BP_MapGimmick_InteractEventTrigger_C				C06_Dng_08Gro_43_Theme_07	-3905	625	64
+3250	Dng_08Gro_43_01	107	BP_MapGimmick_BlockingBox_C					260	103835	2187
+3250	Dng_08Gro_43_01	108	BP_MapGimmick_NoEntry_C			!{flag:617}	C06_Dng_08Gro_43_NoEntry_02[!{flag:617}]	790	37345	90
+3250	Dng_08Gro_43_01	109	BP_MapGimmick_NoEntry_C			!{flag:618}	C06_Dng_08Gro_43_NoEntry_02[!{flag:618}]	790	47850	90
+3250	Dng_08Gro_43_01	11	BP_MapGimmick_BlockingBox_C					-450	102100	3200
+3250	Dng_08Gro_43_01	110	BP_MapGimmick_NoEntry_C			!{flag:619}	C06_Dng_08Gro_43_NoEntry_02[!{flag:619}]	-205	68815	265
+3250	Dng_08Gro_43_01	111	BP_MapGimmick_NoEntry_C			!{flag:620}	C06_Dng_08Gro_43_NoEntry_02[!{flag:620}]	-205	80475	265
+3250	Dng_08Gro_43_01	112	BP_MapGimmick_BlockingBox_C					-104	103832	2187
+3250	Dng_08Gro_43_01	113	BP_MapGimmick_BlockingBox_C					79	103910	2187
+3250	Dng_08Gro_43_01	114	BP_MapGimmick_BlockingBox_C					337	103658	2187
+3250	Dng_08Gro_43_01	115	BP_MapGimmick_BlockingBox_C					-180	103651	2187
+3250	Dng_08Gro_43_01	116	BP_MapGimmick_Floor_Elevator_Interact2_003_C				AirShip	-450	102750	150
+3250	Dng_08Gro_43_01	117	BP_MapGimmick_Floor_Elevator_Interact2_003_C				AirShip	-450	100850	650
+3250	Dng_08Gro_43_01	118	BP_MapGimmick_Floor_Elevator_Interact2_003_C				AirShip	-450	101350	1650
+3250	Dng_08Gro_43_01	119	BP_MapGimmick_Floor_Elevator_Interact2_003_C				AirShip	-450	102590	2650
+3250	Dng_08Gro_43_01	12	BP_MapGimmick_BlockingBox_C					-700	101850	3200
+3250	Dng_08Gro_43_01	120	BP_MapGimmick_Floor_Elevator_Interact2_003_C				AirShip	-450	101850	2150
+3250	Dng_08Gro_43_01	13	BP_MapGimmick_BlockingBox_C					-624	101672	3200
+3250	Dng_08Gro_43_01	14	BP_MapGimmick_BlockingBox_C					-626	102026	3200
+3250	Dng_08Gro_43_01	15	BP_MapGimmick_BlockingBox_C					-273	101674	3200
+3250	Dng_08Gro_43_01	16	BP_MapGimmick_BlockingBox_C					-273	102027	3200
+3250	Dng_08Gro_43_01	17	BP_MapGimmick_BlockingBox_C					-450	101101	1200
+3250	Dng_08Gro_43_01	18	BP_MapGimmick_BlockingBox_C					-450	101600	1200
+3250	Dng_08Gro_43_01	19	BP_MapGimmick_BlockingBox_C					-450	103000	700
+3250	Dng_08Gro_43_01	2	BP_MapGimmick_BlockingBox_C					-450	100601	2700
+3250	Dng_08Gro_43_01	20	BP_MapGimmick_BlockingBox_C					-700	101350	1200
+3250	Dng_08Gro_43_01	200	BP_MapGimmick_SavePoint_C				SavePoint	695	26485	1
+3250	Dng_08Gro_43_01	201	BP_MapGimmick_SavePoint_C				SavePoint	680	47345	1
+3250	Dng_08Gro_43_01	202	BP_MapGimmick_SavePoint_C				SavePoint	-715	91500	150
+3250	Dng_08Gro_43_01	203	BP_MapGimmick_SavePoint_C				SavePoint	240	101525	3250
+3250	Dng_08Gro_43_01	204	BP_MapGimmick_SavePoint_C				SavePoint	7545	-285	0
+3250	Dng_08Gro_43_01	21	BP_MapGimmick_BlockingBox_C					-624	101172	1200
+3250	Dng_08Gro_43_01	22	BP_MapGimmick_BlockingBox_C					-626	101526	1200
+3250	Dng_08Gro_43_01	23	BP_MapGimmick_BlockingBox_C					-273	101174	1200
+3250	Dng_08Gro_43_01	24	BP_MapGimmick_BlockingBox_C					-273	101527	1200
+3250	Dng_08Gro_43_01	25	BP_MapGimmick_BlockingBox_C					-700	102750	700
+3250	Dng_08Gro_43_01	256	BP_MapGimmick_BlockingBase_Child_MagicPot_C			!{flag:923}	Gim_EV_Majipot_Encount_10[!{flag:923}]	1290	59015	997
+3250	Dng_08Gro_43_01	26	BP_MapGimmick_BlockingBox_C					-624	102572	700
+3250	Dng_08Gro_43_01	27	BP_MapGimmick_BlockingBox_C					-626	102926	700
+3250	Dng_08Gro_43_01	28	BP_MapGimmick_BlockingBox_C					-273	102574	700
+3250	Dng_08Gro_43_01	29	BP_MapGimmick_BlockingBox_C					-273	102927	700
+3250	Dng_08Gro_43_01	3	BP_MapGimmick_BlockingBox_C					-450	101100	2700
+3250	Dng_08Gro_43_01	30	BP_MapGimmick_BlockingBox_C					-3100	950	100
+3250	Dng_08Gro_43_01	31	BP_MapGimmick_BlockingBox_C					-1450	0	100
+3250	Dng_08Gro_43_01	32	BP_MapGimmick_BlockingBox_C					-450	100601	700
+3250	Dng_08Gro_43_01	33	BP_MapGimmick_BlockingBox_C					-450	101100	700
+3250	Dng_08Gro_43_01	34	BP_MapGimmick_BlockingBox_C					-700	100850	700
+3250	Dng_08Gro_43_01	35	BP_MapGimmick_BlockingBox_C					-624	100672	700
+3250	Dng_08Gro_43_01	36	BP_MapGimmick_BlockingBox_C					-626	101026	700
+3250	Dng_08Gro_43_01	37	BP_MapGimmick_BlockingBox_C					-273	100674	700
+3250	Dng_08Gro_43_01	38	BP_MapGimmick_BlockingBox_C					-273	101027	700
+3250	Dng_08Gro_43_01	39	BP_MapGimmick_BlockingBox_C					-450	101101	1700
+3250	Dng_08Gro_43_01	4	BP_MapGimmick_BlockingBox_C					-700	100850	2700
+3250	Dng_08Gro_43_01	40	BP_MapGimmick_BlockingBox_C					7400	-950	100
+3250	Dng_08Gro_43_01	41	BP_MapGimmick_BlockingBox_C					-450	101600	1700
+3250	Dng_08Gro_43_01	42	BP_MapGimmick_BlockingBox_C					-700	101350	1700
+3250	Dng_08Gro_43_01	43	BP_MapGimmick_BlockingBox_C					-624	101172	1700
+3250	Dng_08Gro_43_01	44	BP_MapGimmick_BlockingBox_C					-626	101526	1700
+3250	Dng_08Gro_43_01	45	BP_MapGimmick_BlockingBox_C					-273	101174	1700
+3250	Dng_08Gro_43_01	46	BP_MapGimmick_BlockingBox_C					-273	101527	1700
+3250	Dng_08Gro_43_01	47	BP_MapGimmick_BlockingBox_C					-450	102361	1700
+3250	Dng_08Gro_43_01	48	BP_MapGimmick_BlockingBox_C					-450	102860	1700
+3250	Dng_08Gro_43_01	49	BP_MapGimmick_BlockingBox_C					-700	102610	1700
+3250	Dng_08Gro_43_01	5	BP_MapGimmick_BlockingBox_C					-624	100672	2700
+3250	Dng_08Gro_43_01	50	BP_MapGimmick_BlockingBox_C					-624	102432	1700
+3250	Dng_08Gro_43_01	51	BP_MapGimmick_BlockingBox_C					7400	950	100
+3250	Dng_08Gro_43_01	52	BP_MapGimmick_BlockingBox_C					-626	102786	1700
+3250	Dng_08Gro_43_01	53	BP_MapGimmick_BlockingBox_C					-273	102434	1700
+3250	Dng_08Gro_43_01	54	BP_MapGimmick_BlockingBox_C					-273	102787	1700
+3250	Dng_08Gro_43_01	55	BP_MapGimmick_BlockingBox_C					-450	101601	2200
+3250	Dng_08Gro_43_01	56	BP_MapGimmick_BlockingBox_C					-450	102100	2200
+3250	Dng_08Gro_43_01	57	BP_MapGimmick_BlockingBox_C					-700	101850	2200
+3250	Dng_08Gro_43_01	58	BP_MapGimmick_BlockingBox_C					-624	101672	2200
+3250	Dng_08Gro_43_01	59	BP_MapGimmick_BlockingBox_C					-626	102026	2200
+3250	Dng_08Gro_43_01	6	BP_MapGimmick_BlockingBox_C					-626	101026	2700
+3250	Dng_08Gro_43_01	60	BP_MapGimmick_BlockingBox_C					-273	101674	2200
+3250	Dng_08Gro_43_01	61	BP_MapGimmick_BlockingBox_C					-273	102027	2200
+3250	Dng_08Gro_43_01	62	BP_MapGimmick_BlockingBox_C					6450	0	100
+3250	Dng_08Gro_43_01	63	BP_MapGimmick_BlockingBox_C					-450	102341	2700
+3250	Dng_08Gro_43_01	64	BP_MapGimmick_BlockingBox_C					-450	102840	2700
+3250	Dng_08Gro_43_01	65	BP_MapGimmick_BlockingBox_C					-700	102590	2700
+3250	Dng_08Gro_43_01	66	BP_MapGimmick_BlockingBox_C					-624	102412	2700
+3250	Dng_08Gro_43_01	67	BP_MapGimmick_BlockingBox_C					-626	102766	2700
+3250	Dng_08Gro_43_01	68	BP_MapGimmick_BlockingBox_C					-273	102414	2700
+3250	Dng_08Gro_43_01	69	BP_MapGimmick_BlockingBox_C					-273	102767	2700
+3250	Dng_08Gro_43_01	7	BP_MapGimmick_BlockingBox_C					-273	100674	2700
+3250	Dng_08Gro_43_01	70	BP_MapGimmick_BlockingBox_C					-180	103651	1187
+3250	Dng_08Gro_43_01	71	BP_MapGimmick_EventTrigger_C				C06_620_01[{progress:0}==6130]	-3555	50	0
+3250	Dng_08Gro_43_01	72	BP_MapGimmick_EventTrigger_C				Dng_08Gro_43_Encount_01[!{flag:608}]	1200	27000	231
+3250	Dng_08Gro_43_01	73	BP_MapGimmick_EventTrigger_C				Dng_08Gro_43_Encount_02[!{flag:609}]	1200	37350	231
+3250	Dng_08Gro_43_01	74	BP_MapGimmick_EventTrigger_C				Dng_08Gro_43_Encount_03[!{flag:610}]	1200	47850	231
+3250	Dng_08Gro_43_01	75	BP_MapGimmick_EventTrigger_C				Dng_08Gro_43_Encount_04[!{flag:611}]	-200	69100	381
+3250	Dng_08Gro_43_01	76	BP_MapGimmick_EventTrigger_C				Dng_08Gro_43_Encount_05[!{flag:612}]	-200	80206	381
+3250	Dng_08Gro_43_01	77	BP_MapGimmick_EventTrigger_C				Dng_08Gro_43_Encount_06[!{flag:613}]	85	90750	388
+3250	Dng_08Gro_43_01	79	BP_MapGimmick_BlockingBox_C					337	103658	1187
+3250	Dng_08Gro_43_01	8	BP_MapGimmick_BlockingBox_C					-450	102501	700
+3250	Dng_08Gro_43_01	80	BP_MapGimmick_BlockingBox_C					79	103910	1187
+3250	Dng_08Gro_43_01	81	BP_MapGimmick_BlockingBox_C					-104	103832	1187
+3250	Dng_08Gro_43_01	83	BP_MapGimmick_BlockingBox_C					260	103835	1187
+3250	Dng_08Gro_43_01	87	BP_MapGimmick_Object_Door005_C				AirShip	3665	16050	600
+3250	Dng_08Gro_43_01	88	BP_MapGimmick_Object_Door005_C				AirShip	8305	0	0
+3250	Dng_08Gro_43_01	89	BP_MapGimmick_Object_Door004_C				AirShip	2530	37350	250
+3250	Dng_08Gro_43_01	9	BP_MapGimmick_BlockingBox_C					-273	101027	2700
+3250	Dng_08Gro_43_01	90	BP_MapGimmick_Object_Door004_C				AirShip	395	101850	3200
+3250	Dng_08Gro_43_01	91	BP_MapGimmick_Object_Door004_C				AirShip	2535	47850	250
+3250	Dng_08Gro_43_01	92	BP_MapGimmick_Object_Door004_C				AirShip	2635	27000	250
+3250	Dng_08Gro_43_01	93	BP_MapGimmick_BlockingBox_C					-107	103473	1187
+3250	Dng_08Gro_43_01	94	BP_MapGimmick_BlockingBox_C					270	103475	1187
+3250	Dng_08Gro_43_01	95	BP_MapGimmick_BlockingBox_C					270	103475	2187
+3250	Dng_08Gro_43_01	96	BP_MapGimmick_Floor_Elevator_Interact2_003_C				AirShip	80	103650	1145
+3250	Dng_08Gro_43_01	98	BP_MapGimmick_BlockingBox_C					-107	103473	2187
+3250	Dng_08Gro_43_01	99	BP_MapGimmick_NoEntry_C			{progress:0}==6140 | {progress:0}==6150	C06_Dng_08Gro_43_NoEntry_01[{progress:0}==6140 | {progress:0}==6150]	-4920	-60	30
+10060	Dng_08Gro_44	0	BP_MapGimmick_InteractEventTrigger_C				Summon670_Odin_02[{progress:17}==0] Summon670_Odin_02_NPC[{progress:17}==10]	6415	-1010	35
+10060	Dng_08Gro_44	0	BP_MapSound_InDoorReverberation_C					2780	-70	0
+10063	Dng_08Gro_45_01	1	CPP_MapGimmick_BlockingBox			!{flag:614}		5023	0	100
+10064	Dng_08Gro_46_01	0	CPP_MapGimmick_BlockingBox			!{flag:615}		5023	0	100
+3260	Dng_09Pha_40_01	0	BP_MapGimmick_BlockingBox_C					60	5760	100
+3260	Dng_09Pha_40_01	1	BP_MapGimmick_BlockingBox_C					-1770	10730	5150
+3260	Dng_09Pha_40_01	10	BP_MapGimmick_SavePoint_C				SavePoint	-6660	9245	4050
+3260	Dng_09Pha_40_01	4	BP_MapGimmick_SavePoint_C				SavePoint	-437	2730	0
+3260	Dng_09Pha_40_01	5	BP_MapGimmick_EventTrigger_C				C07_707_01[{progress:0}==7030]	-3778	9581	5082
+3270	Dng_09Pha_41_01	0	BP_MapGimmick_EventTrigger_C				C07_713_01[{progress:0}==7060]	235	102590	0
+3270	Dng_09Pha_41_01	1	BP_MapGimmick_SavePoint_C				SavePoint	3310	49390	5100
+3271	Dng_09Pha_42_01	0	BP_MapGimmick_SavePoint_C				SavePoint	-2570	-37060	0
+3271	Dng_09Pha_42_01	5	BP_MapGimmick_SavePoint_C				SavePoint	-1465	41200	100
+3271	Dng_09Pha_42_01	6	BP_MapGimmick_EventTrigger_C				C07_713_01[{progress:0}==7050]	-1215	40122	100
+3272	Dng_09Pha_43_01	0	BP_MapGimmick_BlockingBox_C					17805	1455	390
+3272	Dng_09Pha_43_01	0	BP_MapGimmick_EventTrigger_C				C07_716_01[{progress:0}==7070]	10760	3520	40
+3272	Dng_09Pha_43_01	4	BP_MapGimmick_SavePoint_C				SavePoint	16688	-825	203
+10065	Dng_09Pha_44_01	0	CPP_MapGimmick_BlockingBox			!{flag:700}		5023	50	100
+10066	Dng_09Pha_45_01	0	CPP_MapGimmick_BlockingBox			!{flag:701}		5023	-110	100
+3280	Dng_10Cry_40_01	0	CPP_MapGimmick_BlockingBox					1350	-174180	5950
+3280	Dng_10Cry_40_01	0	CPP_MapGimmick_BlockingBox					1405	-169240	5600
+3280	Dng_10Cry_40_01	127	BP_MapGimmick_BlockingBase_Child_EnterPrise_C					3700	-167870	4233
+3280	Dng_10Cry_40_01	128	BP_MapGimmick_BlockingBase_Child_EnterPrise_C					3670	-175120	4233
+3280	Dng_10Cry_40_01	129	BP_MapGimmick_BlockingBase_Child_EnterPrise_C					-4640	-171480	1533
+3280	Dng_10Cry_40_01	133	BP_MapGimmick_InteractEventTrigger_C				C08_Dng_10Cry_41_CanNotRetrun_01	15890	-55300	2480
+3280	Dng_10Cry_40_01	134	BP_MapGimmick_SavePoint_C				SavePoint	15500	-54600	2480
+3280	Dng_10Cry_40_01	139	BP_MapGimmick_SavePoint_C				SavePoint	-2830	-171540	2900
+3280	Dng_10Cry_40_01	140	BP_MapGimmick_SavePoint_C				SavePoint	10590	13160	500
+3280	Dng_10Cry_40_01	141	BP_MapGimmick_SavePoint_C				SavePoint	3860	-298340	3280
+3280	Dng_10Cry_40_01	142	BP_MapGimmick_BlockingBase_Child_MagicPot_C			!{flag:924}	Gim_EV_Majipot_Encount_11[!{flag:924}]	-465	-91300	880
+3280	Dng_10Cry_40_01	142	BP_MapGimmick_EventTrigger_C				C08_802_01[{progress:0}==8000]	7457	12047	532
+3280	Dng_10Cry_40_01	143	BP_MapGimmick_BlockingBase_Child_MagicPot_C			!{flag:925}	Gim_EV_Majipot_Encount_12[!{flag:925}]	3310	-294440	2470
+3280	Dng_10Cry_40_01	144	BP_MapGimmick_EventTrigger_C				C08_811_02[{progress:0}==8030]	9919	-56159	1067
+3281	Dng_10Cry_41	0	BP_MapSound_InDoorReverberation_C					550	-37880	78670
+3281	Dng_10Cry_41_01	0	BP_MapGimmick_NoEntry_C				C08_Dng_10Cry_41_NoEntry_01[{progress:0}>=8050]	11520	595	39
+3281	Dng_10Cry_41_01	0	BP_MapGimmick_SavePoint_C				SavePoint	300	-38100	78460
+5204	Event_00Eve_107	0	BP_MapSound_InDoorReverberation_C					1340	730	400
+5206	Event_00Eve_109	0	BP_MapSound_InDoorReverberation_C					1340	730	400
+5207	Event_00Eve_110	0	BP_MapSound_InDoorReverberation_C					1340	730	400
+20001	Town_00Com_01	0	BlockingVolume					530	-7	-87
+20001	Town_00Com_01	0	BlockingVolume					-201	-7	262
+20001	Town_00Com_01	0	BlockingVolume					1850	0	0
+20001	Town_00Com_01	1	BP_MapGimmick_SavePoint_C				SavePoint	2620	-450	306
+2010	Town_01Gra_01	0	BP_MapSound_InDoorReverberation_C					-7170	0	110
+2010	Town_01Gra_01	0	BlockingVolume					-7200	0	300
+2010	Town_01Gra_01	0	CPP_MapGimmick_EventTrigger				C01_017_01[{progress:0}==1095]	-2093	-3	221
+2010	Town_01Gra_01	1	BP_MapGimmick_SavePoint_C				SavePoint	9548	-211	69
+2010	Town_01Gra_01	2	BP_MapGimmick_NoEntry_C				C01_Town01Gra01_NoEntry_02	3408	-2570	0
+2010	Town_01Gra_01	3	BP_MapGimmick_NoEntry_C				C01_Town01Gra01_NoEntry_02	3408	2563	0
+2010	Town_01Gra_01	6	BP_MapGimmick_NoEntry_C				C01_Town01Gra01_NoEntry_01	-6192	7	210
+2011	Town_01Gra_02_01	0	BP_MapSound_InDoorReverberation_C					-2300	33550	710
+2011	Town_01Gra_02_01	0	BP_MapSound_InDoorReverberation_C					-7170	0	40
+2011	Town_01Gra_02_01	6	BP_MapGimmick_NoEntry_C				C01_Gra_NoEntry_01[{progress:0}<4000]	10787	-12	310
+2011	Town_01Gra_02_01	7	BP_MapGimmick_NoEntry_C				C01_Coliseum_NoEntry_01[{progress:0}<4000]	3407	-2552	0
+2013	Town_01Gra_03_01	0	BlockingVolume					-7200	0	300
+2015	Town_01Gra_04_01	0	BP_MapSound_InDoorReverberation_C					-1870	32350	570
+2015	Town_01Gra_04_01	10	BP_MapGimmick_Object_Door_Single001_C				AirShip	25180	8467	-350
+2015	Town_01Gra_04_01	11	BP_MapGimmick_Object_Door_Single001_C				AirShip	28150	6110	50
+2015	Town_01Gra_04_01	3	BP_MapGimmick_SavePoint_C				SavePoint	-1145	14140	60
+2015	Town_01Gra_04_01	7	BP_MapGimmick_Object_Door_Single001_C				AirShip	26534	4538	50
+2015	Town_01Gra_04_01	8	BP_MapGimmick_Object_Door_Single001_C				AirShip	29055	7612	50
+2015	Town_01Gra_04_01	9	BP_MapGimmick_Object_Door_Single001_C				AirShip	25847	6947	-350
+2015	Town_01Gra_04_02	17	BP_MapGimmick_TriggerDoor002_C				AirShip	-3825	33622	0
+2015	Town_01Gra_04_02	18	BP_MapGimmick_TriggerDoor002_C				AirShip	-3825	34322	0
+2016	Town_01Gra_05_01	3	BP_MapGimmick_SavePoint_C				SavePoint	-4120	70520	0
+2016	Town_01Gra_05_01	4	BP_MapGimmick_EventTrigger_C				SubEv_C01_Arena_01[!{flag:154}]	25935	-7200	505
+2000	Town_01Gra_20	0	BP_MapSound_InDoorReverberation_C					-1870	32530	340
+2000	Town_01Gra_20	0	BP_MapSound_InDoorReverberation_C					-1870	54220	120
+2000	Town_01Gra_20	0	BP_MapSound_InDoorReverberation_C					-1870	13940	4600
+2000	Town_01Gra_20	0	BP_MapSound_InDoorReverberation_C					-1870	13940	700
+2000	Town_01Gra_20	0	BP_MapSound_InDoorReverberation_C					1580	4240	700
+2000	Town_01Gra_20	0	BP_MapSound_InDoorReverberation_C					-1870	13940	2700
+2000	Town_01Gra_20	10	BP_MapGimmick_SavePoint_C				SavePoint	-860	14445	0
+2000	Town_01Gra_20	28	BP_MapGimmick_Object_Door_Single001_C				AirShip	195	2417	243
+2000	Town_01Gra_20	29	BP_MapGimmick_Object_Door_Single001_C				AirShip	2953	4768	538
+2000	Town_01Gra_20	30	BP_MapGimmick_Object_Door_Single001_C				AirShip	582	5056	243
+2000	Town_01Gra_20	31	BP_MapGimmick_Object_Door_Single001_C				C01_013_01[{progress:0}==1070] AirShip[{progress:0}>=1080] AirShip[{progress:0}==0]	777	24441	40
+2000	Town_01Gra_20	32	BP_MapGimmick_Object_Door_Single001_C				AirShip	2291	4131	538
+2000	Town_01Gra_20	33	BP_MapGimmick_Object_Door_Single001_C				AirShip	1100	3335	338
+2000	Town_01Gra_20	34	BP_MapGimmick_Object_Door_Single001_C				AirShip	1372	2742	338
+2000	Town_01Gra_20	35	BP_MapGimmick_Object_Door_Single001_C				AirShip	1621	5336	333
+2000	Town_01Gra_20	36	BP_MapGimmick_Object_Door_Single001_C				AirShip	2341	6031	333
+2000	Town_01Gra_20	37	BP_MapGimmick_Object_Door_Single001_C				AirShip	-473	13291	37
+2000	Town_01Gra_20	38	BP_MapGimmick_Object_Door_Single001_C				AirShip	427	4572	243
+2000	Town_01Gra_20	39	BP_MapGimmick_InteractEventTrigger_C			{progress:0}<5000	DT_Town_010Gra_20_Flower_01[{progress:0}<5000]	-520	24720	100
+2000	Town_01Gra_20	4	CPP_MapGimmick_EventTrigger			({equip:1001, Vision}|{equip:1002, Vision})&{progress:0}==1090	C01_015_01[({equip:1001, Vision}|{equip:1002, Vision})&{progress:0}==1090]	6439	52658	-779
+2000	Town_01Gra_20	40	BP_MapGimmick_InteractEventTrigger_C				DT_Town_010Gra_20_Chest_01[!{flag:1411}]	715	25235	85
+2000	Town_01Gra_20	6	CPP_MapGimmick_EventTrigger			{progress:0}==1080	C01_014_01[{progress:0}==1080]	5947	52674	-802
+2000	Town_01Gra_20	8	CPP_MapGimmick_NoEntry			(!{equip:1001, Vision}&!{equip:1002, Vision})&{progress:0}==1090	C01_Town01Gra20_NoEntry_01[(!{equip:1001, Vision}&!{equip:1002, Vision})&{progress:0}==1090]	6439	52658	-843
+2012	Town_01Gra_21_01	0	BlockingVolume					-11504	-1063	1314
+2012	Town_01Gra_21_01	0	BlockingVolume					-11504	1092	1314
+2012	Town_01Gra_21_01	0	BlockingVolume					-14643	-7808	500
+2012	Town_01Gra_21_01	0	BlockingVolume					-14161	-7808	500
+2012	Town_01Gra_21_01	0	BlockingVolume					4890	-983	513
+2012	Town_01Gra_21_01	0	BlockingVolume					4890	983	513
+2012	Town_01Gra_21_01	1	BP_MapGimmick_SavePoint_C				SavePoint	-12520	1305	1180
+2012	Town_01Gra_21_01	18	BP_MapGimmick_Object_Door001_C				AirShip	-37990	0	192
+2012	Town_01Gra_21_01	19	BP_MapGimmick_Object_Door_Child007_C				AirShip	-11576	0	1248
+2012	Town_01Gra_21_01	2	BP_MapGimmick_Object_Door_Single_Slid_Child01Gra_21_C				AirShip	-14400	-7796	467
+2012	Town_01Gra_21_01	21	BP_MapGimmick_TriggerDoor001_C					-29980	-6000	832
+2012	Town_01Gra_21_01	22	BP_MapGimmick_TriggerDoor001_C					-29980	6000	832
+2012	Town_01Gra_21_01	23	BP_MapGimmick_TriggerDoor001_C					-13180	5600	1212
+2012	Town_01Gra_21_01	24	BP_MapGimmick_TriggerDoor001_C					-12379	3200	1212
+2012	Town_01Gra_21_01	25	BP_MapGimmick_TriggerDoor001_C					-12379	-3200	1212
+2012	Town_01Gra_21_01	26	BP_MapGimmick_TriggerDoor001_C					-13180	-6000	1212
+2014	Town_01Gra_22_01	14	BP_MapGimmick_TriggerDoor001_C					-29980	-6000	832
+2014	Town_01Gra_22_01	15	BP_MapGimmick_TriggerDoor001_C					-29980	6000	832
+2014	Town_01Gra_22_01	16	BP_MapGimmick_TriggerDoor001_C					-13180	5600	1212
+2014	Town_01Gra_22_01	17	BP_MapGimmick_TriggerDoor001_C					-12379	3200	1212
+2014	Town_01Gra_22_01	18	BP_MapGimmick_TriggerDoor001_C					-12379	-3200	1212
+2014	Town_01Gra_22_01	19	BP_MapGimmick_TriggerDoor001_C					-13180	-6000	1212
+2014	Town_01Gra_22_01	20	BP_MapGimmick_Object_Door001_C				AirShip	-37990	0	192
+2014	Town_01Gra_22_01	25	BP_MapGimmick_SavePoint_C				SavePoint	-12520	1305	1180
+2014	Town_01Gra_22_01	26	BP_MapGimmick_NoEntry_C				DT_Town_010Gra_22_NoEntry[{progress:0}==1020]	-12818	-2963	1218
+2014	Town_01Gra_22_01	27	BP_MapGimmick_NoEntry_C				DT_Town_010Gra_22_NoEntry[{progress:0}==1020]	-13613	5355	1218
+2014	Town_01Gra_22_01	28	BP_MapGimmick_NoEntry_C				DT_Town_010Gra_22_NoEntry[{progress:0}==1020]	-14002	-2532	432
+2014	Town_01Gra_22_01	29	BP_MapGimmick_NoEntry_C				DT_Town_010Gra_22_NoEntry[{progress:0}==1020]	-14002	2539	432
+2014	Town_01Gra_22_01	3	CPP_MapGimmick_EventTrigger				C01_004_01_C[{progress:0}==1020]	-14834	0	434
+2014	Town_01Gra_22_01	30	BP_MapGimmick_Object_Door_Child007_C				AirShip	-11578	1	1244
+2014	Town_01Gra_22_01	50	BP_MapGimmick_InteractEventTrigger_C				DT_Town_010Gra_22_Desk_01	-11160	3205	1185
+2014	Town_01Gra_22_01	51	BP_MapGimmick_InteractEventTrigger_C				DT_Town_010Gra_22_BoolShell_01[{progress:0}>=1020]	-12165	2440	1180
+2020	Town_02Lan_20_01	0	BP_MapSound_InDoorReverberation_C					-3560	26380	950
+2020	Town_02Lan_20_01	0	CPP_MapGimmick_NoEntry			{progress:0}==1140	C01_023_NoEntry[{progress:0}==1140]	6737	8947	41
+2020	Town_02Lan_20_01	1	BP_MapGimmick_SavePoint_C				SavePoint	-2200	20260	65
+2020	Town_02Lan_20_01	10	CPP_MapGimmick_NoEntry			{progress:0}==1140	C01_023_NoEntry[{progress:0}==1140]	7196	4734	41
+2020	Town_02Lan_20_01	6	BP_MapGimmick_Object_Door_Single002_C				AirShip	7183	7519	30
+2020	Town_02Lan_20_01	7	BP_MapGimmick_Object_Door_Single002_C				AirShip	7578	5224	30
+2020	Town_02Lan_20_01	8	BP_MapGimmick_Object_Door_Single002_C				AirShip	9143	6033	30
+2030	Town_02Lan_21_01	0	BP_MapSound_InDoorReverberation_C					-2000	14110	2630
+2030	Town_02Lan_21_01	0	BP_MapSound_InDoorReverberation_C					2590	-2860	0
+2030	Town_02Lan_21_01	10	BP_MapGimmick_Object_Door_Single001_C				AirShip	855	-5053	443
+2030	Town_02Lan_21_01	11	BP_MapGimmick_Object_Door_Single001_C				AirShip	855	-4103	443
+2030	Town_02Lan_21_01	12	BP_MapGimmick_Object_Door_Single001_C				AirShip	2555	-1403	643
+2030	Town_02Lan_21_01	13	BP_MapGimmick_Object_Door_Single001_C				AirShip	2824	-4490	643
+2030	Town_02Lan_21_01	3	BP_MapGimmick_SavePoint_C				SavePoint	-1360	13295	61
+2030	Town_02Lan_21_01	5	CPP_MapGimmick_InteractEventTrigger				Gim_EV_BulletinBoard_02Lan_Choice	715	-1525	550
+2030	Town_02Lan_21_01	7	BP_MapGimmick_EventTrigger_C				SubEv_C01_Moogle_01[!{flag:144}&{progress:0}==1240]	680	-3470	400
+2031	Town_02Lan_22_01	0	BP_MapGimmick_GetOffPoint_C					1222	80800	73
+2031	Town_02Lan_22_01	4	BP_MapGimmick_SavePoint_C				SavePoint	1885	78880	100
+2031	Town_02Lan_22_01	42	CPP_MapGimmick_BlockingBox					-1080	80760	100
+2031	Town_02Lan_22_01	45	BP_MapGimmick_BlockingBase_C			{progress:43}==0		2500	80825	127
+2031	Town_02Lan_22_01	62	BP_MapGimmick_Object_Door_Single005_C				AirShip	2490	80610	200
+2031	Town_02Lan_22_01	63	BP_MapGimmick_Object_Door_Single005_C				AirShip	2490	79810	200
+2031	Town_02Lan_22_01	64	BP_MapGimmick_Object_Door_Single005_C				AirShip	2490	81410	200
+2031	Town_02Lan_22_01	65	BP_MapGimmick_Object_Door_Single005_C				AirShip	2490	82210	200
+2040	Town_03Kol_20_01	0	BP_MapGimmick_SavePoint_C				SavePoint	-755	3745	3065
+2040	Town_03Kol_20_01	0	BP_MapSound_InDoorReverberation_C					-2040	6110	5800
+2040	Town_03Kol_20_01	3	BP_MapGimmick_BlockingBox_C					-2849	-3500	98
+2060	Town_04Dir_01_01	0	CPP_MapGimmick_BlockingBox					1890	300	100
+2060	Town_04Dir_01_01	1	BP_MapGimmick_SavePoint_C				SavePoint	-660	30400	2065
+2060	Town_04Dir_01_01	10	BP_MapGimmick_TriggerDoor_Slid_002_C					7300	-4200	0
+2060	Town_04Dir_01_01	11	BP_MapGimmick_TriggerDoor_Slid_002_C					7300	-1800	0
+2060	Town_04Dir_01_01	12	BP_MapGimmick_TriggerDoor_Slid_002_C					7300	1800	0
+2060	Town_04Dir_01_01	13	BP_MapGimmick_TriggerDoor_Slid_002_C					7300	4200	0
+2060	Town_04Dir_01_01	14	BP_MapGimmick_TriggerDoor_Slid_001_C					11250	0	0
+2060	Town_04Dir_01_01	15	BP_MapGimmick_BlockingBox_C					-1650	0	50
+2060	Town_04Dir_01_04	16	BP_MapGimmick_EventTrigger_C			!{flag:221}	SubEv_C02_BulletinBoard[!{flag:221}]	6919	-646	24
+2060	Town_04Dir_01_04	4	CPP_MapGimmick_InteractEventTrigger				Gim_EV_BulletinBoard_04Dir_Choice	7185	-795	150
+2061	Town_04Dir_02_01	10	BP_MapGimmick_InteractEventTrigger_C			{progress:4}==20	ChrEv_0040_003_01[{progress:4}==20]	6595	4386	1664
+2061	Town_04Dir_02_01	16	BP_MapGimmick_TriggerDoor_Slid_001_C					350	0	0
+2061	Town_04Dir_02_01	17	BP_MapGimmick_BlockingBox_C					6394	-7400	100
+2061	Town_04Dir_02_01	5	CPP_MapGimmick_EventTrigger				C02_227_01[{progress:0}==2150]	4385	0	903
+2061	Town_04Dir_02_01	7	BP_MapGimmick_BlockingBox_C					6394	7399	60
+2061	Town_04Dir_02_01	9	BP_MapGimmick_EventTrigger_C			{progress:0}==2020	C02_204_01[{progress:0}==2020]	6588	68	832
+2050	Town_04Dir_20_01	0	CPP_MapGimmick_EventTrigger				C02_219_02[{progress:16}==0&{progress:0}==2120]	8915	-4000	-2005
+2050	Town_04Dir_20_01	1	CPP_MapGimmick_EventTrigger				C02_210_01[{progress:0}==2070]	8097	-3234	-2005
+2050	Town_04Dir_20_01	10	BP_MapGimmick_BlockingBase_C			{progress:0}<=2060		8134	-4976	-2778
+2050	Town_04Dir_20_01	13	BP_MapGimmick_SavePoint_C				SavePoint	7870	2070	-1940
+2050	Town_04Dir_20_01	14	BP_MapGimmick_BlockingBox_C					-40	0	190
+2050	Town_04Dir_20_01	15	BP_MapGimmick_BlockingBase_C			{progress:0}<=2060		4	-1	-100
+2050	Town_04Dir_20_01	7	BP_MapGimmick_Floor_Elevator_Interact_002_C				AirShip	4000	-800	-415
+2050	Town_04Dir_20_01	8	BP_MapGimmick_NoEntry_C			{progress:0}<2080	SubEv_C02_Town04Dir20_NoEntry_02[{progress:0}<2080]	10640	-3610	-1940
+2050	Town_04Dir_20_01	9	CPP_MapGimmick_EventTrigger				SubEv_C02_Town04Dir20_NoEntry_01[{progress:0}<=2050]	8845	-4000	-2005
+2070	Town_05Old_01_01	0	BP_MapGimmick_GetOffPoint_C					635	1115	35
+2070	Town_05Old_01_01	0	BP_MapGimmick_GetOffPoint_C					-118	-5065	53
+2070	Town_05Old_01_01	0	BP_MapGimmick_GetOffPoint_C					10463	3904	73
+2070	Town_05Old_01_01	0	BP_MapGimmick_GetOffPoint_C					10802	-4830	63
+2070	Town_05Old_01_01	0	BP_MapGimmick_GetOffPoint_C					8742	9910	63
+2070	Town_05Old_01_01	0	BP_MapSound_InDoorReverberation_C					1290	63560	300
+2070	Town_05Old_01_01	0	BP_MapSound_InDoorReverberation_C					1290	101260	300
+2070	Town_05Old_01_01	0	BP_MapSound_InDoorReverberation_C					1290	80800	240
+2070	Town_05Old_01_01	0	BlockingVolume					8000	-7700	700
+2070	Town_05Old_01_01	0	CPP_MapGimmick_EventTrigger				C03_330_01[{progress:0}==3200]	11338	6800	1220
+2070	Town_05Old_01_01	1	BP_MapGimmick_BlockingBase_C					-453	-4100	172
+2070	Town_05Old_01_01	17	BP_MapGimmick_InteractEventTrigger_C				C03_309_A[{progress:0}==3042]	4035	3005	600
+2070	Town_05Old_01_01	18	BP_MapGimmick_InteractEventTrigger_C				C03_309_B[{progress:0}==3044]	10355	4025	120
+2070	Town_05Old_01_01	19	BP_MapGimmick_InteractEventTrigger_C				C03_309_C[{progress:0}==3046]	7755	-4200	850
+2070	Town_05Old_01_01	2	BP_MapGimmick_BlockingBase_C					-453	-4415	172
+2070	Town_05Old_01_01	20	BP_MapGimmick_SavePoint_C				SavePoint	-245	58640	0
+2070	Town_05Old_01_01	23	CPP_MapGimmick_BlockingBox					-65	-5293	92
+2070	Town_05Old_01_01	24	CPP_MapGimmick_BlockingBox					814	1106	97
+2070	Town_05Old_01_01	3	CPP_MapGimmick_InteractEventTrigger				Gim_EV_BulletinBoard_05Old_Choice	530	-3440	270
+2070	Town_05Old_01_01	33	BP_MapGimmick_EventTrigger_C			{progress:0}>=3050 & !{flag:327}	C03_Town_05Old_01_CanNotRetrun_01[{progress:0}>=3050 & !{flag:327}]	7965	-6990	622
+2070	Town_05Old_01_01	73	BP_MapGimmick_Object_Door_Single004_C				AirShip	580	-3905	300
+2070	Town_05Old_01_01	74	BP_MapGimmick_Object_Door_Single004_C				AirShip	4321	5506	325
+2070	Town_05Old_01_01	83	BP_MapGimmick_NoEntry_C				SubEv_C03_Town05Old01_NoEntry_01[{progress:0}<3050] SubEv_C03_Town05Old01_NoEntry_02[{progress:0}>=3080 & {progress:0}<3130] SubEv_C03_Town05Old01_NoEntry_03[{progress:0}>=3130]	7945	-7040	622
+2070	Town_05Old_01_01	84	BP_MapGimmick_InteractEventTrigger_C				ChrEv_0030_004_01[{progress:3}==30]	3870	5	115
+2070	Town_05Old_01_01	90	CPP_MapGimmick_BlockingBox					10370	4120	113
+2070	Town_05Old_01_01	91	CPP_MapGimmick_BlockingBox					10893	-4597	115
+2080	Town_05Old_20_01	0	CPP_MapGimmick_InteractEventTrigger				ChrEv_0050_003_01[{progress:5}==20] ChrEv_0050_006_01[{progress:5}==50]	-43266	-188	79
+2080	Town_05Old_20_01	1	CPP_MapGimmick_InteractEventTrigger			{progress:0}>=3210	FEV_Town_05Old_20_Rain[{progress:5}!=20 & {progress:5}!=50&{progress:0}>=3210&{progress:3}!=40] ChrEv_0030_005_01[{progress:3}==40]	-43266	1037	79
+2090	Town_05Old_21	0	BP_MapSound_InDoorReverberation_C					-4010	32400	1510
+2090	Town_05Old_21_01	0	BP_MapGimmick_SavePoint_C				SavePoint	295	27525	500
+2090	Town_05Old_21_01	10	BP_MapGimmick_Object_Door_Single001_C				AirShip	3395	217	143
+2090	Town_05Old_21_01	11	BP_MapGimmick_Object_Door_Single001_C				AirShip	3715	2717	143
+2090	Town_05Old_21_01	12	BP_MapGimmick_Object_Door_Single001_C				AirShip	3715	3717	143
+2090	Town_05Old_21_01	13	BP_MapGimmick_Object_Door_Single001_C				AirShip	5325	1067	543
+2090	Town_05Old_21_01	14	BP_MapGimmick_TriggerDoor002_C				AirShip	-325	42422	499
+2090	Town_05Old_21_01	15	BP_MapGimmick_Object_RaftNpc_C			{progress:0}>=3190		4760	4850	80
+2090	Town_05Old_21_01	15	BP_MapGimmick_TriggerDoor002_C				AirShip	-325	41722	499
+2110	Town_06Zol_01	0	BP_MapSound_InDoorReverberation_C					-990	20000	660
+2110	Town_06Zol_01_01	0	BP_MapGimmick_InteractEventTrigger_C				C04_06Zol_01_Choice	594	-298	215
+2110	Town_06Zol_01_01	1	BP_MapGimmick_Object_Door_Single_Slid_002_C				AirShip[{progress:0}>=4100]	1105	19705	50
+2110	Town_06Zol_01_01	4	BP_MapGimmick_Trigger_Door_Single_004_C				AirShip	705	19820	50
+2110	Town_06Zol_01_01	5	CPP_MapGimmick_InteractEventTrigger				Gim_EV_BulletinBoard_06Zol_Choice ChrEv_0340_001_01[{progress:7}>=60&{progress:37}==0] ChrEv_0340_005_01[{progress:37}==40]	1191	651	150
+2110	Town_06Zol_01_01	6	BP_MapGimmick_InteractEventTrigger_C			!{flag:435}	SubEv_C04_Spy_03_02[!{flag:435}&{progress:42}>=30&{progress:42}<40]	-60	350	25
+2110	Town_06Zol_01_01	7	BP_MapGimmick_InteractEventTrigger_C			!{flag:436}	SubEv_C04_Spy_03_03[!{flag:436}&{progress:42}>=30&{progress:42}<40]	2800	-1400	25
+2110	Town_06Zol_01_01	900	BP_MapGimmick_SavePoint_C				SavePoint	-655	19875	1
+2110	Town_06Zol_01_02	0	BlockingVolume					1240	19550	110
+2111	Town_06Zol_02	0	BP_MapSound_InDoorReverberation_C					-990	20000	660
+2111	Town_06Zol_02_01	0	BP_MapGimmick_InteractEventTrigger_C				C04_06Zol_02_Choice	170	-650	180
+2111	Town_06Zol_02_01	2	BP_MapGimmick_NoEntry_C			{progress:0}<4250	C04_06Zol_02_NoEntry_01[{progress:0}<4250]	1530	-30	25
+2111	Town_06Zol_02_01	3	BP_MapGimmick_InteractEventTrigger_C			!{flag:439}	SubEv_C04_Spy_03_06[!{flag:439}&{progress:42}>=30&{progress:42}<40]	90	0	29
+2112	Town_06Zol_03	0	BP_MapSound_InDoorReverberation_C					-990	20000	660
+2112	Town_06Zol_03_01	0	BP_MapGimmick_InteractEventTrigger_C				C04_06Zol_03_Choice	2010	795	195
+2112	Town_06Zol_03_01	1	BP_MapGimmick_InteractEventTrigger_C			!{flag:437}	SubEv_C04_Spy_03_04[!{flag:437}&{progress:42}>=30&{progress:42}<40]	-165	365	35
+2113	Town_06Zol_04	0	BP_MapSound_InDoorReverberation_C					-990	22530	660
+2113	Town_06Zol_04_01	1	BP_MapGimmick_InteractEventTrigger_C				C04_06Zol_04_Choice	1800	-300	195
+2113	Town_06Zol_04_01	2	BP_MapGimmick_InteractEventTrigger_C			!{flag:438}	SubEv_C04_Spy_03_05[!{flag:438}&{progress:42}>=30&{progress:42}<40]	0	0	35
+2114	Town_06Zol_05	0	BP_MapSound_InDoorReverberation_C					-990	20000	660
+2114	Town_06Zol_05_01	0	BP_MapGimmick_InteractEventTrigger_C				C04_06Zol_05_Choice	720	-750	180
+2114	Town_06Zol_05_01	1	BP_MapGimmick_InteractEventTrigger_C				SubEv_C04_Spy_03_01[{progress:42}==20]	-150	-545	39
+2100	Town_06Zol_20	0	BP_MapSound_InDoorReverberation_C					0	10	660
+2100	Town_06Zol_20_01	0	BP_MapGimmick_NoEntry_C				C04_06Zol_20_NoEntry_01[{progress:0}<4060]	0	-2220	-30
+2100	Town_06Zol_20_01	0	BP_MapGimmick_SavePoint_C				SavePoint	-79	-620	1
+2120	Town_06Zol_21	0	BP_MapSound_InDoorReverberation_C					900	-7480	660
+2120	Town_06Zol_21	0	BP_MapSound_InDoorReverberation_C					1620	2280	450
+2120	Town_06Zol_21_01	0	BP_MapGimmick_SavePoint_C				SavePoint	160	3095	-395
+2120	Town_06Zol_21_01	0	CPP_MapGimmick_BlockingBox					2605	-1720	300
+2120	Town_06Zol_21_01	1	BP_MapGimmick_BlockingBox_C					2800	2390	680
+2120	Town_06Zol_21_01	13	BP_MapGimmick_Object_Door_Single003_C				AirShip	2170	-995	200
+2120	Town_06Zol_21_01	5	BP_MapGimmick_NoEntry_C			{progress:0}==4120	C04_Town_06Zol_21_NoEntry_01[{progress:0}==4120]	2810	1950	300
+2120	Town_06Zol_21_01	6	BP_MapGimmick_NoEntry_C			{progress:0}==4120	C04_Town_06Zol_21_NoEntry_02[{progress:0}==4120]	-445	-1810	-195
+2101	Town_06Zol_22	0	BP_MapSound_InDoorReverberation_C					0	10	660
+2101	Town_06Zol_22_01	1	BP_MapGimmick_NoEntry_C				C04_Town_06Zol_22_NoEntry_01	0	-2200	-30
+2101	Town_06Zol_22_01	2	BP_MapGimmick_NoEntry_C				C04_Town_06Zol_22_NoEntry_01	0	2170	-25
+2101	Town_06Zol_22_01	3	BP_MapGimmick_EventTrigger_C			!{flag:544}		-20	0	-101
+2102	Town_06Zol_23	0	BP_MapSound_InDoorReverberation_C					0	10	660
+2102	Town_06Zol_23_01	0	CPP_MapGimmick_InteractEventTrigger				ChrEv_0070_003_01[{progress:7}==20]	1220	-22	112
+2130	Town_07Mys_01	0	BP_MapSound_InDoorReverberation_C					22960	-100	620
+2130	Town_07Mys_01	0	BP_MapSound_InDoorReverberation_C					-6490	21670	2820
+2130	Town_07Mys_01_01	0	BP_MapGimmick_BlockingBox_C					4370	0	380
+2130	Town_07Mys_01_01	0	BP_MapGimmick_WarpCamera_C					18300	1230	272
+2130	Town_07Mys_01_01	0	BP_MapGimmick_WarpCamera_C					18300	1230	5350
+2130	Town_07Mys_01_01	0	BP_MapGimmick_WarpCamera_C					0	0	70
+2130	Town_07Mys_01_01	0	BP_MapGimmick_WarpCamera_C					0	0	-3580
+2130	Town_07Mys_01_01	1	BP_MapGimmick_InteractEventTrigger_C			{flag:541}|{progress:44}==60&!{flag:545}	SubEv_C05_MogChase_Captured_01[{flag:541}] SubEv_C05_MogChase_08[{progress:44}==60&!{flag:545}]	11827	4359	140
+2130	Town_07Mys_01_01	10	BP_MapGimmick_NoEntry_C			{progress:0}>=5020 & {progress:0}<5040	C05_Town_07Mys_01_NoEntry_01[ {progress:0}<5040]	8465	-10	420
+2130	Town_07Mys_01_01	11	CPP_MapGimmick_InteractEventTrigger				Gim_EV_07Mys_Warp_03_Choice	26662	280	5073
+2130	Town_07Mys_01_01	12	BP_MapGimmick_InteractEventTrigger_C			{progress:39}==40	ChrEv_2280_005_01[{progress:39}==40]	20775	-75	5440
+2130	Town_07Mys_01_01	13	CPP_MapGimmick_InteractEventTrigger				Gim_EV_07Mys_Warp_04_Choice	16620	-4948	783
+2130	Town_07Mys_01_01	14	BP_MapGimmick_Warp_Child01_C					18300	1230	170
+2130	Town_07Mys_01_01	15	BP_MapGimmick_Warp_Child01_C					26754	3715	4900
+2130	Town_07Mys_01_01	200	BP_MapGimmick_SavePoint_C			!{flag:545}	SavePoint[!{flag:545}]	17205	4585	170
+2130	Town_07Mys_01_01	24	BP_MapGimmick_Object_Door003_C				AirShip	17320	-4400	685
+2130	Town_07Mys_01_01	25	BP_MapGimmick_Object_Door003_C				AirShip	25950	2000	4975
+2130	Town_07Mys_01_01	26	BP_MapGimmick_EventTrigger_C				SubEv_C05_MogChase_09_entrance[{flag:545}]	5150	0	425
+2130	Town_07Mys_01_01	27	BP_MapGimmick_EventTrigger_C				SubEv_C05_MogChase_09_library[{flag:545}]	29773	-4393	4889
+2130	Town_07Mys_01_01	28	BP_MapGimmick_InteractEventTrigger_C			{progress:8}==40	ChrEv_0080_005_01[{progress:8}==40]	26315	7650	4950
+2130	Town_07Mys_01_01	29	BP_MapGimmick_EventTrigger_C					30415	-5010	5025
+2130	Town_07Mys_01_01	31	BP_MapGimmick_InteractEventTrigger_C			{flag:542}	SubEv_C05_MogChase_Captured_03[{flag:542}]	11828	4647	140
+2130	Town_07Mys_01_01	32	CPP_MapGimmick_InteractEventTrigger				Gim_EV_BulletinBoard_07_Mys_Choice	17960	2000	320
+2130	Town_07Mys_01_01	33	BP_MapGimmick_EventTrigger_C				SubEv_C05_MogChase_09_Sakurahome[{flag:545}]	17176	-4367	636
+2130	Town_07Mys_01_01	34	BP_MapGimmick_EventTrigger_C				SubEv_C05_MogChase_09_potion[{flag:545}]	25702	2003	4973
+2130	Town_07Mys_01_01	500	BP_MapGimmick_InteractEventTrigger_C				SubEv_C05_MogChase_05_NPC01[{flag:545} & ({progress:44}==0|{progress:44}==10) & !{flag:540}]	0	0	0
+2130	Town_07Mys_01_01	501	BP_MapGimmick_InteractEventTrigger_C				SubEv_C05_MogChase_05_NPC02[{flag:545} & ({progress:44}==0|{progress:44}==10) & !{flag:541}]	0	0	0
+2130	Town_07Mys_01_01	502	BP_MapGimmick_InteractEventTrigger_C				SubEv_C05_MogChase_05_NPC03[{flag:545} & ({progress:44}==0|{progress:44}==10) & !{flag:542}]	0	0	0
+2130	Town_07Mys_01_01	503	BP_MapGimmick_InteractEventTrigger_C				SubEv_C05_MogChase_05_NPC01[{flag:545} & ({progress:44}==20|{progress:44}==30) & !{flag:540}]	0	0	0
+2130	Town_07Mys_01_01	504	BP_MapGimmick_InteractEventTrigger_C				SubEv_C05_MogChase_05_NPC02[{flag:545} & ({progress:44}==20|{progress:44}==30) & !{flag:541}]	0	0	0
+2130	Town_07Mys_01_01	505	BP_MapGimmick_InteractEventTrigger_C				SubEv_C05_MogChase_05_NPC03[{flag:545} & ({progress:44}==20|{progress:44}==30) & !{flag:542}]	0	0	0
+2130	Town_07Mys_01_01	506	BP_MapGimmick_InteractEventTrigger_C				SubEv_C05_MogChase_05_NPC01[{flag:545} & ({progress:44}==40|{progress:44}==50) & !{flag:540}]	0	0	0
+2130	Town_07Mys_01_01	507	BP_MapGimmick_InteractEventTrigger_C				SubEv_C05_MogChase_05_NPC02[{flag:545} & ({progress:44}==40|{progress:44}==50) & !{flag:541}]	0	0	0
+2130	Town_07Mys_01_01	508	BP_MapGimmick_InteractEventTrigger_C				SubEv_C05_MogChase_05_NPC03[{flag:545} & ({progress:44}==40|{progress:44}==50) & !{flag:542}]	0	0	0
+2130	Town_07Mys_01_01	6	BP_MapGimmick_SavePoint_C				SavePoint	-2454	15231	2010
+2130	Town_07Mys_01_01	7	CPP_MapGimmick_InteractEventTrigger				Gim_EV_07Mys_Warp_01_Choice	10598	912	576
+2130	Town_07Mys_01_01	8	CPP_MapGimmick_InteractEventTrigger				Gim_EV_07Mys_Warp_02_Choice	17628	4805	343
+2140	Town_07Mys_20	0	BP_MapGimmick_SavePoint_C				SavePoint	-1710	42670	0
+2140	Town_07Mys_20	0	BP_MapSound_InDoorReverberation_C					-3470	35870	1290
+2140	Town_07Mys_20	10	BP_MapGimmick_Object_Door_Single001_C				AirShip	1807	1380	234
+2140	Town_07Mys_20	11	BP_MapGimmick_Object_Door_Single001_C				AirShip	3959	-1505	51
+2140	Town_07Mys_20	12	BP_MapGimmick_Object_Door_Single001_C				AirShip	3856	-2513	54
+2140	Town_07Mys_20	13	BP_MapGimmick_Object_Door_Single001_C				AirShip	598	-1029	43
+2140	Town_07Mys_20	15	BP_MapGimmick_InteractEventTrigger_C			{progress:53}==10	SubEv_C08_Flavia_02[{progress:53}==10]	4320	275	15
+2140	Town_07Mys_20	16	CPP_MapGimmick_InteractEventTrigger				Gim_EV_BulletinBoard_07_Mys_Suniu_Choice	1230	1490	325
+2150	Town_08Gro_01_01	0	BP_MapSound_InDoorReverberation_C					-2150	20500	1550
+2150	Town_08Gro_01_01	1	BP_MapGimmick_Object_Door_Single002_C				AirShip	5468	-3776	516
+2150	Town_08Gro_01_01	12	CPP_MapGimmick_BlockingBox					-270	-300	0
+2150	Town_08Gro_01_01	13	CPP_MapGimmick_InteractEventTrigger				Gim_EV_BulletinBoard_08Gro_Choice	1525	-2210	230
+2150	Town_08Gro_01_01	14	BP_MapGimmick_SavePoint_C				SavePoint	-1190	27740	520
+2150	Town_08Gro_01_01	2	BP_MapGimmick_Object_Door_Single002_C				AirShip	3850	-2110	270
+2150	Town_08Gro_01_01	3	BP_MapGimmick_Object_Door_Single002_C				AirShip	1640	-2610	110
+2150	Town_08Gro_01_01	5	BP_MapGimmick_BlockingBase_Rock_C			{progress:0}<6050|{progress:2}>=40		3825	1115	85
+2150	Town_08Gro_01_01	6	BP_MapGimmick_BlockingBase_RockBroken_C			{progress:0}>=6050&{progress:2}<=30		3825	1115	85
+2150	Town_08Gro_01_01	7	BP_MapGimmick_NoEntry_C			{progress:0}==6050	C06_Town_08Gro_01_NoEntry_01[{progress:0}==6050]	5	-300	-70
+2150	Town_08Gro_01_01	8	BP_MapGimmick_InteractEventTrigger_C			{progress:2}==0&{progress:0}>=6999	ChrEv_0020_001_01[{progress:2}==0&{progress:0}>=6999]	-1510	26620	590
+2160	Town_08Gro_20	0	BP_MapSound_InDoorReverberation_C					-3600	35150	1550
+2160	Town_08Gro_20_01	4	BP_MapGimmick_SavePoint_C				SavePoint	-3680	39760	0
+2170	Town_09Pha_01	0	BP_MapSound_InDoorReverberation_C					-1400	24900	2500
+2170	Town_09Pha_01_01	10	BP_MapGimmick_Object_Door_Single_Slid_006_C				AirShip	-1105	-2650	0
+2170	Town_09Pha_01_01	11	BP_MapGimmick_Object_Door_Single_Slid_006_C				AirShip	1745	-2000	200
+2170	Town_09Pha_01_01	12	BP_MapGimmick_Object_Door_Single_Slid_006_C				AirShip	2245	50	400
+2170	Town_09Pha_01_01	13	BP_MapGimmick_Object_Door_Single_Slid_006_C				AirShip	2245	1750	0
+2170	Town_09Pha_01_01	14	BP_MapGimmick_InteractEventTrigger_C			{progress:0}>=7000	Gim_EV_BulletinBoard_09Pha_Choice[{progress:0}>=7000]	-1305	-2275	150
+2170	Town_09Pha_01_01	2	CPP_MapGimmick_BlockingBox					2860	-2095	0
+2170	Town_09Pha_01_01	20	BP_MapGimmick_SavePoint_C				SavePoint	-530	29235	2100
+1000	Wld	0	BP_MapAirShipLandingPoint_C	3111	怪しい洞窟			-2190	-650	25
+1000	Wld	0	BP_MapAirShipLandingPoint_C	3001	ナシャトの町			5540	14600	65
+1000	Wld	0	BP_MapAirShipLandingPoint_C	2002	グランポート			10755	9795	-18
+1000	Wld	0	BP_MapAirShipLandingPoint_C	2003	セイレーンの塔			12140	9900	48
+1000	Wld	0	BP_MapAirShipLandingPoint_C	4002	ディルマギア工業都市			13190	3210	-12
+1000	Wld	0	BP_MapAirShipLandingPoint_C	5004	水の洞窟			1500	3780	244
+1000	Wld	0	BP_MapAirShipLandingPoint_C	4003	雷鳴山			15370	4320	114
+1000	Wld	0	BP_MapAirShipLandingPoint_C	4006	ドワーフの工房			15820	254	399
+1000	Wld	0	BP_MapAirShipLandingPoint_C	4004	風の神殿			20050	1900	-23
+1000	Wld	0	BP_MapAirShipLandingPoint_C	5400	オルデリオン			-1735	4785	20
+1000	Wld	0	BP_MapAirShipLandingPoint_C	4007	十二武具の間			20280	-2660	-23
+1000	Wld	0	BP_MapAirShipLandingPoint_C	5005	滝の回廊			1240	-310	35
+1000	Wld	0	BP_MapAirShipLandingPoint_C	3002	コロボス遺跡			3820	15890	-32
+1000	Wld	0	BP_MapAirShipLandingPoint_C	5001	水都オルデリオン			-90	2680	16
+1000	Wld	0	BP_MapAirShipLandingPoint_C	5002	ドール湖			4290	5420	418
+1000	Wld	0	BP_MapAirShipLandingPoint_C	6001	モズール駅			-3810	13560	450
+1000	Wld	0	BP_MapAirShipLandingPoint_C	5003	アムールの町			3570	-530	387
+1000	Wld	0	BP_MapAirShipLandingPoint_C	5006	水の神殿			5250	-1420	133
+1000	Wld	0	BP_MapAirShipLandingPoint_C	4008	チョコボレース場			15550	-680	104
+1000	Wld	0	BP_MapAirShipLandingPoint_C	6004	兵器工場			-10450	18010	646
+1000	Wld	0	BP_MapAirShipLandingPoint_C	5008	砂浜（オルデリオン）			-3000	550	17
+1000	Wld	0	BP_MapAirShipLandingPoint_C	6002	帝都ゾルダード			-7200	7200	64
+1000	Wld	0	BP_MapAirShipLandingPoint_C	4100	ディルナド船着き場			13515	4160	-23
+1000	Wld	0	BP_MapAirShipLandingPoint_C	1001	土の神殿			17250	21140	135
+1000	Wld	0	BP_MapAirShipLandingPoint_C	6003	反乱軍のアジト			-9235	13385	86
+1000	Wld	0	BP_MapAirShipLandingPoint_C	10004	クリスタルタワー			-5180	-18005	85
+1000	Wld	0	BP_MapAirShipLandingPoint_C	10216				15530	20570	260
+1000	Wld	0	BP_MapAirShipLandingPoint_C	3000	オーガの洞窟			11410	10960	140
+1000	Wld	0	BP_MapAirShipLandingPoint_C	10000	帝都前駅			-7010	8250	50
+1000	Wld	0	BP_MapAirShipLandingPoint_C	10052	アイメーバの洞窟			16940	5380	234
+1000	Wld	0	BP_MapAirShipLandingPoint_C	10055				-10060	12790	86
+1000	Wld	0	BP_MapAirShipLandingPoint_C	10057				-18690	-4150	69
+1000	Wld	0	BP_MapAirShipLandingPoint_C	10053	トートエイビスの洞窟			-1080	2660	17
+1000	Wld	0	BP_MapAirShipLandingPoint_C	10065	ブラキオレイドスの洞窟			4200	-17250	72
+1000	Wld	0	BP_MapAirShipLandingPoint_C	1003				16850	21880	42
+1000	Wld	0	BP_MapAirShipLandingPoint_C	8001	ゴロノア用飛空艇ポイント			15895	-14150	299
+1000	Wld	0	BP_MapAirShipLandingPoint_C	10066	モルボルグレートの洞窟			-5977	-19103	24
+1000	Wld	0	BP_MapAirShipLandingPoint_C	3031	シャルロットの洞窟			14550	10700	219
+1000	Wld	0	BP_MapAirShipLandingPoint_C	11000	はぐれ家			677	-4044	17
+1000	Wld	0	BP_MapAirShipLandingPoint_C	10213				-16270	-7850	262
+1000	Wld	0	BP_MapAirShipLandingPoint_C	10215				-16810	-10900	91
+1000	Wld	0	BP_MapAirShipLandingPoint_C	10057				-18990	-5180	-10
+1000	Wld	0	BP_MapAirShipLandingPoint_C	9001	シアンの町			-3920	-17480	90
+1000	Wld	0	BP_MapAirShipLandingPoint_C	10059	モルボルの洞窟			7502	-334	17
+1000	Wld	0	BP_MapAirShipLandingPoint_C	9004	レイホウ山			-5180	-18005	85
+1000	Wld	0	BP_MapAirShipLandingPoint_C	1002	グランシェルト城			12460	20700	170
+1000	Wld	0	BP_MapAirShipLandingPoint_C	9003	リュウセイ湖			-5180	-18005	85
+1000	Wld	0	BP_MapAirShipLandingPoint_C	9005	忘れ去られた城壁			-5180	-18005	85
+1000	Wld	0	BP_MapAirShipLandingPoint_C	3213	ビクトリアの洞窟			-16794	-10885	91
+1000	Wld	0	BP_MapAirShipLandingPoint_C	4000	貫穿の石碑			-10690	10010	340
+1000	Wld	0	BP_MapAirShipLandingPoint_C	10054	マインドフレイアの洞窟			4180	-2130	285
+1000	Wld	0	BP_MapAirShipLandingPoint_C	7005	ミシディアの塔			-17070	-9750	180
+1000	Wld	0	BP_MapAirShipLandingPoint_C	10056				-13730	17670	665
+1000	Wld	0	BP_MapAirShipLandingPoint_C	7004	名もなき古城			-19325	-7490	51
+1000	Wld	0	BP_MapAirShipLandingPoint_C	2031	謎の宝物庫			10500	9950	-20
+1000	Wld	0	BP_MapAirShipLandingPoint_C	10062	スカルドラゴンの洞窟			9640	-14095	168
+1000	Wld	0	BP_MapAirShipLandingPoint_C	3004	隠れた洞窟			14360	18890	34
+1000	Wld	0	BP_MapAirShipLandingPoint_C	9007	ダルナキア洞窟東			-10804	-5784	17
+1000	Wld	0	BP_MapAirShipLandingPoint_C	10061	アロサウルスの洞窟			-10562	-2525	-2
+1000	Wld	0	BP_MapAirShipLandingPoint_C	7002	スニウ村			-17675	-4550	246
+1000	Wld	0	BP_MapAirShipLandingPoint_C	9006	ダルナキア洞窟西			-10345	-11415	34
+1000	Wld	0	BP_MapAirShipLandingPoint_C	7001	魔道都市ミシディア			-17515	-8365	96
+1000	Wld	0	BP_MapAirShipLandingPoint_C	10058	スカルドラゴンの洞窟			-19220	-10880	155
+1000	Wld	0	BP_MapAirShipLandingPoint_C	2190	空き小屋			1464	-16220	47
+1000	Wld	0	BP_MapAirShipLandingPoint_C	4005	モブリズ飛空艇工場			18280	-1620	105
+1000	Wld	0	BP_MapAirShipLandingPoint_C	2001	コルの町			12470	14980	65
+1000	Wld	0	BP_MapAirShipLandingPoint_C	6600				-1770	13325	-10
+1000	Wld	0	BP_MapGimmick_BlockingBox_C					13128	-3307	17
+1000	Wld	15	BP_MapGimmick_NoEntry_C				C06_602_01[{progress:0}<6020] C06_602_Again[{progress:0}<6020&{flag:600}] C06_Wld_08Gro_NoEntry_02[ {progress:0}>=6020 & {progress:0}<=6050]	18954	-15242	704
+1000	Wld	170	BP_MapGimmick_InteractEventTrigger_C			!{flag:444}&{progress:48}==10	ChrEv_2630_002_02[!{flag:444}]	-3180	15415	448
+1000	Wld	171	BP_MapGimmick_InteractEventTrigger_C			!{flag:443}&{progress:48}==10	ChrEv_2630_002_01[!{flag:443}]	-14504	16421	636
+1000	Wld	193	BP_MapGimmick_InteractEventTrigger_C				Summon670_Odin_03_yet[{progress:17}==0] Summon670_Odin_03[{progress:17}==10|{progress:17}==20]	16685	-17063	1329
+1000	Wld	208	BP_MapGimmick_InteractEventTrigger_C			!{flag:951}&{progress:54}>=40&{progress:54}<50	SubEv_C09_Gilgamesh_09[{progress:54}>=40&{progress:54}<50]	15375	3070	325
+1000	Wld	209	BP_MapGimmick_InteractEventTrigger_C			!{flag:952}&{progress:54}>=40&{progress:54}<50	SubEv_C09_Gilgamesh_10[{progress:54}>=40&{progress:54}<50]	740	-200	10
+1000	Wld	210	BP_MapGimmick_InteractEventTrigger_C			!{flag:953}&{progress:54}>=40&{progress:54}<50	SubEv_C09_Gilgamesh_11[{progress:54}>=40&{progress:54}<50]	-3505	14430	460
+1000	Wld	211	BP_MapGimmick_InteractEventTrigger_C			!{flag:954}&{progress:54}>=40&{progress:54}<50	SubEv_C09_Gilgamesh_12[{progress:54}>=40&{progress:54}<50]	13530	18630	70
+1000	Wld	212	BP_MapGimmick_InteractEventTrigger_C			{progress:54}==50	SubEv_C09_Gilgamesh_14[{progress:54}==50]	7825	13900	80
+1000	Wld	5000	BP_MapGimmick_InteractEventTrigger_C			{progress:36}==10	ChrEv_0410_002_01[{progress:36}==10]	-12413	17128	642
+1000	Wld	64	BP_MapGimmick_InteractEventTrigger_C			{progress:35}==10	SubEv_C03_Mercedes_02_Trigger[{progress:35}==10]	6690	-65	-40
+1000	Wld_01Gra	0	BP_MapAirShipLandingPoint_C	10200	レジェンドの祠_ティーダ			14386	21538	50
+1000	Wld_01Gra	123	BP_MapGimmick_NoEntry_C			{progress:0}<=1120&{progress:0}>=1000	C01_Wld01Gra_NoEntry_01[{progress:0}<=1120&{progress:0}>=1000]	13521	18918	66
+1000	Wld_01Gra	129	BP_MapGimmick_BlockingBase_Wld01Gra_01_C			{progress:0}<5000		14710	19360	130
+1000	Wld_01Gra	13	BP_MapGimmick_EventTrigger_C				C01_024_02_Fade[{progress:0}==1160]	6049	15257	95
+1000	Wld_01Gra	131	BP_MapGimmick_EventTrigger_C				C01_ArijigokuEncount[!{ride}&!{flag:113}]	10814	13272	30
+1000	Wld_01Gra	201	BP_MapGimmick_EventTrigger_C				SubEv_C01_Skaha_02_01[{progress:22}==0&{progress:0}==1205&(flag:10000)]	7280	15030	20
+1000	Wld_01Gra	202	BP_MapGimmick_NoEntry_C				C01_Wld01Gra_NoEntry_02[{progress:0}<5000]	14780	19335	109
+1000	Wld_01Gra	75	BP_MapGimmick_NoEntry_C			{progress:0}<=1080	C01_Dng01Gra41_NoEntry_01[{progress:0}>=1000&{progress:0}<=1080&!{flag:114}&!{flag:115}] C01_Dng01Gra41_NoEntry_02[{progress:0}>=1000&{progress:0}<=1080&{flag:114}&!{flag:115}] C01_Dng01Gra41_NoEntry_03[{progress:0}>=1000&{progress:0}<=1080&{flag:114}&{flag:115}]	16630	22507	110
+1000	Wld_02Lan	0	BP_MapAirShipLandingPoint_C	10201	レジェンドの祠_ティナ			13473	14553	38
+1000	Wld_02Lan	0	BP_MapAirShipLandingPoint_C	10202	レジェンドの祠_ノクティス			13735	10150	13
+1000	Wld_03Kol	0	BP_MapAirShipLandingPoint_C	10203				2242	10642	218
+1000	Wld_04Dir	0	BP_MapAirShipLandingPoint_C	10209	レジェンドの祠_ユフィ			-2051	-45	48
+1000	Wld_04Dir	0	BP_MapAirShipLandingPoint_C	10204	レジェンドの祠_エース			15961	1191	530
+1000	Wld_04Dir	0	BP_MapAirShipLandingPoint_C	10207	レジェンドの祠_セラ			13546	-1450	-16
+1000	Wld_04Dir	0	BP_MapAirShipLandingPoint_C	10208	レジェンドの祠_カイン			18143	-2955	105
+1000	Wld_04Dir	146	BP_MapGimmick_NoEntry_C				SubEv_C02_Wld04Dir_NoEntry_01[{progress:0}<2030]	14055	3320	65
+1000	Wld_04Dir	17	BP_MapGimmick_BlockingBase_C			{flag:203}		16377	5288	130
+1000	Wld_04Dir	2	BP_MapGimmick_BlockingBase_C			!{flag:203}		16377	5288	131
+1000	Wld_04Dir	81	BP_MapGimmick_InteractEventTrigger_C				Gim_EV_ShipMovement_02_01_Choice[{progress:0}<=2170&{progress:0}>=2000] Gim_EV_ShipMovement_02_02_Choice[{progress:0}<=3200&{progress:0}>=3000] Gim_EV_ShipMovement_02_03_Choice[{progress:0}>=3210]	13291	4670	4
+1000	Wld_05Old	0	BP_MapAirShipLandingPoint_C	5007	光の祠_ティーダ			682	-4731	17
+1000	Wld_05Old	0	BP_MapAirShipLandingPoint_C	10206	レジェンドの祠_エース			2588	7536	101
+1000	Wld_05Old	191	BP_MapGimmick_InteractEventTrigger_C				Gim_EV_ShipMovement_03_01_Choice[{progress:0}<=3200&{progress:0}>=3000] Gim_EV_ShipMovement_03_02_Choice[{progress:0}>=3210]	-2129	5106	4
+1000	Wld_05Old	20	CPP_MapGimmick_EventTrigger				C03_324_01[{progress:0}==3160]	5492	-1676	103
+1000	Wld_05Old	23	BP_MapGimmick_NoEntry_C				SubEv_C03_Wld05Old_NoEntry_02[{progress:0}<3030] SubEv_C03_Wld05Old_NoEntry_03[{progress:0}>=3030 & {progress:0}<3130]	1600	-450	-25
+1000	Wld_05Old	28	CPP_MapGimmick_BlockingBox			{progress:0}<=3160		6005	-1718	100
+1000	Wld_05Old	67	BP_MapGimmick_NoEntry_C				SubEv_C03_Wld05Old_NoEntry_01[{progress:0}<3020]	170	4735	38
+1000	Wld_06Zol	0	BP_MapAirShipLandingPoint_C	10210				-3250	16150	440
+1000	Wld_06Zol	0	BP_MapAirShipLandingPoint_C	10211				-8390	12210	90
+1000	Wld_06Zol	0	BP_MapAirShipLandingPoint_C	10212				-11300	18470	650
+1000	Wld_06Zol	190	BP_MapGimmick_InteractEventTrigger_C				Gim_EV_ShipMovement_04_01_Choice[{progress:0}>=3210]	-1628	12881	4
+1000	Wld_06Zol	79	CPP_MapGimmick_EventTrigger				C04_401_01[{progress:0}==3210]	-2008	13042	-55
+1000	Wld_07Mys	59	BP_MapGimmick_BlockingBase_07Mys_Blizzard001_C			!{flag:95}		-18925	-11845	148
+1000	Wld_07Mys_01	142	BP_MapGimmick_EventTrigger_C			{progress:20}<=20	Summon640_Shiva_02_Trigger[( {progress:20}==0|{progress:20}==10 )&!{flag:12}] Summon640_Shiva_02_Retry_Trigger[{progress:20}==20] Summon640_Shiva_02_Trigger_NF[( {progress:20}==0|{progress:20}==10 )&{flag:12}]	-18899	-11853	151
+1000	Wld_07Mys_01	200	BP_MapGimmick_EventTrigger_C				C05_506_Trigger[{progress:0}==5040]	-17520	-3725	354
+1000	Wld_08Gro	0	BP_MapGimmick_BlockingBox_C			{progress:0}<6060		18905	-15305	710
+1000	Wld_08Gro	0	BP_MapGimmick_BlockingBox_C			{progress:0}<6060		19970	-9665	1150
+1000	Wld_08Gro_01	16	BP_MapGimmick_NoEntry_C			{progress:0}<=6050	C06_Wld_08Gro_NoEntry_05[{progress:0}<=6050]	19981	-9726	1097
+1000	Wld_08Gro_01	172	BP_MapGimmick_EventTrigger_C				C06_601_Trigger[{progress:0}==5310]	16252	-14184	1145
+1000	Wld_08Gro_01	173	BP_MapGimmick_EventTrigger_C				C06_609_01[{progress:0}==6060]	18888	-15239	707
+1000	Wld_08Gro_01	176	BP_MapGimmick_EventTrigger_C			{progress:0}==6060	C06_609_01[{progress:0}==6060]	20000	-9740	1090
+1000	Wld_08Gro_01	72	BP_MapGimmick_EventTrigger_C				C06_614_Trigger[{progress:0}==6090]	16020	-18931	1544
+1000	Wld_09Pha_01	14	BP_MapGimmick_EventTrigger_C				C07_701_Trigger[{progress:0}==6180]	-8104	-16073	1928
+1000	Wld_09Pha_01	192	BP_MapGimmick_InteractEventTrigger_C				C07_Wld_09Pha_NoEntry_03[{progress:0}>=7000  & {progress:0}<7090]	-7735	-15540	1995
+1000	Wld_09Pha_01	197	BP_MapGimmick_NoEntry_C			{progress:0}<7020	C07_Wld_09Pha_NoEntry_01[{progress:0}<7005] C07_Wld_09Pha_NoEntry_02[{progress:0}>=7005 & {progress:0}<7020]	-5620	-17410	90
+1000	Wld_09Pha_02	0	BP_MapAirShipLandingPoint_C	3171	林道			-5180	-18005	85
+1000	Wld_10Cry_01	74	BP_MapGimmick_EventTrigger_C				C08_801_MapTransition[{progress:0}==7090]	-3509	-8406	595
+1000	Wld_11Adr	203	CPP_MapGimmick_BlockingBox			{progress:24}==10		-21380	20070	-196

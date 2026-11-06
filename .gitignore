@@ -19,3 +19,8 @@ __pycache__/
 
 # Built apworld
 dist/
+
+# Game data dumped by tools/dump_game (the game's own data; never commit it)
+/dump/
+tools/dump_game/bin/
+tools/dump_game/obj/

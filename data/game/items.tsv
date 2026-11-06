@@ -1,0 +1,590 @@
+id	table	type	detail	name	buy	sell	sellable	row
+1	consumable	Consumables		Potion	100	25	true	ポーション
+2	consumable	Consumables		Hi-Potion	800	200	true	ハイポーション
+3	consumable	Consumables		Ether	500	120	true	エーテル
+4	consumable	Consumables		Phoenix Down	200	50	true	フェニックスの尾
+7	consumable	Consumables		Antidote Herb	100	20	true	毒消し草
+8	consumable	Consumables		Remedy	3000	750	true	万能薬
+9	consumable	Consumables		Knife of Poison	500	120	true	どくばり
+10	consumable	Consumables		Eye Drops	200	50	true	目薬
+11	consumable	Consumables		Smelling Salts	300	70	true	気付け薬
+12	consumable	Consumables		Echo Herb	300	70	true	やまびこ草
+13	consumable	Consumables		Unicorn Horn	500	120	true	ユニコーンの角
+14	consumable	Consumables		X-Potion	3000	750	true	エクスポーション
+16	consumable	Consumables		Gold Needle	800	200	true	金の針
+17	consumable	Consumables		Herb of Awakening	300	70	true	活性剤
+18	consumable	Consumables		X-Ether	6000	1500	true	エーテルスーパー
+19	consumable	Consumables		Healing Spring	5000	1250	true	回復の泉
+20	consumable	Consumables		Turbo Ether	2000	500	true	エーテルターボ
+22	consumable	Consumables		Elixir	500000	10	true	エリクサー
+23	consumable	Consumables		Megalixir	500000	10	true	ラストエリクサー
+24	consumable	Consumables		Smoke Bomb	300	70	true	けむりだま
+26	consumable	Consumables		Knife of Blind	1000	250	true	暗闇
+27	consumable	Consumables		Knife of Silence	1000	250	true	沈黙
+28	consumable	Consumables		Knife of Confuse	1500	370	true	混乱
+29	consumable	Consumables		Knife of Paralysis	2000	500	true	麻痺
+30	consumable	Consumables		Knife of Sleep	2000	500	true	睡眠
+31	consumable	Consumables		Mist Potion	500	120	true	ミストポーション
+32	consumable	Consumables		Mist Hi-Potion	4000	1000	true	ミストハイポーション
+33	consumable	Consumables		Mist X-Potion	10000	2500	true	ミストエクスポーション
+34	consumable	Consumables		Mist Ether	2500	620	true	ミストエーテル
+35	consumable	Consumables		Mist Turbo Ether	10000	2500	true	ミストエーテルターボ
+36	consumable	Consumables		Mist X-Ether	30000	7500	true	ミストエーテルスーパー
+37	consumable	Consumables		Phoenix Pinion	2000	500	true	フェニックスの羽
+200	consumable	Consumables		Flame Scroll II	2500	620	true	火遁の巻物・弐
+201	consumable	Consumables		Ice Scroll II	2500	620	true	氷遁の巻物・弐
+202	consumable	Consumables		Wind Scroll II	2500	620	true	風遁の巻物・弐
+203	consumable	Consumables		Earth Scroll II	2500	620	true	土遁の巻物・弐
+204	consumable	Consumables		Lightning Scroll II	2500	620	true	雷遁の巻物・弐
+205	consumable	Consumables		Water Scroll II	2500	620	true	水遁の巻物・弐
+206	consumable	Consumables		Shuriken	1000	250	true	しゅりけん
+207	consumable	Consumables		Fuma Shuriken	3000	750	true	ふうましゅりけん
+208	consumable	Consumables		Chef’s Knife	5000	1250	true	ほうちょう
+209	consumable	Consumables		Flame Scroll I	1000	250	true	火遁の巻物・壱
+210	consumable	Consumables		Ice Scroll I	1000	250	true	氷遁の巻物・壱
+211	consumable	Consumables		Wind Scroll I	1000	250	true	風遁の巻物・壱
+212	consumable	Consumables		Earth Scroll I	1000	250	true	土遁の巻物・壱
+213	consumable	Consumables		Lightning Scroll I	1000	250	true	雷遁の巻物・壱
+214	consumable	Consumables		Water Scroll I	1000	250	true	水遁の巻物・壱
+500	consumable	Consumables		Tent	300	70	true	テント
+600	consumable	Consumables		Small Golden Shell	99999	2500	true	黄金の小甲羅
+601	consumable	Consumables		Golden Shell	99999	5000	true	黄金の中甲羅
+602	consumable	Consumables		Large Golden Shell	99999	10000	true	黄金の大甲羅
+9500	seed	Consumables		<MISSING STRING TABLE ENTRY>	100	50	true	ギサールの種（仮）
+9501	seed	Consumables		<MISSING STRING TABLE ENTRY>	200	100	true	カラッカの種（仮）
+10100	equipment	Equipment	GreatSowrd	Crimson Saber	200	50	false	クリムゾンセイバー
+10101	equipment	Equipment	GreatSowrd	Bronze Sword	350	80	true	ブロンズソード
+10102	equipment	Equipment	GreatSowrd	Longsword	650	160	true	ロングソード
+10103	equipment	Equipment	GreatSowrd	Bladed Shield	10000	2500	true	ブレイドシールド
+10104	equipment	Equipment	GreatSowrd	Knight’s Blade	1800	450	true	ナイトブレイド
+10105	equipment	Equipment	GreatSowrd	Flametongue	3800	950	true	後程パッシブ付与1
+10106	equipment	Equipment	GreatSowrd	Icebrand	7700	1920	true	アイスブランド
+10107	equipment	Equipment	GreatSowrd	Claymore	1400	350	true	クレイモア
+10108	equipment	Equipment	GreatSowrd	Kaiser Sword	4000	1000	true	カイザーソード
+10109	equipment	Equipment	GreatSowrd	Bastard Sword	30000	7500	true	バスタードソード
+10110	equipment	Equipment	GreatSowrd	Blood Sword	31000	7750	true	ブラッドソード
+10111	equipment	Equipment	GreatSowrd	Greatsword	5500	1370	true	グレートソード
+10112	equipment	Equipment	GreatSowrd	Rune Blade	22000	5500	true	ルーンブレイド
+10113	equipment	Equipment	GreatSowrd	Lunar Sword	15000	3750	true	ルナソード
+10114	equipment	Equipment	GreatSowrd	Stagger Blade	27500	6870	true	ミスリルソード
+10115	equipment	Equipment	GreatSowrd	Soul Sabre	50000	12500	true	ソウルセイバー
+10116	equipment	Equipment	GreatSowrd	Sword of Trials	35000	8750	true	修験の剣
+10117	equipment	Equipment	GreatSowrd	Falchion	40000	10000	true	ファルシオン
+10118	equipment	Equipment	GreatSowrd	Moon Saber	2000	500	true	レイン魔力特化１
+10119	equipment	Equipment	GreatSowrd	Nocturne	3000	750	true	レイン魔力特化２
+10120	equipment	Equipment	GreatSowrd	Arcana Blade	4000	1000	true	レイン魔力特化３
+10121	equipment	Equipment	GreatSowrd	Knight’s Sword	5000	1250	true	レイン魔力特化４
+10122	equipment	Equipment	GreatSowrd	Ether’s Light	6000	1500	true	レイン魔力特化５
+10123	equipment	Equipment	GreatSowrd	Guardian Sword	3000	750	true	レイン防御武器１
+10124	equipment	Equipment	GreatSowrd	Variable Steel	27500	6870	true	レイン防御武器２
+10125	equipment	Equipment	GreatSowrd	Briar Edge	4000	1000	true	レイン特殊武器１
+10126	equipment	Equipment	GreatSowrd	Hero’s Blade	6000	1500	true	レイン特殊武器２
+10127	equipment	Equipment	GreatSowrd	Indomitable	45000	11250	true	レイン特殊武器３
+10128	equipment	Equipment	GreatSowrd	Flamberge	1000	250	true	レインキャラクエ武器
+10129	equipment	Equipment	GreatSowrd	Malice Breaker	41000	10250	true	破魔剣
+10130	equipment	Equipment	GreatSowrd	Knight’s Greatsword	500	120	false	DLC専用レイン武器
+10190	equipment	Equipment	GreatSowrd	Save the Vermillion	1000	250	false	アイリーン装備レイン
+10194	equipment	Equipment	GreatSowrd	Apocalypse	8000	2000	true	アポカリプス
+10195	equipment	Equipment	GreatSowrd	Excalibur	8000	2000	true	エクスカリバー
+10196	equipment	Equipment	GreatSowrd	Lightbringer	8000	2000	true	ライトブリンガー
+10197	equipment	Equipment	GreatSowrd	Ragnarok+	1000	250	false	ラグナロク・改
+10198	equipment	Equipment	GreatSowrd	Ancient Greatsword	200	50	false	古びた大剣
+10199	equipment	Equipment	GreatSowrd	Ragnarok	200	50	false	ラグナロク
+10200	equipment	Equipment	Katana	Shiden	200	50	false	紫電
+10201	equipment	Equipment	Katana	Nodachi	1000	250	true	野太刀
+10202	equipment	Equipment	Katana	Sakura-Fubuki	1000	250	true	桜吹雪
+10203	equipment	Equipment	Katana	Ashura	4200	1050	true	阿修羅
+10204	equipment	Equipment	Katana	Tsukiyo no Tachi	2000	500	true	月夜の太刀
+10205	equipment	Equipment	Katana	Kuki	9500	2370	true	九鬼
+10206	equipment	Equipment	Katana	Hyosetsumaru	26500	6620	true	後程パッシブ付与2
+10207	equipment	Equipment	Katana	Dodanuki	700	170	true	同田貫
+10208	equipment	Equipment	Katana	Uchigatana	350	80	true	打刀
+10209	equipment	Equipment	Katana	Samurai’s Katana	2200	550	true	サムライブレード
+10210	equipment	Equipment	Katana	Rasetsu	34000	8500	true	羅刹
+10211	equipment	Equipment	Katana	Hototogisu	5250	1310	true	不如帰
+10212	equipment	Equipment	Katana	Shiranui	7350	1830	true	不知火
+10213	equipment	Equipment	Katana	Kogarasumaru	1500	370	true	小烏丸
+10214	equipment	Equipment	Katana	Kiku-Ichimonji	21000	5250	true	菊一文字
+10215	equipment	Equipment	Katana	Kotetsu	42000	10500	true	虎徹
+10216	equipment	Equipment	Katana	Osafune	50000	12500	true	備前長船
+10217	equipment	Equipment	Katana	Laserblade	2000	500	true	ラスウェル魔力特化１
+10218	equipment	Equipment	Katana	Astral Blade	3000	750	true	ラスウェル魔力特化２
+10219	equipment	Equipment	Katana	Reito	4000	1000	true	ラスウェル魔力特化３
+10220	equipment	Equipment	Katana	Genmato	5000	1250	true	ラスウェル魔力特化４
+10221	equipment	Equipment	Katana	Rikudo	28000	7000	true	ラスウェル魔力特化５
+10222	equipment	Equipment	Katana	Hasaito	3000	750	true	ラスウェルブレイク武器１
+10223	equipment	Equipment	Katana	Sundering Odachi	26500	6620	true	ラスウェルブレイク武器２
+10224	equipment	Equipment	Katana	Kikokusenga	4000	1000	true	ラスウェル特殊武器１
+10225	equipment	Equipment	Katana	Kumobashiri	6000	1500	true	ラスウェル特殊武器２
+10226	equipment	Equipment	Katana	Guardbreaker	7000	1750	true	ラスウェル特殊武器３
+10227	equipment	Equipment	Katana	Iwakirimaru	1000	250	true	ラスウェルキャラクエ武器
+10228	equipment	Equipment	Katana	Vibroblade	15000	3750	true	超高周波ブレード
+10229	equipment	Equipment	Katana	Murasame	30000	7500	true	ムラサメ
+10230	equipment	Equipment	Katana	Gorgon Sword	37000	9250	true	ゴルゴンソード
+10231	equipment	Equipment	Katana	Carbide Blade	40000	10000	true	超硬質合金ブレード
+10290	equipment	Equipment	Katana	Shisui	1500	370	false	アイリーン装備ラスウェル戦
+10294	equipment	Equipment	Katana	Mutsunokami	8000	2000	true	陸奥守
+10295	equipment	Equipment	Katana	Masamune	8000	2000	true	正宗
+10296	equipment	Equipment	Katana	Murakumo	53000	13250	true	天叢雲剣
+10297	equipment	Equipment	Katana	Sasuke’s Blade+	1500	370	false	佐助の刀・改
+10298	equipment	Equipment	Katana	Ancient Katana	200	50	false	古びた刀
+10299	equipment	Equipment	Katana	Sasuke’s Blade	200	50	false	佐助の刀
+10300	equipment	Equipment	Bow	Reincarnation	200	50	false	リンカネーション
+10301	equipment	Equipment	Bow	Silver Bow	4000	1000	true	銀の弓
+10302	equipment	Equipment	Bow	Floral Arc	1000	250	true	フルールアルク
+10303	equipment	Equipment	Bow	Fujin’s Bow	32000	8000	true	風神の弓
+10304	equipment	Equipment	Bow	Rune Bow	34500	8620	true	ルーンボウ
+10305	equipment	Equipment	Bow	Midnight Longbow	10500	2620	true	夜の長弓
+10306	equipment	Equipment	Bow	Shortbow	600	150	true	ショートボウ
+10307	equipment	Equipment	Bow	Longbow	15000	3750	true	ロングボウ
+10308	equipment	Equipment	Bow	Elfin Bow	4500	1120	true	エルフィンボウ
+10309	equipment	Equipment	Bow	Greatbow	18000	4500	true	グレートボウ
+10310	equipment	Equipment	Bow	Crescent Bow	1600	400	true	クレセントボウ
+10311	equipment	Equipment	Bow	Composite Bow	2000	500	true	コンポジットボウ
+10312	equipment	Equipment	Bow	Loxley Bow	23500	5870	true	ロクスリーボウ
+10313	equipment	Equipment	Bow	Oracle Bow	30000	7500	true	宣託の弓
+10314	equipment	Equipment	Bow	Gandiva	50000	12500	true	ガーンデーヴァ
+10315	equipment	Equipment	Bow	Compound Bow	2000	500	true	フィーナ物理特化１
+10316	equipment	Equipment	Bow	Rock Piercer	3000	750	true	フィーナ物理特化２
+10317	equipment	Equipment	Bow	Heavy Crossbow	4000	1000	true	フィーナ物理特化３
+10318	equipment	Equipment	Bow	Ballista	5000	1250	true	フィーナ物理特化４
+10319	equipment	Equipment	Bow	Deafening Bow	6000	1500	true	フィーナ物理特化５
+10320	equipment	Equipment	Bow	Cure Drop	3000	750	true	フィーナ回復武器１
+10321	equipment	Equipment	Bow	Seraphim Bow	5000	1250	true	フィーナ回復武器２
+10322	equipment	Equipment	Bow	Moon Rain	4000	1000	true	フィーナ追加武器８
+10323	equipment	Equipment	Bow	Ydalir	6000	1500	true	フィーナ追加武器９
+10324	equipment	Equipment	Bow	Rune Arch	7000	1750	true	フィーナ追加武器１０
+10325	equipment	Equipment	Bow	Kagura Longbow	45000	11250	true	神楽の大弓
+10326	equipment	Equipment	Bow	Bow of the Hawk	40000	10000	true	鷹の弓
+10327	equipment	Equipment	Bow	Spellblade’s Bow	41000	10250	true	闘士の大弓
+10390	equipment	Equipment	Bow	Elysium	1500	370	false	アイリーン装備フィーナ
+10395	equipment	Equipment	Bow	Yoichi Bow	57000	14250	true	与一の弓
+10396	equipment	Equipment	Bow	Faerie Bow	8000	2000	true	妖精の弓
+10397	equipment	Equipment	Bow	Artemis Bow+	1500	370	false	アルテミスの弓・改
+10398	equipment	Equipment	Bow	Ancient Bow	1000	250	false	古びた弓
+10399	equipment	Equipment	Bow	Artemis Bow	1000	250	false	アルテミスの弓
+10400	equipment	Equipment	Hammer	Mechabo Hammer	200	50	false	メカボハンマー
+10401	equipment	Equipment	Hammer	Bronze Hammer	2000	500	true	ブロンズハンマー
+10402	equipment	Equipment	Hammer	Cross Pein Hammer	5000	1250	true	クロスハンマー
+10403	equipment	Equipment	Hammer	Sledgehammer	2000	500	true	スレッジハンマー
+10404	equipment	Equipment	Hammer	Iron Hammer	9000	2250	true	アイアンハンマー
+10405	equipment	Equipment	Hammer	Heroic Hammer	20000	5000	true	ブレイブハンマー
+10406	equipment	Equipment	Hammer	Slam Hammer	3600	900	true	ストライクハンマー
+10407	equipment	Equipment	Hammer	Nightbreaker	25000	6250	true	ナイトブレイカー
+10408	equipment	Equipment	Hammer	Warpick	5500	1370	true	ピックハンマー
+10409	equipment	Equipment	Hammer	Star Shatterer	37000	9250	true	星砕の槌
+10410	equipment	Equipment	Hammer	Dreadwing Mallet	2000	500	true	リド魔法特化１
+10411	equipment	Equipment	Hammer	Morning Star	3000	750	true	リド魔法特化２
+10412	equipment	Equipment	Hammer	Arc Hammer	4000	1000	true	リド魔法特化３
+10413	equipment	Equipment	Hammer	Divine Mallet	26500	6620	true	リド魔法特化４
+10414	equipment	Equipment	Hammer	Demon’s Maul	6000	1500	true	リド魔法特化５
+10415	equipment	Equipment	Hammer	Piercing Mace	3000	750	true	リド追加武器６（３章）
+10416	equipment	Equipment	Hammer	Bullseye Mace	5000	1250	true	リド追加武器７（５章）
+10417	equipment	Equipment	Hammer	Clown Hammer	4000	1000	true	リド追加武器８
+10418	equipment	Equipment	Hammer	Inquisitor’s Gavel	6000	1500	true	リド追加武器９
+10419	equipment	Equipment	Hammer	Analysis Hammer	7000	1750	true	リド追加武器１０
+10420	equipment	Equipment	Hammer	Fortune’s Maul	48500	12120	true	打ち出の大槌
+10421	equipment	Equipment	Hammer	Scorpion Tail	34000	8500	true	スコーピオンテイル
+10422	equipment	Equipment	Hammer	Buster Mace	7000	1750	true	バスターメイス
+10423	equipment	Equipment	Hammer	Great Mace	15000	3750	true	グレートメイス
+10424	equipment	Equipment	Hammer	Golem Hammer	30000	7500	true	ゴーレムハンマー
+10425	equipment	Equipment	Hammer	Oni Maul	40000	10000	true	鬼鉄槌
+10426	equipment	Equipment	Hammer	War Hammer	50000	12500	true	ウォーハンマー
+10427	equipment	Equipment	Hammer	Mjollnir	8000	2000	true	ニョルニル
+10490	equipment	Equipment	Hammer	Mechabo Hammer SUPER	1000	250	false	アイリーン装備リド
+10495	equipment	Equipment	Hammer	Pilebunker	8000	2000	true	パイルバンカー
+10496	equipment	Equipment	Hammer	Thor’s Hammer+	1000	250	false	トールハンマー・改
+10497	equipment	Equipment	Hammer	Ancient Hammer	200	50	false	古びたハンマー
+10498	equipment	Equipment	Hammer	Thor’s Hammer	200	50	false	トールハンマー
+10499	equipment	Equipment	Hammer	Gaia Hammer	30000	7500	false	大地のハンマー
+10500	equipment	Equipment	Grimoire	Codex Belli	200	50	false	神策の兵法書
+10501	equipment	Equipment	Grimoire	Disciple’s Grimoire	4500	1120	true	魔法辞典初級
+10502	equipment	Equipment	Grimoire	Adept’s Grimoire	11000	2750	true	魔法辞典中級
+10503	equipment	Equipment	Grimoire	Master’s Grimoire	18000	4500	true	魔法辞典上級
+10504	equipment	Equipment	Grimoire	Knightly Tactics	6300	1570	true	騎士の戦術書
+10505	equipment	Equipment	Grimoire	The Savant General	40000	10000	true	鬼才傭兵の書
+10506	equipment	Equipment	Grimoire	Codex Asura	15000	3750	true	修羅経典
+10507	equipment	Equipment	Grimoire	Codex Pestis	22500	5620	true	蟲毒経典
+10508	equipment	Equipment	Grimoire	R’lyeh Text	3000	750	true	後程パッシブ付与3
+10509	equipment	Equipment	Grimoire	Celaeno Fragments	3000	750	true	セラエノ断章
+10510	equipment	Equipment	Grimoire	Book of Eibon	8000	2000	true	エイボンの書
+10511	equipment	Equipment	Grimoire	Pnakotic Manuscript	50000	12500	true	ナコト写本
+10512	equipment	Equipment	Grimoire	Necronomicon	8000	2000	true	ネクロノミコン
+10513	equipment	Equipment	Grimoire	Total Calisthenics	3000	750	true	ニコル物理特化１
+10514	equipment	Equipment	Grimoire	Illegible Lexicon	4000	1000	true	ニコル物理特化２
+10515	equipment	Equipment	Grimoire	Book of Strength	5000	1250	true	ニコル物理特化３
+10516	equipment	Equipment	Grimoire	Battle Grimoire	6000	1500	true	ニコル物理特化４
+10517	equipment	Equipment	Grimoire	Index of War	43000	10750	true	ニコル物理特化５
+10518	equipment	Equipment	Grimoire	Blessed Cults	3000	750	true	ニコル追加武器６
+10519	equipment	Equipment	Grimoire	Luminous Grimoire	5000	1250	true	ニコル追加武器７
+10520	equipment	Equipment	Grimoire	Annihilaticon	4000	1000	true	ニコル追加武器８
+10521	equipment	Equipment	Grimoire	Anatomy of Magic	6000	1500	true	ニコル追加武器９
+10522	equipment	Equipment	Grimoire	Arch Drain	7000	1750	true	ニコル追加武器１０
+10523	equipment	Equipment	Grimoire	Sage’s Journal	30000	7500	true	賢者の手稿
+10524	equipment	Equipment	Grimoire	Tome of Grace	35700	8920	true	生命賛歌
+10525	equipment	Equipment	Grimoire	Book of the Stars	38500	9620	true	星の書
+10526	equipment	Equipment	Grimoire	Book of the Cosmos	47500	11870	true	異星の書
+10590	equipment	Equipment	Grimoire	Codex Providentiae	200	50	false	アイリーン装備ニコル
+10597	equipment	Equipment	Grimoire	Last Resort+	200	50	false	ラストリゾート・改
+10598	equipment	Equipment	Grimoire	Ancient Tome	45000	11250	false	古びた書物
+10599	equipment	Equipment	Grimoire	Last Resort	200	50	false	ラストリゾート
+10600	equipment	Equipment	Whip	Empress Birch	200	50	false	エンプレスビュート
+10601	equipment	Equipment	Whip	Leather Whip	7000	1750	true	レザーウィップ
+10602	equipment	Equipment	Whip	Shock Whip	200	50	true	電撃鞭
+10603	equipment	Equipment	Whip	Lunar Whip	33300	8320	true	ミスリルウィップ
+10604	equipment	Equipment	Whip	Death Adder	36000	9000	true	デスウィップ
+10605	equipment	Equipment	Whip	Shinobi’s Kusarigama	45000	11250	true	忍びの鎖鎌
+10606	equipment	Equipment	Whip	Whip Blade	30000	7500	true	蛇腹剣
+10607	equipment	Equipment	Whip	Sleipnir’s Tail	55000	13750	true	スレイプニルテイル
+10608	equipment	Equipment	Whip	Beast Killer	50000	12500	true	ビーストキラー
+10609	equipment	Equipment	Whip	Dragon Whisker	8000	2000	true	竜の髭
+10610	equipment	Equipment	Whip	Power Whip	5000	1250	true	魔人フィーナ物理特化１
+10611	equipment	Equipment	Whip	Rush Whip	6000	1500	true	魔人フィーナ物理特化２
+10612	equipment	Equipment	Whip	Thorn Whip	7000	1750	true	魔人フィーナ物理特化３
+10613	equipment	Equipment	Whip	Whip of Affliction	6000	1500	true	魔人フィーナ追加武器４
+10614	equipment	Equipment	Whip	Cursed Whip	45000	11250	true	魔人フィーナ追加武器５
+10615	equipment	Equipment	Whip	Serpent Bone Whip	40000	10000	true	蛇骨鞭
+10690	equipment	Equipment	Whip	Abyss	200	50	false	アイリーン装備魔人フィーナ
+10696	equipment	Equipment	Whip	Fire Birch+	200	50	false	ファイアビュート・改
+10697	equipment	Equipment	Whip	Ancient Whip	200	50	false	古びた鞭
+10698	equipment	Equipment	Whip	Fire Birch	200	50	false	ファイアビュート
+10699	equipment	Equipment	Whip	Rugged Whip	7000	1750	false	700年前用の装備
+10700	equipment	Equipment	Gun	Renatus Duo	200	50	false	AL式魔電粒子砲
+10701	equipment	Equipment	Gun	Peacemaker	9000	2250	true	ピースメーカー
+10702	equipment	Equipment	Gun	Firefly	27500	6870	true	ファイアフライ
+10703	equipment	Equipment	Gun	Musketoon	22000	5500	true	マスケトン
+10704	equipment	Equipment	Gun	Hastur Long Barrel	8000	2000	true	ハスターロングバレルC
+10705	equipment	Equipment	Gun	A-Type Sniper R	15000	3750	true	A式スナイパーR
+10706	equipment	Equipment	Gun	Kokytos	31000	7750	true	コキュートス
+10707	equipment	Equipment	Gun	Silver-Round Rifle	48000	12000	true	銀玉鉄砲
+10708	equipment	Equipment	Gun	Culverin	50000	12500	true	カルバリン
+10709	equipment	Equipment	Gun	Repeater Rifle	4000	1000	true	ウィンチェスター
+10710	equipment	Equipment	Gun	Quicksilver	34500	8620	true	クイックシルバー
+10711	equipment	Equipment	Gun	Mythril Cannon	4000	1000	true	ジェイク魔法特化１
+10712	equipment	Equipment	Gun	Magi-Blaster	5000	1250	true	ジェイク魔法特化２
+10713	equipment	Equipment	Gun	Arcane Long Rifle	6000	1500	true	ジェイク魔法特化３
+10714	equipment	Equipment	Gun	Rune Shooter	7000	1750	true	ジェイク魔法特化４
+10715	equipment	Equipment	Gun	Spellfire	8000	2000	true	ジェイク魔法特化５
+10716	equipment	Equipment	Gun	Pulse Cannon	4000	1000	true	ジェイク追加武器６
+10717	equipment	Equipment	Gun	Barrel Blazer	5000	1250	true	ジェイク追加武器７
+10718	equipment	Equipment	Gun	Barrier Bane	5000	1250	true	ジェイク追加武器８
+10719	equipment	Equipment	Gun	Impetus Breaker	27000	6750	true	ジェイク追加武器９
+10720	equipment	Equipment	Gun	Jackpot Gun	7000	1750	true	ジェイク追加武器１０
+10721	equipment	Equipment	Gun	Gatling Gun	30000	7500	true	ガトリング砲
+10722	equipment	Equipment	Gun	Loose Cannon	40000	10000	true	トリガーハッピー
+10723	equipment	Equipment	Gun	Ultra Magnum	53000	13250	true	ウルトラマグナム
+10790	equipment	Equipment	Gun	Caelum Renatum	200	50	false	アイリーン装備ジェイク
+10797	equipment	Equipment	Gun	Arcturus+	200	50	false	アルクトゥルス・改
+10798	equipment	Equipment	Gun	Ancient Firearm	200	50	false	古びた銃
+10799	equipment	Equipment	Gun	Arcturus	200	50	false	アルクトゥルス
+10800	equipment	Equipment	Rod	White Roselia	200	50	false	ブラックロゼリア
+10801	equipment	Equipment	Rod	Mythril Rod	22500	5620	true	ミスリルロッド
+10802	equipment	Equipment	Rod	Resonate Staff	5000	1250	true	ストライクロッド
+10803	equipment	Equipment	Rod	Silver Staff	43000	10750	true	銀杖
+10804	equipment	Equipment	Rod	Vajra Staff	35700	8920	true	五鈷杵錫杖
+10805	equipment	Equipment	Rod	Staff of the Magi	30000	7500	true	賢者の杖
+10806	equipment	Equipment	Rod	Unyielding Staff	38800	9700	true	不屈の杖
+10807	equipment	Equipment	Rod	Mystletainn	50000	12500	true	ミストルティン
+10808	equipment	Equipment	Rod	Laevateinn	8000	2000	true	レーヴァテイン
+10809	equipment	Equipment	Rod	Whale Whisker	56000	14000	true	鯨の髭
+10810	equipment	Equipment	Rod	Striking Staff	4000	1000	true	サクラ物理特化１
+10811	equipment	Equipment	Rod	War Pick	5000	1250	true	サクラ物理特化２
+10812	equipment	Equipment	Rod	Iron Baton	6000	1500	true	サクラ物理特化３
+10813	equipment	Equipment	Rod	Pole Mace	7000	1750	true	サクラ物理特化４
+10814	equipment	Equipment	Rod	Battle Staff	8000	2000	true	サクラ物理特化５
+10815	equipment	Equipment	Rod	Impact Wand	5000	1250	true	サクラ追加武器６
+10816	equipment	Equipment	Rod	Rod of Focus	27500	6870	true	サクラ追加武器７
+10817	equipment	Equipment	Rod	Catastrophe	5000	1250	true	サクラ追加武器８
+10818	equipment	Equipment	Rod	Barrier Staff	6000	1500	true	サクラ追加武器９
+10819	equipment	Equipment	Rod	High Caster	7000	1750	true	サクラ追加武器１０
+10820	equipment	Equipment	Rod	Seraph’s Rod	35000	8750	true	セラフロッド
+10890	equipment	Equipment	Rod	Roselia	200	50	false	アイリーン装備サクラ
+10897	equipment	Equipment	Rod	Wizard’s Rod+	200	50	false	ウィザードロッド・改
+10898	equipment	Equipment	Rod	Ancient Rod	200	50	false	古びたロッド
+10899	equipment	Equipment	Rod	Wizard’s Rod	200	50	false	ウィザードロッド
+11000	equipment	Equipment	LightArmor	Leather Armor	100	20	true	レザーアーマー
+11001	equipment	Equipment	LightArmor	Knight’s Jacket	750	180	true	鎖帷子
+11002	equipment	Equipment	LightArmor	Black Garb	1000	250	true	黒装束
+11003	equipment	Equipment	LightArmor	Prickly Straitjacket	700	170	true	茨の拘束着
+11004	equipment	Equipment	LightArmor	Bronze Chestplate	300	70	true	ブロンズチェスト
+11005	equipment	Equipment	LightArmor	Tunic	200	50	true	チュニック
+11006	equipment	Equipment	LightArmor	Surcoat	980	240	true	サーコート
+11007	equipment	Equipment	LightArmor	Engineer’s Jacket	1200	300	true	エンジニアジャケット
+11008	equipment	Equipment	LightArmor	Red Jacket	3000	750	true	レッドジャケット
+11009	equipment	Equipment	LightArmor	Mythril Vest	15000	3750	true	ミスリルベスト
+11010	equipment	Equipment	LightArmor	Rose Jacket	7000	1750	true	薔薇のジャケット
+11011	equipment	Equipment	LightArmor	Shinobi Gear	40000	10000	true	忍びの衣
+11012	equipment	Equipment	LightArmor	Power Vest	2500	620	true	力だすき
+11013	equipment	Equipment	LightArmor	Kenpo Gi	5000	1250	true	拳法着
+11014	equipment	Equipment	LightArmor	Brigandine	12000	3000	true	ブリガンダイン
+11015	equipment	Equipment	LightArmor	Crown Vest	42000	10500	true	クラウンベスト
+11016	equipment	Equipment	LightArmor	Diamond Chestplate	45000	11250	true	ダイアの胸当て
+11017	equipment	Equipment	LightArmor	Bone Mail	8000	2000	true	ボーンメイル
+11018	equipment	Equipment	LightArmor	Anti-Magic Gear	2000	500	true	軽鎧魔防特化１
+11019	equipment	Equipment	LightArmor	Astral Jacket	3000	750	true	軽鎧魔防特化２
+11020	equipment	Equipment	LightArmor	Rune Scales	1200	300	true	軽鎧魔防特化３
+11021	equipment	Equipment	LightArmor	Arcane Coat	5000	1250	true	軽鎧魔防特化４
+11022	equipment	Equipment	LightArmor	Spell Jacket	6000	1500	true	軽鎧魔防特化５
+11023	equipment	Equipment	LightArmor	Ninja Gear	3000	750	true	物理回避軽鎧１
+11024	equipment	Equipment	LightArmor	Hoodwink Garb	4000	1000	true	物理回避軽鎧２
+11025	equipment	Equipment	LightArmor	Mirage Jacket	5000	1250	true	物理回避軽鎧３
+11026	equipment	Equipment	LightArmor	Shadowstep Garb	6000	1500	true	物理回避軽鎧４
+11027	equipment	Equipment	LightArmor	Swallow Scales	36000	9000	true	物理回避軽鎧５
+11028	equipment	Equipment	LightArmor	Aethereal Chestplate	25000	6250	true	エーテルチェスト
+11029	equipment	Equipment	LightArmor	Xibalba Coat	35000	8750	true	シバルバーコート
+11030	equipment	Equipment	LightArmor	Jacket of Restoration	30000	7500	true	レストアジャケット
+11031	equipment	Equipment	LightArmor	Scarlet Vest	35000	8750	true	緋色のベスト
+11032	equipment	Equipment	LightArmor	Adamite Jacket	30000	7500	true	アダマイトジャケット
+11033	equipment	Equipment	LightArmor	Lorica Sancta	35000	8750	false	ホーリーメイル
+11034	equipment	Equipment	LightArmor	Chestplate of Preparation	500	120	false	DLC専用経験値アップ
+11035	equipment	Equipment	LightArmor	Blessed Cuirass	500	120	false	DLC専用ギルアップ
+11097	equipment	Equipment	LightArmor	Mirage Vest+	200	50	false	ミラージュベスト・改
+11098	equipment	Equipment	LightArmor	Ancient Garment	200	50	false	古びた軽装
+11099	equipment	Equipment	LightArmor	Mirage Vest	200	50	false	ミラージュベスト
+11300	equipment	Equipment	HeavyArmor	Stout Armor	45000	11250	true	堅牢の鎧
+11301	equipment	Equipment	HeavyArmor	Crystal Armor	90000	22500	true	クリスタルアーマー
+11302	equipment	Equipment	HeavyArmor	Iron Armor	1080	270	true	アイアンアーマー
+11303	equipment	Equipment	HeavyArmor	Silver Chestplate	3300	820	true	シルバープレート
+11304	equipment	Equipment	HeavyArmor	Golden Armor	22000	5500	true	ゴールドアーマー
+11305	equipment	Equipment	HeavyArmor	Shielded Armor	6300	1570	true	シールドアーマー
+11306	equipment	Equipment	HeavyArmor	Phalanx	2250	560	true	ファランクス
+11307	equipment	Equipment	HeavyArmor	Knight Armor	5500	1370	true	ナイトアーマー
+11308	equipment	Equipment	HeavyArmor	Lunar Plate	12000	3000	true	ムーンプレート
+11309	equipment	Equipment	HeavyArmor	Carmine Armor	8000	2000	true	烈火の鎧
+11310	equipment	Equipment	HeavyArmor	Glacial Armor	8000	2000	true	氷天の鎧
+11311	equipment	Equipment	HeavyArmor	Polaris Cuirass	35000	8750	true	極星の重鎧
+11312	equipment	Equipment	HeavyArmor	Armor of Dusk	25000	6250	true	落陽の鎧
+11313	equipment	Equipment	HeavyArmor	Force Armor	46000	11500	true	フォースアーマー
+11314	equipment	Equipment	HeavyArmor	Diamond Armor	8000	2000	true	ダイアの鎧
+11315	equipment	Equipment	HeavyArmor	Armor of Gales	2000	500	true	重鎧魔防特化１
+11316	equipment	Equipment	HeavyArmor	Devout’s Armor	3000	750	true	重鎧魔防特化２
+11317	equipment	Equipment	HeavyArmor	Ether Plate	4000	1000	true	重鎧魔防特化３
+11318	equipment	Equipment	HeavyArmor	Oracle’s Armor	5000	1250	true	重鎧魔防特化４
+11319	equipment	Equipment	HeavyArmor	Fortress Gear	6000	1500	true	重鎧魔防特化５
+11320	equipment	Equipment	HeavyArmor	Scale Mail	3000	750	true	追加重鎧６
+11321	equipment	Equipment	HeavyArmor	Protective Gear	4000	1000	true	追加重鎧７
+11322	equipment	Equipment	HeavyArmor	Tyr’s Armor	5000	1250	true	HP半減プロシェル重鎧３
+11323	equipment	Equipment	HeavyArmor	Guardian’s Plate	22000	5500	true	追加重鎧９
+11324	equipment	Equipment	HeavyArmor	Plate of Providence	7500	1870	true	追加重鎧１０
+11325	equipment	Equipment	HeavyArmor	Beast Hunter’s Armor	44000	11000	true	獣狩りの鎧
+11326	equipment	Equipment	HeavyArmor	Mythril Armor	16500	4120	true	ミスリルアーマー
+11327	equipment	Equipment	HeavyArmor	Gear Plate	27000	6750	true	ギアプレート
+11328	equipment	Equipment	HeavyArmor	Gladiator’s Armor	31500	7870	true	グラディウスアーマー
+11329	equipment	Equipment	HeavyArmor	Lorica Apocalyptica	1000	250	false	終焉の鎧
+11396	equipment	Equipment	HeavyArmor	Genji Armor	1000	250	false	源氏の鎧
+11397	equipment	Equipment	HeavyArmor	Tatenashi Armor+	1000	250	false	マクシミリアン・改
+11398	equipment	Equipment	HeavyArmor	Ancient Cuirass	1000	250	false	古びた重装
+11399	equipment	Equipment	HeavyArmor	Tatenashi Armor	1000	250	false	マクシミリアン
+11500	equipment	Equipment	Robe	Leather Robe	100	20	true	皮のローブ
+11501	equipment	Equipment	Robe	Spirit Veil	750	180	true	精霊のヴェール
+11502	equipment	Equipment	Robe	Sorcerer’s Habit	13500	3370	true	魔術師の服
+11503	equipment	Equipment	Robe	Cotton Robe	1000	250	true	木綿のローブ
+11504	equipment	Equipment	Robe	White Dress	1320	330	true	ホワイトドレス
+11505	equipment	Equipment	Robe	Angelic Vesture	35000	8750	true	天使の衣
+11506	equipment	Equipment	Robe	Silk Robe	2750	680	true	シルクのローブ
+11507	equipment	Equipment	Robe	Bard’s Tunic	4500	1120	true	詩人の服
+11508	equipment	Equipment	Robe	Cape of the Raiju	2000	500	true	雷獣のマント
+11509	equipment	Equipment	Robe	Lunar Eclipse Robe	2900	720	true	月食のローブ
+11510	equipment	Equipment	Robe	Solar Eclipse Robe	7700	1920	true	日食のローブ
+11511	equipment	Equipment	Robe	Cleric’s Surplice	18000	4500	true	司祭のローブ
+11512	equipment	Equipment	Robe	Sage’s Robe	12000	3000	true	賢者のローブ
+11513	equipment	Equipment	Robe	Elegant Robe	36000	9000	true	瀟洒なローブ
+11514	equipment	Equipment	Robe	Robe of Roses	4000	1000	true	薔薇のローブ
+11515	equipment	Equipment	Robe	Devout’s Robe	28000	7000	true	導師のローブ
+11516	equipment	Equipment	Robe	White Robe	33000	8250	true	白のローブ
+11517	equipment	Equipment	Robe	Black Robe	2500	620	true	黒のローブ
+11518	equipment	Equipment	Robe	Gaia Gear	45000	11250	true	大地の衣
+11519	equipment	Equipment	Robe	Minerva Bustier	50000	12500	true	ミネルバビスチェ
+11520	equipment	Equipment	Robe	Behemoth Suit	44000	11000	true	ベヒーモスーツ
+11521	equipment	Equipment	Robe	Protective Overcoat	2000	500	true	ローブ物防特化１
+11522	equipment	Equipment	Robe	Aegis Robe	3000	750	true	ローブ物防特化２
+11523	equipment	Equipment	Robe	Vita Cloak	4000	1000	true	ローブ物防特化３
+11524	equipment	Equipment	Robe	Guarding Gown	5000	1250	true	ローブ物防特化４
+11525	equipment	Equipment	Robe	Rock Cloak	6000	1500	true	ローブ物防特化５
+11526	equipment	Equipment	Robe	Mirage Robe	3000	750	true	追加ローブ６
+11527	equipment	Equipment	Robe	Phantom Robe	4000	1000	true	追加ローブ７
+11528	equipment	Equipment	Robe	Mirage Coat	5000	1250	true	魔法回避ローブ３
+11529	equipment	Equipment	Robe	Arch Robe	20000	5000	true	追加ローブ９
+11530	equipment	Equipment	Robe	Illusory Robe	7500	1870	true	追加ローブ１０
+11531	equipment	Equipment	Robe	Feather Robes	38500	9620	true	薄羽のローブ
+11597	equipment	Equipment	Robe	Lordly Robes+	1000	250	false	ローブオブロード・改
+11598	equipment	Equipment	Robe	Ancient Cloak	40000	10000	false	古びたマント
+11599	equipment	Equipment	Robe	Lordly Robes	1000	250	false	ローブオブロード
+12000	equipment	Equipment	None	Earrings of Health	600	150	true	体力のイヤリング
+12001	equipment	Equipment	None	Adept’s Armlet	25000	6250	true	熟練者の腕輪
+12002	equipment	Equipment	None	Power Stone	10000	2500	true	パワーストーン
+12003	equipment	Equipment	None	Mage’s Glasses	800	200	true	魔術師のメガネ
+12004	equipment	Equipment	None	Idaten’s Shoes	600	150	true	韋駄天のくつ
+12005	equipment	Equipment	None	Lucky Bell	400	100	true	幸運の鈴
+12006	equipment	Equipment	None	Fire Sprite Earrings	3000	750	true	火精のピアス
+12007	equipment	Equipment	None	Ring of Retaliation	200	50	true	反物の指輪
+12008	equipment	Equipment	None	Aeolian Misanga	200	50	true	疾風のミサンガ
+12010	equipment	Equipment	None	Chocobo Down Charm	200	50	true	チョコボの羽飾り
+12011	equipment	Equipment	None	Reflect Ring	25000	6250	true	リフレクトリング
+12012	equipment	Equipment	None	Protect Ring	20000	5000	true	プロテクトリング
+12013	equipment	Equipment	None	Barrier Ring	20000	5000	true	バリアリング
+12014	equipment	Equipment	None	Hermes Sandals	18000	4500	true	エルメスの靴
+12015	equipment	Equipment	None	Iron Sandals	1500	370	true	鉄下駄
+12016	equipment	Equipment	None	Berserker Ring	1500	370	true	怒りのリング
+12017	equipment	Equipment	None	Angel Ring	1500	370	true	天使の指輪
+12018	equipment	Equipment	None	Safety Bit	4000	1000	true	セーフティビット
+12019	equipment	Equipment	None	Star Pendant	1000	250	true	星のペンダント
+12020	equipment	Equipment	None	Silver-Rimmed Glasses	1000	250	true	銀縁メガネ
+12021	equipment	Equipment	None	Power Wristbands	1000	250	true	パワーリスト
+12022	equipment	Equipment	None	Bulletproof Vest	1000	250	true	防弾チョッキ
+12023	equipment	Equipment	None	Earrings	2500	620	true	イヤリング
+12024	equipment	Equipment	None	Talisman	1000	250	true	タリスマン
+12025	equipment	Equipment	None	Precognizant Beads	10000	2500	true	見切りの数珠
+12026	equipment	Equipment	None	Zephyr Cloak	10000	2500	true	そよ風のマント
+12027	equipment	Equipment	None	Gale Hairpin	1500	370	true	疾風の簪
+12028	equipment	Equipment	None	Brigand’s Gloves	4000	1000	true	盗賊の小手
+12029	equipment	Equipment	None	Alarm Earrings	3500	870	true	アラームピアス
+12030	equipment	Equipment	None	Swift Badge	3000	750	true	スイフトバッジ
+12031	equipment	Equipment	None	Poison Charm	700	170	true	ポイズンチャーム
+12032	equipment	Equipment	None	Monk’s Prayer Beads	1500	370	true	僧侶の数珠
+12033	equipment	Equipment	None	Hairband	200	50	true	ヘアバンド
+12034	equipment	Equipment	None	Insulated Gloves	3000	750	true	絶縁グローブ
+12035	equipment	Equipment	None	Headband	1500	370	true	ハチマキ
+12036	equipment	Equipment	None	Mage’s Shard	3600	900	true	魔道士の欠片
+12037	equipment	Equipment	None	Mage’s Stone	35000	8750	true	魔道士の石
+12038	equipment	Equipment	None	Philosopher’s Stone	3000	750	true	賢者の石
+12039	equipment	Equipment	None	Aquatic Veil	3000	750	true	水のヴェール
+12040	equipment	Equipment	None	Jeweled Ring	2000	500	true	ジュエルリング
+12042	equipment	Equipment	None	Tiara of Frost	3000	750	true	氷結のティアラ
+12043	equipment	Equipment	None	Fujin’s Fuda	3000	750	true	風神の御札
+12044	equipment	Equipment	None	Mole Doll	3000	750	true	土竜の埴輪
+12045	equipment	Equipment	None	Scintillating Ring	3000	750	true	明光の指輪
+12046	equipment	Equipment	None	Silver Key	3000	750	true	銀の鍵
+12047	equipment	Equipment	None	Trick Coin	777	190	true	ラッキーコイン
+12048	equipment	Equipment	None	Protector’s Seal	1000	250	true	守護騎士の勲章
+12049	equipment	Equipment	None	Calm Armlet	2000	500	true	冷静の腕輪
+12050	equipment	Equipment	None	Knight’s Medallion	1000	250	true	レインキャラクエアクセ
+12051	equipment	Equipment	None	Crest of Criticality	1000	250	true	ラスウェルキャラクエアクセ
+12052	equipment	Equipment	None	Blessed Pendant	1000	250	true	フィーナキャラクエアクセ
+12053	equipment	Equipment	None	Chocobo Nitro	1000	250	true	リドキャラクエアクセ
+12054	equipment	Equipment	None	Enchanted Ring	1000	250	true	ニコルキャラクエアクセ
+12055	equipment	Equipment	None	Amulet of Magic Absorption	1000	250	true	サクラキャラクエアクセ
+12056	equipment	Equipment	None	Moonlight Ring	1000	250	true	魔人フィーナキャラクエアクセ
+12057	equipment	Equipment	None	Hairpin of Grace	1000	250	true	４章イベ用アクセサリ
+12058	equipment	Equipment	None	Ring of Rage	1000	250	true	追加アクセサリ９
+12059	equipment	Equipment	None	Mastery Pendant	1000	250	true	追加アクセサリ１０
+12060	equipment	Equipment	None	Stagger Ring	1000	250	true	崩身の指輪
+12061	equipment	Equipment	None	Adept’s Monocle	1000	250	true	巧者のモノクル
+12062	equipment	Equipment	None	Arcane Pendant	1000	250	true	マジックペンダント
+12063	equipment	Equipment	None	Vitality Charm	1000	250	true	バイタルチャーム
+12064	equipment	Equipment	None	Heart Anklet	1000	250	true	ハートアンクレット
+12065	equipment	Equipment	None	Ribbon	1000	250	true	リボン
+12066	equipment	Equipment	None	Warding Bell	12000	3000	true	退魔の鈴
+12067	equipment	Equipment	None	Foe Attractor	12000	3000	true	エネミーマグネット
+12068	equipment	Equipment	None	Warrior’s Bandana	15000	3750	true	戦士のバンダナ
+12069	equipment	Equipment	None	Circlet of Enlightenment	35000	8750	true	解脱の輪
+12070	equipment	Equipment	None	Gentleman Thief’s Monocle	35000	8750	true	義賊のモノクル
+12071	equipment	Equipment	None	Sniper’s Eye	1000	250	true	スナイパーアイ
+12072	equipment	Equipment	None	Cursed Ring	1000	250	true	カースドリング
+12073	equipment	Equipment	None	Dark Rosary	1000	250	true	邪心のロザリオ
+12074	equipment	Equipment	None	Scar Orb	1000	250	true	スカーオーブ
+12075	equipment	Equipment	None	Evil Eye	1000	250	true	悪魔の目
+12076	equipment	Equipment	None	Vampire Charm	1000	250	true	ヴァンプチャーム
+12077	equipment	Equipment	None	Life Charm	20000	5000	true	ライフチャーム
+12078	equipment	Equipment	None	Solar Pendant	35000	8750	true	火属性付与
+12079	equipment	Equipment	None	Snow Spirit’s Scarf	35000	8750	true	氷属性付与
+12080	equipment	Equipment	None	Thunder God’s Earrings	35000	8750	true	雷属性付与
+12081	equipment	Equipment	None	Azure Amulet	35000	8750	true	水属性付与
+12082	equipment	Equipment	None	Sylph’s Tiara	35000	8750	true	風属性付与
+12083	equipment	Equipment	None	Golem Core	35000	8750	true	土属性付与
+12084	equipment	Equipment	None	Halo Ring	35000	8750	true	光属性付与
+12085	equipment	Equipment	None	Demon’s Ring	35000	8750	true	闇属性付与
+12086	equipment	Equipment	None	Adamantine Beads	10000	2500	true	行動順が最後になる
+12087	equipment	Equipment	None	Anti-Magic Studs	500	120	true	魔法カウンター
+12090	equipment	Equipment	None	Mastery Ring	500	120	false	DLC専用MRPUP
+12095	equipment	Equipment	None	Ultima Reactor	50000	12500	false	アルテマリアクター
+12096	equipment	Equipment	None	Genji Gloves	35000	8750	false	源氏の小手
+12097	equipment	Equipment	None	Gold Hairpin+	100	20	false	金の髪飾り・改
+12098	equipment	Equipment	None	Ancient Accessory	100	20	false	古びた金細工
+12099	equipment	Equipment	None	Gold Hairpin	100	20	false	金の髪飾り
+12100	equipment	Equipment	None	Rose Circlet	1500	370	true	紅薔薇のサークレット
+12101	equipment	Equipment	None	Super Ribbon	1500	370	false	スーパーリボン
+12102	equipment	Equipment	None	Dragon Seal	1500	370	false	竜の紋章
+12103	equipment	Equipment	None	Omega Badge	1500	370	false	オメガの勲章
+13017	vision	Equipment		Amelia	0	0	false	アメリア
+13024	vision	Equipment		Tronn	0	0	false	トロン
+13027	vision	Equipment		Victoria	0	0	false	ビクトリア
+13033	vision	Equipment		Camille	0	0	false	カーミル
+13045	vision	Equipment		Leah	0	0	false	リーア
+13051	vision	Equipment		Ayaka	0	0	false	アヤカ
+13060	vision	Equipment		Charlotte	0	0	false	シャルロット
+13062	vision	Equipment		Wilhelm	0	0	false	ヴィルヘルム
+13080	vision	Equipment		Aileen	0	0	false	アイリーン
+13100	vision	Equipment		Warrior of Light	0	0	false	ウォーリアオブライト
+13101	vision	Equipment		Firion	0	0	false	フリオニール
+13102	vision	Equipment		Onion Knight	0	0	false	オニオンナイト
+13103	vision	Equipment		Cecil	0	0	false	セシル
+13105	vision	Equipment		Bartz	0	0	false	バッツ
+13108	vision	Equipment		Terra	0	0	false	ティナ
+13110	vision	Equipment		Cloud	0	0	false	クラウド
+13113	vision	Equipment		Sephiroth	0	0	false	セフィロス
+13116	vision	Equipment		Squall	0	0	false	スコール
+13118	vision	Equipment		Zidane	0	0	false	ジタン
+13120	vision	Equipment		Tidus	0	0	false	ティーダ
+13123	vision	Equipment		Shantotto	0	0	false	シャントット
+13124	vision	Equipment		Vaan	0	0	false	ヴァン
+13125	vision	Equipment		Lightning	0	0	false	ライトニング
+13127	vision	Equipment		Y’shtola	0	0	false	ヤ・シュトラ
+13128	vision	Equipment		Noctis	0	0	false	ノクティス
+13130	vision	Equipment		Clive	0	0	false	クライヴ
+20005	valuable	Valuable		White Jade Stone	0	0	false	白輝石
+20006	valuable	Valuable		Black Jade Stone	0	0	false	黒輝石
+20007	valuable	Valuable		Magic Tome	0	0	false	魔道書
+20008	valuable	Valuable		Tunnel Key	0	0	false	地下隧道の鍵
+20009	valuable	Valuable		Level 1 Lab Key Card	0	0	false	研究所キーカードレベル1
+20010	valuable	Valuable		Level 2 Lab Key Card	0	0	false	研究所キーカードレベル2
+20011	valuable	Valuable		Level 3 Lab Key Card	0	0	false	研究所キーカードレベル3
+20016	valuable	Valuable		Adamantite	35000	8750	false	アダマンタイト
+20018	valuable	Valuable		牢屋の鍵	0	0	false	牢屋の鍵
+20019	valuable	Valuable		Dungeon Key	0	0	false	地下牢の鍵
+20020	valuable	Valuable		Dew of Reprieve	0	0	false	寛解の雫
+20021	valuable	Valuable		Throne Room Key	0	0	false	玉座の鍵
+20023	valuable	Valuable		Viscus Vitae	0	0	false	滋養肝
+20024	valuable	Valuable		Rushroom	0	0	false	活力ダケ
+20025	valuable	Valuable		Pure Water	0	0	false	清らかな水
+20026	valuable	Valuable		Convalescence Draught	0	0	false	養生薬
+20027	valuable	Valuable		Super Salubrious Salad Stem	0	0	false	極上健命菜
+20028	valuable	Valuable		Portrait of Dario	0	0	false	ダリオの似顔絵
+20029	valuable	Valuable		Dario’s Letter	0	0	false	手紙
+20030	valuable	Valuable		Ruby Fragment	0	0	false	ルビーの欠片
+20031	valuable	Valuable		Broken Sword Hilt	0	0	false	折れた剣
+20032	valuable	Valuable		Broken Sword Blade	0	0	false	折れた刀身
+20033	valuable	Valuable		Cabin Key	0	0	false	小屋の鍵
+25000	valuable	Valuable		Magicite Shard	10000	1	false	魔石Lv１
+25001	valuable	Valuable		Magicite	50000	1	false	魔石Lv２
+25002	valuable	Valuable		Magicite Cryst	250000	1	false	魔石Lv３
+25004	valuable	Valuable		Tablet Shard	0	0	false	石板のカケラ
+27006	valuable	Valuable		Magi-tenna	0	0	false	ミシディアレーダー強化素材①
+27007	valuable	Valuable		Resonance Stone	0	0	false	ミシディアレーダー強化素材②
+27008	valuable	Valuable		High-Power Generator	60000	15000	false	ミシディアレーダー強化素材③
+29000	valuable	Valuable		Fledgling’s Proof of Victory	0	0	false	コロシアム初級クリア
+29001	valuable	Valuable		Brawler’s Proof of Victory	0	0	false	コロシアム中級クリア
+29002	valuable	Valuable		Gladiator’s Proof of Victory	0	0	false	コロシアム上級クリア
+29003	valuable	Valuable		Champion’s Proof of Victory	0	0	false	コロシアム最上級クリア
+29500	valuable	Valuable		Magitek Armor Key	0	0	false	DLCアイテム1
+29510	valuable	Valuable		Archwitch’s Grimoire	0	0	false	DLCアイテム2
+29520	valuable	Valuable		Magitek Airship Passkey	0	0	false	DLCアイテム3
+30000	artifact	Artifact		Tome of Sages	0	0	false	賢者の書
+30001	artifact	Artifact		Exodus	0	0	false	エクソダス
+30002	artifact	Artifact		Choboco Saddle	0	0	false	チョコボの鞍
+30003	artifact	Artifact		Trick Coin	0	0	false	イカサマコイン
+30004	artifact	Artifact		Sorcerer's Cape	0	0	false	ソーサリーマント
+30005	artifact	Artifact		Lordly Robes	0	0	false	ローブオブロード
+30006	artifact	Artifact		Premium Card	0	0	false	ブラックカード
+30007	artifact	Artifact		Transporter	0	0	false	トランスポーター
+30008	artifact	Artifact		Soul Jade	0	0	false	魂の勾玉
+30009	artifact	Artifact		Runic Bracer	0	0	false	ルーンの腕輪
+30010	artifact	Artifact		Bandit Cuff Links	0	0	false	盗賊のカフス
+30011	artifact	Artifact		Chocobo Saddle-Bike	0	0	false	チョコボサドル：バイク
+30012	artifact	Artifact		[TEMP] Increase movement speed	0	0	false	EXP抑制装置
+30013	artifact	Artifact		[TEMP] Airship skin	0	0	false	移動速度増加
+30014	artifact	Artifact		[TEMP] EXP Suppressor	0	0	false	飛空艇スキン
+30015	artifact	Artifact		Fury Ring	0	0	false	怒りの指輪
+30016	artifact	Artifact		[TEMP] Enemy lure	0	0	false	てきよせ
+30017	artifact	Artifact		Cursed Ring	0	0	false	呪いの指輪
+30018	artifact	Artifact		賢者の巻物	0	0	false	賢者の巻物

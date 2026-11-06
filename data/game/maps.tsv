@@ -1,0 +1,187 @@
+id	key	name	island	group	table
+1000	Wld	Field	None	-1	DT_MapData_00Com
+2000	01Gra_20	Town of Mitra	Grandshelt	-1	DT_MapData_01Gra
+2010	01Gra_01	Grandshelt, the Royal Capital	Grandshelt	2011	DT_MapData_01Gra
+2011	01Gra_02	Grandshelt, the Royal Capital	Grandshelt	2011	DT_MapData_01Gra
+2012	01Gra_21	Grandshelt Castle	Grandshelt	2011	DT_MapData_01Gra
+2013	01Gra_03	Grandshelt, the Royal Capital	Grandshelt	2011	DT_MapData_01Gra
+2014	01Gra_22	Grandshelt Castle	Grandshelt	2011	DT_MapData_01Gra
+2015	01Gra_04	Commercial District	Grandshelt	2011	DT_MapData_01Gra
+2016	01Gra_05	Colosseum	Grandshelt	2011	DT_MapData_01Gra
+2017	01Gra_06	Grandshelt, the Royal Capital	Grandshelt	2011	DT_MapData_01Gra
+2020	02Lan_20	Village of Kol	Lanzelt	-1	DT_MapData_02Lan
+2030	02Lan_21	Grandport Harbor	Lanzelt	-1	DT_MapData_02Lan
+2031	02Lan_22	Oblivion Palace	Lanzelt	-1	DT_MapData_02Lan
+2040	03Kol_20	Town of Felicitas	Kolobos	-1	DT_MapData_03Kol
+2050	04Dir_20	Dwarven Forge	Dirnado	-1	DT_MapData_04Dir
+2060	04Dir_01	Dilmagia, the Machinopolis	Dirnado	2060	DT_MapData_04Dir
+2061	04Dir_02	Shipyard	Dirnado	2060	DT_MapData_04Dir
+2070	05Old_01	Olderion, the Aquapolis	Olderion	2070	DT_MapData_05Old
+2080	05Old_20	Lake Dorr	Olderion	2080	DT_MapData_05Old
+2081	05Old_23	Lake Dorr	Olderion	2080	DT_MapData_05Old
+2090	05Old_21	Town of Amore	Olderion	-1	DT_MapData_05Old
+2100	06Zol_20	Mozul Station	Zoldaad	2100	DT_MapData_06Zol
+2101	06Zol_22	Kellis Station	Zoldaad	2102	DT_MapData_06Zol
+2102	06Zol_23	Capital Station	Zoldaad	2102	DT_MapData_06Zol
+2110	06Zol_01	Zoldaad, the Imperial Capital	Zoldaad	2110	DT_MapData_06Zol
+2111	06Zol_02	Zoldaad Castle Plaza	Zoldaad	2110	DT_MapData_06Zol
+2112	06Zol_03	Capital Market	Zoldaad	2110	DT_MapData_06Zol
+2113	06Zol_04	Imperial Residences	Zoldaad	2110	DT_MapData_06Zol
+2114	06Zol_05	Slums	Zoldaad	2110	DT_MapData_06Zol
+2120	06Zol_21	Rebel Hideout	Zoldaad	-1	DT_MapData_06Zol
+2130	07Mys_01	Mysidia, the Magiapolis	MagiNationMysidia	2130	DT_MapData_07Mys
+2140	07Mys_20	Village of Sunioo	MagiNationMysidia	-1	DT_MapData_07Mys
+2150	08Gro_01	Gaberada, the Undertown	Gronoa	-1	DT_MapData_08Gro
+2160	08Gro_20	Town of Duggle	Gronoa	-1	DT_MapData_08Gro
+2170	09Pha_01	Town of Sian	Pharm	-1	DT_MapData_09Pha
+2180	09Pha_20	Lake Ryusei	Pharm	-1	DT_MapData_09Pha
+2190	09Pha_21	Abandoned Cabin	Pharm	-1	DT_MapData_09Pha
+3000	01Gra_40	Earth Shrine	Grandshelt	3000	DT_MapData_01Gra
+3001	01Gra_43	Earth Shrine	Grandshelt	3000	DT_MapData_01Gra
+3010	01Gra_41	Dragon’s Maw	Pharm	-1	DT_MapData_09Pha
+3020	01Gra_42	Grandshelt Castle	Grandshelt	2011	DT_MapData_01Gra
+3030	02Lan_40	Siren’s Tower	Lanzelt	-1	DT_MapData_02Lan
+3031	02Lan_44	Cavern of Swords	Lanzelt	-1	DT_MapData_02Lan
+3040	03Kol_40	Kolobos Ruins	Kolobos	-1	DT_MapData_03Kol
+3050	04Dir_40	Mt. Thunderclap	Dirnado	-1	DT_MapData_04Dir
+3060	04Dir_41	Mobliz Shipyard	Dirnado	3060	DT_MapData_04Dir
+3061	04Dir_43	Mobliz Shipyard	Dirnado	3060	DT_MapData_04Dir
+3062	04Dir_44	Mobliz Shipyard	Dirnado	3060	DT_MapData_04Dir
+3070	04Dir_42	Wind Shrine	Dirnado	-1	DT_MapData_04Dir
+3080	05Old_40	Cave of Waters	Olderion	-1	DT_MapData_05Old
+3090	05Old_41	Old Town, Olderion	Olderion	2070	DT_MapData_05Old
+3091	05Old_42	Old Town, Olderion	Olderion	2070	DT_MapData_05Old
+3100	05Old_43	Waterfall Way	Olderion	-1	DT_MapData_05Old
+3110	05Old_44	Water Shrine	Olderion	-1	DT_MapData_05Old
+3111	05Old_45	Ruby Cave	Olderion	-1	DT_MapData_05Old
+3120	06Zol_40	Timber Tracks	Zoldaad	2100	DT_MapData_06Zol
+3121	06Zol_47	Phantom Train	Zoldaad	2110	DT_MapData_06Zol
+3130	06Zol_41	Weapons Factory	Zoldaad	3130	DT_MapData_06Zol
+3131	06Zol_45	Weapons Factory	Zoldaad	3130	DT_MapData_06Zol
+3140	06Zol_42	Underground Tunnel	Zoldaad	2110	DT_MapData_06Zol
+3150	06Zol_43	Dungeon	Zoldaad	2110	DT_MapData_06Zol
+3160	06Zol_44	Zoldaad Castle	Zoldaad	2110	DT_MapData_06Zol
+3170	07Mys_40		MagiNationMysidia	-1	DT_MapData_07Mys
+3180	07Mys_41	Nameless Ruins	MagiNationMysidia	-1	DT_MapData_07Mys
+3190	07Mys_42	Arcane Library	MagiNationMysidia	2130	DT_MapData_07Mys
+3200	07Mys_43	Tower of Mysidia	MagiNationMysidia	-1	DT_MapData_07Mys
+3210	07Mys_44	Fina’s Psyche	MagiNationMysidia	3210	DT_MapData_07Mys
+3211	07Mys_45	Fina’s Psyche	MagiNationMysidia	3210	DT_MapData_07Mys
+3212	07Mys_46	Fina’s Psyche	MagiNationMysidia	3210	DT_MapData_07Mys
+3213	07Mys_49	Victoria’s Shrine	MagiNationMysidia	-1	DT_MapData_07Mys
+3220	08Gro_40	Research Center Ruins	Gronoa	-1	DT_MapData_08Gro
+3230	08Gro_41	Rugged Mountain Path	Gronoa	-1	DT_MapData_08Gro
+3240	08Gro_42	Gronoa Shrine	Gronoa	-1	DT_MapData_08Gro
+3250	08Gro_43	Sanctissimus Shrine	Gronoa	-1	DT_MapData_08Gro
+3260	09Pha_40	Mt. Reizan	Pharm	-1	DT_MapData_09Pha
+3270	09Pha_41	Wandering Lands	Pharm	8000	DT_MapData_09Pha
+3271	09Pha_42	Forest Path	Pharm	-1	DT_MapData_09Pha
+3272	09Pha_43	Wandering Lands	Pharm	8000	DT_MapData_09Pha
+3280	10Cry_40	Crystal Tower	LandOfTheCrystals	9000	DT_MapData_10Cry
+3281	10Cry_41	Crystal Tower	LandOfTheCrystals	9000	DT_MapData_10Cry
+3290	04Dir_45	Chamber of Arms	Dirnado	-1	DT_MapData_04Dir
+5010	00Eve_87	Battlefield	None	-1	DT_MapData_00Com
+5020	00Eve_80		None	-1	DT_MapData_00Com
+5021	00Eve_102		None	-1	DT_MapData_00Com_Prod
+5030	00Eve_81		Dirnado	-1	DT_MapData_04Dir
+5031	00Eve_90		Olderion	-1	DT_MapData_05Old
+5032	00Eve_91		None	-1	DT_MapData_00Com_Prod
+5040	00Eve_93		Dirnado	-1	DT_MapData_04Dir
+5041	00Eve_94		Dirnado	-1	DT_MapData_04Dir
+5050	00Eve_95		Zoldaad	-1	DT_MapData_06Zol
+5090	00Com_65		Zoldaad	-1	DT_MapData_06Zol
+5100	00Eve_83	Zoldaad Castle	Zoldaad	2110	DT_MapData_06Zol
+5130	00Eve_84		Olderion	-1	DT_MapData_05Old
+5140	00Eve_85	Airship	Zoldaad	-1	DT_MapData_06Zol
+5150	00Eve_88	Airship	None	-1	DT_MapData_10Cry
+5152	00Eve_117	Airship	None	-1	DT_MapData_10Cry
+5153	00Eve_118	Crystal Tower	None	-1	DT_MapData_10Cry
+5154	00Eve_119	Crystal Tower	None	-1	DT_MapData_10Cry
+5155	00Eve_120		None	-1	DT_MapData_00Com_Prod
+5156	00Com_121	Research Center Ruins	Dirnado	-1	DT_MapData_04Dir
+5160	00Eve_89		None	-1	DT_MapData_06Zol
+5170	00Eve_92		None	-1	DT_MapData_00Com
+5180	00Eve_96	Wandering Lands	Pharm	8000	DT_MapData_09Pha
+5181	00Eve_97	Wandering Lands	Pharm	8000	DT_MapData_09Pha
+5190	00Eve_98	Crystal Tower	None	-1	DT_MapData_10Cry
+5191	00Eve_99	Crystal Tower	None	-1	DT_MapData_10Cry
+5192	00Eve_100	Lake Dorr	None	-1	DT_MapData_10Cry
+5193	00Eve_101	Airship	None	-1	DT_MapData_00Com_Prod
+5194	00Eve_111	Airship	None	-1	DT_MapData_00Com_Prod
+5195	00Eve_112	Fina’s Psyche	MagiNationMysidia	3210	DT_MapData_07Mys
+5197	00Eve_114	Mysidia, the Magiapolis	MagiNationMysidia	-1	DT_MapData_07Mys
+5198	00Eve_115	Colosseum	Grandshelt	-1	DT_MapData_01Gra
+5199	00Eve_116	Airship	None	-1	DT_MapData_00Com_Prod
+5200	00Eve_103		None	-1	DT_MapData_00Com
+5201	00Eve_104		None	-1	DT_MapData_00Com_Prod
+5202	00Eve_105		None	-1	DT_MapData_00Com
+5203	00Eve_106		None	-1	DT_MapData_00Com_Prod
+5204	00Eve_107		None	-1	DT_MapData_00Com_Prod
+5205	00Eve_108		None	-1	DT_MapData_00Com_Prod
+5206	00Eve_109		None	-1	DT_MapData_00Com_Prod
+5207	00Eve_110		None	-1	DT_MapData_00Com_Prod
+10001	01Gra_44	Lost Cave	Grandshelt	-1	DT_MapData_01Gra
+10020	00Com_217	Sanctum of Light	Grandshelt	-1	DT_MapData_01Gra
+10030	06Zol_46	Infernal Hollow	Zoldaad	-1	DT_MapData_06Zol
+10031	06Zol_48	Quarry Cave	Zoldaad	-1	DT_MapData_06Zol
+10040	00Com_45	Battlefield	None	10040	DT_MapData_00Com
+10041	00Com_46	Battlefield	None	10040	DT_MapData_00Com
+10042	00Com_47	Battlefield	None	10042	DT_MapData_00Com_Prod
+10043	00Com_48	Airship	None	-1	DT_MapData_00Com_Prod
+10044	00Com_49	Battlefield	None	10042	DT_MapData_00Com_Prod
+10045	00Com_50	Grandport Harbor	None	-1	DT_MapData_00Com
+10051	02Lan_42	Marauder Cave	Lanzelt	-1	DT_MapData_02Lan
+10052	04Dir_46	Shoggoth Cave	Dirnado	-1	DT_MapData_04Dir
+10053	05Old_46	Rukh Cave	Olderion	-1	DT_MapData_05Old
+10054	05Old_47	Mindflayer Cave	Olderion	-1	DT_MapData_05Old
+10055	06Zol_49	Gogmagog Cave	Zoldaad	-1	DT_MapData_06Zol
+10056	06Zol_50	Pyroviper Cave	Zoldaad	-1	DT_MapData_06Zol
+10057	07Mys_47	Salome Cave	MagiNationMysidia	-1	DT_MapData_07Mys
+10058	07Mys_48	Jotunn Cave	MagiNationMysidia	-1	DT_MapData_07Mys
+10059	01Gra_46	Malboro Varietas Cave	Olderion	-1	DT_MapData_05Old
+10060	08Gro_44	Bladerain Stele	Gronoa	-1	DT_MapData_08Gro
+10061	05Old_48	Tartarosaurus Cave	Pharm	-1	DT_MapData_09Pha
+10062	02Lan_43	Catacumba Cave	Gronoa	-1	DT_MapData_08Gro
+10063	08Gro_45	Necromonarch Cave	Gronoa	-1	DT_MapData_08Gro
+10064	08Gro_46	Humbaba Cave	Gronoa	-1	DT_MapData_08Gro
+10065	09Pha_44	Titanoraidos Cave	Pharm	-1	DT_MapData_09Pha
+10066	09Pha_45	Malboro Menace Cave	Pharm	-1	DT_MapData_09Pha
+10200	00Com_200	Sanctum of Light	Olderion	10200	DT_MapData_05Old
+10201	00Com_201	Sanctum of Light	Kolobos	10201	DT_MapData_03Kol
+10202	00Com_202	Sanctum of Light	Dirnado	10202	DT_MapData_04Dir
+10203	00Com_203	Sanctum of Light	Lanzelt	10203	DT_MapData_02Lan
+10205	00Com_205	Sanctum of Light	Olderion	10205	DT_MapData_05Old
+10206	00Com_206	Sanctum of Light	Dirnado	10206	DT_MapData_04Dir
+10207	00Com_207	Sanctum of Light	Dirnado	10207	DT_MapData_04Dir
+10208	00Com_208	Sanctum of Light	Lanzelt	10208	DT_MapData_02Lan
+10209	00Com_209	Sanctum of Light	Olderion	10209	DT_MapData_05Old
+10210	00Com_210	Sanctum of Light	Zoldaad	10210	DT_MapData_06Zol
+10211	00Com_211	Sanctum of Light	Zoldaad	10211	DT_MapData_06Zol
+10212	00Com_212	Sanctum of Light	Zoldaad	10212	DT_MapData_06Zol
+10213	00Com_213	Sanctum of Light	MagiNationMysidia	10213	DT_MapData_07Mys
+10214	00Com_214	Sanctum of Light	MagiNationMysidia	10214	DT_MapData_07Mys
+10215	00Com_215	Sanctum of Light	MagiNationMysidia	10215	DT_MapData_07Mys
+10216	00Com_216	Sanctum of Light	Grandshelt	10216	DT_MapData_01Gra
+10218	00Com_218	Whirlpool Hollow	Grandshelt	-1	DT_MapData_01Gra
+10220	00Com_220	Sanctum of Tidus	Olderion	10200	DT_MapData_05Old
+10221	00Com_221	Sanctum of Terra	Kolobos	10201	DT_MapData_03Kol
+10222	00Com_222	Sanctum of Noctis	Dirnado	10202	DT_MapData_04Dir
+10223	00Com_223	Sanctum of WoL	Lanzelt	10203	DT_MapData_02Lan
+10225	00Com_225	Sanctum of Firion	Olderion	10205	DT_MapData_05Old
+10226	00Com_226	Sanctum of Zidane	Dirnado	10206	DT_MapData_04Dir
+10227	00Com_227	Sanctum of Onion Knight	Dirnado	10207	DT_MapData_04Dir
+10228	00Com_228	Sanctum of Cloud	Lanzelt	10208	DT_MapData_02Lan
+10229	00Com_229	Sanctum of Squall	Olderion	10209	DT_MapData_05Old
+10230	00Com_230	Sanctum of Shantotto	Zoldaad	10210	DT_MapData_06Zol
+10231	00Com_231	Sanctum of Cecil	Zoldaad	10211	DT_MapData_06Zol
+10232	00Com_232	Sanctum of Y’shtola	Zoldaad	10212	DT_MapData_06Zol
+10233	00Com_233	Sanctum of Bartz	MagiNationMysidia	10213	DT_MapData_07Mys
+10234	00Com_234	Sanctum of Lightning	MagiNationMysidia	10214	DT_MapData_07Mys
+10235	00Com_235	Sanctum of Vaan	MagiNationMysidia	10215	DT_MapData_07Mys
+10236	00Com_236	Sanctum of Clive	Grandshelt	10216	DT_MapData_01Gra
+10237	00Com_237	Sanctum of Light	Grandshelt	-1	DT_MapData_01Gra
+11000	05Old_22	Secluded Dwelling	Olderion	-1	DT_MapData_05Old
+20000	00Eve_86	Airship	None	-1	DT_MapData_00Com
+20001	00Com_01	Airship	None	20001	DT_MapData_00Com_Prod
+20002	00Com_03	Deck	None	20001	DT_MapData_00Com_Prod
+60000	00Com_9999	不正な遷移先	None	-1	DT_MapData_00Com

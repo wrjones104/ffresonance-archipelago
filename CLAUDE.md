@@ -10,6 +10,7 @@ An Archipelago implementation for Final Fantasy Resonance (UE 5.6, game module `
   - `Scripts/bridge.lua`: the file bridge (`ap_in.txt` from the client, `ap_out.txt` to it). The line formats are in its header.
   - `Assets/`: the Archipelago logo.
 - **The apworld and client**, `apworld/ff_resonance/` (`client.py`, `world.py`, `items.py`, `locations.py`, `options.py`, generated `data.py`). `python tools/build_apworld.py` builds `dist/ff_resonance.apworld`.
+- **The game data dump**, `tools/dump_game/` (C#, CUE4Parse) and `tools/gen_from_dump.py`. They read the game's pak files off-line and write `data/game/*.tsv`. Use these tables, not FFR-Randomizer's lists, as the reference for items, units, maps, chests, field items, map exits and gimmicks. See "The game data dump" in the README.
 - **Docs:**
   - `README.md`: setup, commands, bridge format, test results per round, the current round's test plan, open questions.
   - `IDEAS.md`: numbered ideas and findings, with what is known and what to find out.
@@ -49,6 +50,7 @@ An Archipelago implementation for Final Fantasy Resonance (UE 5.6, game module `
   - `ffrap_find <text>`: classes, functions and fields by name.
   - `ffrap_layout <text>`: the panels around some on-screen text.
   - `ffrap_functions`: function signatures.
+  - Off-line, before a probe: `data/game/*.tsv`, or `dotnet run --project tools/dump_game -- assets <path>` for any asset's properties.
 
 **Shipping risky changes:**
 - **A crash in the engine ends the game before Lua can log.** Ship risky UI work behind a test command, off by default, that logs each step before it runs.

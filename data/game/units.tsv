@@ -1,0 +1,644 @@
+id	category	race	name	level	row
+1	Enemy	Human	Soldier	30	パラデイア兵士
+2	Enemy	Avian	Steel Bat	1	スティールバット
+3	Enemy	Animal	Dire Rat	2	ウェアラット
+5	Enemy	Human	Goblin	4	ゴブリン
+6	Enemy	Animal	Wolf	11	ウルフ
+7	Enemy	Reaper	Skeleton	4	スケルトン
+9	Enemy	Aquatic	Green Slime	11	グリーンスライム
+10	Enemy	Plantoid	Mandragora	3	マンドラゴラ
+11	Enemy	Avian	Dive Talon	6	ダイブイーグル
+12	Enemy	Aquatic	Poison Toad	6	ポイズントード
+13	Enemy	Insect	Killer Mantis	18	キラーマンティス
+14	Enemy	Reaper	Wraith Soldier	5	幽鬼兵
+15	Enemy	Animal	Wild Nakk	14	ワイルドナック
+16	Enemy	Human	Goblin Guard	5	ゴブリンガード
+17	Enemy	Reaper	Sergeant	6	サージェント
+18	Enemy	Human	Cutpurse	6	したっぱ
+19	Enemy	Animal	Nutkin	4	ナッツイータ―
+20	Enemy	Plantoid	Human Trap	7	イビルプラント
+21	Enemy	Insect	Hornet	6	ホーネット
+22	Enemy	Animal	Wild Rat	8	ワイルドラット
+23	Enemy	Plantoid	Wood Eyes	11	ウッドアイズ
+24	Enemy	Demon	Bomb	12	ボム
+26	Enemy	Reaper	Poplium	8	パウポリウム
+27	Enemy	Human	Shadow	7	シャドウ
+28	Enemy	Dragon	Mini Dragon	17	ミニドラゴン
+29	Enemy	Fairy	Red Elemental	28	レッドエレメンタル
+30	Enemy	Avian	Vulture	24	ヴァルチャー
+31	Enemy	Human	Footpad	12	こそどろ
+32	Enemy	Human	Thief Boss	13	おかしら
+33	Enemy	Insect	Scorpion	6	サソリ
+34	Enemy	Aquatic	Desert Sahagin	9	デザートサハギン
+35	Enemy	Demon	Basilisk	18	バジリスク
+36	Enemy	Aquatic	Xiphactinus	22	クシファクティヌス
+37	Enemy	Insect	Crawler	7	クロウラー
+38	Enemy	Plantoid	Cactuar	30	サボテンダー
+39	Enemy	Plantoid	Minituar	16	ミニテンダー
+40	Enemy	Aquatic	Red Marshmallow	25	レッドマシュマロ
+41	Enemy	Avian	Osprey	14	ルク
+42	Enemy	Dragon	Diresaur	19	ウェアドラゴン
+43	Enemy	Human	Ghost	7	ゴースト
+44	Enemy	Aquatic	Sahagin	9	サハギン
+45	Enemy	Reaper	Soul	5	ソウル
+46	Enemy	Demon	Imp	17	インプ
+47	Enemy	Human	Sorcerer	18	ソーサラー
+48	Enemy	Human	Mage	10	メイジ
+49	Enemy	Aquatic	Abtu	9	アブトー
+51	Enemy	Fairy	Aqua Elemental	10	アクアエレメンタル
+52	Enemy	Demon	Floateye	9	フロータイボール
+53	Enemy	Animal	Mu	18	ムー
+54	Enemy	Plantoid	Mammon	5	マモン
+55	Enemy	Animal	Ipooh	14	イプー
+56	Enemy	Plantoid	Alraune	6	アルラウネ
+57	Enemy	Reaper	Zombie	12	ゾンビー
+58	Enemy	Reaper	Ghoul	7	グール
+59	Enemy	Stone	Headstone	16	ブロックス
+60	Enemy	Machina	Security Eye	14	アイズ
+61	Enemy	Stone	Objet d’Art	23	せきぞう
+62	Enemy	Reaper	Skuldier	7	スカルジャー
+63	Enemy	Human	Gigas	24	ギガース
+64	Enemy	Aquatic	Anet	19	アネット
+65	Enemy	Aquatic	Gigantoad	4	ギガントード
+66	Enemy	Aquatic	Adamantoise	20	アダマンタイマイ
+67	Enemy	Insect	Sea Scorpion	18	うみサソリ
+68	Enemy	Aquatic	Shark	11	シャーク
+69	Enemy	Insect	Hivesguard	23	ビーネ
+72	Enemy	Aquatic	Sahagin Chief	46	サハギンチーフ
+74	Enemy	Animal	Stunner Rat	18	スタナー
+75	Enemy	Insect	Gigas Worm	22	ギガースウォーム
+76	Enemy	Human	Goblin Mage	21	ゴブリンメイジ
+77	Enemy	Avian	Golden Eagle	24	ゴールドイーグル
+78	Enemy	Avian	Iron bat	14	アイアンバット
+79	Enemy	Insect	Twinscythe	25	トゥカッター
+80	Enemy	Fairy	Ninlil	16	ニンリル
+81	Enemy	Avian	Sprinter	13	スプリンター
+82	Enemy	Avian	Huri Kamuy	26	フリカムイ
+83	Enemy	Reaper	Green Soul	19	グリーンソウル
+84	Enemy	Demon	Balloon	26	バルーン
+86	Enemy	Human	Captain	13	キャプテン
+87	Enemy	Human	Warlock	12	ウィザード
+88	Enemy	Reaper	Cursed Bones	28	カースドスカル
+89	Enemy	Machina	Searcher	26	サーチャー
+90	Enemy	Machina	Magitek Armor	30	魔導アーマー
+91	Enemy	Machina	Epimetheus	16	エピメテウス
+92	Enemy	Machina	Centipede	15	センチピード
+93	Enemy	Avian	Poison Eagle	25	プアゾンイーグル
+94	Enemy	Avian	Zuu	26	ズー
+95	Enemy	Demon	Pit Fiend	24	ピットフィーンド
+96	Enemy	Insect	Greater Mantis	47	グランインセクト
+97	Enemy	Dragon	Balaur	32	バラウール
+98	Enemy	Animal	Worgen	21	ウォーグウルフ
+99	Enemy	Dragon	Dragon Junior	24	リトルドラゴン
+100	Enemy	Machina	Scolopendra	26	シュタール
+101	Enemy	Plantoid	Treant	26	トレント
+102	Enemy	Stone	Pawn	15	ポーン
+103	Enemy	Fairy	Jupiter	25	ユピテル
+104	Enemy	Plantoid	Vamplant	25	吸血草
+105	Enemy	Stone	Monster Effigy	26	石像獣
+107	Enemy	Demon	Medusa	18	メデューサ
+108	Enemy	Reaper	Yellow Soul	23	イエローソウル
+109	Enemy	Reaper	Ghast	28	ガスト
+110	Enemy	Reaper	Dark Skeleton	5	ダークスケルトン
+111	Enemy	Demon	Gremlin	29	プラクティ
+112	Enemy	Demon	Dire Lizard	44	グレートリザード
+113	Enemy	Demon	The Hunger	9	ハンガー
+115	Enemy	Animal	Gusion	32	グシオン
+117	Enemy	Animal	Soul Eater	25	ソウルイーター
+118	Enemy	Animal	Kaiser Wolf	40	カイザーウルフ
+119	Enemy	Animal	Destroyer	24	デストロイダー
+120	Enemy	Animal	Tyrant	39	マッドタイラント
+121	Enemy	Animal	Giant Bear	27	ビッグベア
+122	Enemy	Animal	Evil Bear	45	イビルベア
+123	Enemy	Animal	Coeurl	27	クアール
+124	Enemy	Animal	Bandercoeurl	40	バンデルクアール
+125	Enemy	Animal	Stealth Coeurl	37	ステルスクアール
+126	Enemy	Animal	Chimera	28	キマイラ
+127	Enemy	Animal	Chimera Brain	52	キマイラブレイン
+128	Enemy	Animal	Dhorme Chimera	16	ドルムキマイラ
+131	Enemy	Animal	Apanda	54	アパンダ
+132	Enemy	Avian	Cockatrice	35	コカトリス
+133	Enemy	Avian	Simurgh	32	シムルグ
+134	Enemy	Avian	Giant Bird	36	ビッグバード
+135	Enemy	Avian	Phorusrhacos	48	フォルスラコス
+137	Enemy	Avian	Rudra	39	きょだいちょう
+138	Enemy	Avian	Shantak	49	シャンタク
+139	Enemy	Aquatic	Toadgre	32	オーガニトード
+140	Enemy	Aquatic	Yellow Jelly	26	イエローゼリー
+141	Enemy	Aquatic	Black Flan	47	ブラックプリン
+142	Enemy	Aquatic	Flan Princess	48	プリンプリンセス
+143	Enemy	Aquatic	White Mousse	22	ホワイトムース
+144	Enemy	Aquatic	Maelspike	23	レイジングスパイク
+145	Enemy	Aquatic	Merman	22	マーマン
+146	Enemy	Aquatic	Black Shark	24	ブラックシャーク
+147	Enemy	Aquatic	Megalodon	26	メガロドン
+148	Enemy	Aquatic	Magma Tortoise	26	マグマントータス
+149	Enemy	Aquatic	Adamandelion	50	アダマンデリオン
+150	Enemy	Aquatic	Amoebozoa	26	アメーボゾア
+151	Enemy	Aquatic	Ribosome	25	ライボソーム
+152	Enemy	Demon	Ahriman	37	アーリマン
+153	Enemy	Demon	Plague	52	プレイグ
+154	Enemy	Demon	Bloody Eye	17	ブラッディレッド
+155	Enemy	Demon	Mini Satana	33	サタナジュニア
+156	Enemy	Demon	Grenade	40	グレネード
+157	Enemy	Demon	Gray Bomb	33	ペイニーボム
+158	Enemy	Demon	Purobolos	40	ピュロボロス
+159	Enemy	Demon	Hell’s Rider	6	ヘルズハーレー
+160	Enemy	Demon	Test Rider	40	トライアライド
+161	Enemy	Demon	Dante	50	ダンテ
+162	Enemy	Demon	Abyssal	50	アビサル
+163	Enemy	Demon	Gluttony	54	グラトニー
+164	Enemy	Demon	Ice Lizard	34	アイスリザード
+165	Enemy	Demon	Black Lizard	35	くろとかげ
+166	Enemy	Demon	Fire Lizard	26	ファイアリザード
+167	Enemy	Demon	Gomory	36	ゴモリー
+168	Enemy	Demon	Earth Medusa	49	アースメデューサ
+169	Enemy	Demon	Arachne	28	アルケニー
+170	Enemy	Demon	Medeia	40	メーディア
+171	Enemy	Demon	Messalina	52	メッサリーナ
+172	Enemy	Human	Goblin Prince	60	ゴブリンプリンス
+173	Enemy	Human	Dark Wizard	45	ダークウィザード
+174	Enemy	Human	Black Warlock	50	あんこくまどうし
+175	Enemy	Human	Specter	50	スペクター
+176	Enemy	Human	Hessian Elite	37	ヘス精鋭兵
+177	Enemy	Reaper	Enhanced Wraith Soldier	9	強化幽鬼兵
+178	Enemy	Human	Zoldaadian Soldier	28	ゾルダード兵
+179	Enemy	Human	Lieutenant	34	ルーテナント
+180	Enemy	Human	Punisher	39	パニッシャー
+182	Enemy	Human	Ogre Chief	48	オーガチーフ
+183	Enemy	Human	Mad Ogre	40	バーサオーガ
+184	Enemy	Human	Cabrakan	50	カブラカン
+185	Enemy	Human	Hill Gigas	27	ヒルギガース
+186	Enemy	Human	Thunder Gigas	45	サンダーギガース
+187	Enemy	Human	Jackalto	50	ジャクルトゥ
+188	Enemy	Machina	Watcher	26	ウォッチャー
+189	Enemy	Machina	Lost Searcher	64	ロストサーチャー
+191	Enemy	Machina	Tarvos	26	タルヴォス
+192	Enemy	Machina	Oberon	40	オベロン
+193	Enemy	Machina	Io	27	イオ
+194	Enemy	Machina	Europa	66	エウロペ
+195	Enemy	Machina	Tunnel Armor	27	ディッグアーマー
+196	Enemy	Machina	Ganymede	70	ガニメデ
+197	Enemy	Dragon	Blood Dragon	28	ブリードドラゴン
+198	Enemy	Dragon	Wyvern	26	ワイバーン
+199	Enemy	Dragon	Lesser Lopros	33	レッサーロプロス
+200	Enemy	Dragon	Platinum Dragon	52	プラチナドラゴン
+201	Enemy	Dragon	Allosaur	37	アロサウルス
+203	Enemy	Dragon	Chaos Dragon	48	カオスドラゴン
+204	Enemy	Dragon	Hexadragon	52	メルトドラゴン
+205	Enemy	Dragon	Hydra	48	ヒドラ
+206	Enemy	Dragon	Fire Hydra	32	ファイアヒドラ
+207	Enemy	Dragon	Mizuchi	52	ミヅチ
+209	Enemy	Dragon	Primeval Reptile	49	オールドドラゴン
+210	Enemy	Dragon	Titanosaurus	50	カースドレイドス
+211	Enemy	Fairy	Fire Wisp	4	ファイアウィスプ
+212	Enemy	Fairy	Spark Wisp	35	スパークウィスプ
+213	Enemy	Fairy	Dark Wisp	49	ダークウィスプ
+214	Enemy	Fairy	Dark Elemental	48	ダークエレメンタル
+215	Enemy	Fairy	White Elemental	48	ホワイトエレメンタル
+216	Enemy	Fairy	Green Elemental	17	グリーンエレメンタル
+217	Enemy	Fairy	Blue Elemental	32	ブルーエレメンタル
+218	Enemy	Fairy	Earth Elemental	28	アースエレメンタル
+219	Enemy	Fairy	Damia	12	ダミアー
+220	Enemy	Fairy	Skadi	23	スカディ
+221	Enemy	Fairy	Haurvatat	36	ハルワタート
+222	Enemy	Fairy	Adar	46	アーダル
+223	Enemy	Fairy	Heimdallr	49	ヘイムダル
+224	Enemy	Fairy	Wandering One	28	さまよえるもの
+225	Enemy	Fairy	Abhorrent One	56	いまわしきもの
+226	Enemy	Fairy	Ominous One	68	まがまがしきもの
+227	Enemy	Fairy	Blood Feeder	37	血をもとめしもの
+229	Enemy	Insect	Hunter Bee	31	ハンタービー
+230	Enemy	Insect	Kimara Bug	39	インセクトキマラ
+231	Enemy	Insect	Death Stalker	39	デスストーカー
+232	Enemy	Insect	Blood Worm	32	ブラッドウォーム
+233	Enemy	Insect	Sliding Worm	46	ストライドウォーム
+234	Enemy	Insect	Wild Maneuverer	46	ワイルドマヌーバー
+235	Enemy	Insect	Dark Fang	38	ダークファング
+236	Enemy	Stone	Death Mask	27	デスマスク
+237	Enemy	Stone	Rosetta	41	ロゼッタ
+238	Enemy	Stone	Cursed Slate	40	呪いの石板
+239	Enemy	Stone	Bronze	47	ブロンズ
+240	Enemy	Stone	Ice Sculpture	37	氷の彫像
+241	Enemy	Stone	Ancient Objet d’Art	57	いにしえの石像
+242	Enemy	Stone	Roper	36	ローパー
+243	Enemy	Stone	Quick Roper	48	サドンローパー
+244	Enemy	Stone	Blue Roper	37	ブルーローパー
+245	Enemy	Stone	Red Roper	26	レッドローパー
+246	Enemy	Stone	Metal Roper	39	メタルローパー
+247	Enemy	Stone	Gargoyle	28	ガーゴイル
+249	Enemy	Stone	Belphegor	54	ベルフェゴール
+250	Enemy	Stone	Yakhanati	40	ヤクハナティ
+251	Enemy	Stone	Petraryukos	52	ペトラリュコス
+252	Enemy	Plantoid	Ivy	1	アイビー
+253	Enemy	Plantoid	Adenium	40	アデニウム
+254	Enemy	Plantoid	Nanochu	47	ピコチュー
+257	Enemy	Plantoid	Malbodoom	40	モルボルドゥーム
+258	Enemy	Plantoid	Malboro Marquis	53	モルボルマーキス
+259	Enemy	Plantoid	Drosera	24	ドロセラ
+260	Enemy	Plantoid	Blood Flower	35	ブラッドフラワ
+261	Enemy	Plantoid	Corpse flower	48	コープスフラワー
+262	Enemy	Reaper	Evil Dreamer	45	ドリームエビル
+263	Enemy	Reaper	Revenant	40	レブナント
+264	Enemy	Reaper	Zombie Warrior	27	ゾンビファイター
+265	Enemy	Reaper	Spritzer	33	スピリッツァー
+266	Enemy	Reaper	Shut	49	シュト
+267	Enemy	Reaper	Bone Dragon	37	ボーンドラゴン
+269	Enemy	Reaper	Ancient Dragon	40	エンシェントドラゴン
+270	Enemy	Reaper	Abaddon	41	アバドン
+272	Enemy	Reaper	Bloodsaurus	45	ブラッディサウルス
+273	Enemy	Reaper	Ashasaur	47	アッシュサウルス
+275	Enemy	Demon	Piscodaemon	46	ピスコディーモン
+276	Enemy	Demon	Demon Squid	54	デモンスクイド
+277	Enemy	Human	Aldorian Praetorian	35	精鋭剣闘兵
+278	Enemy	Human	Shock Trooper	33	アルドール突撃兵
+279	Enemy	Human	Heavy Gunner	34	アルドール重砲兵
+280	Enemy	Dragon	Ember	46	エンバー
+282	Enemy	Avian	Chick	4	チック
+283	Enemy	Avian	White Peak	15	ホワイトピーク
+284	Enemy	Avian	Pecking Chick	15	ペックチック
+285	Enemy	Demon	Page 32	35	32ページ
+287	Enemy	Machina	A-Type Magitek Armor+	36	A式魔導アーマー改
+288	Enemy	Machina	All-Terrain Magitek Armor	35	野戦型A式魔導アーマー
+289	Enemy	Aquatic	Tonberry	42	トンベリ
+290	Enemy	Aquatic	Master Tonberry	55	トンベリマスター
+291	Enemy	Demon	Page 64	35	64ページ
+292	Enemy	Demon	Page 256	35	256ページ
+293	Enemy	Aquatic	Mini Gil Snapper	18	ミニギルガメ
+294	Enemy	Aquatic	Gil Snapper	36	ギルガメ
+295	Enemy	Aquatic	King Gil Snapper	49	キングギルガメ
+296	Enemy	Plantoid	Metal Minituar	18	メタルミニテン
+297	Enemy	Plantoid	Metal Cactuar	36	メタルサボテン
+298	Enemy	Plantoid	Metal Gigantuar	52	メタルジャボテン
+299	Enemy	Fairy	Citrine Pot	15	マジポット
+300	Enemy	Fairy	Viridian Pot	22	タフポット
+301	Enemy	Fairy	Crimson Pot	30	パワポット
+302	Enemy	Fairy	Azure Pot	36	デフポット
+303	Enemy	Fairy	Violet Pot	42	インテリポット
+304	Enemy	Fairy	Pearly Pot	55	スピルポット
+305	Enemy	Insect	Slagworm	33	スラッグクロウラ
+306	Enemy	Insect	Nozuchi	47	ノヅチ
+307	Enemy	Human	Ogre Mage	20	オーガメイジ
+352	Boss	Plantoid	Gigantuar	40	ジャボテンダー
+400	Boss	Human	Umbra	17	常闇のヴェリアス
+401	Boss	Animal	Belmodar	4	ベルモーダー
+402	Boss	Reaper	Mahadeva	38	マーハディーバ
+405	Boss	Insect	Antlion	20	アリジゴク
+406	Boss	Machina	Guardian	25	ガーディアン
+407	Boss	Machina	Adrastea	16	アドラステア
+408	Boss	Fairy	Typhon	35	テュポーン
+409	Boss	Human	Aether	18	天風のヴェリアス
+411	Boss	Human	Alluvion	26	水華のヴェリアス
+412	Boss	Machina	Cutting Edge Magitek Weapon	35	新型魔導兵器
+413	Boss	Human	Ignis	27	劫火のヴェリアス
+414	Boss	Human	Evan	30	エヴァン
+415	Boss	Human	Lazarov	30	ラザロフ
+416	Boss	Human	Archwitch Fina	38	魔人フィーナ（エネミー）
+417	Boss	Human	Lux	41	光輝のヴェリアス
+418	Boss	Human	Elfdrit	42	エルダリート
+419	Boss	Human	Lasswell	43	ラスウェル（エネミー）
+420	Boss	Human	Gelidus	43	氷刃のヴェリアス
+421	Boss	Human	Tellus	39	王土のヴェリアス
+422	Boss	Animal	Behemoth	52	ベヒーモス（賢者）
+423	Boss	Human	Sol	52	ソル
+424	Boss	Demon	Chaotic Darkness	55	混沌の闇（第１形態）
+425	Boss	Demon	Chaotic Darkness	55	混沌の闇第２本体
+426	Boss	Human	Emperor of Zoldaad	30	ゾルダード皇帝
+428	Boss	Animal	Byblos	36	ビフロス
+431	Boss	Insect	Sandworm	28	サンドウォーム
+432	Boss	Insect	Roundworm	39	ラウンドウォーム
+434	Boss	Plantoid	Crunchu	49	ピキチュー
+436	Boss	Animal	Intangir	52	ねむれるしし
+437	Boss	Animal	Terrarat	50	テララット
+439	Boss	Fairy	Liquid Flame	34	リクイドフレイム
+440	Boss	Fairy	Liquid Thunder	13	リクイドサンダー
+443	Boss	Dragon	Dragon	42	ドラゴン
+445	Boss	Machina	Iron Giant	40	鉄巨人
+446	Boss	Demon	Dad Bomb	40	ファザーボム
+447	Boss	Demon	Mom Bomb	14	マザーボム
+448	Boss	Avian	Archaeoaevis	40	アルケオエイビス
+451	Boss	Avian	Siren	11	セイレーン_BOSS
+452	Boss	Animal	Ifrit	33	イフリート_BOSS
+453	Boss	Human	Shiva	35	シヴァ_BOSS
+454	Boss	Human	Ramuh	20	ラムウ_BOSS
+456	Boss	Human	Odin’s Shadow	45	オーディン_BOSS
+457	Boss	Human	Titan	30	タイタン_BOSS
+458	Boss	Dragon	Bahamut	50	バハムート_BOSS
+459	Boss	Aquatic	Leviathan	23	リヴァイアサン_BOSS
+460	Boss	Dragon	Dark Bahamut	52	ダークバハムート_BOSS
+461	Boss	Machina	Elnath	50	エルナト第一形態
+462	Boss	Machina	Elnath	50	エルナト第二形態１
+463	Boss	Machina	Right Arm	50	エルナト右手
+464	Boss	Machina	Left Arm	50	エルナト左手
+465	Boss	Machina	Elnath	50	エルナト第二形態２
+471	Boss	Insect	Shaula	50	シャウラ第一形態
+472	Boss	Insect	Shaula	50	シャウラ第二形態
+481	Boss	Human	Alhena	50	アルヘナ第一形態(火)
+482	Boss	Human	Alhena	50	アルヘナ第一形態(風)
+483	Boss	Human	Alhena	50	アルヘナ第二形態(火)
+484	Boss	Human	Alhena	50	アルヘナ第二形態(風)
+491	Boss	Fairy	Vindemiatrix	50	ヴィンデミアトリックス第一形態１
+492	Boss	Fairy	Vindemiatrix	50	ヴィンデミアトリックス第一形態２
+493	Boss	Fairy	Vindemiatrix	50	ヴィンデミアトリックス第一形態３
+494	Boss	Fairy	Vindemiatrix	50	ヴィンデミアトリックス第一形態４
+495	Boss	Fairy	Vindemiatrix	50	ヴィンデミアトリックス第一形態５
+496	Boss	Fairy	Vindemiatrix	50	ヴィンデミアトリックス第二形態
+592	Boss	Machina	Ultima Weapon	70	アルテマウェポン（インフェルノ）
+593	Boss	Demon	Left Hand	55	混沌の闇（第１形態）左手
+594	Boss	Demon	Right Hand	55	混沌の闇（第１形態）右手
+595	Boss	Human	Sephiroth	45	セフィロス（敵）
+596	Boss	Human	Gilgamesh	11	ギルガメッシュ(1戦目）
+597	Boss	Human	Gilgamesh	40	ギルガメッシュ(2戦目）
+598	Boss	Human	Gilgamesh	45	ギルガメッシュ(3戦目）
+601	Boss	Human	Dabih	50	ダビー第一形態
+602	Boss	Human	Dabih	50	ダビー第二形態
+603	Boss	Human	Dabih Cultist	50	ダビーのお供１第一形態
+604	Boss	Human	Dabih Cultist	50	ダビーのお供１第二形態
+605	Boss	Human	Dabih Warlock	50	ダビーのお供２第一形態
+606	Boss	Human	Dabih Warlock	50	ダビーのお供２第二形態
+611	Boss	Stone	Tegmine	50	テグミン第一形態
+612	Boss	Stone	Tegmine	50	テグミン第二形態
+613	Boss	Stone	Tegmine	50	テグミン第三形態
+621	Boss	Demon	Brachium	50	ブラキウム第一形態
+622	Boss	Demon	Brachium	50	ブラキウム第二形態
+623	Boss	Demon	Brachium	50	ブラキウム第三形態
+631	Boss	Avian	Sadalsuud	50	サダルスウド第一形態１
+632	Boss	Avian	Sadalsuud	50	サダルスウド第一形態２
+633	Boss	Avian	Sadalsuud	50	サダルスウド第二形態
+634	Boss	Avian	Green Wing	50	サダルスウド翼（緑）
+635	Boss	Avian	Blue Wing	50	サダルスウド翼（青）
+636	Boss	Avian	Orange Wing	50	サダルスウド翼（茶）
+637	Boss	Avian	Red Wing	50	サダルスウド翼（赤）
+641	Boss	Plantoid	Sheratan	50	シェラタン第一形態
+642	Boss	Plantoid	Sheratan	50	シェラタン第二形態
+643	Boss	Plantoid	Fruit of Obsession	50	執念の果実
+644	Boss	Plantoid	Fruit of Fury	50	憤怒の果実
+651	Boss	Aquatic	Alpherg	50	アルフェーグ第一形態
+652	Boss	Aquatic	Alpherg	50	アルフェーグ第二形態１
+653	Boss	Aquatic	Alpherg	50	アルフェーグ第二形態２
+654	Boss	Aquatic	Alpherg	50	アルフェーグ第二形態３
+661	Boss	Animal	Aldhafera	50	アダフェラ第一形態
+662	Boss	Animal	Aldhafera	50	アダフェラ第二形態
+671	Boss	Dragon	Nunki	50	ヌンキ第一形態
+672	Boss	Dragon	Nunki	50	ヌンキ第一形態　本破壊１
+673	Boss	Dragon	Nunki	50	ヌンキ第一形態　本破壊２
+674	Boss	Dragon	Nunki	50	ヌンキ第一形態　本破壊３
+675	Boss	Dragon	Nunki	50	ヌンキ第一形態　本破壊４
+676	Boss	Dragon	Nunki	50	ヌンキ第二形態１
+677	Boss	Dragon	Nunki	50	ヌンキ第二形態２
+690	Boss	Animal	The Keen of Fury	53	混沌の闇第２ねむれるしし
+691	Enemy	Demon	The Leer of Envy	53	混沌の闇第２アーリマン
+692	Enemy	Aquatic	The Stagnant Sloth	54	混沌の闇第２プリン
+693	Enemy	Avian	The Swooping Greed	53	混沌の闇第２ズー
+694	Enemy	Dragon	The Patronizing Pride	52	混沌の闇第２白竜
+695	Enemy	Insect	The Unsatiable Gluttony	54	混沌の闇第２サンドウォーム
+696	Enemy	Demon	The Hollow Intimacy	55	混沌の闇第２アルケニー
+697	Boss	Demon	Chaotic Darkness	55	混沌の闇第２本体モード2
+701	Boss	Avian	Sadalsuud	50	サダルスウド第一形態１（風）
+702	Boss	Avian	Sadalsuud	50	サダルスウド第一形態１（氷）
+703	Boss	Avian	Sadalsuud	50	サダルスウド第一形態１（土）
+704	Boss	Avian	Sadalsuud	50	サダルスウド第一形態１（火）
+705	Boss	Avian	Sadalsuud	50	サダルスウド第一形態２（風）
+706	Boss	Avian	Sadalsuud	50	サダルスウド第一形態２（氷）
+707	Boss	Avian	Sadalsuud	50	サダルスウド第一形態２（土）
+708	Boss	Avian	Sadalsuud	50	サダルスウド第一形態２（火）
+709	Boss	Avian	Sadalsuud	50	サダルスウド第二形態（風）
+710	Boss	Avian	Sadalsuud	50	サダルスウド第二形態（氷）
+711	Boss	Avian	Sadalsuud	50	サダルスウド第二形態（土）
+712	Boss	Avian	Sadalsuud	50	サダルスウド第二形態（火）
+801	Boss	Machina	Elnath	75	エルナト改第一形態
+802	Boss	Machina	Elnath	75	エルナト改第二形態１
+803	Boss	Machina	Right Arm	75	エルナト改右手
+804	Boss	Machina	Left Arm	75	エルナト改左手
+805	Boss	Machina	Elnath	75	エルナト改第二形態２
+811	Boss	Insect	Shaula	75	シャウラ改第一形態
+812	Boss	Insect	Shaula	75	シャウラ改第二形態
+821	Boss	Human	Alhena	75	アルヘナ改第一形態(火)
+822	Boss	Human	Alhena	75	アルヘナ改第一形態(風)
+823	Boss	Human	Alhena	75	アルヘナ改第二形態(火)
+824	Boss	Human	Alhena	75	アルヘナ改第二形態(風)
+831	Boss	Fairy	Vindemiatrix	75	ヴィンデミアトリックス改第一形態１
+832	Boss	Fairy	Vindemiatrix	75	ヴィンデミアトリックス改第一形態２
+833	Boss	Fairy	Vindemiatrix	75	ヴィンデミアトリックス改第一形態３
+834	Boss	Fairy	Vindemiatrix	75	ヴィンデミアトリックス改第一形態４
+835	Boss	Fairy	Vindemiatrix	75	ヴィンデミアトリックス改第一形態５
+836	Boss	Fairy	Vindemiatrix	75	ヴィンデミアトリックス改第二形態
+841	Boss	Human	Dabih	75	ダビー改第一形態
+842	Boss	Human	Dabih	75	ダビー改第二形態
+843	Boss	Human	Dabih Cultist	75	ダビーのお供１改第一形態
+844	Boss	Human	Dabih Cultist	75	ダビーのお供１改第二形態
+845	Boss	Human	Dabih Warlock	75	ダビーのお供２改第一形態
+846	Boss	Human	Dabih Warlock	75	ダビーのお供２改第二形態
+851	Boss	Stone	Tegmine	75	テグミン改第一形態
+852	Boss	Stone	Tegmine	75	テグミン改第二形態
+853	Boss	Stone	Tegmine	75	テグミン改第三形態
+861	Boss	Demon	Brachium	75	ブラキウム改第一形態
+862	Boss	Demon	Brachium	75	ブラキウム改第二形態
+863	Boss	Demon	Brachium	75	ブラキウム改第三形態
+871	Boss	Avian	Sadalsuud	75	サダルスウド改第一形態１
+872	Boss	Avian	Sadalsuud	75	サダルスウド改第一形態２
+873	Boss	Avian	Sadalsuud	75	サダルスウド改第二形態
+874	Boss	Avian	Green Wing	75	サダルスウド改翼（緑）
+875	Boss	Avian	Blue Wing	75	サダルスウド改翼（青）
+876	Boss	Avian	Orange Wing	75	サダルスウド改翼（茶）
+877	Boss	Avian	Red Wing	75	サダルスウド改翼（赤）
+878	Boss	Avian	Sadalsuud	75	サダルスウド改第一形態１（風）
+879	Boss	Avian	Sadalsuud	75	サダルスウド改第一形態１（氷）
+880	Boss	Avian	Sadalsuud	75	サダルスウド改第一形態１（土）
+881	Boss	Avian	Sadalsuud	75	サダルスウド改第一形態１（火）
+882	Boss	Avian	Sadalsuud	75	サダルスウド改第一形態２（風）
+883	Boss	Avian	Sadalsuud	75	サダルスウド改第一形態２（氷）
+884	Boss	Avian	Sadalsuud	75	サダルスウド改第一形態２（土）
+885	Boss	Avian	Sadalsuud	75	サダルスウド改第一形態２（火）
+886	Boss	Avian	Sadalsuud	75	サダルスウド改第二形態（風）
+887	Boss	Avian	Sadalsuud	75	サダルスウド改第二形態（氷）
+888	Boss	Avian	Sadalsuud	75	サダルスウド改第二形態（土）
+889	Boss	Avian	Sadalsuud	75	サダルスウド改第二形態（火）
+891	Boss	Plantoid	Sheratan	75	シェラタン改第一形態
+892	Boss	Plantoid	Sheratan	75	シェラタン改第二形態
+893	Boss	Plantoid	Fruit of Obsession	75	執念の果実改
+894	Boss	Plantoid	Fruit of Fury	75	憤怒の果実改
+901	Boss	Aquatic	Alpherg	75	アルフェーグ改第一形態
+902	Boss	Aquatic	Alpherg	75	アルフェーグ改第二形態１
+903	Boss	Aquatic	Alpherg	75	アルフェーグ改第二形態２
+904	Boss	Aquatic	Alpherg	75	アルフェーグ改第二形態３
+911	Boss	Animal	Aldhafera	75	アダフェラ改第一形態
+912	Boss	Animal	Aldhafera	75	アダフェラ改第二形態
+921	Boss	Dragon	Nunki	75	ヌンキ改第一形態
+922	Boss	Dragon	Nunki	75	ヌンキ改第一形態　本破壊１
+923	Boss	Dragon	Nunki	75	ヌンキ改第一形態　本破壊２
+924	Boss	Dragon	Nunki	75	ヌンキ改第一形態　本破壊３
+925	Boss	Dragon	Nunki	75	ヌンキ改第一形態　本破壊４
+926	Boss	Dragon	Nunki	75	ヌンキ改第二形態１
+927	Boss	Dragon	Nunki	75	ヌンキ改第二形態２
+1001	Playable	Human	Rain	1	レイン
+1002	Playable	Human	Lasswell	1	ラスウェル
+1003	Playable	Human	Fina	1	フィーナ
+1004	Playable	Human	Lid	1	リド
+1005	Playable	Human	Nichol	1	ニコル
+1006	Playable	Human	Archwitch Fina	1	魔人フィーナ
+1007	Playable	Human	Jake	1	ジェイク
+1008	Playable	Human	Sakura	1	サクラ
+1013	Playable	Human	Ignis	30	劫火のヴェリアス（味方）
+1014	Playable	Human	Alluvion	55	水華のヴェリアス（味方）
+1016	Playable	Human	Charlotte	4	シャルロット（ゲスト）
+2002	Enemy	Aquatic	Sahagin	40	ニコルのキャライベ用サハギン
+2004	Enemy	Demon	The Hunger v2	10	ハンガーVer2
+2005	Enemy	Fairy	Aether’s Minion	18	天風の手先
+2006	Enemy	Fairy	Aether’s Guardian	18	天風の守護
+2007	Enemy	Fairy	Prism Core	26	水晶核
+2010	Boss	Human	Ignis	27	劫火のヴェリアス（イベント用１
+2011	Boss	Human	Ignis	27	劫火のヴェリアス（イベント用２
+2012	Enemy	Dragon	Water Dragon	21	水竜
+2013	Enemy	Dragon	Wave Lopros	20	ウェイブロプロス
+2014	Enemy	Aquatic	Azure Snapper	20	ブルースナッパー
+2015	Enemy	Fairy	Orbs of Light	23	光の玉（氷
+2016	Enemy	Fairy	Orbs of Light	23	光の玉（火
+2017	Enemy	Fairy	Orbs of Light	23	光の玉（風
+2018	Enemy	Aquatic	Land Snapper	20	ランドスナッパー
+2019	Enemy	Human	Marauder	15	WM強敵マローダー
+2020	Enemy	Aquatic	Shoggoth	25	WM強敵ショゴス
+2021	Enemy	Plantoid	Poison Flora	7	ポイズンフロウラ
+2022	Enemy	Demon	Great Bomb	13	ボムグレート
+2023	Enemy	Human	Goblin	6	ゴブリンLv6
+2024	Enemy	Human	Imposter Soldier	10	偽兵士
+2025	Enemy	Reaper	Wraith Praetorian	29	近衛幽鬼兵
+2026	Enemy	Avian	Rukh	26	WM強敵ルフ
+2027	Enemy	Insect	Gigas Worm	21	ギガースウォーム（イベ用）
+2028	Enemy	Demon	Mindflayer	28	WM強敵マインドフレイア
+2029	Enemy	Demon	The Hunger v5	31	ハンガーVer5
+2030	Enemy	Demon	Test Subject No. 9	31	実験体９号
+2031	Enemy	Human	No. 999	32	ナンバー９９９
+2032	Enemy	Dragon	Pyroviper	37	WM強敵パイロヴァイパー
+2033	Enemy	Human	Gogmagog	34	WM強敵ゴグマゴグ
+2034	Enemy	Reaper	Phantom Train True Form	32	魔列車の本体
+2035	Enemy	Human	Zoldaadian Soldier	28	下っ端ゾルダード兵
+2036	Enemy	Fairy	Orbs of Light	23	光の玉（氷2
+2037	Enemy	Fairy	Orbs of Light	23	光の玉（火2
+2038	Enemy	Fairy	Orbs of Light	23	光の玉（風2
+2039	Enemy	Aquatic	Ribosome	21	イベ用ライボソーム
+2040	Enemy	Reaper	Wraith Soldier	28	ゾルダード幽鬼兵
+2041	Boss	Machina	Iron Giant	34	鉄巨人（５章）
+2042	Enemy	Demon	Medusa	35	メデューサ（図書館）
+2043	Enemy	Reaper	Fossil Dragon	35	ドラゴンフォシル（図書館）
+2044	Enemy	Demon	Salome	39	WM強敵サロメ
+2045	Enemy	Human	Jotunn	42	WM強敵ヨートゥン
+2046	Enemy	Plantoid	Malboro Varietas	45	WM強敵モルボルバリエタス
+2047	Enemy	Dragon	Tartarosaurus	50	WM強敵タルタロサウルス
+2048	Enemy	Reaper	Catacumba	54	WM強敵カタコンベ
+2049	Enemy	Reaper	Necromonarch	55	WM強敵ネクロモナーク
+2050	Enemy	Animal	Humbaba	55	WM強敵フンババ
+2051	Enemy	Dragon	Titanoraidos	60	WM強敵ティタノレイドス
+2052	Boss	Plantoid	Malboro Menace	60	WM強敵モルボルメナス
+2053	Enemy	Aquatic	Adamandelion	48	イベ用アダマンデリオン
+2054	Enemy	Stone	Gargoyle	35	ガーゴイル（図書館）
+2055	Enemy	Human	Mage	35	メイジ（図書館）
+2056	Enemy	Human	Giant	35	ギガース（図書館）
+2057	Enemy	Reaper	Soul	35	ソウル（図書館）
+2058	Enemy	Stone	Arch Gargoyle	40	アークガーゴイル
+2059	Enemy	Human	Shock Trooper	34	アルドール突撃兵（5章）
+2060	Enemy	Reaper	Sergeant	28	４章用サージェント
+2061	Enemy	Plantoid	Malboro	35	モルボル（精神世界）
+2062	Boss	Human	Tellus	39	王土のヴェリアス（イベント戦）
+2063	Boss	Human	Aether	46	天風のヴェリアス（7章）
+2064	Boss	Human	Ignis	47	劫火のヴェリアス（7章）
+2065	Boss	Human	Alluvion	48	水華のヴェリアス（7章）
+2066	Boss	Human	Tellus	49	王土のヴェリアス（7章）
+2067	Boss	Human	Umbra	50	常闇のヴェリアス（7章）
+2068	Boss	Human	Sol	55	ソル（イベント戦）
+2069	Boss	Human	Lasswell	43	ラスウェル（イベントエネミー）
+2071	Enemy	Human	Former Knight	40	シャルイベ元騎士2
+2073	Enemy	Machina	Magitek Weapon	41	シャルイベ魔導兵器1
+2074	Enemy	Machina	Magitek Weapon	45	シャルイベ魔導兵器2
+2075	Enemy	Fairy	Mind Elemental	27	マインドエレメンタル
+2076	Enemy	Human	Thug	24	メルセデスイベ　ゴロツキ
+2077	Enemy	Fairy	Aether’s Minion	45	天風の手先７章
+2078	Enemy	Fairy	Aether’s Guardian	45	天風の守護７章
+2079	Enemy	Fairy	Prism Core	46	水晶核７章
+2080	Boss	Avian	Archaeoaevis	40	アルケオエイビス(火）
+2081	Boss	Avian	Archaeoaevis	40	アルケオエイビス(氷）
+2082	Boss	Avian	Archaeoaevis	40	アルケオエイビス(風）
+2083	Boss	Avian	Archaeoaevis	40	アルケオエイビス(土）
+2084	Boss	Avian	Archaeoaevis	40	アルケオエイビス(雷）
+2085	Boss	Avian	Archaeoaevis	40	アルケオエイビス(水）
+2086	Enemy	Stone	Ancient Beast Statue	63	いにしえの石像獣
+2087	Boss	Machina	Rogue Magitek Weapon	63	暴走魔導兵器
+2088	Enemy	Fairy	Shiva’s Elemental	32	シヴァのエレメンタル
+2089	Boss	Machina	Ultima Weapon	70	アルテマウェポン（ケラウノス）
+2090	Boss	Machina	Ultima Weapon	70	アルテマウェポン（コキュートス）
+2091	Boss	Machina	Ultima Weapon	70	アルテマウェポン（ネメアー）
+2092	Enemy	Plantoid	Cactuar	30	サボテンダー（ギルガメッシュ戦用
+2093	Enemy	Aquatic	Tonberry	42	トンベリ（ギルガメッシュ戦用
+2094	Enemy	Demon	Bomb	13	ボム（ギルガメッシュ戦用
+2505	Boss	Human	Sephiroth	45	セフィロス（第一）HEAT
+2510	Boss	Human	Sephiroth	45	セフィロス（第二）平時
+2511	Boss	Human	Sephiroth	45	セフィロス（第二）火
+2512	Boss	Human	Sephiroth	45	セフィロス（第二）氷
+2513	Boss	Human	Sephiroth	45	セフィロス（第二）雷
+2514	Boss	Human	Sephiroth	45	セフィロス（第二）風
+2515	Boss	Human	Sephiroth	45	セフィロス（第二）火HEAT
+2516	Boss	Human	Sephiroth	45	セフィロス（第二）氷HEAT
+2517	Boss	Human	Sephiroth	45	セフィロス（第二）雷HEAT
+2518	Boss	Human	Sephiroth	45	セフィロス（第二）風HEAT
+2520	Boss	Human	Sephiroth	45	セフィロス（第三）
+2521	Boss	Human	Sephiroth	45	セフィロス（第二）平時HEAT
+4000	Enemy	Insect	Wild Maneuverer	40	ｺﾛｼｱﾑ_ワイルドマヌーバー
+4001	Enemy	Insect	Dark Fang	40	ｺﾛｼｱﾑ_ダークファング
+4002	Enemy	Dragon	Chaos Dragon	41	ｺﾛｼｱﾑ_カオスドラゴン
+4003	Enemy	Dragon	Hexadragon	41	ｺﾛｼｱﾑ_メルトドラゴン
+4004	Boss	Plantoid	Ochu	43	ｺﾛｼｱﾑ_オチュー
+4005	Enemy	Plantoid	Microchu	43	ｺﾛｼｱﾑ_コチュー
+4006	Enemy	Aquatic	Flan Princess	45	ｺﾛｼｱﾑ_プリンプリンセス
+4007	Enemy	Fairy	Red Elemental	48	ｺﾛｼｱﾑ_レッドエレメンタル
+4008	Enemy	Fairy	Aqua Elemental	48	ｺﾛｼｱﾑ_アクアエレメンタル
+4009	Enemy	Fairy	Dark Elemental	48	ｺﾛｼｱﾑ_ダークエレメンタル
+4010	Enemy	Fairy	White Elemental	48	ｺﾛｼｱﾑ_ホワイトエレメンタル
+4011	Enemy	Fairy	Green Elemental	48	ｺﾛｼｱﾑ_グリーンエレメンタル
+4012	Enemy	Fairy	Blue Elemental	48	ｺﾛｼｱﾑ_ブルーエレメンタル
+4013	Enemy	Fairy	Earth Elemental	48	ｺﾛｼｱﾑ_アースエレメンタル
+4014	Boss	Insect	Zone Eater	55	ｺﾛｼｱﾑ_ゾーンイーター
+4015	Enemy	Reaper	Hidon	58	ｺﾛｼｱﾑ_ヒドゥン
+4016	Boss	Plantoid	Donchu	62	ｺﾛｼｱﾑ_ドンチュー
+4017	Boss	Machina	Death Machine	66	ｺﾛｼｱﾑ_デスマシーン
+4018	Boss	Plantoid	Gargantuan Gigantuar	70	ｺﾛｼｱﾑ_超巨大ジャボテンダー
+4019	Boss	Plantoid	Malboro Queen	75	ｺﾛｼｱﾑ_モルボルクイーン
+4020	Boss	Dragon	Holy Dragon	80	ｺﾛｼｱﾑ_ホーリードラゴン
+4021	Enemy	Animal	Beast of Ruin	90	ｺﾛｼｱﾑ_終焉の魔獣
+4022	Boss	Dragon	Shinryu	95	ｺﾛｼｱﾑ_しんりゅう
+4023	Boss	Machina	Omega	99	ｺﾛｼｱﾑ_オメガ
+10451	Beast	Beast	Siren	1	セイレーン
+10452	Beast	Beast	Ifrit	1	イフリート
+10453	Beast	Beast	Shiva	1	シヴァ
+10454	Beast	Beast	Ramuh	1	ラムウ
+10455	Beast	Beast	Carbuncle	1	カーバンクル
+10456	Beast	Beast	Odin	1	オーディン
+10457	Beast	Beast	Titan	1	タイタン
+10458	Beast	Beast	Bahamut	1	バハムート
+10459	Beast	Beast	Leviathan	1	リヴァイアサン
+10460	Beast	Beast	Bahamut	1	バハムート（700年前）
+13017	Vision	Vision	Amelia	99	アメリア
+13024	Vision	Vision	Tronn	99	トロン
+13027	Vision	Vision	Victoria	99	ビクトリア
+13033	Vision	Vision	Camille	99	カーミル
+13045	Vision	Vision	Leah	99	リーア
+13051	Vision	Vision	Ayaka	99	アヤカ
+13060	Vision	Vision	Charlotte	99	シャルロット
+13062	Vision	Vision	Wilhelm	99	ヴィルヘルム
+13080	Vision	Vision	Aileen	99	アイリーン
+13100	Vision	Vision	Warrior of Light	99	ウォーリアオブライト
+13101	Vision	Vision	Firion	99	フリオニール
+13102	Vision	Vision	Onion Knight	99	オニオンナイト
+13103	Vision	Vision	Cecil	99	セシル
+13105	Vision	Vision	Bartz	99	バッツ
+13108	Vision	Vision	Terra	99	ティナ
+13110	Vision	Vision	Cloud	99	クラウド
+13113	Vision	Vision	Sephiroth	99	セフィロス
+13116	Vision	Vision	Squall	99	スコール
+13118	Vision	Vision	Zidane	99	ジタン
+13120	Vision	Vision	Tidus	99	ティーダ
+13123	Vision	Vision	Shantotto	99	シャントット
+13124	Vision	Vision	Vaan	99	ヴァン
+13125	Vision	Vision	Lightning	99	ライトニング
+13127	Vision	Vision	Y’shtola	99	ヤ・シュトラ
+13128	Vision	Vision	Noctis	99	ノクティス
+13130	Vision	Vision	Clive	99	クライヴ

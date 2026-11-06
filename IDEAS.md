@@ -609,6 +609,12 @@ The "Back" prompt that menus and the chest pop-up show at the bottom right also 
 - **Save safety with custom item IDs:** check what happens if a save holding item `29901` is loaded with the mod disabled (or keep custom gate tokens in Archipelago's bridge state instead of `SaveDataInventory` if the vanilla menu dislikes unknown IDs).
 - **Gate catalog:** scout exact `(mapId, X, Y, Z, Yaw, Scale)` coordinates, gimmick visuals, and unlock rules for actual world-map bridges and dungeon doors (`ffrap_gate` can scout these in game).
 
+**From the game data dump (2026-11-06).** The maps already hold many blockers of their own. `data/game/gimmicks.tsv` lists them with their map, position and condition:
+- 178 `BP_MapGimmick_BlockingBox_C` and 104 `CPP_MapGimmick_BlockingBox`. Some are switched by a condition, for example `!{flag:928}` on `Dng_01Gra_41` (uid 7).
+- 43 `BP_MapGimmick_NoEntry_C`, which play an event and turn the player back. 20 have a condition, such as `{progress:0}>=4000 & {progress:3}!=10` on `Dng_01Gra_40`.
+- 41 blocking bases, 12 of them magic pots.
+- To find out: whether the mod can change a blocker's condition (or its flag) at run time. If it can, an item can open one of the game's own gates, and we may not need to add new blockers.
+
 ## 17. Airship landing restrictions for continent gating
 
 **Idea:** Change or restrict where the airship can land to gate continents and regions in open-world mode. Currently in-game, if a spot is unlandable, the airship's shadow turns red. Could leverage or hook this check to prevent landing on specific continents until their respective items/passes are acquired.
@@ -622,6 +628,8 @@ The "Back" prompt that menus and the chest pop-up show at the bottom right also 
 - Which function or component performs the landing trace/check (e.g. in the airship actor/pawn, vehicle movement component, or map manager).
 - Can that landing query be hooked via UE4SS to force a landing refusal (shadow turns red, landing button disabled) if the player is over a continent or region whose corresponding Archipelago item has not yet been unlocked?
 - How continental boundaries or regions are defined on the world map (coordinate bounding boxes, surface/material tags, or distinct sub-levels/volumes).
+
+**From the game data dump (2026-11-06).** The world map has 81 `BP_MapAirShipLandingPoint_C` actors, in `data/game/gimmicks.tsv`. Each has an `m_Id` (a map or point id, such as 2002 for Grandport) and a Japanese description. None has a condition of its own, so the game decides elsewhere which ones are open.
 
 ## 18. In-game menu for on-the-fly settings and modifiers
 
