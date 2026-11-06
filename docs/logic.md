@@ -7,7 +7,7 @@ The design for turning the world from "chests swap items" into a real Archipelag
 - Each section has what is already known, and **Your call** where a decision is yours. Where I have a suggestion, it is marked *Suggestion*. Ignore it if you have a better idea.
 - When a section has settled, the apworld code follows from it (section 9). In-game tests come from section 8.
 
-Related: [progression.md](progression.md) (the chapter-by-chapter reference), [IDEAS.md](../IDEAS.md) ideas 3 (open world), 4 (vehicles) and 5 (key items).
+Related: [progression.md](progression.md) (the chapter-by-chapter reference), [IDEAS.md](../IDEAS.md) ideas 3 (open world), 4 (vehicles), 5 (key items), 16 (map blockers) and 17 (airship landing limits).
 
 ## 1. Where the world stands today
 
@@ -41,6 +41,19 @@ This choice shapes everything else.
 **Your call:** which mode first?
 
 *Suggestion:* story mode first, built so that open world can come later. The skip prologue work shows the story counter and flags can be set, so open world is not out of reach. But story mode can ship much sooner, and it teaches us which gates the game checks by item.
+
+**Your direction so far.**
+- **Early sketch (2026-11-04):** the first half linear, gated by the story; after the airship, continents as unlock items; the Crystal Tower as the goal.
+- **Refined (2026-11-06): story mode gates itself, in part.** Getting the airship opens more places, but many stay locked, wholly or in part, until the story reaches them. For example, Gronoa has no way in until the story makes an entrance. So story mode does not need continent unlock items.
+- **The risk:** a story run where one or two key items open nearly everything, and the player blazes through. Story mode needs some **artificial gates** of our own, so that progression items matter along the way.
+- **Gates we make:**
+  - **Map blockers** (IDEAS.md, idea 16): an NPC or barrier at a choke point that lets you through only with an item or flag. It works in both modes.
+  - **Airship landing limits** (idea 17): no landing on a continent until its item is found. Mainly for open world, where these give the continent locks.
+
+**Still to decide:**
+- Which choke points get blockers, and with which items.
+- How many gates a run should have, so it feels routed without feeling padded.
+- Whether blockers can be added at all (idea 16's to-find-out list). The first in-game probe of a door gimmick or an NPC's collision answers that.
 
 ## 4. What the mod can do in game
 
@@ -77,6 +90,7 @@ Filled from progression.md and IDEAS.md idea 5. **Your call:** which ones go in,
 | Broken Sword Hilt, Blade | 20031, 20032 | Odin (Iron Splitter) | unknown | no | |
 | Tablet Shards | 25004 | the Tablet Shard turn-in (idea 1) | unknown | no | |
 | Party members | units 1001–1008 | battle strength; maybe story events | the story expects them | no | |
+| Blocker passes (our own) | new | the choke points we block (idea 16) | the mod, since the gate is ours | no: needs idea 16 first | |
 | Visions (26), Espers (9) | various | battle strength | — | no | |
 
 **Things to weigh:**

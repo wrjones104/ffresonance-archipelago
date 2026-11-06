@@ -87,6 +87,8 @@ data/shinies.tsv           shinies seen in game (the mod's seen.tsv)
 data/item_names.tsv        item id -> name, from FFR-Randomizer by LordMikoda (MIT)
 docs/progression.md        the game's progression, chapter by chapter
 docs/logic.md              the progression logic design (draft)
+tests/                     every test; run them all with python tests/run_all.py (tests/README.md)
+CLAUDE.md                  how we work, for Claude sessions: conventions, lessons, where things live
 FFRArchipelago/Assets/     the Archipelago logo for the title screen
 ```
 

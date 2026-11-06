@@ -1,0 +1,734 @@
+"""main.lua against a stub game module and stubbed UE4SS functions (Lua 5.4 via lupa): the item
+queue, checks, sessions, save binding, the per-save count, the skip command, the title entry, the
+Archipelago new game, the item feed and the chest pop-up. Each numbered section is one feature."""
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+import paths  # noqa: E402
+
+import os
+import shutil
+import sys
+import tempfile
+
+from lupa import lua54
+
+SRC = str(paths.MOD)                  # the repo's mod folder
+WORK = tempfile.mkdtemp(prefix="ffrap_main_")   # a scratch copy, so the repo is never written
+if os.path.exists(WORK):
+    shutil.rmtree(WORK)
+shutil.copytree(SRC, WORK, ignore=shutil.ignore_patterns("ap_*.txt", "*.tsv", "ffrap_dump.txt"))
+SCRIPTS = os.path.join(WORK, "Scripts").replace("\\", "/")
+
+
+def path(name):
+    return os.path.join(WORK, name)
+
+
+def read(name):
+    p = path(name)
+    return open(p, encoding="utf-8").read() if os.path.exists(p) else ""
+
+
+def runtime():
+    L = lua54.LuaRuntime(unpack_returned_tuples=True)
+    L.execute(f'package.path = "{SCRIPTS}/?.lua;" .. package.path')
+    return L
+
+
+# 1. compile
+L = runtime()
+for name in ("game", "bridge", "main"):
+    src = open(os.path.join(SCRIPTS, name + ".lua"), encoding="utf-8").read()
+    ok, err = L.eval("function(s, n) local f, e = load(s, n) return f ~= nil, e end")(src, name)
+    assert ok, f"{name}: {err}"
+print("compile: ok")
+
+# 2. the real game.BlankChests against a fake composite table, a parent table and live chests
+L = runtime()
+L.execute(r'''
+local function row(map, id, item, n, money, trap)
+  return { mapId = map, ID = id, ItemId = item, ItemNum = n, Money = money, IsTrap = trap or false }
+end
+local function dtable(name, rows, parents)
+  local t = { rows = rows, name = name, ParentTables = parents or {} }
+  function t:IsValid() return true end
+  function t:GetFullName() return self.name end
+  function t:ForEachRow(fn) for k, r in pairs(self.rows) do fn(k, r) end end
+  return t
+end
+parent = dtable("parent", { a = row(3020, 1, 10100, 1, -1), b = row(3020, 2, -1, 1, 300), t = row(3020, 3, 5, 1, -1, true) })
+root = dtable("root", { a = row(3020, 1, 10100, 1, -1), b = row(3020, 2, -1, 1, 300), t = row(3020, 3, 5, 1, -1, true) }, { parent })
+local function actor(r)
+  local a = { m_Id = r.ID, m_IsOpen = false, m_UniqueId = 100 + r.ID, TypeData = { ID = 100 + r.ID }, m_TreasureBoxData = r }
+  function a:IsValid() return true end
+  function a:HasAnyInternalFlags() return false end
+  function a:HasAnyFlags() return false end
+  return a
+end
+live = {}
+function StaticFindObject(p) if p:find("TreasureBox") then return root end return nil end
+function FindAllOf(c) if c == "CPP_MapGimmick_TreasureBox" then return live end return nil end
+function FindFirstOf() return nil end
+G = (require("game"))
+''')
+lua = L.eval
+assert lua("G.BlankChests(true)") == 4                       # 2 rows x 2 tables; the trap row is skipped
+assert lua("root.rows.a.ItemId") == -1 and lua("root.rows.a.Money") == 1
+assert lua("parent.rows.b.Money") == 1 and lua("root.rows.t.ItemId") == 5
+# a chest spawns while blanking is on: it copies the already-blank row
+L.execute("live[1] = (function() local r = {} for k, v in pairs(root.rows.a) do r[k] = v end return r end)()")
+L.execute('''local r = live[1]; local a = { m_Id = r.ID, m_IsOpen = false, m_UniqueId = 101, TypeData = { ID = 101 }, m_TreasureBoxData = r }
+function a:IsValid() return true end function a:HasAnyInternalFlags() return false end function a:HasAnyFlags() return false end
+live[1] = a''')
+assert lua("live[1].m_TreasureBoxData.ItemId") == -1
+assert lua("G.BlankChests(false)") == 5                      # 4 table rows + the live chest
+assert lua("live[1].m_TreasureBoxData.ItemId") == 10100, "0.2.0 bug: live chest stayed blank"
+assert lua("root.rows.b.Money") == 300 and lua("parent.rows.a.ItemId") == 10100
+assert lua("G.BlankChests(false)") == 0                      # idempotent
+print("blanking: ok")
+
+# 3. main with a stub game (0.3.1)
+STUB = r'''
+local G = { log = {}, ready = true, story = 1020, map = 2002, saveMap = 3020, saveOpen = {} }
+function G.InGame() return G.ready end
+function G.CurrentMap() return G.map end
+function G.MapId() return G.saveMap end
+function G.StoryCounter() return G.story end
+function G.PartyIds() return {1001} end
+function G.Toast() return false end
+function G.IsChestOpenInSave(m, uid) return G.saveOpen[m .. ":" .. uid] == true end
+function G.ChestSaveKeys(m, c) return "" end
+G.chests = {
+  { uid = 1, open = false, rowMap = 3020, rowId = 1, uniqueId = 7, typeId = 7, itemId = 209, itemNum = 3, money = -1 },
+  { uid = 3, open = false, rowMap = 3020, rowId = 3, uniqueId = 63, typeId = 63, itemId = 7, itemNum = 4, money = -1 },
+  { uid = -1, open = true, rowMap = -1, rowId = -1, uniqueId = 54, typeId = 54, itemId = -1, itemNum = 1, money = -1 },
+  { uid = -1, open = true, rowMap = -1, rowId = -1, uniqueId = 42, typeId = 42, itemId = 5, itemNum = 1, money = -1 },
+}
+function G.LiveChests() return G.chests end
+G.shinies = {
+  { uid = 30, open = false, itemId = 16, itemNum = 3, money = -1, class = "BP_MapGimmick_FieldItem_C", visible = "" },
+  { uid = 113, open = true, itemId = -1, itemNum = 1, money = -1, class = "BP_MapGimmick_FieldItem_C", visible = "{progress:30}>=20" },
+}
+function G.LiveFieldItems() return G.shinies end
+function G.GrantItem() return "ok", "" end
+function G.UnlockVision() return "ok", "" end
+function G.AddUnit() return "ok", "" end
+function G.SetFlag() return "ok", "" end
+G.blankCalls = {}
+function G.BlankChests(on) G.blankCalls[#G.blankCalls + 1] = on return 0 end
+G.saveObj, G.saveTicks, G.slotOf = 'SD_1', '0', {}
+function G.SaveObjectName() if G.ready then return G.saveObj end return nil end
+function G.SavedTicks() return G.saveTicks end
+function G.SlotForTicks(t) return G.slotOf[t] end
+function G.DumpChests() end
+function G.DumpFieldItems() end
+function G.ExportChests() return true, "238 rows" end
+G.SKIP_FROM_MIN, G.SKIP_FROM_MAX, G.skipRuns, G.reloads = 1005, 1005, 0, {}
+G.TITLE_NEW_GAME, G.TITLE_ARCHIPELAGO, G.titleAdds = 2, 5, 0
+G.titleOk = false   -- the title entry only once a section turns it on
+function G.AddTitleEntry()
+  G.titleAdds = G.titleAdds + 1
+  if G.titleOk then return true, "copied from the New Game row" end
+  return false, "DA_Title is not loaded (go to the title screen)"
+end
+function G.TitleEntries() return "shown [0,1,2,3,4,5], map keys [0,1,2,3,4,5]" end
+G.orders, G.titleLines = 0, {}
+function G.OrderTitleEntries() G.orders = G.orders + 1; return true, G.orders == 1 and "rebuilt as [0,1,2,5,3,4]" or "already in order" end
+G.describes = 0
+G.FEED_MAX, G.feedReady, G.feed, G.toasts = 5, true, {}, {}
+function G.FeedLine(text, now) if not G.feedReady then return false, "no field HUD" end G.feed[#G.feed + 1] = text; return true end
+function G.FeedTick() return 0 end
+function G.Toast(msg) G.toasts[#G.toasts + 1] = msg; return true end
+G.popups, G.popupReady, G.restores = {}, true, 0
+function G.ChestPopup(text)
+  if not G.popupReady then return false, "no chest pop-up on screen" end
+  G.popups[#G.popups + 1] = text
+  return true, "text set, item line hidden"
+end
+function G.ChestPopupRestore() G.restores = G.restores + 1 end
+G.popupOpen = false
+function G.PopupJustOpened() local o = G.popupOpen; G.popupOpen = false; return o end
+G.layoutAsks = 0
+function G.LayoutOf(t) G.layoutAsks = G.layoutAsks + 1; if G.layoutAsks == 3 then return { "widget TextBlock Text_Message" } end return nil end
+G.logos = {}
+function G.TitleVersionLine(line)
+  G.titleLines[#G.titleLines + 1] = line
+  return (#G.titleLines == 1) and "added" or "already", {}
+end
+function G.TitleLogo(path, line) G.logos[#G.logos + 1] = path; return "added", "20x21" end
+function G.DescribeWidget(w) G.describes = G.describes + 1; return "widget TextBlock" end
+function G.SkipPrologue() G.skipRuns = G.skipRuns + 1; G.story = 1030; return true, { "ok   stub" } end
+function G.SaveAndReload(slot) G.reloads[#G.reloads + 1] = slot; return true, "saved to slot " .. slot .. ", reloading" end
+return G
+'''
+
+
+def boot():
+    L = runtime()
+    L.execute('''
+      tickFn = nil; commands = {}
+      function LoopAsync(ms, fn) if ms == 100 then fastFn = fn else tickFn = fn end end
+      function ExecuteInGameThread(fn) fn() end
+      function RegisterConsoleCommandGlobalHandler(n, fn) commands[n] = fn end
+      hooks = {}
+      function RegisterHook(name, fn) hooks[name] = fn end
+    ''')
+    G = L.execute(STUB)
+    L.globals().package.loaded["game"] = G
+    L.execute(f'dofile("{SCRIPTS}/main.lua")')
+    return L, G
+
+
+# a 0.3.0-style seen.tsv line is read and converted
+open(path("seen.tsv"), "w", encoding="utf-8", newline="\n").write("xchest\t2002\tu52\trowmap -1\t-1\t1\t-1\t\n")
+
+L, G = boot()
+tick = lambda n: [L.execute("tickFn()") for _ in range(n)]
+tick(10)
+assert "check" not in read("ap_out.txt"), "nothing may be judged while the map settles"
+tick(2)
+out = read("ap_out.txt")
+assert "check\tchest:2002:u42\n" in out, out              # rowless chest with a reward
+assert "u54" not in out                                    # rowless, empty, already open: not a location
+assert "chest:3020:1" not in out and "shiny:" not in out
+seen = read("seen.tsv")
+assert "chest\t2002\t7\t3020:1\t209\t3\t-1\t\n" in seen, seen
+assert "xchest\t2002\t54\t\t-1\t1\t-1\t\n" in seen and "spot\t2002\t113\t" in seen and "shiny\t2002\t30\t" in seen
+
+# the save says chest 3020:1 (uid 7 in map 2002) is open while the actor does not: reported
+G.saveOpen["2002:7"] = True
+tick(2)
+assert "check\tchest:3020:1\n" in read("ap_out.txt")
+
+# sync from the save, from another map, after ap_out.txt was lost
+G.map = 1000
+G.saveOpen["2002:63"] = True                                # chest 3020:3, never seen open live
+G.saveOpen["2002:30"] = True                                # shiny 30
+os.remove(path("ap_out.txt"))
+L, G = boot()
+G.map = 1000
+G.saveOpen = {"2002:7": True, "2002:63": True, "2002:30": True, "2002:54": True}
+L.execute('commands["ffrap_sync"]("ffrap_sync", {})')
+out = read("ap_out.txt")
+for key in ("chest:3020:1", "chest:3020:3", "shiny:2002:30"):
+    assert f"check\t{key}\n" in out, (key, out)
+assert "u54" not in out and "u52" not in out and "113" not in out
+L.execute('commands["ffrap_sync"]("ffrap_sync", {})')
+assert read("ap_out.txt").count("chest:3020:3") == 1        # sync twice reports once
+L.execute('commands["ffrap_status"]("ffrap_status", {})')
+print("main: ok")
+
+# 4. 0.4.0: sessions, cfg, sync, gil, and blanking that leaves key-item chests alone
+L = runtime()
+L.execute(r'''
+local function row(map, id, item, n, money)
+  return { mapId = map, ID = id, ItemId = item, ItemNum = n, Money = money, IsTrap = false }
+end
+local function dtable(name, rows)
+  local t = { rows = rows, name = name, ParentTables = {} }
+  function t:IsValid() return true end
+  function t:GetFullName() return self.name end
+  function t:ForEachRow(fn) for k, r in pairs(self.rows) do fn(k, r) end end
+  return t
+end
+root = dtable("root", { a = row(2000, 0, 3, 1, -1), key = row(2011, 1, 30006, 1, -1), gil = row(2001, 2, -1, 1, 400) })
+function StaticFindObject(p) if p:find("TreasureBox") then return root end return nil end
+function FindAllOf() return nil end
+function FindFirstOf() return nil end
+G = (require("game"))
+''')
+assert L.eval("G.BlankChests(true)") == 2
+assert L.eval("root.rows.key.ItemId") == 30006, "a key-item chest must keep its content"
+assert L.eval("root.rows.gil.Money") == 1 and L.eval("root.rows.a.ItemId") == -1
+assert L.eval("G.BlankChests(false)") == 2 and L.eval("root.rows.gil.Money") == 400
+print("blanking limit: ok")
+
+for name in ("ap_in.txt", "ap_out.txt", "ap_state.txt", "seen.tsv"):
+    if os.path.exists(path(name)):
+        os.remove(path(name))
+# pre-session leftovers: a check from before connecting must not survive the session start
+open(path("ap_out.txt"), "w", encoding="utf-8", newline="\n").write("hello\t0.3.1\ncheck\tchest:2001:0\n")
+open(path("seen.tsv"), "w", encoding="utf-8", newline="\n").write(
+    "chest\t2002\t7\t3020:1\t209\t3\t-1\t\nshiny\t1000\t30\tBP\t16\t3\t-1\t\n")
+open(path("ap_in.txt"), "w", encoding="utf-8", newline="\n").write(
+    "seed\tS1:1\ncfg\tblank\t1\n"
+    "item\t0\titem\t10100\t1\tCrimson Saber\nitem\t1\tgil\t0\t400\t400 Gil from Bob\n")
+L, G = boot()
+G.GrantGil = L.eval("function(g) return function(n) g.log[#g.log+1] = 'gil'..n return 'ok', '' end end")(G)
+G.GrantItem = L.eval("function(g) return function(id, n) g.log[#g.log+1] = 'item'..id..'x'..n return 'ok', '' end end")(G)
+G.saveOpen = L.table_from({"2002:7": True})
+G.chests = L.table()
+G.shinies = L.table()
+tick = lambda n: [L.execute("tickFn()") for _ in range(n)]
+out = read("ap_out.txt")
+assert out.startswith("hello\t0.11.2\t1\nseed\tS1:1\n") and "chest:2001:0" not in out, out
+state = read("ap_state.txt")
+assert "seed\tS1:1" in state and "blank\t1" in state, state
+tick(6)
+assert list(G.log.values()) == ["item10100x1", "gil400"], list(G.log.values())
+out = read("ap_out.txt")
+assert "check\tchest:3020:1\n" in out, "sync after a new session: " + out   # from seen.tsv + save
+assert "shiny:1000:30" not in out
+
+# restart, same session: nothing re-granted, the seed line is written again for the client
+L, G = boot()
+G.GrantGil = L.eval("function(g) return function(n) g.log[#g.log+1] = 'gil'..n return 'ok', '' end end")(G)
+G.GrantItem = L.eval("function(g) return function(id, n) g.log[#g.log+1] = 'item'..id..'x'..n return 'ok', '' end end")(G)
+G.chests = L.table()
+G.shinies = L.table()
+tick(8)
+assert list(G.log.values()) == [], list(G.log.values())
+out = read("ap_out.txt")
+assert out.count("seed\tS1:1") == 2 and out.count("check\tchest:3020:1") == 1, out
+
+# the client asks for a sync while running
+G.saveOpen = L.table_from({"1000:30": True})
+with open(path("ap_in.txt"), "a", encoding="utf-8", newline="\n") as f:
+    f.write("sync\n")
+tick(2)
+assert "check\tshiny:1000:30\n" in read("ap_out.txt")
+
+# a new seed starts over: ap_out emptied, items re-applied from index 0
+open(path("ap_in.txt"), "w", encoding="utf-8", newline="\n").write("seed\tS2:3\nitem\t0\titem\t1\t3\tPotion x3\n")
+tick(4)
+out = read("ap_out.txt")
+assert out.startswith("hello\t0.11.2\t1\nseed\tS2:3\n") and "shiny:1000:30" in out and "chest:3020:1" not in out, out
+assert list(G.log.values())[-1] == "item1x3"
+print("sessions: ok")
+
+
+# 5. 0.5.0: each session belongs to one save
+for name in ("ap_in.txt", "ap_out.txt", "ap_state.txt", "seen.tsv"):
+    if os.path.exists(path(name)):
+        os.remove(path(name))
+open(path("seen.tsv"), "w", encoding="utf-8", newline="\n").write("chest\t2002\t7\t3020:1\t209\t3\t-1\t\n")
+open(path("ap_in.txt"), "w", encoding="utf-8", newline="\n").write(
+    "seed\tS5:0:1\ncfg\tblank\t1\nitem\t0\titem\t1\t1\tPotion\n")
+
+
+def boot5(obj, ticks, slots):
+    L, G = boot()
+    G.GrantItem = L.eval("function(g) return function(id, n) g.log[#g.log+1] = 'item'..id..'x'..n return 'ok', '' end end")(G)
+    G.chests, G.shinies = L.table(), L.table()
+    G.saveOpen = L.table_from({"2002:7": True})
+    G.saveObj, G.saveTicks, G.slotOf = obj, ticks, L.table_from(slots)
+    return L, G
+
+
+def load(G, obj, ticks):
+    G.ready = False
+    tick(1)
+    G.ready = True
+    G.saveObj, G.saveTicks = obj, ticks
+    tick(7)
+
+
+def state_slots():
+    for line in read("ap_state.txt").splitlines():
+        if line.startswith("slots\t"):
+            return line[6:]
+    return None
+
+
+# a: the session starts while an existing save (slot 2) is loaded: everything pauses
+L, G = boot5("SD_A", "500", {"500": 2, "600": 3})
+tick = lambda n: [L.execute("tickFn()") for _ in range(n)]
+tick(8)
+out = read("ap_out.txt")
+assert list(G.log.values()) == [], "no grant into an unlinked save"
+assert "check" not in out and "story" not in out, "round 5 bug 2: nothing reported from an unlinked save: " + out
+assert True not in list(G.blankCalls.values()), "chests stay vanilla in an unlinked save"
+assert state_slots() == "", state_slots()
+
+# b: /bind links it: the item arrives, the save's loot is synced, the slot is kept
+with open(path("ap_in.txt"), "a", encoding="utf-8", newline="\n") as f:
+    f.write("bind\n")
+tick(3)
+out = read("ap_out.txt")
+assert list(G.log.values()) == ["item1x1"], list(G.log.values())
+assert "check\tchest:3020:1\n" in out and "story\t1020\n" in out, out
+assert list(G.blankCalls.values())[-1] is True
+assert state_slots() == "2", state_slots()
+
+# c: another save (slot 3) pauses again and unblanks; nothing from it is reported
+G.saveOpen = L.table_from({"2002:7": True, "2002:63": True})
+G.chests = L.table_from({1: L.table_from({"uid": 3, "open": True, "rowMap": 3020, "rowId": 3, "uniqueId": 63,
+                                          "typeId": 63, "itemId": 7, "itemNum": 4, "money": -1})})
+load(G, "SD_B", "600")
+out = read("ap_out.txt")
+assert "chest:3020:3" not in out, out
+assert list(G.blankCalls.values())[-1] is False
+assert "chest\t2002\t63\t3020:3" in read("seen.tsv"), "seen.tsv still records any save"
+# ffrap_sync refuses in an unlinked save
+L.execute('commands["ffrap_sync"]("ffrap_sync", {})')
+assert "chest:3020:3" not in read("ap_out.txt")
+
+# d: the linked slot loads again: resumes, and the open chest in this map counts now
+load(G, "SD_C", "500")
+out = read("ap_out.txt")
+assert "check\tchest:3020:3\n" in out, out
+assert list(G.blankCalls.values())[-1] is True
+
+# e: the linked game saves to slot 4; the summary catches up a tick later
+G.saveTicks = "700"
+tick(1)
+G.slotOf = L.table_from({"500": 2, "600": 3, "700": 4})
+tick(1)
+assert state_slots() == "2,4", state_slots()
+
+# f: another game saves over slot 4: slot 4 is no longer linked
+load(G, "SD_D", "600")
+G.slotOf = L.table_from({"500": 2, "600": 3, "700": 4, "900": 4})
+G.saveTicks = "900"
+tick(2)
+assert state_slots() == "2", state_slots()
+
+# g: a new game while the session has a save: paused, not linked
+load(G, "SD_E", "0")
+assert state_slots() == "2"
+G.story = 1030
+tick(2)
+assert "story\t1030" not in read("ap_out.txt")
+
+# h: restart with an old bind line in ap_in.txt and an unlinked save loaded: stays paused,
+# and the slots come back from ap_state.txt
+with open(path("ap_in.txt"), "a", encoding="utf-8", newline="\n") as f:
+    f.write("item\t1\titem\t2\t1\tHi-Potion\n")
+L, G = boot5("SD_F", "600", {"500": 2, "600": 3})
+tick = lambda n: [L.execute("tickFn()") for _ in range(n)]
+tick(8)
+assert list(G.log.values()) == [], list(G.log.values())
+load(G, "SD_G", "500")
+# 0.11.2: slot 2 was linked holding 0 items (b) and never saved again, so the save on disk lacks
+# item 1 as well: both are granted
+assert list(G.log.values()) == ["item1x1", "item2x1"], list(G.log.values())
+
+# i: a new seed forgets the old save; an unsaved new game links itself
+load(G, "SD_H", "0")
+assert list(G.log.values()) == ["item1x1", "item2x1"], "a paused new game gets nothing new"
+open(path("ap_in.txt"), "w", encoding="utf-8", newline="\n").write("seed\tS6:0:1\nitem\t0\titem\t3\t1\tEther\n")
+tick(3)
+assert list(G.log.values())[-1] == "item3x1", list(G.log.values())
+assert state_slots() == "", state_slots()
+
+# j: ffrap_bind from the console links an existing save
+load(G, "SD_I", "600")
+L.execute('commands["ffrap_bind"]("ffrap_bind", {})')
+assert state_slots() == "3", state_slots()
+L.execute('commands["ffrap_status"]("ffrap_status", {})')
+
+# k: a new game (story 1000) whose timestamp matches linked slot 3 is still a new game: paused
+granted = len(list(G.log.values()))
+with open(path("ap_in.txt"), "a", encoding="utf-8", newline="\n") as f:
+    f.write("item\t1\titem\t4\t1\tPhoenix Down\n")
+G.story = 1000
+load(G, "SD_J", "600")
+tick(3)
+assert len(list(G.log.values())) == granted, ("no grant into a new game", list(G.log.values()))
+assert state_slots() == "3", state_slots()
+# the same slot loaded later in the story is the session's save again
+G.story = 1030
+load(G, "SD_K", "600")
+tick(3)
+assert list(G.log.values())[-1] == "item4x1", list(G.log.values())
+print("save binding: ok")
+
+# 6. ffrap_skip (0.11.2)
+def inbox(text, mode="a"):
+    with open(path("ap_in.txt"), mode, encoding="utf-8", newline="\n") as f:
+        f.write(text)
+
+inbox("seed\tS7:0:1\n", "w")
+tick(3)
+assert state_slots() == "", state_slots()
+G.story = 1000
+load(G, "SD_L", "0")                      # a new game: links itself
+inbox("item\t0\titem\t9\t1\tTent\n")
+tick(3)
+assert list(G.log.values())[-1] == "item9x1", list(G.log.values())
+# refused later in the story
+G.story = 1030
+L.execute('commands["ffrap_skip"]("ffrap_skip", {})')
+assert G.skipRuns == 0
+# round 9: refused during the opening movie (story 1000)
+G.story = 1000
+L.execute('commands["ffrap_skip"]("ffrap_skip", {"0"})')
+assert G.skipRuns == 0 and len(list(G.reloads.values())) == 0
+G.story = 1005
+# no slot: applies, saves nothing
+L.execute('commands["ffrap_skip"]("ffrap_skip", {})')
+assert G.skipRuns == 1 and len(list(G.reloads.values())) == 0
+# with a slot on the same save (story now 1030): applied again before saving; the slot is
+# linked before the reload
+L.execute('commands["ffrap_skip"]("ffrap_skip", {"0"})')
+assert G.skipRuns == 2, G.skipRuns
+assert list(G.reloads.values()) == [0], list(G.reloads.values())
+assert state_slots() == "0", state_slots()
+# the reloaded save (slot 0, story 1030) is the session's: the next item arrives
+G.slotOf = L.table_from({"800": 0})
+load(G, "SD_N", "800")
+inbox("item\t1\titem\t10\t1\tPhoenix Down\n")
+tick(3)
+assert list(G.log.values())[-1] == "item10x1", list(G.log.values())
+# a bad slot argument does nothing
+L.execute('commands["ffrap_skip"]("ffrap_skip", {"x"})')
+assert G.skipRuns == 2
+# the reloaded save is a different object at story 1030: refused
+L.execute('commands["ffrap_skip"]("ffrap_skip", {"0"})')
+assert G.skipRuns == 2 and list(G.reloads.values()) == [0]
+print("skip command: ok")
+
+# 7. a per-save item count (0.11.2)
+# (also: the S8 file below is longer than the S7 one already read; its new first line makes
+# the mod read it from the top)
+def grants():
+    return [g for g in G.log.values() if g.startswith("item")]
+
+def slot_items():
+    for line in read("ap_state.txt").splitlines():
+        if line.startswith("slotItems\t"):
+            return line[len("slotItems\t"):]
+    return None
+
+inbox("seed\tS8:0:1\nclient\t0.1.3\nitem\t0\titem\t100\t1\tA\nitem\t1\titem\t101\t1\tB\nitem\t2\titem\t102\t1\tC\n", "w")
+tick(3)
+G.story, G.slotOf = 1000, L.table_from({})
+before = len(grants())
+load(G, "SD_P", "0")                             # a new game links itself and gets all three
+assert grants()[before:] == ["item100x1", "item101x1", "item102x1"], grants()[before:]
+# the game saves to slot 1 with the three items in it
+G.saveTicks = "1000"
+G.slotOf = L.table_from({"1000": 1})
+tick(2)
+assert state_slots() == "1" and slot_items() == "1=3", (state_slots(), slot_items())
+# a fourth item arrives, and the game is not saved again
+inbox("item\t3\titem\t103\t1\tD\n")
+tick(3)
+assert grants()[-1] == "item103x1"
+n = len(grants())
+# reloading slot 1: that save has three items, so D is granted again
+G.story = 1030
+load(G, "SD_Q", "1000")
+assert grants()[n:] == ["item103x1"], grants()[n:]
+# the game saves to slot 2 with four; slot 1 keeps its three
+G.saveTicks = "1100"
+G.slotOf = L.table_from({"1000": 1, "1100": 2})
+tick(2)
+assert state_slots() == "1,2" and slot_items() == "1=3,2=4", (state_slots(), slot_items())
+n = len(grants())
+load(G, "SD_R", "1100")                          # slot 2 has everything: nothing granted
+assert grants()[n:] == [], grants()[n:]
+load(G, "SD_S", "1000")                          # slot 1 lacks D again
+assert grants()[n:] == ["item103x1"], grants()[n:]
+# binding a save the session never had: it gets all four
+G.slotOf = L.table_from({"1000": 1, "1100": 2, "1200": 5})
+n = len(grants())
+load(G, "SD_T", "1200")
+assert grants()[n:] == [], "paused: an unlinked save gets nothing"
+L.execute('commands["ffrap_bind"]("ffrap_bind", {})')
+tick(3)
+assert grants()[n:] == ["item100x1", "item101x1", "item102x1", "item103x1"], grants()[n:]
+assert state_slots() == "5" and slot_items() == "5=0", (state_slots(), slot_items())
+# it saves; then the game restarts with that save loaded: nothing is granted twice
+G.saveTicks = "1300"
+G.slotOf = L.table_from({"1000": 1, "1100": 2, "1300": 5})
+tick(2)
+assert slot_items() == "5=4", slot_items()
+L, G = boot5("SD_U", "1300", {"1300": 5})
+tick = lambda k: [L.execute("tickFn()") for _ in range(k)]
+G.story = 1030
+tick(8)
+assert [g for g in G.log.values() if g.startswith("item")] == [], list(G.log.values())
+assert G.log is not None
+print("per-save items: ok")
+
+# 8. the title entry (0.7.3): entry 5 becomes New Game and marks the game
+G.titleOk = True
+n_adds = G.titleAdds
+L.execute('commands["ffrap_title"]("ffrap_title", {"add"})')
+assert G.titleAdds == n_adds + 1
+hook = L.eval('hooks["/Script/mucha.CPP_VM_Title:ExecuteEntry"]')
+assert hook is not None
+L.execute("""param = { v = 5 }; function param:get() return self.v end; function param:set(x) self.v = x end""")
+L.execute('hooks["/Script/mucha.CPP_VM_Title:ExecuteEntry"](nil, param)')
+assert L.eval("param.v") == 2, "turned into New Game"
+L.execute("""param2 = { v = 1 }; function param2:get() return self.v end; function param2:set(x) self.v = x end""")
+L.execute('hooks["/Script/mucha.CPP_VM_Title:ExecuteEntry"](nil, param2)')
+assert L.eval("param2.v") == 1, "Load Game left alone"
+L.execute('commands["ffrap_title"]("ffrap_title", {"add"})')    # a second add: still one hook
+print("title entry: ok")
+
+# 9. the Archipelago new game (0.11.2): the entry is kept at start-up, a plain New Game stays
+# vanilla, the Archipelago one links and skips the prologue by itself once it has autosaved
+inbox("seed\tS9:0:1\nitem\t0\titem\t200\t1\tE\n", "w")
+G.titleOk = True
+tick(7)                                           # titleTick runs every 6 ticks
+G.story, G.slotOf = 1000, L.table_from({})
+n = len(grants())
+load(G, "SD_V1", "0")                             # plain New Game: paused
+tick(3)
+assert grants()[n:] == [], ("vanilla new game gets nothing", grants()[n:])
+hook = L.eval('hooks["/Script/mucha.CPP_VM_Title:ExecuteEntry"]')
+L.execute("""p5 = { v = 5 }; function p5:get() return self.v end; function p5:set(x) self.v = x end""")
+hook(None, L.eval("p5"))
+assert L.eval("p5.v") == 2
+runs, reloads = G.skipRuns, len(list(G.reloads.values()))
+load(G, "SD_AP", "0")                             # the Archipelago new game: linked, gets E
+assert grants()[n:] == ["item200x1"], grants()[n:]
+tick(6)
+assert G.skipRuns == runs, "no skip during the opening movie"
+G.story = 1005                                    # Fina can move; then the first autosave
+tick(6)
+assert G.skipRuns == runs, "no skip before the autosave"
+G.saveTicks = "3000"
+G.slotOf = L.table_from({"3000": 0})
+tick(2)                                           # the autosave is seen and linked
+assert G.skipRuns == runs, "waits a moment after the autosave"
+tick(6)
+assert G.skipRuns == runs + 1, G.skipRuns
+assert list(G.reloads.values())[reloads:] == [0], list(G.reloads.values())
+assert state_slots() == "0", state_slots()
+tick(10)
+assert G.skipRuns == runs + 1, "once"
+# a later load of some other save does not get the Archipelago treatment
+G.story = 1030
+load(G, "SD_OTHER", "9999")
+assert G.skipRuns == runs + 1
+assert G.orders >= 1, "the order is checked once the entry is in"
+G.ready = False                                   # back at the title screen
+tick(13)                                          # two checks: the line, then the logo
+assert "FFRArchipelago 0.11.2" in list(G.titleLines.values()), list(G.titleLines.values())
+assert G.describes == 1, "the layout is logged once"
+assert len(list(G.logos.values())) >= 1 and list(G.logos.values())[0].endswith("Assets/archipelago_logo.png"), list(G.logos.values())
+G.ready = True
+print("archipelago new game: ok")
+
+# 10. the item feed (0.11.2): one line per item in game; queued while the HUD is away; a long
+# queue shows its last lines and how many more; off sends messages to the Toast again
+def feed():
+    return list(G.feed.values())
+
+# 0.11.2: the "feed 1" that 0.9.0 wrote by itself does not switch the feed on after a restart
+with open(path("ap_state.txt"), "a", encoding="utf-8", newline="\n") as f:
+    f.write("feed\t1\n")
+L, G = boot5("SD_RESTART", "0", {})
+G.titleOk = True
+tick = lambda n: [L.execute("tickFn()") for _ in range(n)]
+tick(8)
+hook = L.eval('hooks["/Script/mucha.CPP_VM_Title:ExecuteEntry"]')
+L.execute("""p5 = { v = 5 }; function p5:get() return self.v end; function p5:set(x) self.v = x end""")
+inbox("seed\tS10:0:1\n", "w")
+tick(3)
+G.story, G.slotOf = 1000, L.table_from({})
+hook(None, L.eval("p5"))
+L.execute("p5.v = 5")
+hook(None, L.eval("p5"))
+load(G, "SD_F1", "0")
+# 0.11.2: on by default (it works since 0.9.5): a line per item
+inbox("item\t0\titem\t300\t1\tPotion from Bob\nitem\t1\titem\t301\t1\tEther\n")
+tick(3)
+assert feed()[-2:] == ["Received Potion from Bob", "Received Ether"], feed()
+L.execute('commands["ffrap_feed"]("ffrap_feed", {"test", "plain"})')
+assert feed()[-3:] == ["Received Potion from Bob", "Sent Ether to Alice", "Received Rod of Focus"], feed()
+inbox("item\t1\titem\t301\t1\tEther again\n")
+# seven items arrive while the HUD is away (a battle, a loading screen)
+G.feedReady = False
+inbox("".join(f"item\t{i}\titem\t{400 + i}\t1\tItem{i}\n" for i in range(2, 9)))
+tick(3)
+n = len(feed())
+G.feedReady = True
+tick(1)
+assert feed()[n:] == ["and 3 more", "Received Item5", "Received Item6", "Received Item7", "Received Item8"], feed()[n:]
+# 0.11.2: once the feed has shown a line, messages wait for the HUD however long it is away
+# (round 24: a chest pop-up held for 10 s sent its items to the Toast)
+G.feedReady = False
+toasts = len(list(G.toasts.values()))
+n = len(feed())
+inbox("item\t9\titem\t600\t1\tHi-Potion\n")
+tick(30)
+assert list(G.toasts.values())[toasts:] == [], "still waiting after 15 s"
+G.feedReady = True
+tick(1)
+assert feed()[n:] == ["Received Hi-Potion"], feed()[n:]
+# off: messages go to the Toast, with the old combined line
+L.execute('commands["ffrap_feed"]("ffrap_feed", {"off"})')
+assert "itemfeed\t0" in read("ap_state.txt")
+toasts = len(list(G.toasts.values()))
+inbox("item\t10\titem\t500\t1\tTent\n")
+tick(3)
+assert list(G.toasts.values())[toasts:] == ["Received Tent"], list(G.toasts.values())[toasts:]
+L.execute('commands["ffrap_feed"]("ffrap_feed", {"on"})')
+assert "itemfeed\t1" in read("ap_state.txt")
+print("item feed: ok")
+
+# 11. before the feed has shown anything in a run (it cannot find a HUD), the Toast takes messages
+# after 10 s; a successful automatic skip and an Archipelago new game's link are only logged
+L, G = boot5("SD_FRESH", "0", {})
+tick = lambda k: [L.execute("tickFn()") for _ in range(k)]
+G.feedReady = False
+inbox("seed\tS11:0:1\n", "w")
+tick(3)
+G.story = 1000
+load(G, "SD_FRESH2", "0")
+inbox("item\t0\titem\t700\t1\tElixir\n")
+tick(3)
+assert list(G.toasts.values()) == [] or "Received Elixir" not in list(G.toasts.values())
+tick(22)
+assert any("Received Elixir" in t for t in G.toasts.values()), list(G.toasts.values())
+print("feed fallback: ok")
+
+# 12. the chest pop-up (0.11.2): a scouted chest's check makes the pop-up say what it held
+inbox("seed\tS12:0:1\nscout\tchest:3020:3\tHookshot\tAlice\t1\t0\nscout\tchest:3020:2\tTent\tJones\t0\t1\n", "w")
+L, G = boot5("SD_POP", "0", {})
+tick = lambda k: [L.execute("tickFn()") for _ in range(k)]
+G.story = 1000
+G.chests = L.table()
+tick(10)                                   # a new game, linked (no title entry here)
+G.popupReady = False                       # the pop-up comes up a moment after the check
+G.chests = L.table_from({1: L.table_from({"uid": 3, "open": True, "rowMap": 3020, "rowId": 3, "uniqueId": 63,
+                                          "typeId": 63, "itemId": 7, "itemNum": 4, "money": -1})})
+tick(4)
+assert "check\tchest:3020:3" in read("ap_out.txt"), read("ap_out.txt")
+assert list(G.popups.values()) == [], "waits for the pop-up"
+G.popupReady = True
+tick(2)
+assert list(G.popups.values()) == ["You found the following for Alice:\nHookshot"], list(G.popups.values())
+# an own item; and a chest with no scout leaves the pop-up alone
+G.chests = L.table_from({1: L.table_from({"uid": 2, "open": True, "rowMap": 3020, "rowId": 2, "uniqueId": 8,
+                                          "typeId": 8, "itemId": 209, "itemNum": 3, "money": -1}),
+                         2: L.table_from({"uid": 4, "open": True, "rowMap": 3020, "rowId": 4, "uniqueId": 9,
+                                          "typeId": 9, "itemId": 1, "itemNum": 1, "money": -1})})
+tick(6)
+assert list(G.popups.values())[1:] == ["You obtained the following:\nTent"], list(G.popups.values())
+assert G.restores > 0
+# 0.11.2: the fast check: a pop-up that has just come up scans the chests at once and rewrites
+# the pop-up in the same pass, with no regular tick in between
+n = len(list(G.popups.values()))
+inbox("scout\tchest:3020:5\tLongshot\tRat2\t1\t0\n")
+tick(1)
+G.chests = L.table_from({1: L.table_from({"uid": 5, "open": True, "rowMap": 3020, "rowId": 5, "uniqueId": 10,
+                                          "typeId": 10, "itemId": 1, "itemNum": 1, "money": -1})})
+G.popupOpen = True
+L.execute("fastFn()")
+assert "check\tchest:3020:5" in read("ap_out.txt"), "reported by the fast check"
+assert list(G.popups.values())[n:] == ["You found the following for Rat2:\nLongshot"], list(G.popups.values())[n:]
+L.execute("fastFn()")                    # nothing new: nothing happens
+assert len(list(G.popups.values())) == n + 1
+# 0.11.2 (round 27): an older save reloaded; the chest is closed again, then opened again. Its
+# check is already reported, but the pop-up still says what it held.
+reported = read("ap_out.txt").count("check\tchest:3020:5")
+G.chests = L.table_from({1: L.table_from({"uid": 5, "open": False, "rowMap": 3020, "rowId": 5, "uniqueId": 10,
+                                          "typeId": 10, "itemId": 1, "itemNum": 1, "money": -1})})
+tick(4)                                  # seen closed
+G.chests = L.table_from({1: L.table_from({"uid": 5, "open": True, "rowMap": 3020, "rowId": 5, "uniqueId": 10,
+                                          "typeId": 10, "itemId": 1, "itemNum": 1, "money": -1})})
+G.popupOpen = True
+L.execute("fastFn()")
+assert read("ap_out.txt").count("check\tchest:3020:5") == reported, "not reported twice"
+assert list(G.popups.values())[n + 1:] == ["You found the following for Rat2:\nLongshot"], list(G.popups.values())
+# still open on later scans: no more pop-ups
+tick(6)
+assert len(list(G.popups.values())) == n + 2
+print("chest pop-up: ok")

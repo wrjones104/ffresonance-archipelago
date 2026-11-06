@@ -15,6 +15,7 @@ FFRArchipelago/find_*.txt
 __pycache__/
 *.pyc
 .venv/
+.venv-tests/
 
 # Built apworld
 dist/
