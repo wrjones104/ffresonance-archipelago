@@ -16,6 +16,7 @@ An Archipelago implementation for Final Fantasy Resonance (UE 5.6, game module `
   - `IDEAS.md`: numbered ideas and findings, with what is known and what to find out.
   - `docs/progression.md`: the game's chapters and gates.
   - `docs/logic.md`: the progression logic design (in progress).
+  - `docs/open_world.md`: the open world design (the main direction since round 30): the cleared state, gates, enemy scaling.
   - `DISCLOSURE.md`: the AI disclosure. Keep it accurate.
 
 ## How we work

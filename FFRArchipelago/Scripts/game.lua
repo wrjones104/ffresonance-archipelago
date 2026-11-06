@@ -1782,17 +1782,17 @@ function G.SkipPrologue(opts)
     end)
     step(okParty and table.concat(partyNow, ",") == "1001,1002", "party -> [" .. table.concat(partyNow, ", ") .. "]")
 
-    -- Join status: Rain and Lasswell in (0), Fina out (2).
+    -- Join status: Rain and Lasswell in (0), Archwitch Fina (1006, the prologue's Fina) out (2).
     local rain, lasswell, fina = UnitEntry(sd, 1001), UnitEntry(sd, 1002), UnitEntry(sd, 1006)
     step(rain and lasswell and fina and Put(rain, "JoinStatus", 0) and Put(lasswell, "JoinStatus", 0)
-        and Put(fina, "JoinStatus", 2), "join status: Rain, Lasswell 0; Fina 2")
+        and Put(fina, "JoinStatus", 2), "join status: Rain, Lasswell 0; Archwitch Fina 2")
 
     -- Rain's baseParameterList[5] (0-based) goes 0 -> 3 in the prologue. Its meaning is unknown.
     local okBase = false
     if rain then pcall(function() okBase = Put(rain.baseParameterList, 6, 3) end) end
     step(okBase, "Rain baseParameterList[5] -> 3")
 
-    -- Fina back to her chapter 1 self: level 1, her own weapon, no armor, accessories or skills.
+    -- Archwitch Fina back to level 1, her own weapon, no armor, accessories or skills.
     local okFina = fina ~= nil
     if fina then
         for _, kv in ipairs({ { "Experience", 0 }, { "HitPoint", 200 }, { "MagicPoint", 70 },
@@ -1806,7 +1806,7 @@ function G.SkipPrologue(opts)
             okFina = (n == 0) and okFina
         end
     end
-    step(okFina, "Fina reset: Experience 0, HP 200, MP 70, weapon 10600, no armor, accessories or skills")
+    step(okFina, "Archwitch Fina reset: Experience 0, HP 200, MP 70, weapon 10600, no armor, accessories or skills")
 
     -- Inventory, through the game's call: equipped gear is counted in the bag.
     if doInventory then
@@ -2407,6 +2407,155 @@ function G.PollGate()
         x = gateState.x, y = gateState.y, z = gateState.z,
         actors = #gateState.actors,
     }
+end
+
+-- -------------------------------------------------------------------------------------------
+-- Open world probes (round 31): enemy levels and the airship
+-- -------------------------------------------------------------------------------------------
+-- Enemy stats are fixed per unit in DT_UnitParameter: no enemy has a level curve
+-- (LevelParamId -1). So a scaled enemy is a rewritten row. The growth per level comes from a
+-- fit over the 256 normal enemies of the encounter tables, log(stat) against level (r2 0.65 to
+-- 0.86; docs/open_world.md). MP is left alone: it does not follow level (r2 0.09).
+local UNIT_TABLE = "/Game/Datatable/Unit/DT_UnitParameter.DT_UnitParameter"
+G.ENEMY_GROWTH = {
+    MaxHitPoint = 1.1084, MaxBreakPoint = 1.0446, Attack = 1.0461, Defence = 1.0468,
+    Intelligence = 1.0619, Mind = 1.0484, Agility = 1.0473, Experience = 1.1359, Money = 1.1088,
+}
+local GROWTH_ORDER = { "MaxHitPoint", "MaxBreakPoint", "Attack", "Defence", "Intelligence", "Mind",
+                       "Agility", "Experience", "Money" }
+local CATEGORY_ENEMY, CATEGORY_BOSS = 2, 3     -- eUnitCategory
+G.MAX_LEVEL = 99
+
+-- The stats of a unit moved from its own level to `level`. Pure: `orig` holds Level and the
+-- stats in ENEMY_GROWTH. A stat that is 0 stays 0, and no other stat goes below 1.
+function G.ScaledStats(orig, level)
+    local out = { Level = level }
+    local steps = level - orig.Level
+    for _, k in ipairs(GROWTH_ORDER) do
+        local v = orig[k] or 0
+        if v > 0 then
+            out[k] = math.max(1, math.floor(v * G.ENEMY_GROWTH[k] ^ steps + 0.5))
+        else
+            out[k] = v
+        end
+    end
+    return out
+end
+
+-- The level an enemy gets. mode "fixed": every enemy at `a`. mode "clamp": the enemy's own
+-- level, pulled into a .. b (the "within N levels of the party" idea). Anything else: its own.
+function G.ScaledLevel(own, mode, a, b)
+    local lv = own
+    if mode == "fixed" then lv = a
+    elseif mode == "clamp" then lv = math.min(math.max(own, a), b) end
+    return math.max(1, math.min(G.MAX_LEVEL, math.floor(lv)))
+end
+
+-- A party member's level: CPP_BFL_Unit:GetPlayableUnitLevel (FFRSLib's ffrs_unit_level reads
+-- it the same way). nil when unknown.
+function G.UnitLevel(unitId)
+    local lib = Lib("CPP_BFL_Unit")
+    if not lib then return nil end
+    local ok, lv = pcall(function() return lib:GetPlayableUnitLevel(unitId) end)
+    lv = ok and Int(lv) or nil
+    if lv and lv > 0 then return lv end
+    return nil
+end
+
+-- The active party's average level, rounded, and the members' levels as text ("1001:5 1002:4").
+-- nil when the party or any level cannot be read.
+function G.PartyLevel()
+    local ids = G.PartyIds()
+    if not ids or #ids == 0 then return nil, "no party" end
+    local sum, parts = 0, {}
+    for _, id in ipairs(ids) do
+        local lv = G.UnitLevel(id)
+        if not lv then return nil, "no level for unit " .. tostring(id) end
+        sum = sum + lv
+        parts[#parts + 1] = id .. ":" .. lv
+    end
+    return math.floor(sum / #ids + 0.5), table.concat(parts, " ")
+end
+
+-- Sets the story counter (Progress[0]) of the loaded save, as FFRSLib's ffrs_story_set does,
+-- but for any value: that one stops at 8050, and the ending sets 9000. Returns the value read
+-- back. Save and reload for the maps to follow it.
+function G.SetStoryCounter(n)
+    local sd = G.SaveData()
+    if not sd then return nil end
+    pcall(function() sd.Progress.Progress[1] = n end)
+    return G.StoryCounter()
+end
+
+local scaleOriginals = {}   -- unit id -> { Level = n, MaxHitPoint = n, ... } as the game shipped
+
+-- Rescales every enemy row (and bosses too, if withBosses) by mode, a, b, as in ScaledLevel.
+-- mode "off" restores the shipped rows. Returns how many rows changed, and one sample line
+-- (the first enemy that changed) for the log.
+function G.ScaleEnemies(mode, a, b, withBosses)
+    local family = TableFamily(Find(UNIT_TABLE))
+    if #family == 0 then return nil, "DT_UnitParameter not loaded" end
+    local changed, sample = 0, nil
+    local fields = { "Level" }
+    for _, k in ipairs(GROWTH_ORDER) do fields[#fields + 1] = k end
+    for _, dt in ipairs(family) do
+        pcall(function()
+            dt:ForEachRow(function(_, row)
+                local okRow, err = pcall(function()
+                    local cat = Int(row.Category)
+                    if not (cat == CATEGORY_ENEMY or (withBosses and cat == CATEGORY_BOSS)) then return end
+                    local id = Int(row.ID)
+                    local orig = scaleOriginals[id]
+                    if not orig then
+                        orig = {}
+                        for _, k in ipairs(fields) do orig[k] = Int(row[k]) or 0 end
+                        scaleOriginals[id] = orig
+                    end
+                    local want = orig
+                    if mode ~= "off" then want = G.ScaledStats(orig, G.ScaledLevel(orig.Level, mode, a, b)) end
+                    local diff = false
+                    for _, k in ipairs(fields) do
+                        if Int(row[k]) ~= want[k] then
+                            row[k] = want[k]
+                            diff = true
+                        end
+                    end
+                    if diff then
+                        changed = changed + 1
+                        if not sample then
+                            sample = string.format("%s (%d): level %d -> %d, HP %d -> %d, Attack %d -> %d, EXP %d -> %d",
+                                AsText(row.Name) or "?", id, orig.Level, Int(row.Level) or -1, orig.MaxHitPoint,
+                                Int(row.MaxHitPoint) or -1, orig.Attack, Int(row.Attack) or -1,
+                                orig.Experience, Int(row.Experience) or -1)
+                        end
+                    end
+                end)
+                if not okRow then sample = sample or ("row error: " .. tostring(err)) end
+            end)
+        end)
+    end
+    return changed, sample
+end
+
+-- The airship's spawn condition, in DT_MapAirShip (shipped: "{progress:0}>=4250", the end of
+-- chapter 4). With `cond`, writes it first. Returns the condition read back, or nil and why.
+local AIRSHIP_TABLE = "/Game/Datatable/Asset/Map/DT_MapAirShip.DT_MapAirShip"
+G.AIRSHIP_CONDITION = "{progress:0}>=4250"
+function G.AirshipCondition(cond)
+    local dt = Find(AIRSHIP_TABLE)
+    if not dt then return nil, "DT_MapAirShip not loaded" end
+    local now, err = nil, "no row"
+    pcall(function()
+        dt:ForEachRow(function(_, row)
+            if cond then
+                local ok, e = pcall(function() row.spawnCondition = cond end)
+                if not ok then err = "write failed: " .. tostring(e) end
+            end
+            now = AsText(row.spawnCondition)
+        end)
+    end)
+    if now == nil then return nil, err end
+    return now
 end
 
 return G

@@ -31,6 +31,9 @@
 --   ffrap_bind                   link the loaded save to the client's session (also /bind in the client)
 --   ffrap_reset                  set the loaded save's applied-item count to 0 (re-grants everything to it!)
 --   ffrap_gate <subcommand>      experimental: spawn conditional blockers and custom key items
+--   ffrap_scale <level|low high|party n|off> [boss]  probe: rewrite every enemy's level and stats
+--   ffrap_story <value>          probe: set the loaded save's story counter (any value; save and reload)
+--   ffrap_airship [condition|off]  probe: the airship's spawn condition (shipped {progress:0}>=4250)
 --
 -- Each client session belongs to its saves. A new game started from the Archipelago entry on
 -- the title menu is linked to it at once and skips the prologue by itself (plain New Game stays
@@ -38,7 +41,7 @@
 -- follows the save slots the linked game is saved to. While any other save is loaded, the mod
 -- grants nothing, reports nothing and leaves the chests vanilla.
 
-local VERSION = "0.12.0"
+local VERSION = "0.13.0"
 local PROTOCOL = 1        -- the bridge protocol; the apworld's MOD_PROTOCOL
 
 local MOD_DIR = (debug.getinfo(1, "S").source:gsub("^@", ""):gsub("\\", "/"):match("^(.*/)Scripts/[^/]+$"))
@@ -1322,6 +1325,67 @@ command("ffrap_blank", function(p)
     saveState()
     local n = game.BlankChests(want)
     notify("Chest blanking " .. (want and "on" or "off") .. ": " .. n .. " rows changed")
+end)
+
+-- Open world probes (round 31, docs/open_world.md). Neither is saved: a game restart undoes both.
+-- ffrap_scale 30: every enemy at level 30. ffrap_scale 10 20: each enemy's own level, pulled into
+-- 10 to 20. ffrap_scale party 5: pulled into the party's average level, plus or minus 5 (read
+-- once, now). ffrap_scale off: the shipped rows. Add "boss" to change bosses too.
+command("ffrap_scale", function(p)
+    local withBosses = false
+    local args = {}
+    for _, v in ipairs(p) do
+        if tostring(v):lower() == "boss" then withBosses = true else args[#args + 1] = v end
+    end
+    if tostring(args[1]):lower() == "party" then
+        local lv, detail = game.PartyLevel()
+        if not lv then
+            notify("Scale: party level unknown (" .. tostring(detail) .. ")")
+            return
+        end
+        local range = tonumber(args[2]) or 5
+        log("scale: party level " .. lv .. " (" .. detail .. "), range " .. range)
+        args = { lv - range, lv + range }
+    end
+    local a, b = tonumber(args[1]), tonumber(args[2])
+    local mode = (tostring(args[1]):lower() == "off") and "off" or (a and b and "clamp") or (a and "fixed") or nil
+    if not mode then
+        notify("Usage: ffrap_scale <level> | <low> <high> | party [range] | off  [boss]")
+        return
+    end
+    if mode == "clamp" and a > b then a, b = b, a end
+    log(string.format("scale: %s %s %s%s: starting", mode, tostring(a), tostring(b), withBosses and " with bosses" or ""))
+    local n, sample = game.ScaleEnemies(mode, a, b, withBosses)
+    if n == nil then
+        notify("Scale failed: " .. tostring(sample))
+        return
+    end
+    log("scale: " .. n .. " rows changed" .. (sample and ("; " .. sample) or ""))
+    notify("Enemies " .. (mode == "off" and "back to normal" or "rescaled") .. ": " .. n .. " rows changed")
+end)
+
+-- ffrap_story 9000: the story's cleared value (the ending sets it). Only the counter: no flags.
+command("ffrap_story", function(p)
+    local n = tonumber(p[1])
+    if not n then
+        notify("Story counter: " .. tostring(game.StoryCounter()) .. " (usage: ffrap_story <value>)")
+        return
+    end
+    local was = game.StoryCounter()
+    local now = game.SetStoryCounter(math.floor(n))
+    log("story: counter " .. tostring(was) .. " -> " .. tostring(now) .. " (asked for " .. n .. ")")
+    notify("Story counter " .. tostring(was) .. " -> " .. tostring(now) .. ". Save and reload to apply.")
+end)
+
+-- ffrap_airship: show the condition. ffrap_airship {progress:0}>=0: the airship from now on.
+-- ffrap_airship off: the shipped condition. The text is one word, with no spaces.
+command("ffrap_airship", function(p)
+    local want = p[1]
+    if want and want:lower() == "off" then want = game.AIRSHIP_CONDITION end
+    if want then log("airship: writing spawn condition " .. want) end
+    local now, err = game.AirshipCondition(want)
+    log("airship: spawn condition is " .. tostring(now) .. (err and (" (" .. err .. ")") or ""))
+    notify("Airship spawn condition: " .. tostring(now))
 end)
 
 -- Reports every location in seen.tsv that the save says is looted (see syncFromSave).

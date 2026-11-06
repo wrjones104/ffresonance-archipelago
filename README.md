@@ -6,7 +6,7 @@ Two parts:
   - **Receive:** it reads items from a file and grants them in order: bag items, gil, visions, party members and story flags. Each item is applied once per save, tracked by its Archipelago index and by how many items each save slot holds.
   - **Send:** it reports opened chests, picked-up shinies (shining spots) and changes to the story counter.
 - **`apworld/ff_resonance`**, the Archipelago world and client.
-  - The world generates seeds: chests with consumables, equipment or gil are locations, and shinies are an option. Party members, visions and key items can go in the pool (world 0.3.0), with no logic yet.
+  - The world generates seeds: chests with consumables, equipment or gil are locations, and shinies are an option. Party members, visions and key items can go in the pool (world 0.3.0), with no logic yet. An open world mode is being designed ([docs/open_world.md](docs/open_world.md)).
   - The client connects the mod to a server through the bridge files.
 
 `tools/fake_ap.py` still plays the server's part for testing the mod alone.
@@ -22,7 +22,7 @@ The world is tested off-line: Archipelago's general tests pass with it, its own 
 - **ModSettings** (a Blueprint mod in `Content/Paks/LogicMods`, from the same modding tools as FFRSLib) is optional. In the field, messages ("Received ...", "Sent ...", "Archipelago is paused", "Prologue skipped") go to the mod's own item feed at the bottom right of the HUD (since 0.10.0, on by default). ModSettings' Toast panel takes them off the field (the title screen), when the feed has not been able to show anything for 10 seconds since the game started, and with `ffrap_feed off`. Without ModSettings those few only go to `UE4SS.log`.
 - **FFRSLib, FFRS_QoL, FFRBestiary and FFRRandomizer are not needed.** Their code is where the game calls come from (see "Where the game calls come from"), but this mod calls the game directly. FFRRandomizer should stay disabled (IDEAS.md, idea 10).
 
-1. **Mod.** Copy `FFRArchipelago/Scripts` and `FFRArchipelago/Assets` over the installed mod (0.12.0). Delete the old `ap_in.txt`, `ap_out.txt` and `ap_state.txt`, and keep `seen.tsv`. Keep FFRRandomizer disabled.
+1. **Mod.** Copy `FFRArchipelago/Scripts` and `FFRArchipelago/Assets` over the installed mod (0.13.0). Delete the old `ap_in.txt`, `ap_out.txt` and `ap_state.txt`, and keep `seen.tsv`. Keep FFRRandomizer disabled.
 2. **World.** Run `python tools/build_apworld.py`, then copy `dist/ff_resonance.apworld` into your Archipelago `custom_worlds` folder. Or, from source, copy `apworld/ff_resonance` into `worlds/`.
 3. **Seed.**
    - Copy `apworld/Final Fantasy Resonance.yaml` into Archipelago's `Players` folder and set a name.
@@ -149,6 +149,9 @@ At run time the mod writes these files into its own folder: `ap_out.txt`, `ap_st
 | `ffrap_feed [on\|off\|test [plain]]` | The item feed at the bottom right of the field HUD: on by default; off sends messages to ModSettings' Toast. Kept in `ap_state.txt` as `itemfeed`. `test` shows three sample lines. Every step the feed takes is logged before it runs (`feed step: ...`), so a crash's last line names the call. `test plain` leaves out the styling. `check` logs what the engine says about the feed: the box's and each line's size, visibility and font. |
 | `ffrap_bind` | Link the loaded save to the client's session, in place of any earlier one. The same as `/bind` in the client. |
 | `ffrap_reset` | Set the loaded save's applied-item count to 0. Re-grants everything to it! |
+| `ffrap_scale <level\|low high\|party [range]\|off> [boss]` | Open world probe (docs/open_world.md, section 5): rewrites every enemy's level and stats in `DT_UnitParameter`. `30` puts every enemy at level 30. `10 20` pulls each enemy's own level into 10 to 20. `party 5` pulls it into the party's average level ± 5. `off` restores the shipped rows. Add `boss` to change bosses too. Not saved: a restart undoes it. |
+| `ffrap_story [value]` | Open world probe: sets the loaded save's story counter to any value (FFRSLib's `ffrs_story_set` stops at 8050; the ending sets 9000). Only the counter, no flags. Save and reload to apply. Use it on a save that is not linked to a seed, or the client sees the story move. |
+| `ffrap_airship [condition\|off]` | Open world probe: shows or rewrites the airship's spawn condition (`DT_MapAirShip`, shipped `{progress:0}>=4250`). One word, no spaces. `off` restores it. Not saved. |
 | `ffrap_gate <subcommand>` | Experimental gate and custom key-item probe (IDEAS.md, idea 16): `spawn [combo\|box\|rock\|pot\|gate\|world] [dist] [scale]`, `item [id] [count]`, `require <item\|unit\|flag\|off> [id] [count]`, `lock`, `unlock`, `clear`, `status`. |
 
 ## Bridge format
@@ -355,35 +358,48 @@ Rounds 6 to 9 (2026-11-05) worked out and tested the prologue skip; their result
 - **The cause:** one bad key would crash in one place. Crashes in a new place each time are what memory damage looks like, and here that comes from Lua running on two threads at once. Up to 0.11.3 this mod's two timers used `LoopAsync`. Its callback runs on UE4SS's async thread, in this mod's Lua state, ten times a second, while the game thread runs the queued tick in the same state. Lua is not safe on two threads at once. UE4SS 3.0.1 marks `LoopAsync` as deprecated, and its docs say the new timers have "better thread safety". FFRBestiary found the same thing (its 0.1.1 crashed "after an hour or so" with `LoopAsync`) and moved to `LoopInGameThreadWithDelay`. No other mod here runs `LoopAsync` all the time: FFRSLib uses it only in short probe commands.
 - **Fixed in 0.11.4:** both timers now use `LoopInGameThreadWithDelay`. Their callbacks run only on the game thread, so no Lua in this mod runs on UE4SS's async thread.
 
-## Round 30 test plan (mod 0.11.4, then mod 0.12.0 and world 0.3.0)
+**Round 30 (mod 0.11.4, then mod 0.12.0 and world 0.3.0, 2026-11-06): passed.**
+- **Part A, the crash fix:** no crashes since 0.11.4, with the usual mods on. Before, the game crashed within minutes to about an hour. The cause was `LoopAsync` (round 29).
+- **Part B, a new seed with the progression items:**
+  - The new location names came through.
+  - **Visions before Mitra waited.** `vision 13017` (Amelia, which arrived just after shiny 1000:150) and `vision 13128` (Noctis, just after chest 2000:1) logged `waits (the save owns no vision yet ...)`. Later items went on as usual. When the story gave Tronn and Leah (map 2000, 15:05:48), both went in with `(waited)` lines ("visionList 2 -> 3", then "3 -> 4"), and they were in the Visions menu.
+  - **Key items** arrived as bag items, for example the White Jade Stone (chest 3000:6) and the Transporter (chest 3020:5).
+  - **Fina joined at her story event as normal.** So did Tronn and Leah. No party member came from Archipelago yet, so the party-member item is still untested.
+  - **Found: the game can have both Finas at once.** Fina (1003) and Archwitch Fina (1006) are separate party members, though the story swaps them in and out. World 0.3.0 had only Fina. World 0.3.1 adds Archwitch Fina (the skip leaves her at level 1).
+- **Probes for traps (IDEAS.md, idea 20):** there is no `AddStatus` call. The game has continuous-effect classes for it: `CPP_ContFxAddRandStatusCondition` (a random status, like Bad Breath) and `CPP_ContFxAddStatusCondRegist`. Units read their statuses through `CPP_UnitParameter.GetStatusConditionList` and `HasStatusCondition`. `CPP_BFL_Battle` finds battle units: `GetBattleUnitByUnitId`, `GetBattleUnitListByRelation` and others.
+- **Probes for NPC gifts (idea 21):** talk events hand out items through `TalkEventData.ObtainItemList` and `CPP_TalkEventManager.m_ObtainItemList`, and `CPP_BFL_TalkEvent.SetExternalObtainItemList` sets a list from outside.
+- **Players' feedback** (the Archipelago Discord) asks mostly for open world. So open world comes first: [docs/open_world.md](docs/open_world.md).
 
-Two parts. Part A is the crash fix on your current seed. Part B is a new seed with the first progression items.
+## Round 31 test plan (mod 0.13.0, world 0.3.1)
 
-**Part A: the crash fix (mod 0.11.4, world 0.2.0).** Nothing else changed, so the seed and the save carry on.
+Two parts. Part A is the party-member item, on a new seed. Part B is probes for open world, on a save that is **not** linked to a seed.
 
-1. **Install.** Copy `FFRArchipelago/Scripts` from commit 659ab46 (mod 0.11.4) over the installed mod. The log should say `version 0.11.4 loaded`. The apworld is unchanged.
-2. **Play** as you normally do, with your usual mods on, for an hour or more: battles, towns, shops, menus, and some idle time. Before, the game crashed within minutes to about an hour. If it crashes, send `UE4SS.log` and the newest folder in `%LOCALAPPDATA%\FFRS\Saved\Crashes`.
-3. **Check the log for** a line that says `this UE4SS has no LoopInGameThreadWithDelay`. There should be none.
+**Install.** Copy `FFRArchipelago/Scripts` over the installed mod. The log should say `version 0.13.0 loaded`. Copy `dist/ff_resonance.apworld` into Archipelago's `custom_worlds`. The client should say world 0.3.1.
 
-**Part B: progression items (mod 0.12.0, world 0.3.0).** World 0.3.0 renames the locations and changes the pool, so it needs a new seed and a new game.
-
-What changed:
-- **Location names** come from the game's maps: "Village of Kol Chest 1", not "Lan Town 20 Chest 1". Chests are numbered from 1 within each place. Regions 02 and 03 are now Lanzelt and Kolobos (`excluded_regions` uses these names).
-- **Progression items in the pool**, one of each, in place of filler. There are three options, all on by default: `shuffle_party_members` (Fina, Lid, Nichol, Jake, Sakura), `shuffle_visions` (all 26) and `shuffle_key_items` (43). There is no logic for them yet, and the story still gives its own copies.
-- **A party member** joins the active party when there is room. Otherwise it joins the roster (`JoinStatus` 0, as the story's own events do).
-- **A vision** received before the save owns one waits, and the items after it are applied as usual. The game's own first visions come in the Town of Mitra. Before 0.12.0, a vision this early stopped the whole queue.
-
-Steps:
-4. **Install.** Copy `FFRArchipelago/Scripts` over the installed mod. The log should say `version 0.12.0 loaded`. Copy `dist/ff_resonance.apworld` into Archipelago's `custom_worlds`. Generate a new seed with the three shuffle options on. The client should say world 0.3.0. Start from Archipelago on the title menu.
-5. **Location names.** The spoiler log and the client should show the new names.
-6. **A party member.** When you receive one (or use `ffrap_grant unit 1004` for Lid):
-   - With fewer than 4 in the party, the log should say `in the active party`. Is the member in the party menu? What level and gear do they have? Can they fight?
-   - With a full party, the log should say `joined the roster`. Can you swap the member in from the party menu?
+**Part A: party members (world 0.3.1, a new seed).** Generate a new seed with `shuffle_party_members` on, and start from Archipelago on the title menu. Delete `ap_in.txt`, `ap_out.txt` and `ap_state.txt` first, and keep `seen.tsv`.
+1. **A party member from Archipelago** (or `ffrap_grant unit 1004` for Lid, `1006` for Archwitch Fina):
+   - With fewer than 4 in the party, the log should say `in the active party`. Is the member in the party menu? What level and gear? Can they fight?
+   - With a full party, the log should say `joined the roster`. Can you swap them in from the party menu?
    - Later, when the story has that member join: does the event run normally?
-7. **A vision before Mitra.** The log should say `waits (the save owns no vision yet ...)`, and later items should still arrive. After the story gives Tronn and Leah in Mitra, the waiting vision should go in, with a `(waited)` line in the log. Is it in the Visions menu?
-8. **A key item.** Is it in the Valuables (or Artifacts) list? If you get one the story would use later, for example the Tunnel Key, does that part of the story still run normally?
-9. **Probes for the trap and NPC gift ideas (IDEAS.md, ideas 20 and 21).** In a battle, run `ffrap_find StatusCondition`, `ffrap_find AddStatus` and `ffrap_find BattleUnit`. Anywhere, run `ffrap_find ObtainItem`. Each writes `find_<text>.txt` in the mod folder.
-10. **Send** `UE4SS.log` (`[FFRAP]` lines), `seen.tsv`, the spoiler log and the `find_*.txt` files.
+2. **Archwitch Fina** next to Fina: are both in the party menu, and can both fight?
+
+**Part B: open world probes (docs/open_world.md).** Use a save that is not linked to the seed: a plain New Game, or a copy of an old save. These probes change the save's story or the game's tables. A game restart undoes the table changes (`ffrap_scale`, `ffrap_airship`), but `ffrap_story` is written into the save when you save.
+
+3. **Enemy levels.** On the world map near Mitra (Steel Bats, level 1):
+   - `ffrap_scale 30`. The log should say `scale: N rows changed; Steel Bat (2): level 1 -> 30, HP 68 -> ...`. Fight a battle. Are the enemies much stronger? How much EXP and gil did they give? If FFRBestiary shows enemy levels, what does it say?
+   - `ffrap_scale party 5`, then fight again. The log names the party's levels. The enemies should be close to the party's level.
+   - `ffrap_scale off`, then fight: back to normal.
+   - If the first battle after `ffrap_scale 30` was unchanged, change map once (enter and leave a town) and fight again. That tells us whether the game caches the rows.
+4. **The airship before its time.** On a save before the end of chapter 4 (story below 4250):
+   - `ffrap_airship` logs the shipped condition, `{progress:0}>=4250`.
+   - `ffrap_airship {progress:0}>=0`, then go to the world map (or leave and enter it again). Does the airship appear? Where? Can you board it, fly and land?
+   - `ffrap_airship off` restores it.
+5. **The cleared state.** On a scratch save: `ffrap_story 9000`, save, and reload.
+   - Look around Grandshelt and the world map. Is the airship there? Which towns and dungeons can you enter? What do NPCs say? Does anything look broken?
+   - Run `ffrap_snapshot story9000`, and send the `snap_story9000.tsv` file.
+   - If you, or a friend, has a save that has finished the game, an `ffrap_snapshot cleared` of it would be the best reference of all: it holds every flag the cleared world has.
+6. **Traps (idea 20), in a battle:** `ffrap_functions CPP_BFL_Battle CPP_UnitParameter CPP_ContFxAddRandStatusCondition` writes `functions.txt`. Send it.
+7. **Send** `UE4SS.log` (`[FFRAP]` lines), `functions.txt` and the snapshot files.
 
 From round 29, still open: the new world-map shinies (70, 71, 84 to 89 and 91), and dropped chest rows 2 to 4 at Grandshelt Castle (map 2012).
 

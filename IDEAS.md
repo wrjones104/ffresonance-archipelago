@@ -211,6 +211,8 @@ Still to decide: whether to show a message first ("Skipping the prologue…"), a
 
 **Idea:** jump the story to a late point once (for example after the airship), so the world is open, and gate progress with Archipelago items instead of story events. Keep boss fights as locations if possible. The full story is long for an Archipelago run.
 
+**Round 30 (2026-11-06): this is now the main direction.** Players on the Archipelago Discord ask mostly for open world. The design draft, with what the game data says about the story counter, the airship, enemy levels and the cleared state (story 9000), is [docs/open_world.md](docs/open_world.md). Round 31 has its first probes.
+
 **Known so far:**
 - After the airship most of the world is open, except places that need other story events.
 - Continents as unlock items fit Archipelago well:
@@ -675,6 +677,8 @@ The "Back" prompt that menus and the chest pop-up show at the bottom right also 
 - Nothing after the prologue makes Rain join. A starting party without Rain would have him only as an Archipelago item. Lasswell joins again in chapter 3.
 - The story still makes members leave (Fina in chapters 3 and 5, Lasswell in chapter 4) and fights some battles with one fixed member. What `OverwriteBattleParty` does when that member has not joined is unknown. Rain alone is the risky case, so Rain may have to stay in every starting party for now.
 
+**Open world fits this better (round 30).** In open world the story no longer runs, so nothing makes members leave or fights with a fixed party. A random starting party is then simple.
+
 **The build:** the prologue skip already writes the party (`Party.partyList`) and each unit's `JoinStatus`. A `starting_party_size` option (1 to 4) and a seed-chosen list in slot data would make the skip write those members instead of Rain and Lasswell. The apworld would then put the other party members in the pool.
 
 **To find out:**
@@ -696,9 +700,16 @@ The "Back" prompt that menus and the chest pop-up show at the bottom right also 
 - The mod queues a trap (a new item kind `trap`) and keeps the queue in its state file, so a restart keeps it. At the next battle, once the party's battle units exist, it applies each banked trap and says so in the feed ("Bad Breath! Poison, Blind").
 - Traps never fire in a story battle with a fixed party, or in a boss battle, if that can be told apart (a setting).
 
-**To find out (in game, in a battle):**
-- `ffrap_find StatusCondition`, `ffrap_find AddStatus` and `ffrap_find BattleUnit`: the battle unit class and a call that adds a status, or one that runs a skill effect (effect 1376) on a unit.
-- Which object holds the party's battle units, and when they exist after `Encount`.
+**Probe results (round 30, `ffrap_find` in a battle):**
+- **No call adds a status directly.** `ffrap_find AddStatus` found only the class `CPP_ContFxAddStatusCondRegist`.
+- **The game adds statuses through continuous effects.** `CPP_ContFxAddRandStatusCondition` adds a random status (which is what Bad Breath does), and `CPP_ContFxCureStatusCondition` cures one. `CPP_ContEffect.GetStatusCondition` reads an effect's status.
+- **Units read their statuses** through `CPP_UnitParameter`: `GetStatusConditionList`, `HasStatusCondition`, `GetStatusConditionEffect`. `CPP_VM_UnitParam` has the same for the UI.
+- **Battle units can be found** through `CPP_BFL_Battle`: `GetBattleUnitByUnitId`, `GetBattleUnitListByRelation`, `GetBattleUnitParameterByUnitId` and others. `GetStatusConditionList` is there too.
+- There is a debug call, `CPP_DBG_BFL_Battle.DBG_ShowStatusConditionResistances`. The debug battle menu (`DT_DebugMenu_BattleUnit`, 38 entries) may have a "give status" entry to copy.
+
+**To find out (round 31):**
+- The parameters of those calls: `ffrap_functions CPP_BFL_Battle CPP_UnitParameter CPP_ContFxAddRandStatusCondition` in a battle.
+- How to start a continuous effect on a unit: through a skill (Bad Breath's effect 1376), or by making a `CPP_ContFxAddRandStatusCondition` and adding it to the unit.
 - Whether a status set at the very start of a battle is cleared by the battle's own setup.
 
 ## 21. NPC gifts as checks
@@ -717,4 +728,8 @@ The "Back" prompt that menus and the chest pop-up show at the bottom right also 
 - **A way to see the gift.** Either a hook on the call that runs a talk event's `ObtainItemList`, or a check on the event's own done-flag (`OnFlagList`) after the event.
 - **A way to blank it.** Set the row's `ObtainItemList` items to nothing, as chest blanking does for chest rows, before the event runs.
 
-**To find out:** which function runs `ObtainItemList` (`ffrap_find ObtainItem` in game), and whether a talk event's row can be changed in memory like the chest rows.
+**Probe results (round 30, `ffrap_find ObtainItem`):** `TalkEventData.ObtainItemList` (the table rows), `CPP_TalkEventManager.m_ObtainItemList` (the list of the event that is running), `CPP_TalkEventSceneData.m_ExternalObtainItemList`, and the call `CPP_BFL_TalkEvent.SetExternalObtainItemList`.
+- **To see a gift:** watch `CPP_TalkEventManager.m_ObtainItemList` while an event runs. When it holds items, the event is a gift, and the manager says which event it is.
+- **To blank a gift:** the talk event tables are data tables, like the chest table (`CDT_TalkEventData_Prod` is a composite). Their `ObtainItemList` rows can be emptied the same way.
+
+**To find out:** whether emptying a row's `ObtainItemList` stops the gift and leaves the event's text as it was; and, for open world, which gifts are still there at story 9000 (docs/open_world.md, section 6).

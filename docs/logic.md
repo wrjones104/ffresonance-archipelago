@@ -12,7 +12,7 @@ Related: [progression.md](progression.md) (the chapter-by-chapter reference), [I
 ## 1. Where the world stands today
 
 - **One region.** Every location is reachable from the start as far as logic goes. Late-game chests are simply late.
-- **Progression items, with no logic yet (world 0.3.0).** One of each party member after the prologue (Fina, Lid, Nichol, Jake, Sakura), each of the 26 visions and 43 key items and artifacts go in the pool in place of filler. Each has its own option, on by default. They are classed as progression so the logic can use them later. The story still hands out its own copies, and chests and shinies that hold them keep them, so the story can always be finished. Equipment is "useful", and consumables and gil are "filler".
+- **Progression items, with no logic yet (world 0.3.0).** One of each party member after the prologue (Fina, Lid, Nichol, Jake, Sakura, and Archwitch Fina since world 0.3.1), each of the 26 visions and 43 key items and artifacts go in the pool in place of filler. Each has its own option, on by default. They are classed as progression so the logic can use them later. The story still hands out its own copies, and chests and shinies that hold them keep them, so the story can always be finished. Equipment is "useful", and consumables and gil are "filler".
 - **Locations:** 202 chests in 10 regions, and 92 shinies on the world map (an option, off by default), all from the game's own files (world 0.2.0). They are named after the game's maps, for example "Village of Kol Chest 1" (world 0.3.0). Chests and shinies that hold items with id 13000 and up (visions, key items, valuables, Tablet Shards) keep their vanilla content and are not locations. So are the 15 chest rows with no box placed on any map.
 - **Goal:** reach a story checkpoint (`goal_story_checkpoint`, default 8050).
 - **Options:** the goal, `include_shinies`, `excluded_regions`, `shuffle_party_members`, `shuffle_visions` and `shuffle_key_items`.
@@ -40,7 +40,9 @@ This choice shapes everything else.
 
 **Your call:** which mode first?
 
-*Suggestion:* story mode first, built so that open world can come later. The skip prologue work shows the story counter and flags can be set, so open world is not out of reach. But story mode can ship much sooner, and it teaches us which gates the game checks by item.
+**Decided (round 30, 2026-11-06): open world first.** Players on the Archipelago Discord ask mostly for open world, and few want a story mode. The design is in [open_world.md](open_world.md). Story mode may come later, or not at all. The rest of this section is kept as the earlier thinking.
+
+*Earlier suggestion:* story mode first, built so that open world can come later. The skip prologue work shows the story counter and flags can be set, so open world is not out of reach. But story mode can ship much sooner, and it teaches us which gates the game checks by item.
 
 **Your direction so far.**
 - **Early sketch (2026-11-04):** the first half linear, gated by the story; after the airship, continents as unlock items; the Crystal Tower as the goal.

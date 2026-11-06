@@ -120,7 +120,7 @@ class TestNames(FFResonanceTestBase):
 
     def test_progression_items(self) -> None:
         party = [ITEMS[i]["name"] for i in PROGRESSION["party"]]
-        self.assertEqual(party, ["Fina", "Lid", "Nichol", "Jake", "Sakura"])
+        self.assertEqual(party, ["Fina", "Lid", "Nichol", "Archwitch Fina", "Jake", "Sakura"])
         self.assertEqual(ITEMS[UNIT_ITEM_BASE + 1004]["kind"], "unit")
         self.assertEqual(len(PROGRESSION["vision"]), 26)
         self.assertTrue(all(ITEMS[i]["kind"] == "vision" for i in PROGRESSION["vision"]))

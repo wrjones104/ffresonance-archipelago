@@ -111,9 +111,10 @@ GENERIC_PLACE_NAMES = {"Dungeon", "Shipyard", "Slums"}
 # Progression items (world 0.3.0). There is no logic for them yet: they go in the pool in place
 # of filler, and the story still hands out its own copies.
 UNIT_ITEM_BASE = 800_000_000       # AP id of a party member: base + unit id
-# The party members (data/game/units.tsv, category Playable). Archwitch Fina (1006) is Fina's
-# other form, which the story swaps in and out; the guests (1013, 1014, 1016) never stay.
-PARTY_MEMBER_IDS = [1001, 1002, 1003, 1004, 1005, 1007, 1008]
+# The party members (data/game/units.tsv, category Playable). Archwitch Fina (1006) is a member
+# of her own: the game can have both Finas at once, though the story swaps them in and out
+# (round 30). The guests (1013, 1014, 1016) never stay.
+PARTY_MEMBER_IDS = [1001, 1002, 1003, 1004, 1005, 1006, 1007, 1008]
 STARTING_PARTY = [1001, 1002]      # the prologue skip gives Rain and Lasswell
 # Valuables and artifacts that are not key items of the US game, or not one-off items:
 # DLC items (29500-29520), and the counted ones (Magicite 25000-25002, Tablet Shards 25004).

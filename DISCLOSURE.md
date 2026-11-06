@@ -16,7 +16,7 @@ Claude Code (Anthropic), using Claude Opus models, in the Claude desktop app.
 - The UE4SS Lua mod: `FFRArchipelago/Scripts/main.lua`, `game.lua` and `bridge.lua`.
 - The Archipelago world and client: everything in `apworld/ff_resonance`, including its tests and docs.
 - The tools in `tools/`: the fake server, the data generator, the apworld builder, and the game data dump (`tools/dump_game`, built on the CUE4Parse library, and `tools/gen_from_dump.py`).
-- Most of the text in `README.md`, `IDEAS.md` and `docs/progression.md`, with notes from me reworded and checked against the game data.
+- Most of the text in `README.md`, `IDEAS.md` and the files in `docs/` (`progression.md`, `logic.md`, `open_world.md`), with notes from me reworded and checked against the game data.
 - Research: reading the installed mods (FFR Modding Tools / FFRSLib, FFRS_QoL) and FFR-Randomizer to find out which engine calls and data tables to use.
 
 **Done by me:**

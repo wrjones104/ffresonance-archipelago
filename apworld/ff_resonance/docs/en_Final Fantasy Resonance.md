@@ -6,7 +6,7 @@ Chests that hold consumables, equipment or gil become Archipelago locations. The
 
 Optionally (experimental), the shining spots ("shinies") on the world map are locations too. Locations are named after the game's own maps, for example "Village of Kol Chest 1".
 
-Also experimental, and on by default: party members (Fina, Lid, Nichol, Jake, Sakura), all 26 visions and the key items go into the item pool, one of each, in place of filler. There is no logic for them yet, and the story still hands out its own copies, so for now an item from Archipelago is an early copy. Chests and shinies that hold key items or visions keep them, so the story plays as normal.
+Also experimental, and on by default: party members (Fina, Lid, Nichol, Archwitch Fina, Jake, Sakura), all 26 visions and the key items go into the item pool, one of each, in place of filler. There is no logic for them yet, and the story still hands out its own copies, so for now an item from Archipelago is an early copy. Chests and shinies that hold key items or visions keep them, so the story plays as normal.
 
 ## What is the goal?
 

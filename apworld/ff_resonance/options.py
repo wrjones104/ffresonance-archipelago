@@ -39,8 +39,8 @@ class ExcludedRegions(OptionSet):
 
 class ShufflePartyMembers(DefaultOnToggle):
     """
-    EXPERIMENTAL. Adds the party members who join after the prologue (Fina, Lid, Nichol, Jake,
-    Sakura) to the item pool. One received joins the active party when there is room, and the
+    EXPERIMENTAL. Adds the party members who join after the prologue (Fina, Lid, Nichol,
+    Archwitch Fina, Jake, Sakura) to the item pool. One received joins the active party when there is room, and the
     roster otherwise. The story still has them join at their usual time, so for now this lets
     them join early. There is no logic for them yet.
     """

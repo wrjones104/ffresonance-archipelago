@@ -877,3 +877,85 @@ assert L.eval("G.HasVision(13100)") is False
 L.execute("visionLib.owned[13100] = true")
 assert L.eval("G.HasVision(13100)") is True
 print("party members and HasVision: ok")
+
+# 0.13.0: open world probes. Enemy rows rescaled by level (ffrap_scale), and the airship's
+# spawn condition (ffrap_airship)
+st = L.eval("G.ScaledStats({ Level = 1, MaxHitPoint = 68, MaxBreakPoint = 50, Attack = 30, Defence = 30,"
+            " Intelligence = 15, Mind = 30, Agility = 13, Experience = 12, Money = 20 }, 11)")
+assert st.Level == 11 and st.MaxHitPoint == round(68 * 1.1084 ** 10) and st.Attack == round(30 * 1.0461 ** 10), dict(st)
+same = L.eval("G.ScaledStats({ Level = 7, MaxHitPoint = 300, Attack = 66, Money = 0 }, 7)")
+assert same.MaxHitPoint == 300 and same.Attack == 66 and same.Money == 0, dict(same)
+down = L.eval("G.ScaledStats({ Level = 50, MaxHitPoint = 3, Attack = 2 }, 1)")
+assert down.MaxHitPoint == 1 and down.Attack == 1, "no stat below 1"
+assert L.eval("G.ScaledLevel(30, 'clamp', 5, 15)") == 15
+assert L.eval("G.ScaledLevel(2, 'clamp', 5, 15)") == 5
+assert L.eval("G.ScaledLevel(9, 'clamp', 5, 15)") == 9
+assert L.eval("G.ScaledLevel(9, 'fixed', 140)") == 99 and L.eval("G.ScaledLevel(9, 'fixed', -3)") == 1
+assert L.eval("G.ScaledLevel(9, 'off', 20)") == 9
+
+L.execute(r"""
+unitRows = {
+  bat = { ID = 2, Category = 2, Name = FText("Steel Bat"), Level = 1, MaxHitPoint = 68, MaxBreakPoint = 50,
+          Attack = 30, Defence = 30, Intelligence = 15, Mind = 30, Agility = 13, Experience = 12, Money = 20 },
+  boss = { ID = 9004, Category = 3, Name = FText("Belmodar"), Level = 4, MaxHitPoint = 2000, MaxBreakPoint = 100,
+           Attack = 60, Defence = 40, Intelligence = 30, Mind = 40, Agility = 20, Experience = 100, Money = 300 },
+  rain = { ID = 1001, Category = 1, Name = FText("Rain"), Level = 1, MaxHitPoint = 300, MaxBreakPoint = 0,
+           Attack = 30, Defence = 20, Intelligence = 10, Mind = 10, Agility = 10, Experience = 0, Money = 0 },
+}
+unitDT = {}
+function unitDT:IsValid() return true end
+function unitDT:GetFullName() return "DataTable /Game/Datatable/Unit/DT_UnitParameter" end
+function unitDT:ForEachRow(fn) for k, r in pairs(unitRows) do fn(fname(k), r) end end
+airRow = { spawnCondition = "{progress:0}>=4250" }
+airDT = {}
+function airDT:IsValid() return true end
+function airDT:ForEachRow(fn) fn(fname("NewRow"), airRow) end
+local prevSFO3 = StaticFindObject
+function StaticFindObject(p)
+  if p == "/Game/Datatable/Unit/DT_UnitParameter.DT_UnitParameter" then return unitDT end
+  if p == "/Game/Datatable/Asset/Map/DT_MapAirShip.DT_MapAirShip" then return airDT end
+  return prevSFO3(p)
+end
+""")
+n, sample = L.execute("return G.ScaleEnemies('fixed', 20, nil, false)")
+assert n == 1 and "Steel Bat (2): level 1 -> 20" in sample, (n, sample)
+assert L.eval("unitRows.bat.Level") == 20 and L.eval("unitRows.bat.MaxHitPoint") == round(68 * 1.1084 ** 19)
+assert L.eval("unitRows.boss.Level") == 4 and L.eval("unitRows.rain.Level") == 1, "bosses and party left alone"
+n, _ = L.execute("return G.ScaleEnemies('fixed', 20, nil, false)")
+assert n == 0, "already scaled: nothing to do"
+# the next scale works from the shipped row, not from the scaled one
+n, _ = L.execute("return G.ScaleEnemies('clamp', 5, 15, true)")
+assert n == 2 and L.eval("unitRows.bat.Level") == 5 and L.eval("unitRows.boss.Level") == 5, n
+assert L.eval("unitRows.bat.MaxHitPoint") == round(68 * 1.1084 ** 4)
+n, _ = L.execute("return G.ScaleEnemies('off', nil, nil, true)")
+assert n == 2 and L.eval("unitRows.bat.MaxHitPoint") == 68 and L.eval("unitRows.boss.Experience") == 100, n
+
+assert L.eval("G.AirshipCondition()") == "{progress:0}>=4250"
+assert L.eval("G.AirshipCondition('{progress:0}>=0')") == "{progress:0}>=0"
+assert L.eval("airRow.spawnCondition") == "{progress:0}>=0"
+L.execute("airDT = nil")
+now, err = L.execute("return G.AirshipCondition('x')")
+assert now is None and "not loaded" in err, (now, err)
+print("open world probes (scale, airship): ok")
+
+# the party's average level (GetPlayableUnitLevel), and the story counter at any value
+L.execute(r"""
+levels = { [1001] = 5, [1002] = 8 }
+unitBFL = {}
+function unitBFL:IsValid() return true end
+function unitBFL:GetPlayableUnitLevel(id) return levels[id] or 0 end
+function partyVM:GetPartyUnitIdList() return { 1001, 1002 } end
+local prevSFO4 = StaticFindObject
+function StaticFindObject(p)
+  if p == "/Script/mucha.Default__CPP_BFL_Unit" then return unitBFL end
+  return prevSFO4(p)
+end
+""")
+lv, detail = L.execute("return G.PartyLevel()")
+assert lv == 7 and detail == "1001:5 1002:8", (lv, detail)
+L.execute("levels[1002] = nil")
+lv, detail = L.execute("return G.PartyLevel()")
+assert lv is None and "1002" in detail, (lv, detail)
+L.execute("mgr.m_pGameSaveData = makeSave({false}, { {SaveId=1, JoinStatus=0} }, 1130, 1, false)")
+assert L.eval("G.SetStoryCounter(9000)") == 9000 and L.eval("G.StoryCounter()") == 9000
+print("party level and story counter: ok")
