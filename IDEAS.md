@@ -580,3 +580,45 @@ The "Back" prompt that menus and the chest pop-up show at the bottom right also 
    - knowing which chest is about to be opened, not just opened.
 
 **Verdict:** worth one cheap test (way 1), when there is time. If chests can be empty, the rest follows from what the feed already does. If not, way 2 is a small, safe polish, and way 3 waits until long after progression logic.
+
+## 16. Map blockers and custom forced gates
+
+**Idea:** Introduce "blocking" elements on the world map or in town/dungeon maps (e.g. new forced gates, an NPC blocking a bridge or choke point until XYZ item or flag is collected) to control routing and enforce progression logic.
+
+**Known so far:**
+- Story gates in the game read `{progress: N}` and `{flag: N}` conditions (e.g. in `DT_MainScenario` and `VisibleCondition` for field gimmicks/shinies).
+- Towns, dungeons, and the world map contain collision barriers, door gimmicks (`BP_MapGimmick_*`), and NPC actors with attached collision and interaction scripts.
+- The mod and FFRSLib can read and manipulate flags, items, and story state at runtime.
+
+**To find out:**
+- Whether we can dynamically spawn new blocker actors (collision volumes or NPC actors) into maps, or if it is cleaner to repurpose existing gate/barrier gimmicks or NPC objects.
+- How NPC collision and visibility are managed: can an existing NPC be repositioned or conditionally toggled (visible + collision active) based on an Archipelago progression item check?
+- For world-map bridges or map transition boundaries, what actor or collision volume blocks passage, and can its enabled/collision state be overridden via script or data asset patching?
+
+## 17. Airship landing restrictions for continent gating
+
+**Idea:** Change or restrict where the airship can land to gate continents and regions in open-world mode. Currently in-game, if a spot is unlandable, the airship's shadow turns red. Could leverage or hook this check to prevent landing on specific continents until their respective items/passes are acquired.
+
+**Known so far:**
+- The airship already performs a continuous landing validity check beneath its position; hovering over invalid terrain (water, steep mountains, dense forest, or restricted zones) turns the shadow red and disables the landing action.
+- Open-world mode (Idea 3) and vehicles (Idea 4) rely on continents as unlockable items (e.g. Grandshelt, Dirnado, Olderion, etc.), but an unrestricted airship would normally bypass continental borders.
+- Vehicle physics/controllers and map data (`MAP_DATA`, world map collision/sub-levels) handle the movement and landing raycast/trace.
+
+**To find out:**
+- Which function or component performs the landing trace/check (e.g. in the airship actor/pawn, vehicle movement component, or map manager).
+- Can that landing query be hooked via UE4SS to force a landing refusal (shadow turns red, landing button disabled) if the player is over a continent or region whose corresponding Archipelago item has not yet been unlocked?
+- How continental boundaries or regions are defined on the world map (coordinate bounding boxes, surface/material tags, or distinct sub-levels/volumes).
+
+## 18. In-game menu for on-the-fly settings and modifiers
+
+**Idea:** Introduce our own in-game menu option with on-the-fly customizable settings, such as EXP, Gil (GP), and MRP (Magic/Resonance Points) modifiers, encounter rate adjustments (e.g. 0x / 0.5x / 1x / 2x / 4x), and Archipelago client status.
+
+**Known so far:**
+- FFRSLib successfully adds custom menu options to the System Menu by appending tags to `DA_SystemMenu.DisplayEntryList`, registering rows in `EntryPropertyMap`, and hooking `CPP_VM_SystemMenu:ExecuteEntryEvent`.
+- We successfully added a custom entry to the Title Menu (`DA_Title`, `VM_Title_C`, `ExecuteEntry`) in mod 0.8.0.
+- Encounter checks and battle reward calculations route through distinct engine functions/classes (e.g. `CPP_MapManager:Encount`, battle calculation / reward distribution functions).
+
+**To find out:**
+- How best to display the configuration UI: whether to build a custom widget layout (similar to the item feed / dialog overlay) or reuse the game's existing Option/Settings UI widgets (sliders, toggles, list pickers).
+- Where battle rewards (EXP, Gil, MRP/AP) are tallied and awarded at battle end, and whether a multiplier hook can safely scale rewards without breaking progression caps or desyncing saves.
+- Where the field encounter step counter or rate calculation lives (e.g. in `CPP_MapManager` or player pawn state) and how to cleanly scale or suppress encounters on the fly.
