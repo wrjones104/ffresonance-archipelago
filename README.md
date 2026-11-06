@@ -338,6 +338,13 @@ Rounds 6 to 9 (2026-11-05) worked out and tested the prologue skip; their result
 - **The fast check:** from the second chest on, the check and the pop-up text came in the same pass (for example, both at 16:33:11.23). No stutter.
 - **Found:** after reloading an older save (slot 0), chests opened again kept "1 gil". Their checks were already reported, and only a first report asked for the pop-up text, though the scouts were there.
 
+**Round 29, first run (mod 0.11.3, world 0.2.0, 2026-11-06): stopped by a crash in the Earth Shrine.**
+- **Worked:** the new game for the seed, the skip, chest blanking (432 rows), and checks `chest:3001:0`, `3001:1`, `3000:1`, `3000:2` and `3000:3`, each with its item received and the pop-up text set. Row 3000:0, which world 0.2.0 dropped, did not turn up.
+- **The crash:** the game sat idle in menus for about 20 minutes, then crashed with "Fatal error!" on the next battle result screen (11:31). The game's report (`%LOCALAPPDATA%\FFRS\Saved\Crashes`) says `EXCEPTION_ACCESS_VIOLATION reading address 0` on the game thread.
+- **Where, from UE4SS.pdb:** a Lua function on a game-thread timer (`process_simple_actions` from the engine tick), inside two nested `pcall`s, indexed a UObject with a key that is not a string (`UObject __index` -> `get_string` on a null string). In UE4SS that happens with `obj[key]` where `key` is nil, a boolean or a table. A `pcall` cannot catch it.
+- **Whose:** the stack cannot say. Four Lua mods were running: this one, FFRSLib, FFRS_QoL and FFRBestiary. This mod logged nothing for the 20 minutes before the crash. It indexes UObjects only with fixed field names, and with dynamic ones only in probe commands and the skip, none of which ran. While idle, the log also shows two "Ref was not function" errors (11:15 and 11:23). Those are UE4SS calling a callback that is gone; FFRSLib registers and unregisters hooks on the fly as menus open.
+- **How the stack was read:** with Windows' `dbghelp` and `UE4SS.pdb`, against the offsets in `CrashContext.runtime-xml`. After a crash, send that folder along with the log.
+
 ## Round 29 test plan (mod 0.11.3, world 0.2.0)
 
 The world now comes from the game's own files (README, "The game data dump"). It has 202 chest locations (was 216) and 92 shinies (was 83). 14 chest rows were dropped because no box for them is placed on any map, among them all of map 10050, a dungeon the game does not ship. 9 world-map shinies are new: uids 70, 71, 84 to 89 and 91. Round 28 was not played, so its steps are here too.
@@ -350,7 +357,10 @@ The world now comes from the game's own files (README, "The game data dump"). It
 4. **Dropped chests.** Where you can, visit a map with a dropped row and run `ffrap_dump` there. Look for a chest that gives 1 gil and sends no check: that would be a real chest we dropped. The dropped rows are in `NO_BOX` in `apworld/ff_resonance/data.py`. The ones easiest to reach:
    - Map 3000 (the first dungeon), row 0. Round 1 saw boxes 1 to 6 there and never row 0.
    - Grandshelt Castle (map 2012), rows 2 to 4. The three boxes there with no row (uids 50, 52, 54) were open story chests in round 3.
-5. **Send** `UE4SS.log` (`[FFRAP]` lines) and `seen.tsv`.
+5. **Send** `UE4SS.log` (`[FFRAP]` lines) and `seen.tsv`. After a crash, also send the newest folder in `%LOCALAPPDATA%\FFRS\Saved\Crashes`.
+6. **The idle crash (first run).** Carry on from your last save (slot 5). The items received after it are applied again. Chests 3000:1 to 3000:3 open again with no new check, because those checks are already sent. To find whose crash it was, leave the game idle in a menu for 20 minutes, then fight a battle:
+   - first with only this mod and ModSettings (turn off FFRSLib, FFRS_QoL and FFRBestiary);
+   - then, if that is clean, with the others back on.
 
 ## Open questions
 
