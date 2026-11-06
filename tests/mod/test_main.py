@@ -161,6 +161,64 @@ function G.TitleLogo(path, line) G.logos[#G.logos + 1] = path; return "added", "
 function G.DescribeWidget(w) G.describes = G.describes + 1; return "widget TextBlock" end
 function G.SkipPrologue() G.skipRuns = G.skipRuns + 1; G.story = 1030; return true, { "ok   stub" } end
 function G.SaveAndReload(slot) G.reloads[#G.reloads + 1] = slot; return true, "saved to slot " .. slot .. ", reloading" end
+G.TEST_KEY_ID, G.gate, G.injectedItems = 29901, nil, {}
+function G.HasActiveGate() return G.gate ~= nil end
+function G.PlayerPose()
+  return { class = "BP_MapUnit_Player_Field_C", x = 0, y = 0, z = 0, yaw = 0, sx = 1 }
+end
+function G.InjectValuableItem(id)
+  id = id or G.TEST_KEY_ID
+  G.injectedItems[#G.injectedItems + 1] = id
+  return true, 'added row FFRAP_Key_' .. id .. ': ID=' .. id .. ', name="Bridge Crest"'
+end
+function G.SpawnGate(kind, dist)
+  G.gate = {
+    kind = kind or "combo", locked = true, x = 200, y = 0, z = 0,
+    dist = tonumber(dist) or 220, bumpDist = 165, cond = nil,
+  }
+  return true, "spawned " .. G.gate.kind
+end
+function G.SetGateLock(locked)
+  if not G.gate then return false, "no active gate" end
+  G.gate.locked = locked
+  return true, locked and "locked (visible, collision on)" or "unlocked (hidden, collision off)"
+end
+function G.SetGateRequirement(cond)
+  if not G.gate then return false, "no active gate" end
+  G.gate.cond = cond
+  if not cond then return true, "requirement cleared" end
+  local held = G.gateHeld or 0
+  local met = held >= (cond.count or 1)
+  G.gate.locked = not met
+  local txt = string.format("Bridge Crest (%d/%d)", held, cond.count or 1)
+  G.gate.condText = txt
+  return true, (met and "unlocked: " or "locked, need ") .. txt
+end
+function G.PollGate()
+  if not G.gate then return nil end
+  if G.gate.gone then G.gate = nil; return { gone = true } end
+  local changed = nil
+  if G.gate.cond then
+    local held = G.gateHeld or 0
+    local need = G.gate.cond.count or 1
+    G.gate.condText = string.format("Bridge Crest (%d/%d)", held, need)
+    local wantLocked = held < need
+    if wantLocked ~= G.gate.locked then
+      G.gate.locked = wantLocked
+      changed = wantLocked and "locked" or "unlocked"
+    end
+  end
+  return {
+    locked = G.gate.locked, changed = changed, condText = G.gate.condText,
+    dist = G.gate.dist, bumpDist = G.gate.bumpDist,
+    kind = G.gate.kind, mapId = G.map, x = G.gate.x, y = G.gate.y, z = G.gate.z, actors = 2,
+  }
+end
+function G.ClearGate()
+  local n = G.gate and 2 or 0
+  G.gate = nil
+  return n
+end
 return G
 '''
 
@@ -263,7 +321,7 @@ G.chests = L.table()
 G.shinies = L.table()
 tick = lambda n: [L.execute("tickFn()") for _ in range(n)]
 out = read("ap_out.txt")
-assert out.startswith("hello\t0.11.2\t1\nseed\tS1:1\n") and "chest:2001:0" not in out, out
+assert out.startswith("hello\t0.11.3\t1\nseed\tS1:1\n") and "chest:2001:0" not in out, out
 state = read("ap_state.txt")
 assert "seed\tS1:1" in state and "blank\t1" in state, state
 tick(6)
@@ -294,7 +352,7 @@ assert "check\tshiny:1000:30\n" in read("ap_out.txt")
 open(path("ap_in.txt"), "w", encoding="utf-8", newline="\n").write("seed\tS2:3\nitem\t0\titem\t1\t3\tPotion x3\n")
 tick(4)
 out = read("ap_out.txt")
-assert out.startswith("hello\t0.11.2\t1\nseed\tS2:3\n") and "shiny:1000:30" in out and "chest:3020:1" not in out, out
+assert out.startswith("hello\t0.11.3\t1\nseed\tS2:3\n") and "shiny:1000:30" in out and "chest:3020:1" not in out, out
 assert list(G.log.values())[-1] == "item1x3"
 print("sessions: ok")
 
@@ -599,7 +657,7 @@ assert G.skipRuns == runs + 1
 assert G.orders >= 1, "the order is checked once the entry is in"
 G.ready = False                                   # back at the title screen
 tick(13)                                          # two checks: the line, then the logo
-assert "FFRArchipelago 0.11.2" in list(G.titleLines.values()), list(G.titleLines.values())
+assert "FFRArchipelago 0.11.3" in list(G.titleLines.values()), list(G.titleLines.values())
 assert G.describes == 1, "the layout is logged once"
 assert len(list(G.logos.values())) >= 1 and list(G.logos.values())[0].endswith("Assets/archipelago_logo.png"), list(G.logos.values())
 G.ready = True
@@ -732,3 +790,54 @@ assert list(G.popups.values())[n + 1:] == ["You found the following for Rat2:\nL
 tick(6)
 assert len(list(G.popups.values())) == n + 2
 print("chest pop-up: ok")
+
+# 13. experimental gate and custom key-item probe (0.11.3): works standalone even on unlinked saves
+L, G = boot5("SD_GATE", "900", {"900": 6})
+tick = lambda k: [L.execute("tickFn()") for _ in range(k)]
+tick(6)                                    # settled on an unlinked save
+L.execute('commands["ffrap_gate"]("ffrap_gate", {"spawn", "combo", "220"})')
+assert G.gate is not None and G.gate.locked is True
+assert list(G.feed.values())[-1] == "Gate: spawned combo"
+
+# custom item injection + grant
+G.gateHeld = 0
+G.GrantItem = L.eval("function(g) return function(id, n) g.gateHeld = (g.gateHeld or 0) + n; g.log[#g.log+1] = 'item'..id..'x'..n; return 'ok', 'held -> '..g.gateHeld end end")(G)
+L.execute('commands["ffrap_gate"]("ffrap_gate", {"item"})')
+assert list(G.injectedItems.values()) == [29901] and G.gateHeld == 1
+assert list(G.log.values())[-1] == "item29901x1"
+
+# bind requirement (3 Bridge Crests): currently 1/3, so locked
+L.execute('commands["ffrap_gate"]("ffrap_gate", {"require", "item", "29901", "3"})')
+assert G.gate.locked is True
+assert list(G.feed.values())[-1] == "Gate: locked, need Bridge Crest (1/3)"
+
+# walk into the locked gate: shows proximity hint once, does not repeat while standing close,
+# re-arms after stepping back and waiting 3 s
+G.gate.dist = 120
+n_feed = len(list(G.feed.values()))
+tick(1)
+assert list(G.feed.values())[n_feed:] == ["Gate locked: need Bridge Crest (1/3)"]
+tick(10)
+assert len(list(G.feed.values())) == n_feed + 1, "no spam while standing at the gate"
+G.gate.dist = 230
+tick(7)                                    # > 3 s later, player backed away
+G.gate.dist = 110
+tick(1)
+assert list(G.feed.values())[-1] == "Gate locked: need Bridge Crest (1/3)"
+
+# collect the remaining 2 Bridge Crests: gate unlocks automatically on next tick
+L.execute('commands["ffrap_gate"]("ffrap_gate", {"item", "29901", "2"})')
+assert G.gateHeld == 3
+tick(1)
+assert G.gate.locked is False
+assert list(G.feed.values())[-1] == "Gate unlocked! (Bridge Crest (3/3))"
+
+# manual lock clears auto-requirement so it stays locked across ticks; status and clear work
+L.execute('commands["ffrap_gate"]("ffrap_gate", {"lock"})')
+tick(3)
+assert G.gate.locked is True
+L.execute('commands["ffrap_gate"]("ffrap_gate", {"status"})')
+assert list(G.feed.values())[-1].startswith("Gate (combo): locked")
+L.execute('commands["ffrap_gate"]("ffrap_gate", {"clear"})')
+assert G.gate is None and list(G.feed.values())[-1] == "Gate cleared (2 actor(s) removed)"
+print("gate probe: ok")

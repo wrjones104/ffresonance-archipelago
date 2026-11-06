@@ -649,3 +649,184 @@ L.execute('blocks = {}')
 assert L.eval('(G.TitleVersionLine("FFRArchipelago 0.8.1"))') is None
 print("probes: ok")
 print("snapshot: ok")
+
+# 0.11.3: experimental custom key items and conditional map gates (ffrap_gate)
+L.execute(r"""
+valuableRows = {
+  Row_Potion = { ID = 1, nameSg = FText("Potion"), isAvailableSale = true },
+  Row_TunnelKey = { ID = 20008, sortId = 12, nameSg = FText("Tunnel Key"), isAvailableSale = false },
+  Row_Temp = { ID = 30012, sortId = 99, nameSg = FText("[TEMP] Placeholder"), isAvailableSale = false },
+}
+valuableDT = { rows = valuableRows }
+function valuableDT:IsValid() return true end
+function valuableDT:ForEachRow(fn)
+  for k, r in pairs(self.rows) do fn(fname(k), r) end
+end
+function valuableDT:AddRow(name, tpl)
+  -- Match UE4SS: FText fields passed in AddRow's table are dropped until written on FindRow.
+  local copy = {}
+  for k, v in pairs(tpl or {}) do
+    if type(v) ~= "table" then copy[k] = v end
+  end
+  self.rows[name] = copy
+end
+function valuableDT:FindRow(name) return self.rows[name] end
+
+bag = {}
+invLib = {
+  FindInventory = function(_, id) return bag[id] or 0 end,
+  AddInventory = function(_, id, n)
+    if id == 29901 and not valuableRows["FFRAP_Key_29901"] then return end
+    bag[id] = (bag[id] or 0) + n
+  end,
+}
+function invLib:IsValid() return true end
+
+joinStatuses = { [1001] = 0, [1006] = 2 }
+unitLib = { GetJoinStatus = function(_, id) return joinStatuses[id] end }
+function unitLib:IsValid() return true end
+
+spawnedActors = {}
+local function makeActorClass(cname)
+  local c = { cname = cname }
+  function c:IsValid() return true end
+  function c:GetFName() return fname(self.cname) end
+  return c
+end
+actorClasses = {
+  ["/Game/BP/Map/Gimmick/BP_MapGimmick_BlockingBox.BP_MapGimmick_BlockingBox_C"] = makeActorClass("BP_MapGimmick_BlockingBox_C"),
+  ["/Game/BP/Map/Gimmick/Child/BlockObject/BP_MapGimmick_BlockingBase_Child_MagicPot.BP_MapGimmick_BlockingBase_Child_MagicPot_C"] = makeActorClass("BP_MapGimmick_BlockingBase_Child_MagicPot_C"),
+  ["/Game/BP/Map/Gimmick/Child/BlockObject/BP_MapGimmick_BlockingBase_Wld01Gra_01.BP_MapGimmick_BlockingBase_Wld01Gra_01_C"] = makeActorClass("BP_MapGimmick_BlockingBase_Wld01Gra_01_C"),
+}
+
+fakeWorld = {}
+function fakeWorld:IsValid() return true end
+function fakeWorld:SpawnActor(cls, loc, rot)
+  local a = {
+    cls = cls.cname,
+    x = loc.X or 0, y = loc.Y or 0, z = loc.Z or 0,
+    yaw = rot.Yaw or 0,
+    hidden = false, collision = true, dead = false,
+  }
+  function a:IsValid() return not self.dead end
+  function a:HasAnyInternalFlags() return false end
+  function a:HasAnyFlags() return false end
+  function a:K2_GetActorLocation() return { X = self.x, Y = self.y, Z = self.z } end
+  function a:K2_SetActorLocation(l) self.x, self.y, self.z = l.X, l.Y, l.Z end
+  function a:K2_SetActorRotation(r) self.yaw = r.Yaw end
+  function a:SetActorScale3D(s) self.scale = s.X end
+  function a:SetActorHiddenInGame(h) self.hidden = h end
+  function a:SetActorEnableCollision(on) self.collision = on end
+  function a:K2_DestroyActor() self.dead = true end
+  spawnedActors[#spawnedActors + 1] = a
+  return a
+end
+
+fakePawn = { x = 100.0, y = 200.0, z = 10.0, yaw = 0.0, fx = 0.0, fy = 1.0, sx = 1.0 }
+function fakePawn:IsValid() return true end
+function fakePawn:HasAnyInternalFlags() return false end
+function fakePawn:HasAnyFlags() return false end
+function fakePawn:K2_GetActorLocation() return { X = self.x, Y = self.y, Z = self.z } end
+function fakePawn:K2_GetActorRotation() return { Pitch = 0, Yaw = self.yaw, Roll = 0 } end
+function fakePawn:GetActorForwardVector() return { X = self.fx, Y = self.fy, Z = 0 } end
+function fakePawn:GetActorScale3D() return { X = self.sx, Y = self.sx, Z = self.sx } end
+function fakePawn:GetClass() return { GetFName = function() return fname("BP_MapUnit_Player_Field_C") end } end
+function fakePawn:GetWorld() return fakeWorld end
+
+fakePC = {}
+function fakePC:IsValid() return true end
+function fakePC:HasAnyInternalFlags() return false end
+function fakePC:HasAnyFlags() return false end
+function fakePC:K2_GetPawn() return fakePawn end
+function fakePC:GetWorld() return fakeWorld end
+
+fakeMapId = 3001
+fakeMapMgr = { GetSameMapId = function() return fakeMapId end }
+function fakeMapMgr:IsValid() return true end
+function fakeMapMgr:HasAnyInternalFlags() return false end
+function fakeMapMgr:HasAnyFlags() return false end
+
+local prevSFO = StaticFindObject
+function StaticFindObject(p)
+  if p == "/Game/Datatable/Item/DT_ValuableItemData.DT_ValuableItemData" then return valuableDT end
+  if p == "/Script/mucha.Default__CPP_BFL_SaveDataInventory" then return invLib end
+  if p == "/Script/mucha.Default__CPP_BFL_SaveDataUnit" then return unitLib end
+  if actorClasses[p] then return actorClasses[p] end
+  return prevSFO(p)
+end
+local prevFAO = FindAllOf
+function FindAllOf(c)
+  if c == "PlayerController" then return { fakePC } end
+  return prevFAO(c)
+end
+local prevFFO = FindFirstOf
+function FindFirstOf(c)
+  if c == "CPP_MapManager" then return fakeMapMgr end
+  return prevFFO(c)
+end
+""")
+
+L.execute("gateSteps = {}; G.gateTrace = function(s) gateSteps[#gateSteps + 1] = s end")
+ok, detail = L.execute("return G.InjectValuableItem()")
+assert ok is True and 'added row FFRAP_Key_29901' in detail and 'Bridge Crest' in detail, detail
+assert L.eval('valuableRows.FFRAP_Key_29901.nameSg:ToString()') == "Bridge Crest"
+assert L.eval('valuableRows.FFRAP_Key_29901.description:ToString()').startswith("An Archipelago test key item")
+assert L.eval('valuableRows.FFRAP_Key_29901.isAvailableSale') is False
+assert len(list(L.eval("gateSteps").values())) >= 3
+# idempotent update on second call, refuses overwriting vanilla Potion (1), allows [TEMP] (30012)
+ok2, detail2 = L.execute("return G.InjectValuableItem(29901, 'Island Sigil')")
+assert ok2 is True and 'updated row FFRAP_Key_29901' in detail2 and 'Island Sigil' in detail2, detail2
+ok_bad, why_bad = L.execute("return G.InjectValuableItem(1, 'Clobber')")
+assert ok_bad is False and "vanilla item" in why_bad, why_bad
+ok_tmp, detail_tmp = L.execute("return G.InjectValuableItem(30012, 'Unused Key')")
+assert ok_tmp is True and "updated row Row_Temp" in detail_tmp, detail_tmp
+# restore Bridge Crest name and grant 1
+L.execute("G.InjectValuableItem(29901, 'Bridge Crest')")
+code, gdetail = L.execute("return G.GrantItem(29901, 1)")
+assert code == "ok" and L.eval("G.HeldCount(29901)") == 1, (code, gdetail)
+
+# spawn combo gate 220 units ahead along +Y
+ok, sdetail = L.execute("return G.SpawnGate('combo', 220, 2.5)")
+assert ok is True and "BP_MapGimmick_BlockingBox + BP_MapGimmick_BlockingBase_Child_MagicPot" in sdetail, sdetail
+assert L.eval("#spawnedActors") == 2
+assert abs(L.eval("spawnedActors[1].x") - 100.0) < 1e-6 and abs(L.eval("spawnedActors[1].y") - 420.0) < 1e-6
+assert L.eval("spawnedActors[1].scale") == 2.5
+assert L.eval("spawnedActors[1].collision") is True and L.eval("spawnedActors[1].hidden") is False
+
+# require 3 Bridge Crests: currently 1/3 -> stays locked; 3/3 -> PollGate unlocks; 2/3 -> re-locks
+ok, rdetail = L.execute("return G.SetGateRequirement({ kind = 'item', id = 29901, count = 3 })")
+assert ok is True and rdetail == "locked, need Bridge Crest (1/3)", rdetail
+L.execute("G.GrantItem(29901, 2)")
+poll = L.eval("G.PollGate()")
+assert poll.changed == "unlocked" and poll.locked is False and poll.condText == "Bridge Crest (3/3)"
+assert L.eval("spawnedActors[1].collision") is False and L.eval("spawnedActors[1].hidden") is True
+L.execute("bag[29901] = 2")
+poll2 = L.eval("G.PollGate()")
+assert poll2.changed == "locked" and poll2.locked is True
+assert L.eval("spawnedActors[1].collision") is True and L.eval("spawnedActors[1].hidden") is False
+
+# unit requirement: Fina (1006, JoinStatus=2) locks; Rain (1001, JoinStatus=0) unlocks
+ok, udetail = L.execute("return G.SetGateRequirement({ kind = 'unit', id = 1006 })")
+assert ok is True and "unit 1006 (missing, JoinStatus=2)" in udetail, udetail
+assert L.eval("spawnedActors[1].collision") is True
+ok, udetail2 = L.execute("return G.SetGateRequirement({ kind = 'unit', id = 1001 })")
+assert ok is True and "unit 1001 (joined, JoinStatus=0)" in udetail2, udetail2
+assert L.eval("spawnedActors[1].collision") is False
+
+# npc is refused (raw NPC pawns crash or self-destruct); spawning `world` on map 1000 replaces
+# previous actors at default dist 120
+ok_npc, why_npc = L.execute("return G.SpawnGate('npc')")
+assert ok_npc is False and "npc pawns crash" in why_npc, why_npc
+L.execute("fakeMapId = 1000")
+ok, wdetail = L.execute("return G.SpawnGate('world')")
+assert ok is True and "BP_MapGimmick_BlockingBase_Wld01Gra_01" in wdetail, wdetail
+assert L.eval("spawnedActors[1].dead") is True and L.eval("spawnedActors[2].dead") is True
+assert abs(L.eval("spawnedActors[3].y") - 320.0) < 1e-6
+
+# actor destroyed by map unload: PollGate reports gone; ClearGate on live actor cleans up
+L.execute("G.SpawnGate('box', 150)")
+assert L.eval("G.ClearGate()") == 1 and L.eval("G.HasActiveGate()") is False
+L.execute("G.SpawnGate('box', 150); spawnedActors[#spawnedActors].dead = true")
+assert L.eval("G.PollGate().gone") is True and L.eval("G.HasActiveGate()") is False
+L.execute("G.gateTrace = nil")
+print("gates: ok")

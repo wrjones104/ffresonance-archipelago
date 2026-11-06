@@ -583,17 +583,31 @@ The "Back" prompt that menus and the chest pop-up show at the bottom right also 
 
 ## 16. Map blockers and custom forced gates
 
-**Idea:** Introduce "blocking" elements on the world map or in town/dungeon maps (e.g. new forced gates, an NPC blocking a bridge or choke point until XYZ item or flag is collected) to control routing and enforce progression logic.
+**Idea:** Introduce "blocking" elements on the world map or in town/dungeon maps (e.g. new forced gates or barriers on a bridge or choke point until specific items, characters, or flags are collected) to control routing and enforce progression logic.
 
 **Known so far:**
 - Story gates in the game read `{progress: N}` and `{flag: N}` conditions (e.g. in `DT_MainScenario` and `VisibleCondition` for field gimmicks/shinies).
 - Towns, dungeons, and the world map contain collision barriers, door gimmicks (`BP_MapGimmick_*`), and NPC actors with attached collision and interaction scripts.
-- The mod and FFRSLib can read and manipulate flags, items, and story state at runtime.
+- The mod and FFRSLib can read and manipulate flags, items, roster join state, and story state at runtime.
 
-**To find out:**
-- Whether we can dynamically spawn new blocker actors (collision volumes or NPC actors) into maps, or if it is cleaner to repurpose existing gate/barrier gimmicks or NPC objects.
-- How NPC collision and visibility are managed: can an existing NPC be repositioned or conditionally toggled (visible + collision active) based on an Archipelago progression item check?
-- For world-map bridges or map transition boundaries, what actor or collision volume blocks passage, and can its enabled/collision state be overridden via script or data asset patching?
+**Probe results (2026-11-06, mod 0.11.3, `ffrap_gate`):**
+- **`BP_MapGimmick_*` blockers work everywhere.** Spawning cooked gimmick Blueprints with `world:SpawnActor` (loaded via `KismetSystemLibrary:LoadAsset_Blocking`) worked with full collision in towns, dungeons, and on the overworld (`map 1000`):
+  - `BP_MapGimmick_BlockingBox` (invisible collision box),
+  - `BP_MapGimmick_BlockingBase_Child_MagicPot` (visible sparkling Magic Pot),
+  - `BP_MapGimmick_BlockingBase_Rock` (rock barrier),
+  - `BP_MapGimmick_BlockObject_Gate` (gate barrier),
+  - `BP_MapGimmick_BlockingBase_Wld01Gra_01` (overworld barrier).
+- **Scaling works.** `SetActorScale3D` scales both the visual mesh and its collision cleanly, so a single blocker can span a wide world-map bridge or choke point.
+- **Player pawn naming is inverted.** In the log, town and dungeon maps use `BP_MapUnit_Player_C` (`scale 1.00`), while the overworld (`map 1000`) uses `BP_MapUnit_Player_Field_C` (`scale 1.00`).
+- **Raw NPC pawns do not work (and are not needed).** Spawning `BP_MapUnit_NPC` on the overworld placed an actor that destroyed itself on the next tick (~0.11 s later), showing nothing. Spawning `BP_MapUnit_NPC_Field` in a town (`map 2000`) crashed the game inside `SpawnActor`. `CPP_MapUnit_NPC` expects `CPP_MapManager` and `DT_MapUnitPlacementAsset` setup; `BP_MapGimmick_*` actors have no such dependency and cover all blocker needs.
+- **Live conditional unlocking works.** Toggling `SetActorHiddenInGame` and `SetActorEnableCollision` hides and disables a blocker on the spot and restores it cleanly when locked again. Polling item counts (`FindInventory`) on the 500 ms tick showed `"Gate locked: need ..."` in the HUD feed on approach and removed the gate as soon as the 3rd copy was granted. Spawned actors are not written to the save and clear themselves on map change.
+- **Custom key items work in `DT_ValuableItemData`, except for the display name.** Adding row `FFRAP_Key_29901` (`ID = 29901`, cloned from row `20008` Tunnel Key) via `AddRow` grew `DT_ValuableItemData` from 37 to 38 rows. `AddInventory(29901, n)` and `FindInventory(29901)` tracked the count (`0 -> 1 -> 3`) and the new item appeared live in the Valuables menu without a restart. However, the menu displayed `"Tunnel Key"` even though `r.nameSg` read back `"Bridge Crest"` in Lua—meaning the UI reads another property or localization key copied from template row `20008`.
+- **Bypass behaviour.** Because gates are spawned by the mod at runtime, disabling UE4SS removes the physical barrier. Archipelago's server logic still withholds downstream progression items, and if stricter anti-bypass is ever needed the mod can check region coordinates on load or gate transitions directly.
+
+**Still to find out:**
+- **Exact item text fields (and our own item dump):** dump `DT_ValuableItemData.RowStruct` and the other `DT_*ItemData` tables directly from the game so we have authoritative vanilla item names and see which field controls the on-screen name of a custom row.
+- **Save safety with custom item IDs:** check what happens if a save holding item `29901` is loaded with the mod disabled (or keep custom gate tokens in Archipelago's bridge state instead of `SaveDataInventory` if the vanilla menu dislikes unknown IDs).
+- **Gate catalog:** scout exact `(mapId, X, Y, Z, Yaw, Scale)` coordinates, gimmick visuals, and unlock rules for actual world-map bridges and dungeon doors (`ffrap_gate` can scout these in game).
 
 ## 17. Airship landing restrictions for continent gating
 

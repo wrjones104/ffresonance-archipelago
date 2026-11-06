@@ -30,6 +30,7 @@
 --   ffrap_sync                   report every known location the save says is looted
 --   ffrap_bind                   link the loaded save to the client's session (also /bind in the client)
 --   ffrap_reset                  set the loaded save's applied-item count to 0 (re-grants everything to it!)
+--   ffrap_gate <subcommand>      experimental: spawn conditional blockers and custom key items
 --
 -- Each client session belongs to its saves. A new game started from the Archipelago entry on
 -- the title menu is linked to it at once and skips the prologue by itself (plain New Game stays
@@ -37,7 +38,7 @@
 -- follows the save slots the linked game is saved to. While any other save is loaded, the mod
 -- grants nothing, reports nothing and leaves the chests vanilla.
 
-local VERSION = "0.11.2"
+local VERSION = "0.11.3"
 local PROTOCOL = 1        -- the bridge protocol; the apworld's MOD_PROTOCOL
 
 local MOD_DIR = (debug.getinfo(1, "S").source:gsub("^@", ""):gsub("\\", "/"):match("^(.*/)Scripts/[^/]+$"))
@@ -877,6 +878,44 @@ end
 -- Tick
 -- -------------------------------------------------------------------------------------------
 
+-- Watches an active experimental gate (ffrap_gate). Does nothing until one is spawned.
+local gateNear = false
+local gateHintAt = -999
+
+local function gateTick()
+    if not (game.HasActiveGate and game.HasActiveGate()) then
+        gateNear = false
+        return
+    end
+    local info = game.PollGate()
+    if not info or info.gone then
+        gateNear = false
+        log("gate: cleared (actor gone or map changed)")
+        return
+    end
+    if info.changed == "unlocked" then
+        gateNear = false
+        notify("Gate unlocked! (" .. tostring(info.condText) .. ")")
+        return
+    elseif info.changed == "locked" then
+        notify("Gate locked (" .. tostring(info.condText) .. ")")
+    end
+    if info.locked and info.condText and info.dist and info.bumpDist then
+        if info.dist <= info.bumpDist then
+            if not gateNear and (feedClock - gateHintAt >= 3.0) then
+                gateNear = true
+                gateHintAt = feedClock
+                show("Gate locked: need " .. info.condText)
+                log("gate: blocked player at dist " .. string.format("%.1f", info.dist) .. " (" .. info.condText .. ")")
+            end
+        elseif info.dist > info.bumpDist + 40.0 then
+            gateNear = false
+        end
+    else
+        gateNear = false
+    end
+end
+
 local function tick()
     state.ticks = state.ticks + 1
     readInbox(false)
@@ -902,6 +941,7 @@ local function tick()
             end
             autoSkip()
             pcall(popupTick)
+            pcall(gateTick)
             -- Chests and shinies are still recorded in seen.tsv for any save; scanLoot reports
             -- them only for the session's save (see opened).
             if state.ticks % CHEST_EVERY == 0 then scanLoot() end
@@ -1079,6 +1119,87 @@ command("ffrap_notice", function(p)
     local ok, detail = game.QuestNotice(text)
     log("notice: " .. tostring(detail))
     if not ok then notify("Notice: " .. tostring(detail)) end
+end)
+
+-- ffrap_gate: experimental blocker and custom key-item probe (IDEAS.md, idea 16).
+--   ffrap_gate spawn [combo|box|rock|pot|gate|world] [dist] [scale]
+--   ffrap_gate item [id] [count]
+--   ffrap_gate require <item|unit|flag|off> [id] [count]
+--   ffrap_gate lock | unlock | clear | status
+command("ffrap_gate", function(p)
+    local what = (p and p[1] and p[1]:lower()) or "status"
+    local function traced(fn)
+        game.gateTrace = function(step) log("gate step: " .. step) end
+        local okCall, a, b = pcall(fn)
+        game.gateTrace = nil
+        if not okCall then error(a) end
+        return a, b
+    end
+    if what == "spawn" then
+        log("gate spawn: starting")
+        local ok, detail = traced(function() return game.SpawnGate(p[2], p[3], p[4]) end)
+        gateNear = false
+        notify("Gate: " .. tostring(detail))
+    elseif what == "item" then
+        local id = tonumber(p[2]) or game.TEST_KEY_ID
+        local count = tonumber(p[3]) or 1
+        log("gate item: injecting " .. tostring(id))
+        local ok, detail = traced(function() return game.InjectValuableItem(id) end)
+        log("gate item: " .. tostring(detail))
+        if not ok then
+            notify("Gate item: " .. tostring(detail))
+            return
+        end
+        local code, grantDetail = game.GrantItem(id, count)
+        notify(string.format("Gate item %d: %s; grant x%d -> %s (%s)",
+            id, tostring(detail), count, tostring(code), tostring(grantDetail)))
+    elseif what == "require" then
+        local kind = p[2] and p[2]:lower()
+        if kind == "off" or kind == "none" then
+            local _, detail = traced(function() return game.SetGateRequirement(nil) end)
+            gateNear = false
+            notify("Gate: " .. tostring(detail))
+            return
+        end
+        local id = tonumber(p[3])
+        local count = tonumber(p[4]) or 1
+        if not (kind and (kind == "item" or kind == "unit" or kind == "flag") and id) then
+            notify("Usage: ffrap_gate require <item|unit|flag> <id> [count]  (or: require off)")
+            return
+        end
+        local _, detail = traced(function()
+            return game.SetGateRequirement({ kind = kind, id = id, count = count })
+        end)
+        gateNear = false
+        notify("Gate: " .. tostring(detail))
+    elseif what == "lock" or what == "unlock" then
+        traced(function() game.SetGateRequirement(nil) end)
+        local _, detail = traced(function() return game.SetGateLock(what == "lock") end)
+        gateNear = false
+        notify("Gate: " .. tostring(detail))
+    elseif what == "clear" then
+        local n = traced(function() return game.ClearGate() end)
+        gateNear = false
+        notify("Gate cleared (" .. tostring(n) .. " actor(s) removed)")
+    else
+        local pose, why = game.PlayerPose()
+        if pose then
+            log(string.format("gate status: map %s, pawn %s at (%.1f, %.1f, %.1f) yaw %.1f scale %.2f",
+                tostring(game.CurrentMap()), pose.class, pose.x, pose.y, pose.z, pose.yaw, pose.sx))
+        else
+            log("gate status: no pawn (" .. tostring(why) .. ")")
+        end
+        local info = game.PollGate()
+        if not info or info.gone then
+            notify("Gate: none active (ffrap_gate spawn | item | require | lock | unlock | clear)")
+            return
+        end
+        local msg = string.format("Gate (%s): %s at (%.0f, %.0f, %.0f), dist %.0f%s",
+            tostring(info.kind), info.locked and "locked" or "unlocked",
+            info.x, info.y, info.z, info.dist or -1,
+            info.condText and (", req " .. info.condText) or "")
+        notify(msg)
+    end
 end)
 
 -- ffrap_inspect <class or path>: one object's fields and functions to inspect_<name>.tsv.

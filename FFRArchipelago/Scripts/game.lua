@@ -1956,4 +1956,429 @@ function G.DumpFieldItems(out)
     end
 end
 
+-- -------------------------------------------------------------------------------------------
+-- Artificial gates and custom key items (IDEAS.md, idea 16). Experimental.
+-- -------------------------------------------------------------------------------------------
+-- Off until `ffrap_gate` runs from the console. Every engine call announces itself through
+-- G.gateTrace first so UE4SS.log names the call if the engine crashes.
+
+G.TEST_KEY_ID = 29901
+G.TEST_KEY_NAME = "Bridge Crest"
+G.TEST_KEY_DESC = "An Archipelago test key item used to unseal gated bridges."
+G.gateTrace = nil
+
+local VALUABLE_DT = "/Game/Datatable/Item/DT_ValuableItemData.DT_ValuableItemData"
+local GATE_SPECS = {
+    box = { { pkg = "/Game/BP/Map/Gimmick/BP_MapGimmick_BlockingBox", name = "BP_MapGimmick_BlockingBox" } },
+    rock = { { pkg = "/Game/BP/Map/Gimmick/Child/BlockObject/BP_MapGimmick_BlockingBase_Rock", name = "BP_MapGimmick_BlockingBase_Rock" } },
+    pot = { { pkg = "/Game/BP/Map/Gimmick/Child/BlockObject/BP_MapGimmick_BlockingBase_Child_MagicPot", name = "BP_MapGimmick_BlockingBase_Child_MagicPot" } },
+    gate = { { pkg = "/Game/BP/Map/Gimmick/Child/BlockObject/BP_MapGimmick_BlockObject_Gate", name = "BP_MapGimmick_BlockObject_Gate" } },
+    world = { { pkg = "/Game/BP/Map/Gimmick/Child/BlockObject/BP_MapGimmick_BlockingBase_Wld01Gra_01", name = "BP_MapGimmick_BlockingBase_Wld01Gra_01" } },
+}
+GATE_SPECS.combo = { GATE_SPECS.box[1], GATE_SPECS.pot[1] }
+
+local customItemNames = { [G.TEST_KEY_ID] = G.TEST_KEY_NAME }
+local gateState = nil
+
+local function gateStep(what)
+    if G.gateTrace then G.gateTrace(what) end
+end
+
+local function AsText(v)
+    if v == nil then return nil end
+    if type(v) == "string" then return v end
+    local ok, s = pcall(function() return v:ToString() end)
+    if ok and type(s) == "string" then return s end
+    local okGet, g = pcall(function() return v:get():ToString() end)
+    if okGet and type(g) == "string" then return g end
+    return tostring(v)
+end
+
+-- Loads an object by path, using KismetSystemLibrary first (LoadAsset crashed once after fast
+-- travel in FFRSLib).
+local function LoadObject(path)
+    local o = Find(path)
+    if o then return o end
+    gateStep("LoadAsset_Blocking " .. path)
+    pcall(function()
+        local ksl = Find("/Script/Engine.Default__KismetSystemLibrary")
+        ksl:LoadAsset_Blocking(ksl:Conv_SoftObjPathToSoftObjRef(ksl:MakeSoftObjectPath(path)))
+    end)
+    o = Find(path)
+    if not o and LoadAsset then
+        gateStep("LoadAsset fallback " .. path)
+        pcall(function() LoadAsset(path) end)
+        o = Find(path)
+    end
+    return o
+end
+
+-- Loads a cooked Blueprint's generated class (`<pkg>.<name>_C`), trying the class path first and
+-- AssetRegistryHelpers second (as FFRSLib loads BP_PackSection_C).
+local function LoadBlueprintClass(pkg, name)
+    local className = name .. "_C"
+    local classPath = pkg .. "." .. className
+    local cls = LoadObject(classPath)
+    if cls then return cls end
+    gateStep("AssetRegistryHelpers:GetAsset " .. classPath)
+    pcall(function()
+        local helpers = Find("/Script/AssetRegistry.Default__AssetRegistryHelpers")
+        if helpers then
+            cls = helpers:GetAsset({
+                PackageName = FName(pkg),
+                AssetName = FName(className),
+            })
+        end
+    end)
+    if cls and cls:IsValid() then return cls end
+    return nil
+end
+
+function G.HeldCount(id)
+    local inv = Lib("CPP_BFL_SaveDataInventory")
+    return inv and Held(inv, id) or nil
+end
+
+-- Roster status for a playable unit: 0 joined, 1 never joined, 2 left, or nil when unknown.
+function G.UnitJoinStatus(unitId)
+    local lib = Lib("CPP_BFL_SaveDataUnit")
+    if lib and lib.GetJoinStatus then
+        local ok, st = pcall(function() return lib:GetJoinStatus(unitId) end)
+        local n = ok and Int(st) or nil
+        if n ~= nil then return n end
+    end
+    local sd = G.SaveData()
+    local u = sd and UnitEntry(sd, unitId)
+    return u and Int(u.JoinStatus) or nil
+end
+
+function G.IsUnitJoined(unitId)
+    local st = G.UnitJoinStatus(unitId)
+    if st ~= nil then return st == 0 end
+    local vm = PartyVM()
+    return vm ~= nil and Joined(vm, unitId)
+end
+
+local function CanOverwriteItem(id, rowName)
+    if type(rowName) == "string" and rowName:sub(1, 10) == "FFRAP_Key_" then return true end
+    return id >= 29900 or id == 20018 or (id >= 30012 and id <= 30016)
+end
+
+-- Adds or updates a key item row in DT_ValuableItemData. AddRow drops FText fields passed in a
+-- Lua table, so an existing row is cloned first and FText fields are set on the stored row.
+function G.InjectValuableItem(id, name, desc)
+    id = tonumber(id) or G.TEST_KEY_ID
+    name = (name and name ~= "") and name or G.TEST_KEY_NAME
+    desc = (desc and desc ~= "") and desc or G.TEST_KEY_DESC
+
+    local dt = LoadObject(VALUABLE_DT)
+    if not dt then return false, "DT_ValuableItemData could not be loaded" end
+
+    local total, template, existingName, existingRow = 0, nil, nil, nil
+    gateStep("scan DT_ValuableItemData")
+    pcall(function()
+        dt:ForEachRow(function(k, row)
+            total = total + 1
+            local rid = Int(row.ID)
+            if not template or rid == 20008 then template = row end
+            if rid == id then
+                existingName = AsText(k)
+                existingRow = row
+            end
+        end)
+    end)
+
+    local rowName, r, how
+    if existingRow then
+        if not CanOverwriteItem(id, existingName) then
+            return false, "item " .. id .. " is a vanilla item (row " .. tostring(existingName)
+                .. "); use >= 29900, 20018, or 30012..30016"
+        end
+        rowName, r = existingName, existingRow
+        how = "updated row " .. tostring(rowName)
+    else
+        rowName = "FFRAP_Key_" .. tostring(id)
+        gateStep("DT_ValuableItemData:AddRow " .. rowName)
+        local added = false
+        if template and pcall(function() dt:AddRow(rowName, template) end) then
+            added = true
+        elseif pcall(function() dt:AddRow(rowName, {}) end) then
+            added = true
+        end
+        if not added then return false, "DT_ValuableItemData:AddRow refused " .. rowName end
+        gateStep("DT_ValuableItemData:FindRow " .. rowName)
+        pcall(function() r = dt:FindRow(rowName) end)
+        if not r then
+            pcall(function()
+                dt:ForEachRow(function(k, row)
+                    if not r and AsText(k) == rowName then r = row end
+                end)
+            end)
+        end
+        if not r then return false, "AddRow ran, but FindRow(" .. rowName .. ") returned nil" end
+        how = "added row " .. rowName .. " (table had " .. total .. " rows)"
+    end
+
+    gateStep("write fields on " .. tostring(rowName))
+    pcall(function() r.ID = id end)
+    pcall(function() r.sortId = 9900 + (id % 100) end)
+    pcall(function() r.nameSg = FText(name) end)
+    pcall(function() r.namePl = FText(name .. "s") end)
+    pcall(function() r.nameDetSg = FText("a " .. name) end)
+    pcall(function() r.nameDetPl = FText(name .. "s") end)
+    pcall(function() r.description = FText(desc) end)
+    pcall(function()
+        r.buyingPrice = 0
+        r.sellingPrice = 0
+        r.isAvailableSale = false
+    end)
+
+    local readId, readName
+    pcall(function() readId = Int(r.ID) end)
+    pcall(function() readName = AsText(r.nameSg) end)
+    customItemNames[id] = name
+    if readId ~= id then
+        return false, how .. ", but r.ID read back as " .. tostring(readId)
+    end
+    return true, how .. ": ID=" .. tostring(readId) .. ', name="' .. tostring(readName) .. '"'
+end
+
+-- The player pawn's position, facing, scale and world, or nil and a reason.
+function G.PlayerPose()
+    local pc = PlayerController()
+    if not pc then return nil, "no PlayerController" end
+    local pawn
+    pcall(function() pawn = pc:K2_GetPawn() end)
+    if not (pawn and Alive(pawn)) then return nil, "no player pawn" end
+    local loc
+    pcall(function() loc = pawn:K2_GetActorLocation() end)
+    if not (loc and type(loc.X) == "number") then return nil, "cannot read pawn location" end
+    local yaw = 0
+    pcall(function()
+        local rot = pawn:K2_GetActorRotation()
+        if rot and type(rot.Yaw) == "number" then yaw = rot.Yaw end
+    end)
+    local fx, fy
+    pcall(function()
+        local fwd = pawn:GetActorForwardVector()
+        if fwd and type(fwd.X) == "number" and (fwd.X ~= 0 or fwd.Y ~= 0) then
+            fx, fy = fwd.X, fwd.Y
+        end
+    end)
+    if not fx then
+        local rad = yaw * math.pi / 180.0
+        fx, fy = math.cos(rad), math.sin(rad)
+    end
+    local sx, sy, sz = 1, 1, 1
+    pcall(function()
+        local s = pawn:GetActorScale3D()
+        if s and type(s.X) == "number" then sx, sy, sz = s.X, s.Y, s.Z end
+    end)
+    local pawnClass = "?"
+    pcall(function() pawnClass = pawn:GetClass():GetFName():ToString() end)
+    local world
+    pcall(function() world = pawn:GetWorld() end)
+    if not (world and world:IsValid()) then pcall(function() world = pc:GetWorld() end) end
+    if not (world and world:IsValid()) then return nil, "no valid UWorld" end
+    return {
+        pawn = pawn, world = world, class = pawnClass,
+        x = loc.X, y = loc.Y, z = loc.Z, yaw = yaw, fx = fx, fy = fy,
+        sx = sx, sy = sy, sz = sz,
+    }
+end
+
+function G.HasActiveGate()
+    return gateState ~= nil
+end
+
+-- Destroys any spawned test gate actors and resets gate state. Returns how many actors were cleared.
+function G.ClearGate()
+    if not gateState then return 0 end
+    local n = 0
+    for _, a in ipairs(gateState.actors or {}) do
+        if Alive(a) then
+            n = n + 1
+            gateStep("destroy gate actor")
+            pcall(function() a:SetActorEnableCollision(false) end)
+            pcall(function() a:SetActorHiddenInGame(true) end)
+            pcall(function() a:K2_DestroyActor() end)
+        end
+    end
+    gateState = nil
+    return n
+end
+
+-- Spawns a test gate `dist` units ahead of the player. `kind` is combo (BlockingBox + MagicPot),
+-- box, rock, pot, gate or world. Raw NPC pawns crash or self-destruct without MapManager setup,
+-- so `npc` is refused. Replaces any previous test gate.
+function G.SpawnGate(kind, dist, scale)
+    kind = (kind and kind ~= "") and kind:lower() or "combo"
+    if kind == "npc" then
+        return false, "npc pawns crash when spawned directly; use combo, box, rock, pot, gate or world"
+    end
+    local mapId = G.CurrentMap()
+    local specs = GATE_SPECS[kind]
+    if not specs then
+        return false, 'unknown gate kind "' .. tostring(kind) .. '" (use combo, box, rock, pot, gate, world)'
+    end
+
+    local pose, why = G.PlayerPose()
+    if not pose then return false, why end
+    dist = tonumber(dist) or (mapId == 1000 and 120 or 220)
+    local sc = scale and tonumber(scale) or nil
+
+    G.ClearGate()
+
+    local tx = pose.x + pose.fx * dist
+    local ty = pose.y + pose.fy * dist
+    local tz = pose.z
+    local tyaw = (pose.yaw + 180.0) % 360.0
+    local locArg = { X = tx, Y = ty, Z = tz }
+    local rotArg = { Pitch = 0.0, Yaw = tyaw, Roll = 0.0 }
+
+    local spawned, names = {}, {}
+    for _, spec in ipairs(specs) do
+        local cls = LoadBlueprintClass(spec.pkg, spec.name)
+        if not cls then
+            gateState = { actors = spawned }
+            G.ClearGate()
+            return false, "could not load class " .. spec.pkg .. "." .. spec.name .. "_C"
+        end
+        gateStep("SpawnActor " .. spec.name)
+        local actor
+        local okSpawn = pcall(function() actor = pose.world:SpawnActor(cls, locArg, rotArg) end)
+        if not (okSpawn and actor and actor:IsValid()) then
+            gateStep("SpawnActor empty-transform fallback " .. spec.name)
+            pcall(function() actor = pose.world:SpawnActor(cls, {}, {}) end)
+        end
+        if not (actor and actor:IsValid()) then
+            gateState = { actors = spawned }
+            G.ClearGate()
+            return false, "SpawnActor failed for " .. spec.name
+        end
+        -- Ensure the actor sits at (tx, ty, tz) even when SpawnActor ignored the transform table.
+        local ax, ay, az
+        pcall(function()
+            local aloc = actor:K2_GetActorLocation()
+            if aloc then ax, ay, az = aloc.X, aloc.Y, aloc.Z end
+        end)
+        if not ax or math.abs(ax - tx) + math.abs(ay - ty) > 1.0 then
+            gateStep("K2_SetActorLocation " .. spec.name)
+            pcall(function() actor:K2_SetActorLocation(locArg, false, {}, true) end)
+            pcall(function() actor:K2_SetActorRotation(rotArg, true) end)
+        end
+        if sc then
+            gateStep("SetActorScale3D " .. spec.name)
+            pcall(function() actor:SetActorScale3D({ X = sc, Y = sc, Z = sc }) end)
+        end
+        gateStep("enable visibility and collision " .. spec.name)
+        pcall(function() actor:SetActorHiddenInGame(false) end)
+        pcall(function() actor:SetActorEnableCollision(true) end)
+        spawned[#spawned + 1] = actor
+        names[#names + 1] = spec.name
+    end
+
+    gateState = {
+        kind = kind,
+        mapId = mapId,
+        x = tx, y = ty, z = tz,
+        dist = dist,
+        bumpDist = math.max(90.0, dist * 0.75),
+        locked = true,
+        actors = spawned,
+        cond = nil,
+    }
+    return true, string.format(
+        "spawned %s (%s) at (%.1f, %.1f, %.1f), %.0f ahead of %s (scale %.2f)",
+        kind, table.concat(names, " + "), tx, ty, tz, dist, pose.class, pose.sx
+    )
+end
+
+local function LiveGateActors()
+    if not gateState then return nil end
+    local live = {}
+    for _, a in ipairs(gateState.actors or {}) do
+        if Alive(a) then live[#live + 1] = a end
+    end
+    gateState.actors = live
+    if #live == 0 then
+        gateState = nil
+        return nil
+    end
+    return live
+end
+
+function G.SetGateLock(locked)
+    local live = LiveGateActors()
+    if not live then return false, "no active gate (spawn one first, or the map changed)" end
+    for _, a in ipairs(live) do
+        gateStep((locked and "lock" or "unlock") .. " gate actor")
+        pcall(function() a:SetActorHiddenInGame(not locked) end)
+        pcall(function() a:SetActorEnableCollision(locked) end)
+    end
+    gateState.locked = locked
+    return true, locked and "locked (visible, collision on)" or "unlocked (hidden, collision off)"
+end
+
+function G.CheckGateCondition(cond)
+    if not cond then return false, "none" end
+    if cond.kind == "item" then
+        local need = cond.count or 1
+        local held = G.HeldCount(cond.id) or 0
+        local label = customItemNames[cond.id] or ("item " .. tostring(cond.id))
+        return held >= need, string.format("%s (%d/%d)", label, held, need)
+    elseif cond.kind == "unit" then
+        local st = G.UnitJoinStatus(cond.id)
+        local joined = G.IsUnitJoined(cond.id)
+        return joined, string.format("unit %d (%s, JoinStatus=%s)", cond.id, joined and "joined" or "missing", tostring(st))
+    elseif cond.kind == "flag" then
+        local on = G.GetFlag(cond.id) == true
+        return on, string.format("flag %d (%s)", cond.id, tostring(on))
+    end
+    return false, "unknown condition " .. tostring(cond.kind)
+end
+
+function G.SetGateRequirement(cond)
+    if not LiveGateActors() then return false, "no active gate (run ffrap_gate spawn first)" end
+    gateState.cond = cond
+    if not cond then return true, "requirement cleared" end
+    local met, text = G.CheckGateCondition(cond)
+    G.SetGateLock(not met)
+    return true, (met and "unlocked: " or "locked, need ") .. text
+end
+
+-- Polls the active gate once: checks actor liveness, re-evaluates any requirement, and measures
+-- horizontal distance from the player pawn.
+function G.PollGate()
+    if not gateState then return nil end
+    if not LiveGateActors() then return { gone = true } end
+    local changed, condText = nil, nil
+    if gateState.cond then
+        local met
+        met, condText = G.CheckGateCondition(gateState.cond)
+        local wantLocked = not met
+        if wantLocked ~= gateState.locked then
+            G.SetGateLock(wantLocked)
+            changed = wantLocked and "locked" or "unlocked"
+        end
+    end
+    local dist = nil
+    local pose = G.PlayerPose()
+    if pose then
+        local dx, dy = pose.x - gateState.x, pose.y - gateState.y
+        dist = math.sqrt(dx * dx + dy * dy)
+    end
+    return {
+        locked = gateState.locked,
+        changed = changed,
+        condText = condText,
+        dist = dist,
+        bumpDist = gateState.bumpDist,
+        kind = gateState.kind,
+        mapId = gateState.mapId,
+        x = gateState.x, y = gateState.y, z = gateState.z,
+        actors = #gateState.actors,
+    }
+end
+
 return G

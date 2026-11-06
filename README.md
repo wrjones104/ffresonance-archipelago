@@ -120,6 +120,7 @@ At run time the mod writes these files into its own folder: `ap_out.txt`, `ap_st
 | `ffrap_feed [on\|off\|test [plain]]` | The item feed at the bottom right of the field HUD: on by default; off sends messages to ModSettings' Toast. Kept in `ap_state.txt` as `itemfeed`. `test` shows three sample lines. Every step the feed takes is logged before it runs (`feed step: ...`), so a crash's last line names the call. `test plain` leaves out the styling. `check` logs what the engine says about the feed: the box's and each line's size, visibility and font. |
 | `ffrap_bind` | Link the loaded save to the client's session, in place of any earlier one. The same as `/bind` in the client. |
 | `ffrap_reset` | Set the loaded save's applied-item count to 0. Re-grants everything to it! |
+| `ffrap_gate <subcommand>` | Experimental gate and custom key-item probe (IDEAS.md, idea 16): `spawn [combo\|box\|rock\|pot\|gate\|world] [dist] [scale]`, `item [id] [count]`, `require <item\|unit\|flag\|off> [id] [count]`, `lock`, `unlock`, `clear`, `status`. |
 
 ## Bridge format
 
