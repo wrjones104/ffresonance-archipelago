@@ -42,6 +42,10 @@ An Archipelago implementation for Final Fantasy Resonance (UE 5.6, game module `
   - `ESlateVisibility`: Visible 0, Collapsed 1, Hidden 2.
 - **Text with icons is a `RichTextBlock`**, which is not a `TextBlock`. Search both.
 
+**Threads:**
+- **Never use `LoopAsync` or `ExecuteAsync`**: their callbacks run Lua on UE4SS's async thread while the game thread runs Lua in the same state. The game crashed at random, in a new place each time. Use `LoopInGameThreadWithDelay` and `ExecuteInGameThreadWithDelay` (round 29).
+- **Crash reports:** `%LOCALAPPDATA%\FFRS\Saved\Crashes\*\CrashContext.runtime-xml` holds the stack as module offsets. `UE4SS.pdb` (next to `UE4SS.dll`) names the UE4SS frames, through `dbghelp`.
+
 **Hooks and probes:**
 - **Native functions called from Blueprints can be hooked** with `RegisterHook`, and a pre-hook can change their arguments (the title menu's `ExecuteEntry`).
 - **Probes:**

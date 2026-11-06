@@ -38,7 +38,7 @@
 -- follows the save slots the linked game is saved to. While any other save is loaded, the mod
 -- grants nothing, reports nothing and leaves the chests vanilla.
 
-local VERSION = "0.11.3"
+local VERSION = "0.11.4"
 local PROTOCOL = 1        -- the bridge protocol; the apworld's MOD_PROTOCOL
 
 local MOD_DIR = (debug.getinfo(1, "S").source:gsub("^@", ""):gsub("\\", "/"):match("^(.*/)Scripts/[^/]+$"))
@@ -1347,18 +1347,23 @@ local function fastTick()
     pcall(popupTick)
 end
 
-LoopAsync(FAST_MS, function()
-    ExecuteInGameThread(function()
-        local ok, err = pcall(fastTick)
-        if not ok then log("fast tick error: " .. tostring(err)) end
-    end)
-    return false
-end)
+-- Both timers run on the game thread, from UE4SS's own game-thread timer (round 29). Up to 0.11.3
+-- they ran from LoopAsync, whose callback runs on UE4SS's async thread. That thread ran Lua in
+-- this mod's Lua state, ten times a second, while the game thread ran the queued tick in the same
+-- state. Lua is not safe on two threads at once: the game crashed at random, after minutes or
+-- hours, in a different place each time (a bad name, a broken Lua table, a bad object).
+local function every(ms, name, fn)
+    local function run()
+        local ok, err = pcall(fn)
+        if not ok then log(name .. " error: " .. tostring(err)) end
+    end
+    if LoopInGameThreadWithDelay then
+        LoopInGameThreadWithDelay(ms, run)
+    else
+        log("this UE4SS has no LoopInGameThreadWithDelay: the " .. name .. " runs from LoopAsync")
+        LoopAsync(ms, function() ExecuteInGameThread(run) return false end)
+    end
+end
 
-LoopAsync(TICK_MS, function()
-    ExecuteInGameThread(function()
-        local ok, err = pcall(tick)
-        if not ok then log("tick error: " .. tostring(err)) end
-    end)
-    return false
-end)
+every(FAST_MS, "fast tick", fastTick)
+every(TICK_MS, "tick", tick)

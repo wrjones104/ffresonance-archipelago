@@ -22,7 +22,7 @@ The world is tested off-line: Archipelago's general tests pass with it, its own 
 - **ModSettings** (a Blueprint mod in `Content/Paks/LogicMods`, from the same modding tools as FFRSLib) is optional. In the field, messages ("Received ...", "Sent ...", "Archipelago is paused", "Prologue skipped") go to the mod's own item feed at the bottom right of the HUD (since 0.10.0, on by default). ModSettings' Toast panel takes them off the field (the title screen), when the feed has not been able to show anything for 10 seconds since the game started, and with `ffrap_feed off`. Without ModSettings those few only go to `UE4SS.log`.
 - **FFRSLib, FFRS_QoL, FFRBestiary and FFRRandomizer are not needed.** Their code is where the game calls come from (see "Where the game calls come from"), but this mod calls the game directly. FFRRandomizer should stay disabled (IDEAS.md, idea 10).
 
-1. **Mod.** Copy `FFRArchipelago/Scripts` and `FFRArchipelago/Assets` over the installed mod (0.11.3). Delete the old `ap_in.txt`, `ap_out.txt` and `ap_state.txt`, and keep `seen.tsv`. Keep FFRRandomizer disabled.
+1. **Mod.** Copy `FFRArchipelago/Scripts` and `FFRArchipelago/Assets` over the installed mod (0.11.4). Delete the old `ap_in.txt`, `ap_out.txt` and `ap_state.txt`, and keep `seen.tsv`. Keep FFRRandomizer disabled.
 2. **World.** Run `python tools/build_apworld.py`, then copy `dist/ff_resonance.apworld` into your Archipelago `custom_worlds` folder. Or, from source, copy `apworld/ff_resonance` into `worlds/`.
 3. **Seed.**
    - Copy `apworld/Final Fantasy Resonance.yaml` into Archipelago's `Players` folder and set a name.
@@ -345,22 +345,26 @@ Rounds 6 to 9 (2026-11-05) worked out and tested the prologue skip; their result
 - **Whose:** the stack cannot say. Four Lua mods were running: this one, FFRSLib, FFRS_QoL and FFRBestiary. This mod logged nothing for the 20 minutes before the crash. It indexes UObjects only with fixed field names, and with dynamic ones only in probe commands and the skip, none of which ran. While idle, the log also shows two "Ref was not function" errors (11:15 and 11:23). Those are UE4SS calling a callback that is gone; FFRSLib registers and unregisters hooks on the fly as menus open.
 - **How the stack was read:** with Windows' `dbghelp` and `UE4SS.pdb`, against the offsets in `CrashContext.runtime-xml`. After a crash, send that folder along with the log.
 
-## Round 29 test plan (mod 0.11.3, world 0.2.0)
+**Round 29, second run (mod 0.11.3, world 0.2.0, 2026-11-06): two more crashes, and the cause found.**
+- **Reopened chests** (round 28's step): after loading slot 0, chests 3000:2 and 3000:3 and later 3020:6 opened again with their pop-up text set and no new check. Chest 3000:1 logged "no chest pop-up on screen" and kept "1 gil".
+- **Checks:** chests 3000:4 to 3000:6, 2000:0 to 2000:4, 3020:1 and 3020:3 to 3020:6, and 2015:3, each with its item received.
+- **Shinies on the world map work as locations:** `shiny:1000:150`, `99`, `100`, `128`, `136`, `137`, `3` and `102` each sent a check, and the item came back. But each shiny also gave its own item: shinies are not blanked yet (open question 6). None of the 9 new uids was picked up yet. `shiny:2015:4` (the Medal, a Tablet Shard) was reported and is not a location, as expected.
+- **`ffrap_dump` on map 2002:** the chest rows there are 3020:0, 1 and 3 to 9. There is no box for row 3020:2, which world 0.2.0 dropped (`NO_BOX`). The three rowless boxes (uids 50, 52, 54) were open.
+- **Crashes:** at 13:15 (walking on map 2015) and 13:27 (in a shop, with the shop dialog open). The player sees crashes at random times: in battle, in town, in menus. FFRS_QoL was off. FFRSLib and FFRBestiary were still on in `mods.txt`. The player also plays a normal save with those mods and has never had a crash.
+- **All 17 crash reports from the last two days have the same shape:** an access violation on the game thread, from a Lua function on a UE4SS game-thread timer (`process_simple_actions`), inside two or three `pcall`s. But the place they crash differs each time: `get_string` on a null key (11:31, 13:27), `luaH_getshortstr` on a broken Lua table (09:50, 13:15), `FName` to text, `IsA` on a bad object, `lua_setiuservalue`, `FinishSpawningActor`.
+- **The cause:** one bad key would crash in one place. Crashes in a new place each time are what memory damage looks like, and here that comes from Lua running on two threads at once. Up to 0.11.3 this mod's two timers used `LoopAsync`. Its callback runs on UE4SS's async thread, in this mod's Lua state, ten times a second, while the game thread runs the queued tick in the same state. Lua is not safe on two threads at once. UE4SS 3.0.1 marks `LoopAsync` as deprecated, and its docs say the new timers have "better thread safety". FFRBestiary found the same thing (its 0.1.1 crashed "after an hour or so" with `LoopAsync`) and moved to `LoopInGameThreadWithDelay`. No other mod here runs `LoopAsync` all the time: FFRSLib uses it only in short probe commands.
+- **Fixed in 0.11.4:** both timers now use `LoopInGameThreadWithDelay`. Their callbacks run only on the game thread, so no Lua in this mod runs on UE4SS's async thread.
 
-The world now comes from the game's own files (README, "The game data dump"). It has 202 chest locations (was 216) and 92 shinies (was 83). 14 chest rows were dropped because no box for them is placed on any map, among them all of map 10050, a dungeon the game does not ship. 9 world-map shinies are new: uids 70, 71, 84 to 89 and 91. Round 28 was not played, so its steps are here too.
+## Round 30 test plan (mod 0.11.4, world 0.2.0)
 
-1. **Install.**
-   - Copy `FFRArchipelago/Scripts` over the installed mod. The log should say `version 0.11.3 loaded`.
-   - Copy `dist/ff_resonance.apworld` into Archipelago's `custom_worlds`, and generate a new seed. The client should say world 0.2.0.
-2. **Chests again after a reload** (from round 28): open a few chests, go back to the title without saving (or load an older save), and open the same chests again. Each pop-up should say what the chest held, with no new `check` line in the log.
-3. **The new shinies,** with `include_shinies` on. Pick up one or two of world-map shinies 70, 71, 84 to 89 and 91. Each should send a check (`check shiny:1000:<uid>` in the log).
-4. **Dropped chests.** Where you can, visit a map with a dropped row and run `ffrap_dump` there. Look for a chest that gives 1 gil and sends no check: that would be a real chest we dropped. The dropped rows are in `NO_BOX` in `apworld/ff_resonance/data.py`. The ones easiest to reach:
-   - Map 3000 (the first dungeon), row 0. Round 1 saw boxes 1 to 6 there and never row 0.
-   - Grandshelt Castle (map 2012), rows 2 to 4. The three boxes there with no row (uids 50, 52, 54) were open story chests in round 3.
-5. **Send** `UE4SS.log` (`[FFRAP]` lines) and `seen.tsv`. After a crash, also send the newest folder in `%LOCALAPPDATA%\FFRS\Saved\Crashes`.
-6. **The idle crash (first run).** Carry on from your last save (slot 5). The items received after it are applied again. Chests 3000:1 to 3000:3 open again with no new check, because those checks are already sent. To find whose crash it was, leave the game idle in a menu for 20 minutes, then fight a battle:
-   - first with only this mod and ModSettings (turn off FFRSLib, FFRS_QoL and FFRBestiary);
-   - then, if that is clean, with the others back on.
+0.11.4 fixes the random crashes (round 29, second run). Nothing else changed, so the seed and the save carry on.
+
+1. **Install.** Copy `FFRArchipelago/Scripts` over the installed mod. The log should say `version 0.11.4 loaded`. The apworld is unchanged.
+2. **The crash fix.** Play as you normally do, with your usual mods on, for an hour or more: battles, towns, shops, menus, and some idle time. Before, the game crashed within minutes to about an hour. If it crashes, send `UE4SS.log` and the newest folder in `%LOCALAPPDATA%\FFRS\Saved\Crashes`.
+3. **Check the log for** a line that says `this UE4SS has no LoopInGameThreadWithDelay`. There should be none. If there is one, the old timers are back in use.
+4. **The new shinies** (from round 29), with `include_shinies` on. Pick up one or two of world-map shinies 70, 71, 84 to 89 and 91. Each should send a check (`check shiny:1000:<uid>` in the log). Each still gives its own item too, as shinies are not blanked yet.
+5. **Dropped chests** (from round 29). Where you can, visit a map with a dropped row and run `ffrap_dump` there. Look for a chest that gives 1 gil and sends no check. The dropped rows are in `NO_BOX` in `apworld/ff_resonance/data.py`. Map 3000 row 0 and map 3020 row 2 had no box. Grandshelt Castle (map 2012), rows 2 to 4, is still to check.
+6. **Send** `UE4SS.log` (`[FFRAP]` lines) and `seen.tsv`.
 
 ## Open questions
 
@@ -377,7 +381,7 @@ The world now comes from the game's own files (README, "The game data dump"). It
    - **Bridge fix, found on the way:** a new seed's `ap_in.txt` that was already longer than the old one was read from the old position, so its `seed` line was missed. The mod now also starts over when the file's first line changes.
 6. **Vanilla rewards.**
    - Chests: blanking to 1 gil and restoring both work (round 5).
-   - Shinies carry their reward on the actor, so the same trick should work on `m_ItemId` and `m_Money`.
+   - Shinies carry their reward on the actor, so the same trick should work on `m_ItemId` and `m_Money`. Not done yet: in round 29 each world-map shiny gave its own item as well as the Archipelago one.
    - Story events that hand out party members, visions or key items need their own approach.
 7. **Gil.** Solved: `CPP_BFL_SaveDataPlayer` `GetCurrentMoney` / `SetCurrentMoney`, tested in round 5.
 8. **Checks from another save.** Fixed in 0.5.0 and tested off-line only: each session is linked to one save (see "Bridge format"), and every other save is paused. Not tested in game yet: that a new game has no slot until it is saved, and that a save's timestamp matches its slot summary in this game version. FFRBestiary relies on both.

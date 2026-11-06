@@ -227,7 +227,9 @@ def boot():
     L = runtime()
     L.execute('''
       tickFn = nil; commands = {}
-      function LoopAsync(ms, fn) if ms == 100 then fastFn = fn else tickFn = fn end end
+      -- the timers must run on the game thread (0.11.4): LoopAsync runs Lua on another thread
+      function LoopInGameThreadWithDelay(ms, fn) if ms == 100 then fastFn = fn else tickFn = fn end end
+      function LoopAsync(ms, fn) error("LoopAsync used") end
       function ExecuteInGameThread(fn) fn() end
       function RegisterConsoleCommandGlobalHandler(n, fn) commands[n] = fn end
       hooks = {}
@@ -321,7 +323,7 @@ G.chests = L.table()
 G.shinies = L.table()
 tick = lambda n: [L.execute("tickFn()") for _ in range(n)]
 out = read("ap_out.txt")
-assert out.startswith("hello\t0.11.3\t1\nseed\tS1:1\n") and "chest:2001:0" not in out, out
+assert out.startswith("hello\t0.11.4\t1\nseed\tS1:1\n") and "chest:2001:0" not in out, out
 state = read("ap_state.txt")
 assert "seed\tS1:1" in state and "blank\t1" in state, state
 tick(6)
@@ -352,7 +354,7 @@ assert "check\tshiny:1000:30\n" in read("ap_out.txt")
 open(path("ap_in.txt"), "w", encoding="utf-8", newline="\n").write("seed\tS2:3\nitem\t0\titem\t1\t3\tPotion x3\n")
 tick(4)
 out = read("ap_out.txt")
-assert out.startswith("hello\t0.11.3\t1\nseed\tS2:3\n") and "shiny:1000:30" in out and "chest:3020:1" not in out, out
+assert out.startswith("hello\t0.11.4\t1\nseed\tS2:3\n") and "shiny:1000:30" in out and "chest:3020:1" not in out, out
 assert list(G.log.values())[-1] == "item1x3"
 print("sessions: ok")
 
@@ -657,7 +659,7 @@ assert G.skipRuns == runs + 1
 assert G.orders >= 1, "the order is checked once the entry is in"
 G.ready = False                                   # back at the title screen
 tick(13)                                          # two checks: the line, then the logo
-assert "FFRArchipelago 0.11.3" in list(G.titleLines.values()), list(G.titleLines.values())
+assert "FFRArchipelago 0.11.4" in list(G.titleLines.values()), list(G.titleLines.values())
 assert G.describes == 1, "the layout is logged once"
 assert len(list(G.logos.values())) >= 1 and list(G.logos.values())[0].endswith("Assets/archipelago_logo.png"), list(G.logos.values())
 G.ready = True
