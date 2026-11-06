@@ -644,3 +644,77 @@ The "Back" prompt that menus and the chest pop-up show at the bottom right also 
 - How best to display the configuration UI: whether to build a custom widget layout (similar to the item feed / dialog overlay) or reuse the game's existing Option/Settings UI widgets (sliders, toggles, list pickers).
 - Where battle rewards (EXP, Gil, MRP/AP) are tallied and awarded at battle end, and whether a multiplier hook can safely scale rewards without breaking progression caps or desyncing saves.
 - Where the field encounter step counter or rate calculation lives (e.g. in `CPP_MapManager` or player pawn state) and how to cleanly scale or suppress encounters on the fly.
+
+## 19. A random starting party
+
+**Idea:** a yaml option for the starting party: 1 to 4 members, picked at random from the party members (Rain, Lasswell, Fina, Lid, Nichol, Jake, Sakura). It must not break story mode. The members not in the starting party become Archipelago items.
+
+**From the game data dump (round 30, 2026-11-06):**
+- **The story's conditions never test the party.** Every condition string in the game's tables is one of `{flag:}` (2043), `{progress:}` (1419), `{item:}` (295), `{colosseum:}` (130), `{transferItem:}` (64), `{unitLevel:}` (48) or `{colosseum_ClearCount:}` (4). None is about who has joined.
+- **The story sets the roster itself, in talk events.** Each talk event row has a `ChangeUnitJoinStatusList` (unit id, `eUnitJoinStatus`) and an `OverwriteBattleParty` (a fixed party for one battle). The status values are 0 Join, 1 NotJoin, 2 Leave, 3 TemporalLeave and 4 Lost. The events that use them:
+
+| Event | Change |
+|---|---|
+| C01_002_01 (end of the prologue) | Rain and Lasswell join, Archwitch Fina (1006) NotJoin |
+| C01_022_01 | Fina (1003) joins |
+| C02_204_01 | Lid (1004) joins |
+| C03_306_01 | Nichol (1005) joins |
+| C03_312_01, C03_314_B_01 | Lasswell and Nichol join (again) |
+| C03_320_01 | Fina leaves, Archwitch Fina joins |
+| C03_328_03 | Archwitch Fina leaves, Fina joins |
+| C04_416_01 | Jake (1007) joins |
+| C04_421_01, C04_422_02 | Lasswell leaves for a while (TemporalLeave), then joins again |
+| C04_435_01 | a battle with Lid alone (`OverwriteBattleParty` [1004]) |
+| C05_504_01 | Sakura (1008) joins |
+| C05_513 to C05_540 | Fina and Archwitch Fina swap again |
+| C06_607_01, C06_608_01 | Fina joins |
+| C06_623_01, C06_624_01, C08_819_04 | battles with Rain alone (`OverwriteBattleParty` [1001]) |
+
+**What that means:**
+- A member who joined early simply "joins" again at their story event. That is harmless (round 30 tests it with the party-member items).
+- Nothing after the prologue makes Rain join. A starting party without Rain would have him only as an Archipelago item. Lasswell joins again in chapter 3.
+- The story still makes members leave (Fina in chapters 3 and 5, Lasswell in chapter 4) and fights some battles with one fixed member. What `OverwriteBattleParty` does when that member has not joined is unknown. Rain alone is the risky case, so Rain may have to stay in every starting party for now.
+
+**The build:** the prologue skip already writes the party (`Party.partyList`) and each unit's `JoinStatus`. A `starting_party_size` option (1 to 4) and a seed-chosen list in slot data would make the skip write those members instead of Rain and Lasswell. The apworld would then put the other party members in the pool.
+
+**To find out:**
+- What level and gear a member has when they join before the story's own join (round 30 shows this with Fina, Lid, Nichol, Jake and Sakura).
+- What a story battle with `OverwriteBattleParty` does when that member has not joined.
+- Whether the party menu lets you swap in a member who joined the roster but not the active party.
+
+## 20. Trap items, banked until the next battle
+
+**Idea:** trap items that hit the party: "Bad Breath" (random status ailments), and stat downs such as Deprotect (defence down) and Deshell (magic defence down). Status ailments end with the battle. So a trap that arrives on a map or in a menu is banked by the mod and fires at the start of the next battle.
+
+**Known so far:**
+- **The statuses, from the game's enums (`eUnitStatusCondition`):** Poison 1, Blind 2, Sleep 3, Silence 4, Paralyzation 5, Confusion 6, Stoned 7, Charme 8, Stop 9, Berserk 10, Doom 11, Slow 12, and the stat downs AttackDown 15, DeffenceDown 16, IntelligenceDown 17, MindDown 18, BreakDmgDown 19, BreakDmgTakenUp 20. There are 87 in all, buffs too (Haste 33, Regene 30).
+- **Bad Breath is in the game.** It is skill `くさいいき` in `DT_SkillData` ("Bad Breath"), plus "Super Bad Breath" (`ちょ～くさいいき`). Its effect is row 1376 of `DT_SkillEffectData`: an `AddEffect` with a 50% chance that lasts 3 actions. Its `ParamList` holds 1023, 1027, 1028 and 1029, which look like the ailment effect rows it picks from.
+- **A battle start can be seen.** FFRSLib hooks `/Script/mucha.CPP_MapManager:Encount` for field encounters.
+
+**The design:**
+- The apworld gets trap items and a `trap_chance` option (filler replaced by traps).
+- The mod queues a trap (a new item kind `trap`) and keeps the queue in its state file, so a restart keeps it. At the next battle, once the party's battle units exist, it applies each banked trap and says so in the feed ("Bad Breath! Poison, Blind").
+- Traps never fire in a story battle with a fixed party, or in a boss battle, if that can be told apart (a setting).
+
+**To find out (in game, in a battle):**
+- `ffrap_find StatusCondition`, `ffrap_find AddStatus` and `ffrap_find BattleUnit`: the battle unit class and a call that adds a status, or one that runs a skill effect (effect 1376) on a unit.
+- Which object holds the party's battle units, and when they exist after `Encount`.
+- Whether a status set at the very start of a battle is cleared by the battle's own setup.
+
+## 21. NPC gifts as checks
+
+**Idea:** many NPCs hand out an item when you talk to them, some in the story and some not. These could be Archipelago locations: the gift is blanked and reported as a check, like a chest.
+
+**From the game data dump (round 30, 2026-11-06):** talk events carry an `ObtainItemList` (item `ID`, `Num`, and a `Condition`). About 200 talk events give items. Grouped by event table:
+- **Free talk with town NPCs** (`FreeTalk/<region>/...`), about 20. For example Mage's Glasses in Mitra, Lunar Sword and Brigandine at the Colosseum, the Magi-tenna in Gaberada and the Cabin Key in Sian. Also Phoenix Down x5 and the Transporter (from Charlotte) in Grandshelt Castle.
+- **Side quests** (`SubEvent/SubEv_Chapter01` to `09`), about 75. Rewards and gil from quest givers, the MogChase rewards in chapter 5, and the Aileen weapons in chapter 6.
+- **Character events** (`CharaEvent`): 8 accessories from the party members' own events, and 9 vision events that give a vision plus Magicite (Amelia, Camille, Ayaka, Charlotte, Victoria, Wilhelm and more).
+- **Story** (`MainEvent`): C01_014_03 gives the first two visions (Tronn and Leah), and C06_606_01 gives the White Jade Stone.
+- **Others:** the Arena rank rewards and proofs, 12 Arms weapon awakenings (24), the strong enemies (15), the rope-jumping game (`Nawatobi`, 6), the summon events (7), the legend events (17) and the merchant ship (5).
+
+**What it needs:**
+- **The table as the location list.** A `tools/gen_from_dump.py` step that writes `data/game/talk_rewards.tsv`, with the event, map, items, condition and flags. Then pick which groups become locations. Free talk and side quests are the natural first set.
+- **A way to see the gift.** Either a hook on the call that runs a talk event's `ObtainItemList`, or a check on the event's own done-flag (`OnFlagList`) after the event.
+- **A way to blank it.** Set the row's `ObtainItemList` items to nothing, as chest blanking does for chest rows, before the event runs.
+
+**To find out:** which function runs `ObtainItemList` (`ffrap_find ObtainItem` in game), and whether a talk event's row can be changed in memory like the chest rows.

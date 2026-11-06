@@ -45,7 +45,8 @@ class FFResonanceWorld(World):
     """
     Final Fantasy Resonance, played with a UE4SS mod that grants received items in game and
     reports opened chests and picked-up shinies. Chests that hold consumables, equipment or gil
-    are shuffled. Key items, visions and party members stay where the game puts them.
+    are shuffled. Party members, visions and key items can be added to the pool as well; the
+    story still hands out its own copies.
     """
 
     game = items.GAME

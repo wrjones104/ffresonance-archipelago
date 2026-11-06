@@ -12,10 +12,10 @@ Related: [progression.md](progression.md) (the chapter-by-chapter reference), [I
 ## 1. Where the world stands today
 
 - **One region.** Every location is reachable from the start as far as logic goes. Late-game chests are simply late.
-- **No progression items.** Equipment is "useful", and consumables and gil are "filler". Key items, visions and party members stay where the game puts them, so the story can always be finished.
-- **Locations:** 202 chests in 10 regions, and 92 shinies on the world map (an option, off by default), all from the game's own files (world 0.2.0). Chests and shinies that hold items with id 13000 and up (visions, key items, valuables, Tablet Shards) keep their vanilla content and are not locations. So are the 15 chest rows with no box placed on any map.
+- **Progression items, with no logic yet (world 0.3.0).** One of each party member after the prologue (Fina, Lid, Nichol, Jake, Sakura), each of the 26 visions and 43 key items and artifacts go in the pool in place of filler. Each has its own option, on by default. They are classed as progression so the logic can use them later. The story still hands out its own copies, and chests and shinies that hold them keep them, so the story can always be finished. Equipment is "useful", and consumables and gil are "filler".
+- **Locations:** 202 chests in 10 regions, and 92 shinies on the world map (an option, off by default), all from the game's own files (world 0.2.0). They are named after the game's maps, for example "Village of Kol Chest 1" (world 0.3.0). Chests and shinies that hold items with id 13000 and up (visions, key items, valuables, Tablet Shards) keep their vanilla content and are not locations. So are the 15 chest rows with no box placed on any map.
 - **Goal:** reach a story checkpoint (`goal_story_checkpoint`, default 8050).
-- **Options:** the goal, `include_shinies` and `excluded_regions`.
+- **Options:** the goal, `include_shinies`, `excluded_regions`, `shuffle_party_members`, `shuffle_visions` and `shuffle_key_items`.
 
 ## 2. The experience
 
@@ -63,8 +63,8 @@ What a progression item can be depends on what the mod can grant and what the ga
 |---|---|---|
 | Bag items (consumables, equipment, key items, artifacts) | `AddInventory` | yes, every round since round 1 |
 | Gil | `SetCurrentMoney` | yes (round 5) |
-| Visions | `visionList` plus `AddInventory`, the FFRSLib way | built; not yet a real Archipelago item |
-| Party members | `CPP_VM_Party:AddUnit` | built; it puts a unit in the *active* party and fails when that is full (README, open question 1). "Has joined" may be `JoinStatus` instead. Needs testing |
+| Visions | `visionList` plus `AddInventory`, the FFRSLib way | yes in round 1; an Archipelago item since world 0.3.0. One received before the save owns a vision waits (mod 0.12.0). Round 30 tests it |
+| Party members | `CPP_VM_Party:AddUnit`, and `JoinStatus` 0 when the party is full (mod 0.12.0) | an Archipelago item since world 0.3.0. The story sets `JoinStatus` itself, in talk events (IDEAS.md, idea 19). Round 30 tests it |
 | Story flags | `SetFlag` | yes (the skip prologue sets 21) |
 | Vehicles | the Chocobo by item 30002 | yes: the saddle alone lets you ride (round 5). The airship is unknown: 29520 only changes how it looks |
 
@@ -95,7 +95,7 @@ Filled from progression.md and IDEAS.md idea 5. **Your call:** which ones go in,
 
 **Things to weigh:**
 - **Story items in story mode.** A key item the story itself needs (a key on the main path) cannot be taken out of its place, or the story can stall until another player sends it. That may be fine, or it may be miserable. *Suggestion:* in v1, only shuffle gates on optional content, and keep main-path keys where they are.
-- **Party members** would be the most Resonance-feeling progression, but the story scripts them joining. They need careful testing before they are items.
+- **Party members** would be the most Resonance-feeling progression, but the story scripts them joining. The story's conditions never test the party, though: only flags, the story counter, items, the Colosseum and unit levels (IDEAS.md, idea 19). So a member who joins early may be harmless. Round 30 tests it.
 - **Upgrades as progressive items.** The three radar parts could be one "Progressive Radar" item, received three times.
 
 ## 6. Regions and access
@@ -105,8 +105,8 @@ The location regions today, with where each opens in the story:
 | Region | Chests | Opens (story) | Needs, beyond the story | Can you go back later? |
 |---|---|---|---|---|
 | Grandshelt | 40 | chapter 1 | | |
-| Kol | 8 | chapter 1 (Village of Kol) | Chocobo? | |
-| Lan | 28 | ? | | |
+| Lanzelt | 28: Village of Kol, Grandport Harbor, Siren's Tower, Oblivion Palace | chapter 1 (Village of Kol) | Chocobo? | |
+| Kolobos | 8: Town of Felicitas, Kolobos Ruins | ? | | |
 | Dirnado | 19 | chapter 2 | | |
 | Olderion | 23 | chapter 3 | | |
 | Zoldaad | 21 | chapter 4 | keys inside (Tunnel, Dungeon, Throne Room)? | |
@@ -124,7 +124,7 @@ The location regions today, with where each opens in the story:
 - **Chests.** The 238 chest table rows match `data/chests.tsv` exactly. A box is matched to its row by `m_Id`, and by its map or by its level's name (`gen_from_dump.box_matches`; round 3 confirmed both ways). 15 rows have no placed box on any map, and since world 0.2.0 they are not locations (`NO_BOX` in `data.py`). Among them is all of map 10050 (`02Lan_41`), which ships only a background level and has no map table row; its items 5 and 6 are not in any item table. Boxes with no `m_Id` (the native default, -1) are the open story chests that round 3 saw in map 2002.
 
 **Your call, and facts to fill in:**
-- Where is **Lan**, and when does it open?
+- When does **Kolobos** (Felicitas, Kolobos Ruins) open? The dump shows the Village of Kol is in Lanzelt (`02Lan_20`), not in Kolobos (round 30).
 - Which regions can be **revisited** later, and from when (the airship)? Anything you cannot go back to belongs in `excluded_regions` by default, or needs logic that says "before chapter N".
 - The **sub-areas** inside a region that need an item. For example, the Kolobos part of Grandshelt needs the Chocobo. Those become their own logic regions.
 
@@ -148,7 +148,7 @@ Each is an in-game check. Most can be done with `ffrap_grant` on a save, and a l
 2. **The airship:** which flag or item lets it fly (idea 4). That needs a flag diff around the point the story hands it out, with `ffrap_snapshot`.
 3. **Party members:** does `AddUnit`, or setting `JoinStatus`, give a working member before the story would? And what does the story do when that member is already there?
 4. **Revisiting:** which regions can be reached again after their chapter.
-5. **Lan:** where it is and when it opens.
+5. **Kolobos:** when it opens.
 6. **The goal:** does the ending reach story 8050?
 
 ## 9. How this becomes code (for reference)

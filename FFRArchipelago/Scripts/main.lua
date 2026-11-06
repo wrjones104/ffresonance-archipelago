@@ -38,7 +38,7 @@
 -- follows the save slots the linked game is saved to. While any other save is loaded, the mod
 -- grants nothing, reports nothing and leaves the chests vanilla.
 
-local VERSION = "0.11.4"
+local VERSION = "0.12.0"
 local PROTOCOL = 1        -- the bridge protocol; the apworld's MOD_PROTOCOL
 
 local MOD_DIR = (debug.getinfo(1, "S").source:gsub("^@", ""):gsub("\\", "/"):match("^(.*/)Scripts/[^/]+$"))
@@ -336,8 +336,50 @@ local function readInbox(initial)
     end
 end
 
+-- Items that cannot go in yet, by index: a vision before the save owns any (the story hands out
+-- the first ones in Mitra). A grant that answers "wait" goes here and the queue goes on. These
+-- are tried again each pass. The list is rebuilt from the received visions whenever a save is
+-- loaded, because an older save can lack a vision that was unlocked after it was written.
+-- Only visions: they are the same item however often they are granted. A unit is not re-added,
+-- as the story itself makes some leave (Fina in chapter 3).
+local waiting, waitingDirty = {}, true
+
+local function rebuildWaiting()
+    waiting = {}
+    for i = 0, state.applied - 1 do
+        local it = state.items[i]
+        if it and it.kind == "vision" and game.HasVision(it.id) ~= true then waiting[#waiting + 1] = i end
+    end
+end
+
+local function applyWaiting(names)
+    if waitingDirty then
+        rebuildWaiting()
+        waitingDirty = false
+    end
+    local keep = {}
+    for _, i in ipairs(waiting) do
+        local it = state.items[i]
+        local code, detail = "fail", "item gone"
+        if it then code, detail = grant(it) end
+        if code == "wait" or code == "retry" then
+            keep[#keep + 1] = i
+        elseif detail ~= "already owned" then
+            log(string.format("item %d %s %d x%d (waited): %s (%s)", i, it.kind, it.id, it.count, code, tostring(detail)))
+            bridge.write("applied", i, code, detail)
+            if code == "ok" then
+                names[#names + 1] = it.label
+            else
+                notify("Could not apply " .. it.label .. ": " .. tostring(detail))
+            end
+        end
+    end
+    waiting = keep
+end
+
 local function applyItems()
     local done, names = 0, {}
+    applyWaiting(names)
     while done < MAX_GRANTS_PER_TICK do
         local it = state.items[state.applied]
         if not it then break end
@@ -346,18 +388,27 @@ local function applyItems()
             state.lastResult = "waiting: " .. tostring(detail)
             break
         end
-        log(string.format("item %d %s %d x%d: %s (%s)", state.applied, it.kind, it.id, it.count,
-            code, tostring(detail)))
-        bridge.write("applied", state.applied, code, detail)
-        if code == "ok" then
-            names[#names + 1] = it.label
+        if code == "wait" then
+            log(string.format("item %d %s %d x%d: waits (%s)", state.applied, it.kind, it.id, it.count, tostring(detail)))
+            waiting[#waiting + 1] = state.applied
+            state.applied = state.applied + 1
+            state.lastResult = it.label .. ": waits"
+            done = done + 1
+            saveState()
         else
-            notify("Could not apply " .. it.label .. ": " .. tostring(detail))
+            log(string.format("item %d %s %d x%d: %s (%s)", state.applied, it.kind, it.id, it.count,
+                code, tostring(detail)))
+            bridge.write("applied", state.applied, code, detail)
+            if code == "ok" then
+                names[#names + 1] = it.label
+            else
+                notify("Could not apply " .. it.label .. ": " .. tostring(detail))
+            end
+            state.applied = state.applied + 1
+            state.lastResult = it.label .. ": " .. code
+            done = done + 1
+            saveState()
         end
-        state.applied = state.applied + 1
-        state.lastResult = it.label .. ": " .. code
-        done = done + 1
-        saveState()
     end
     if feedOn and game.InGame() then
         -- The feed has a line per item.
@@ -677,6 +728,7 @@ local function followSave()
         end
         log("save loaded: slot " .. tostring(save.slot) .. ", session slots [" .. slotsText(true) .. "]")
         judgeSave()
+        waitingDirty = true
     elseif ticks ~= save.ticks then
         -- The game saved. Grants happen after this check in the same tick, so the count now is
         -- what the save holds.

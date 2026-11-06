@@ -191,8 +191,8 @@ The chest table's row names carry a region code (`Dng_01Gra_40_0`). From the cha
 | Code | Region | Confidence |
 |---|---|---|
 | 01Gra | Grandshelt | sure |
-| 02Lan | ? | unknown. A Grandshelt-area land, between Gra and Kol in numbering. |
-| 03Kol | Kolobos (Village of Kol, Kolobos Ruins) | likely |
+| 02Lan | Lanzelt (Village of Kol, Grandport Harbor, Siren's Tower, Oblivion Palace) | sure: the island column of `DT_MapData` (round 30) |
+| 03Kol | Kolobos (Town of Felicitas, Kolobos Ruins) | sure: the island column of `DT_MapData` (round 30) |
 | 04Dir | Dirnado | sure |
 | 05Old | Olderion | sure |
 | 06Zol | Zoldaad | sure |

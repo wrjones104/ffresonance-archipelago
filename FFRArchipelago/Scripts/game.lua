@@ -198,6 +198,15 @@ function G.GrantItem(id, n)
     return "ok", "held " .. tostring(before) .. " -> " .. tostring(after)
 end
 
+-- Whether the save owns a vision: true, false, or nil when the vision library is not loaded.
+function G.HasVision(id)
+    local lib = Lib("CPP_BFL_Vision")
+    if not (lib and lib.HasVision) then return nil end
+    local ok, r = pcall(function() return lib:HasVision(id) end)
+    if not ok then return nil end
+    return r == true
+end
+
 local visionRows
 local function VisionRowExists(id)
     if not visionRows then
@@ -227,11 +236,7 @@ function G.UnlockVision(id)
     if exists == nil then return "retry", "vision table not loaded" end
     if not exists then return "fail", "no DT_VisionItemData row for " .. id end
 
-    local lib = Lib("CPP_BFL_Vision")
-    local function Has()
-        local ok, r = pcall(function() return lib and lib.HasVision and lib:HasVision(id) end)
-        return ok and r == true
-    end
+    local function Has() return G.HasVision(id) == true end
     if Has() then return "ok", "already owned" end
 
     local list
@@ -239,7 +244,9 @@ function G.UnlockVision(id)
         return "retry", "visionList unreadable"
     end
     local n = #list
-    if n == 0 then return "retry", "the save owns no vision yet to copy synchro keys from" end
+    -- "wait", not "retry": the story hands out the first visions in Mitra, and the items after
+    -- this one must not wait for that (main.lua keeps it aside and tries it again).
+    if n == 0 then return "wait", "the save owns no vision yet to copy synchro keys from" end
 
     -- Reading one past the end grows a UE4SS TArray by a zeroed element.
     local okGrow = pcall(function() local _ = list[n + 1] end)
@@ -290,8 +297,10 @@ function G.GrantGil(n)
 end
 
 -- Party members. CPP_VM_Party:AddUnit puts a unit in the ACTIVE party, and fails when it is
--- full. For Archipelago we want "joined the roster", which may be a different call
--- (JoinStatus in sd.unitParameterList). Open question 1 in the README.
+-- full (round 1). The roster is each unit's JoinStatus in sd.unitParameterList
+-- (eUnitJoinStatus: 0 Join, 1 NotJoin, 2 Leave, 3 TemporalLeave, 4 Lost), which the story's own
+-- talk events set through ChangeUnitJoinStatusList (data dump, round 30). So a unit goes into
+-- the active party when there is room, and otherwise joins the roster as the story would.
 local function PartyVM() return Live("CPP_VM_Party") end
 
 local function Joined(vm, id)
@@ -302,11 +311,16 @@ end
 function G.AddUnit(id)
     local vm = PartyVM()
     if not (vm and vm.AddUnit) then return "retry", "party view model not loaded" end
-    if Joined(vm, id) then return "ok", "already joined" end
+    if Joined(vm, id) or G.UnitJoinStatus(id) == 0 then return "ok", "already joined" end
     local ok, r = pcall(function() return vm:AddUnit(id) end)
     if not ok then return "fail", "AddUnit raised: " .. tostring(r) end
-    if Joined(vm, id) then return "ok", "AddUnit returned " .. tostring(r) end
-    return "fail", "did not join (AddUnit returned " .. tostring(r) .. "; party full?)"
+    if Joined(vm, id) then return "ok", "in the active party (AddUnit returned " .. tostring(r) .. ")" end
+    -- The party is full: the roster only.
+    local how = G.SetJoinStatus(id, 0)
+    if G.UnitJoinStatus(id) == 0 then
+        return "ok", "joined the roster through " .. tostring(how) .. " (AddUnit returned " .. tostring(r) .. ")"
+    end
+    return "fail", "did not join (AddUnit returned " .. tostring(r) .. "; JoinStatus write " .. tostring(how) .. ")"
 end
 
 -- Unit ids in the active party, as a plain table, or nil.
@@ -2050,6 +2064,20 @@ function G.UnitJoinStatus(unitId)
     local sd = G.SaveData()
     local u = sd and UnitEntry(sd, unitId)
     return u and Int(u.JoinStatus) or nil
+end
+
+-- Sets a playable unit's roster status. Returns how it was written ("library" or "save
+-- field"), or nil when neither worked.
+function G.SetJoinStatus(unitId, status)
+    local lib = Lib("CPP_BFL_SaveDataUnit")
+    if lib and lib.SetJoinStatus then
+        local ok = pcall(function() lib:SetJoinStatus(unitId, status) end)
+        if ok and G.UnitJoinStatus(unitId) == status then return "library" end
+    end
+    local sd = G.SaveData()
+    local u = sd and UnitEntry(sd, unitId)
+    if u and Put(u, "JoinStatus", status) then return "save field" end
+    return nil
 end
 
 function G.IsUnitJoined(unitId)

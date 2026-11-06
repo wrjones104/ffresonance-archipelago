@@ -3,8 +3,9 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from BaseClasses import Item, ItemClassification
+from Options import OptionError
 
-from .data import ITEMS
+from .data import ITEMS, PROGRESSION
 
 if TYPE_CHECKING:
     from .world import FFResonanceWorld
@@ -13,22 +14,31 @@ GAME = "Final Fantasy Resonance"
 
 ITEM_NAME_TO_ID: dict[str, int] = {info["name"]: ap_id for ap_id, info in ITEMS.items()}
 
-# The MVP has no progression items: key items and story items stay where the game puts them,
-# so the story can always be finished. Equipment is marked useful, so hints and fill treat it
-# as worth something.
+# Party members, visions and key items are progression (world 0.3.0), though no logic reads
+# them yet: every location is reachable from the start. They are marked now so the logic can
+# use them later without a change of item ids or classes. The story still hands out its own
+# copies, so in story mode an item from Archipelago is an early copy.
+# Equipment is useful, so hints and fill treat it as worth something.
 CLASSIFICATIONS = {
     "consumable": ItemClassification.filler,
     "equipment": ItemClassification.useful,
     "gil": ItemClassification.filler,
+    "party": ItemClassification.progression,
+    "vision": ItemClassification.progression,
+    "key": ItemClassification.progression,
 }
 
 item_name_groups: dict[str, set[str]] = {
     "Consumables": {i["name"] for i in ITEMS.values() if i["category"] == "consumable"},
     "Equipment": {i["name"] for i in ITEMS.values() if i["category"] == "equipment"},
     "Gil": {i["name"] for i in ITEMS.values() if i["category"] == "gil"},
+    "Party Members": {i["name"] for i in ITEMS.values() if i["category"] == "party"},
+    "Visions": {i["name"] for i in ITEMS.values() if i["category"] == "vision"},
+    "Key Items": {i["name"] for i in ITEMS.values() if i["category"] == "key"},
 }
 
 FILLER_NAMES = sorted(item_name_groups["Consumables"])
+FILLER_CATEGORIES = {"consumable", "gil"}
 
 
 class FFResonanceItem(Item):
@@ -40,9 +50,32 @@ def create_item(world: FFResonanceWorld, name: str) -> FFResonanceItem:
     return FFResonanceItem(name, CLASSIFICATIONS[ITEMS[ap_id]["category"]], ap_id, world.player)
 
 
+def progression_ids(world: FFResonanceWorld) -> list[int]:
+    """The progression items the options put in the pool, one of each."""
+    chosen: list[int] = []
+    if world.options.shuffle_party_members:
+        chosen += PROGRESSION["party"]
+    if world.options.shuffle_visions:
+        chosen += PROGRESSION["vision"]
+    if world.options.shuffle_key_items:
+        chosen += PROGRESSION["key"]
+    return chosen
+
+
 def create_all_items(world: FFResonanceWorld) -> None:
-    """One item per location: each location's own vanilla content goes into the pool."""
-    pool = [create_item(world, ITEMS[ap_id]["name"]) for ap_id in world.vanilla_items]
+    """
+    One item per location. Each location's own vanilla content goes into the pool, then each
+    progression item takes the place of one filler item (a consumable or gil), picked at random.
+    """
+    pool_ids = list(world.vanilla_items)
+    extra = progression_ids(world)
+    filler_at = [i for i, ap_id in enumerate(pool_ids) if ITEMS[ap_id]["category"] in FILLER_CATEGORIES]
+    if len(extra) > len(filler_at):
+        raise OptionError(f"{world.player_name}: {len(extra)} progression items, but only {len(filler_at)} "
+                          f"filler items to replace. Turn on include_shinies, or turn off a shuffle option.")
+    for i in sorted(world.random.sample(filler_at, len(extra)), reverse=True):
+        pool_ids.pop(i)
+    pool = [create_item(world, ITEMS[ap_id]["name"]) for ap_id in pool_ids + extra]
     unfilled = len(world.multiworld.get_unfilled_locations(world.player))
     pool += [world.create_filler() for _ in range(unfilled - len(pool))]
     world.multiworld.itempool += pool

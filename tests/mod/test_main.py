@@ -10,6 +10,7 @@ import paths  # noqa: E402
 import os
 import shutil
 import sys
+import re
 import tempfile
 
 from lupa import lua54
@@ -20,6 +21,7 @@ if os.path.exists(WORK):
     shutil.rmtree(WORK)
 shutil.copytree(SRC, WORK, ignore=shutil.ignore_patterns("ap_*.txt", "*.tsv", "ffrap_dump.txt"))
 SCRIPTS = os.path.join(WORK, "Scripts").replace("\\", "/")
+VERSION = re.search(r'local VERSION = "([^"]+)"', open(os.path.join(SRC, "Scripts", "main.lua"), encoding="utf-8").read()).group(1)
 
 
 def path(name):
@@ -114,6 +116,7 @@ G.shinies = {
 function G.LiveFieldItems() return G.shinies end
 function G.GrantItem() return "ok", "" end
 function G.UnlockVision() return "ok", "" end
+function G.HasVision(id) return (G.owned or {})[id] == true end
 function G.AddUnit() return "ok", "" end
 function G.SetFlag() return "ok", "" end
 G.blankCalls = {}
@@ -323,7 +326,7 @@ G.chests = L.table()
 G.shinies = L.table()
 tick = lambda n: [L.execute("tickFn()") for _ in range(n)]
 out = read("ap_out.txt")
-assert out.startswith("hello\t0.11.4\t1\nseed\tS1:1\n") and "chest:2001:0" not in out, out
+assert out.startswith(f"hello\t{VERSION}\t1\nseed\tS1:1\n") and "chest:2001:0" not in out, out
 state = read("ap_state.txt")
 assert "seed\tS1:1" in state and "blank\t1" in state, state
 tick(6)
@@ -354,7 +357,7 @@ assert "check\tshiny:1000:30\n" in read("ap_out.txt")
 open(path("ap_in.txt"), "w", encoding="utf-8", newline="\n").write("seed\tS2:3\nitem\t0\titem\t1\t3\tPotion x3\n")
 tick(4)
 out = read("ap_out.txt")
-assert out.startswith("hello\t0.11.4\t1\nseed\tS2:3\n") and "shiny:1000:30" in out and "chest:3020:1" not in out, out
+assert out.startswith(f"hello\t{VERSION}\t1\nseed\tS2:3\n") and "shiny:1000:30" in out and "chest:3020:1" not in out, out
 assert list(G.log.values())[-1] == "item1x3"
 print("sessions: ok")
 
@@ -659,7 +662,7 @@ assert G.skipRuns == runs + 1
 assert G.orders >= 1, "the order is checked once the entry is in"
 G.ready = False                                   # back at the title screen
 tick(13)                                          # two checks: the line, then the logo
-assert "FFRArchipelago 0.11.4" in list(G.titleLines.values()), list(G.titleLines.values())
+assert f"FFRArchipelago {VERSION}" in list(G.titleLines.values()), list(G.titleLines.values())
 assert G.describes == 1, "the layout is logged once"
 assert len(list(G.logos.values())) >= 1 and list(G.logos.values())[0].endswith("Assets/archipelago_logo.png"), list(G.logos.values())
 G.ready = True
@@ -843,3 +846,47 @@ assert list(G.feed.values())[-1].startswith("Gate (combo): locked")
 L.execute('commands["ffrap_gate"]("ffrap_gate", {"clear"})')
 assert G.gate is None and list(G.feed.values())[-1] == "Gate cleared (2 actor(s) removed)"
 print("gate probe: ok")
+
+# 14. 0.12.0: a vision that cannot go in yet (the save owns none) waits aside; the items after
+# it are applied, and it goes in once it can. After a reload it is tried again.
+for name in ("ap_in.txt", "ap_out.txt", "ap_state.txt", "seen.tsv"):
+    if os.path.exists(path(name)):
+        os.remove(path(name))
+open(path("ap_in.txt"), "w", encoding="utf-8", newline="\n").write(
+    "seed\tS9:1\n"
+    "item\t0\tvision\t13100\t1\tWarrior of Light\n"
+    "item\t1\titem\t1\t1\tPotion\n"
+    "item\t2\tunit\t1004\t1\tLid\n")
+L, G = boot()
+L.globals().G = G
+L.execute(r"""
+G.owned, G.visionReady = {}, false
+function G.UnlockVision(id)
+  if G.owned[id] then return "ok", "already owned" end
+  if not G.visionReady then return "wait", "the save owns no vision yet" end
+  G.owned[id] = true
+  G.log[#G.log + 1] = "vision" .. id
+  return "ok", "visionList 2 -> 3"
+end
+function G.GrantItem(id, n) G.log[#G.log + 1] = "item" .. id .. "x" .. n return "ok", "" end
+function G.AddUnit(id) G.log[#G.log + 1] = "unit" .. id return "ok", "" end
+""")
+G.chests = L.table()
+G.shinies = L.table()
+tick = lambda n: [L.execute("tickFn()") for _ in range(n)]
+tick(6)
+assert list(G.log.values()) == ["item1x1", "unit1004"], list(G.log.values())
+L.execute("G.visionReady = true")
+tick(1)
+assert list(G.log.values()) == ["item1x1", "unit1004", "vision13100"], list(G.log.values())
+tick(2)
+assert list(G.log.values()).count("vision13100") == 1, "an unlocked vision is not granted again"
+# the game saves to slot 1 (holding all three), then that slot is loaded into a game that lacks
+# the vision: the slot's count stands, and the vision alone is tried again
+L.execute("G.saveTicks = '5'; G.slotOf['5'] = 1")
+tick(2)
+L.execute("G.owned = {}; G.saveObj = 'SD_2'")
+tick(3)
+assert list(G.log.values()).count("vision13100") == 2, list(G.log.values())
+assert list(G.log.values()).count("item1x1") == 1
+print("waiting vision: ok")

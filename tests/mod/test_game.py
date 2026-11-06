@@ -830,3 +830,50 @@ L.execute("G.SpawnGate('box', 150); spawnedActors[#spawnedActors].dead = true")
 assert L.eval("G.PollGate().gone") is True and L.eval("G.HasActiveGate()") is False
 L.execute("G.gateTrace = nil")
 print("gates: ok")
+
+# 0.12.0: a party member joins the active party when there is room, and the roster otherwise
+# (JoinStatus 0, eUnitJoinStatus::Join); a vision before the save owns any waits
+L.execute(r"""
+joinStatuses[1004], joinStatuses[1005], joinStatuses[1007] = 1, 1, 1
+partyFull = false
+partyVM = {}
+function partyVM:IsValid() return true end
+function partyVM:HasAnyInternalFlags() return false end
+function partyVM:HasAnyFlags() return false end
+function partyVM:IsJoinedUnit(id) return joinStatuses[id] == 0 end
+function partyVM:AddUnit(id)
+  if partyFull then return false end
+  joinStatuses[id] = 0
+  return true
+end
+function unitLib:SetJoinStatus(id, st) joinStatuses[id] = st end
+visionLib = { owned = {} }
+function visionLib:IsValid() return true end
+function visionLib:HasVision(id) return self.owned[id] == true end
+local prevFFO2 = FindFirstOf
+function FindFirstOf(c)
+  if c == "CPP_VM_Party" then return partyVM end
+  return prevFFO2(c)
+end
+local prevSFO2 = StaticFindObject
+function StaticFindObject(p)
+  if p == "/Script/mucha.Default__CPP_BFL_Vision" then return visionLib end
+  return prevSFO2(p)
+end
+""")
+code, detail = L.execute("return G.AddUnit(1004)")
+assert code == "ok" and "in the active party" in detail, (code, detail)
+L.execute("partyFull = true")
+code, detail = L.execute("return G.AddUnit(1005)")
+assert code == "ok" and "joined the roster through library" in detail, (code, detail)
+assert L.eval("joinStatuses[1005]") == 0
+code, detail = L.execute("return G.AddUnit(1005)")
+assert code == "ok" and detail == "already joined", (code, detail)
+# the library cannot write it: refused, and said so
+L.execute("unitLib.SetJoinStatus = nil")
+code, detail = L.execute("return G.AddUnit(1007)")
+assert code == "fail" and "did not join" in detail, (code, detail)
+assert L.eval("G.HasVision(13100)") is False
+L.execute("visionLib.owned[13100] = true")
+assert L.eval("G.HasVision(13100)") is True
+print("party members and HasVision: ok")

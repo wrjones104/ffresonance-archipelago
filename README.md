@@ -6,7 +6,7 @@ Two parts:
   - **Receive:** it reads items from a file and grants them in order: bag items, gil, visions, party members and story flags. Each item is applied once per save, tracked by its Archipelago index and by how many items each save slot holds.
   - **Send:** it reports opened chests, picked-up shinies (shining spots) and changes to the story counter.
 - **`apworld/ff_resonance`**, the Archipelago world and client.
-  - The world generates seeds: chests with consumables, equipment or gil are locations, and shinies are an option.
+  - The world generates seeds: chests with consumables, equipment or gil are locations, and shinies are an option. Party members, visions and key items can go in the pool (world 0.3.0), with no logic yet.
   - The client connects the mod to a server through the bridge files.
 
 `tools/fake_ap.py` still plays the server's part for testing the mod alone.
@@ -22,7 +22,7 @@ The world is tested off-line: Archipelago's general tests pass with it, its own 
 - **ModSettings** (a Blueprint mod in `Content/Paks/LogicMods`, from the same modding tools as FFRSLib) is optional. In the field, messages ("Received ...", "Sent ...", "Archipelago is paused", "Prologue skipped") go to the mod's own item feed at the bottom right of the HUD (since 0.10.0, on by default). ModSettings' Toast panel takes them off the field (the title screen), when the feed has not been able to show anything for 10 seconds since the game started, and with `ffrap_feed off`. Without ModSettings those few only go to `UE4SS.log`.
 - **FFRSLib, FFRS_QoL, FFRBestiary and FFRRandomizer are not needed.** Their code is where the game calls come from (see "Where the game calls come from"), but this mod calls the game directly. FFRRandomizer should stay disabled (IDEAS.md, idea 10).
 
-1. **Mod.** Copy `FFRArchipelago/Scripts` and `FFRArchipelago/Assets` over the installed mod (0.11.4). Delete the old `ap_in.txt`, `ap_out.txt` and `ap_state.txt`, and keep `seen.tsv`. Keep FFRRandomizer disabled.
+1. **Mod.** Copy `FFRArchipelago/Scripts` and `FFRArchipelago/Assets` over the installed mod (0.12.0). Delete the old `ap_in.txt`, `ap_out.txt` and `ap_state.txt`, and keep `seen.tsv`. Keep FFRRandomizer disabled.
 2. **World.** Run `python tools/build_apworld.py`, then copy `dist/ff_resonance.apworld` into your Archipelago `custom_worlds` folder. Or, from source, copy `apworld/ff_resonance` into `worlds/`.
 3. **Seed.**
    - Copy `apworld/Final Fantasy Resonance.yaml` into Archipelago's `Players` folder and set a name.
@@ -355,16 +355,37 @@ Rounds 6 to 9 (2026-11-05) worked out and tested the prologue skip; their result
 - **The cause:** one bad key would crash in one place. Crashes in a new place each time are what memory damage looks like, and here that comes from Lua running on two threads at once. Up to 0.11.3 this mod's two timers used `LoopAsync`. Its callback runs on UE4SS's async thread, in this mod's Lua state, ten times a second, while the game thread runs the queued tick in the same state. Lua is not safe on two threads at once. UE4SS 3.0.1 marks `LoopAsync` as deprecated, and its docs say the new timers have "better thread safety". FFRBestiary found the same thing (its 0.1.1 crashed "after an hour or so" with `LoopAsync`) and moved to `LoopInGameThreadWithDelay`. No other mod here runs `LoopAsync` all the time: FFRSLib uses it only in short probe commands.
 - **Fixed in 0.11.4:** both timers now use `LoopInGameThreadWithDelay`. Their callbacks run only on the game thread, so no Lua in this mod runs on UE4SS's async thread.
 
-## Round 30 test plan (mod 0.11.4, world 0.2.0)
+## Round 30 test plan (mod 0.11.4, then mod 0.12.0 and world 0.3.0)
 
-0.11.4 fixes the random crashes (round 29, second run). Nothing else changed, so the seed and the save carry on.
+Two parts. Part A is the crash fix on your current seed. Part B is a new seed with the first progression items.
 
-1. **Install.** Copy `FFRArchipelago/Scripts` over the installed mod. The log should say `version 0.11.4 loaded`. The apworld is unchanged.
-2. **The crash fix.** Play as you normally do, with your usual mods on, for an hour or more: battles, towns, shops, menus, and some idle time. Before, the game crashed within minutes to about an hour. If it crashes, send `UE4SS.log` and the newest folder in `%LOCALAPPDATA%\FFRS\Saved\Crashes`.
-3. **Check the log for** a line that says `this UE4SS has no LoopInGameThreadWithDelay`. There should be none. If there is one, the old timers are back in use.
-4. **The new shinies** (from round 29), with `include_shinies` on. Pick up one or two of world-map shinies 70, 71, 84 to 89 and 91. Each should send a check (`check shiny:1000:<uid>` in the log). Each still gives its own item too, as shinies are not blanked yet.
-5. **Dropped chests** (from round 29). Where you can, visit a map with a dropped row and run `ffrap_dump` there. Look for a chest that gives 1 gil and sends no check. The dropped rows are in `NO_BOX` in `apworld/ff_resonance/data.py`. Map 3000 row 0 and map 3020 row 2 had no box. Grandshelt Castle (map 2012), rows 2 to 4, is still to check.
-6. **Send** `UE4SS.log` (`[FFRAP]` lines) and `seen.tsv`.
+**Part A: the crash fix (mod 0.11.4, world 0.2.0).** Nothing else changed, so the seed and the save carry on.
+
+1. **Install.** Copy `FFRArchipelago/Scripts` from commit 659ab46 (mod 0.11.4) over the installed mod. The log should say `version 0.11.4 loaded`. The apworld is unchanged.
+2. **Play** as you normally do, with your usual mods on, for an hour or more: battles, towns, shops, menus, and some idle time. Before, the game crashed within minutes to about an hour. If it crashes, send `UE4SS.log` and the newest folder in `%LOCALAPPDATA%\FFRS\Saved\Crashes`.
+3. **Check the log for** a line that says `this UE4SS has no LoopInGameThreadWithDelay`. There should be none.
+
+**Part B: progression items (mod 0.12.0, world 0.3.0).** World 0.3.0 renames the locations and changes the pool, so it needs a new seed and a new game.
+
+What changed:
+- **Location names** come from the game's maps: "Village of Kol Chest 1", not "Lan Town 20 Chest 1". Chests are numbered from 1 within each place. Regions 02 and 03 are now Lanzelt and Kolobos (`excluded_regions` uses these names).
+- **Progression items in the pool**, one of each, in place of filler. There are three options, all on by default: `shuffle_party_members` (Fina, Lid, Nichol, Jake, Sakura), `shuffle_visions` (all 26) and `shuffle_key_items` (43). There is no logic for them yet, and the story still gives its own copies.
+- **A party member** joins the active party when there is room. Otherwise it joins the roster (`JoinStatus` 0, as the story's own events do).
+- **A vision** received before the save owns one waits, and the items after it are applied as usual. The game's own first visions come in the Town of Mitra. Before 0.12.0, a vision this early stopped the whole queue.
+
+Steps:
+4. **Install.** Copy `FFRArchipelago/Scripts` over the installed mod. The log should say `version 0.12.0 loaded`. Copy `dist/ff_resonance.apworld` into Archipelago's `custom_worlds`. Generate a new seed with the three shuffle options on. The client should say world 0.3.0. Start from Archipelago on the title menu.
+5. **Location names.** The spoiler log and the client should show the new names.
+6. **A party member.** When you receive one (or use `ffrap_grant unit 1004` for Lid):
+   - With fewer than 4 in the party, the log should say `in the active party`. Is the member in the party menu? What level and gear do they have? Can they fight?
+   - With a full party, the log should say `joined the roster`. Can you swap the member in from the party menu?
+   - Later, when the story has that member join: does the event run normally?
+7. **A vision before Mitra.** The log should say `waits (the save owns no vision yet ...)`, and later items should still arrive. After the story gives Tronn and Leah in Mitra, the waiting vision should go in, with a `(waited)` line in the log. Is it in the Visions menu?
+8. **A key item.** Is it in the Valuables (or Artifacts) list? If you get one the story would use later, for example the Tunnel Key, does that part of the story still run normally?
+9. **Probes for the trap and NPC gift ideas (IDEAS.md, ideas 20 and 21).** In a battle, run `ffrap_find StatusCondition`, `ffrap_find AddStatus` and `ffrap_find BattleUnit`. Anywhere, run `ffrap_find ObtainItem`. Each writes `find_<text>.txt` in the mod folder.
+10. **Send** `UE4SS.log` (`[FFRAP]` lines), `seen.tsv`, the spoiler log and the `find_*.txt` files.
+
+From round 29, still open: the new world-map shinies (70, 71, 84 to 89 and 91), and dropped chest rows 2 to 4 at Grandshelt Castle (map 2012).
 
 ## Open questions
 

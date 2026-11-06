@@ -46,8 +46,8 @@ GIL_ITEM_BASE = 900_000_000
 # Region codes in the chest table's row names (Dng_01Gra_40_0 = dungeon, region 01 "Gra").
 REGION_NAMES = {
     "Gra": "Grandshelt",
-    "Lan": "Lan",               # region 02: real name not confirmed yet
-    "Kol": "Kol",               # region 03: real name not confirmed yet
+    "Lan": "Lanzelt",           # the island column of DT_MapData (data/game/maps.tsv)
+    "Kol": "Kolobos",
     "Dir": "Dirnado",
     "Old": "Olderion",
     "Zol": "Zoldaad",
@@ -76,18 +76,59 @@ def item_kind(item_id: int, money: int) -> str | None:
     return None
 
 
-def chest_name(row: str, chest_id: int) -> tuple[str, str]:
-    """('Grandshelt Dungeon 40 Chest 0', 'Grandshelt') from 'Dng_01Gra_40_0'."""
-    parts = row.split("_")
-    kind = {"Dng": "Dungeon", "Town": "Town"}.get(parts[0], parts[0])
-    code = parts[1][2:]
-    region = REGION_NAMES.get(code, code)
-    area = "-".join(parts[2:-1])
-    return f"{region} {kind} {area} Chest {chest_id}", region
+def ascii_name(name: str) -> str:
+    """The game writes apostrophes as U+2019; names players type in hints use the plain one."""
+    return name.replace("’", "'")
+
+
+def chest_region(row: str) -> str:
+    """'Grandshelt' from 'Dng_01Gra_40_0'."""
+    code = row.split("_")[1][2:]
+    return REGION_NAMES.get(code, code)
+
+
+def chest_place(row: str, map_id: int, maps: dict[int, dict]) -> str:
+    """
+    The English map name a chest row is on: its row's mapId in DT_MapData, else the map whose
+    key matches the row's table (Town_01Gra_02 -> 01Gra_02), else the region and area code.
+    A name the game uses in several regions ("Dungeon") gets its region in front.
+    """
+    table = row.rsplit("_", 1)[0]
+    key = "_".join(table.split("_")[1:3])
+    name = (maps.get(map_id) or {}).get("name") or next(
+        (m["name"] for m in maps.values() if m["key"] == key and m["name"]), "")
+    region = chest_region(row)
+    if not name:
+        kind = {"Dng": "Dungeon", "Town": "Town"}.get(table.split("_")[0], table.split("_")[0])
+        return f"{region} {kind} {key.split('_', 1)[-1]}"
+    if name in GENERIC_PLACE_NAMES:
+        name = f"{region} {name}"
+    return ascii_name(name)
+
+
+GENERIC_PLACE_NAMES = {"Dungeon", "Shipyard", "Slums"}
+
+# Progression items (world 0.3.0). There is no logic for them yet: they go in the pool in place
+# of filler, and the story still hands out its own copies.
+UNIT_ITEM_BASE = 800_000_000       # AP id of a party member: base + unit id
+# The party members (data/game/units.tsv, category Playable). Archwitch Fina (1006) is Fina's
+# other form, which the story swaps in and out; the guests (1013, 1014, 1016) never stay.
+PARTY_MEMBER_IDS = [1001, 1002, 1003, 1004, 1005, 1007, 1008]
+STARTING_PARTY = [1001, 1002]      # the prologue skip gives Rain and Lasswell
+# Valuables and artifacts that are not key items of the US game, or not one-off items:
+# DLC items (29500-29520), and the counted ones (Magicite 25000-25002, Tablet Shards 25004).
+NOT_KEY_ITEMS = {25000, 25001, 25002, 25004, 29500, 29510, 29520}
+
+
+def is_japanese(name: str) -> bool:
+    return any("぀" <= ch <= "ヿ" or "一" <= ch <= "鿿" for ch in name)
 
 
 def main() -> None:
-    names = {int(r["id"]): r["name"] for r in read_tsv("game/items.tsv")}
+    item_rows = read_tsv("game/items.tsv")
+    names = {int(r["id"]): ascii_name(r["name"]) for r in item_rows}
+    maps = {int(r["id"]): r for r in read_tsv("game/maps.tsv")}
+    units = {int(r["id"]): r for r in read_tsv("game/units.tsv")}
     seen_shinies = {(r["map"], r["uid"]) for r in read_tsv("shinies.tsv")}
     items: dict[int, dict] = {}      # AP item id -> item info
 
@@ -114,11 +155,20 @@ def main() -> None:
             no_box.append(f"chest:{map_id}:{chest_id}")
             continue
         item_id, count, money = int(r["ItemId"]), int(r["ItemNum"]), int(r["Money"])
-        name, region = chest_name(r["row"], chest_id)
         ap_item = item_for(item_id, count, money)
-        entry = {"key": f"chest:{map_id}:{chest_id}", "name": name, "region": region, "row": r["row"],
+        entry = {"key": f"chest:{map_id}:{chest_id}", "place": chest_place(r["row"], map_id, maps),
+                 "region": chest_region(r["row"]), "row": r["row"],
                  "id": CHEST_LOCATION_BASE + map_id * 1000 + chest_id, "vanilla": ap_item}
         (chests if ap_item is not None else kept_chests).append(entry)
+
+    # Chests are numbered from 1 within each place name, in the order of their AP ids (map id,
+    # then row ID). A place can span maps (the Earth Shrine is maps 3000 and 3001).
+    numbered: dict[str, int] = {}
+    for entry in sorted(chests, key=lambda e: e["id"]):
+        numbered[entry["place"]] = numbered.get(entry["place"], 0) + 1
+        entry["name"] = f"{entry['place']} Chest {numbered[entry['place']]}"
+    for entry in chests + kept_chests:
+        entry.pop("place")
 
     shinies, kept_shinies = [], []
     for r in read_tsv("game/field_items.tsv"):
@@ -132,7 +182,33 @@ def main() -> None:
                  "condition": r.get("visible") or "", "seen": (r["map"], r["uid"]) in seen_shinies}
         (shinies if ap_item is not None else kept_shinies).append(entry)
 
-    # Item names must be unique: two ids with one English name get the id appended.
+    # Progression items: party members, visions and key items, one of each.
+    progression: dict[str, list[int]] = {"party": [], "vision": [], "key": []}
+    for unit_id in PARTY_MEMBER_IDS:
+        ap_id = UNIT_ITEM_BASE + unit_id
+        items[ap_id] = {"name": units[unit_id]["name"], "kind": "unit", "game_id": unit_id, "count": 1,
+                        "category": "party"}
+        if unit_id not in STARTING_PARTY:
+            progression["party"].append(ap_id)
+    for r in item_rows:
+        item_id, name = int(r["id"]), names[int(r["id"])]
+        if r["table"] == "vision":
+            category, kind = "vision", "vision"
+        elif r["table"] in ("valuable", "artifact"):
+            if item_id in NOT_KEY_ITEMS or name.startswith("[TEMP]") or is_japanese(name):
+                continue
+            category, kind = "key", "item"
+        else:
+            continue
+        ap_id = item_id * 1000 + 1
+        items[ap_id] = {"name": name, "kind": kind, "game_id": item_id, "count": 1, "category": category}
+        progression[category].append(ap_id)
+
+    # Item names must be unique: two ids with one English name get the id appended. A vision
+    # shares its name with a party member or a unit (Charlotte): it gets "Vision" after it.
+    for ap_id, info in items.items():
+        if info["category"] == "vision":
+            info["name"] = f"{info['name']} (Vision)"
     seen: dict[str, int] = {}
     for ap_id in sorted(items):
         name = items[ap_id]["name"]
@@ -158,9 +234,16 @@ def main() -> None:
         f.write("# Chests and shinies that keep vanilla key items or valuables: not locations\n")
         f.write("KEPT_VANILLA = " + pprint.pformat(sorted(e["key"] for e in kept_chests + kept_shinies), width=110) + "\n\n")
         f.write("# Chest table rows with no box placed on any map: not locations\n")
-        f.write("NO_BOX = " + pprint.pformat(sorted(no_box), width=110) + "\n")
+        f.write("NO_BOX = " + pprint.pformat(sorted(no_box), width=110) + "\n\n")
+        f.write("# Progression items by group (AP ids): party members not in the starting party, visions,\n"
+                "# key items. One of each goes in the pool when its option is on.\n")
+        f.write("PROGRESSION = " + pprint.pformat(progression, width=110, sort_dicts=True) + "\n")
+        f.write(f"STARTING_PARTY = {STARTING_PARTY!r}\n")
+        f.write(f"UNIT_ITEM_BASE = {UNIT_ITEM_BASE}\n")
     print(f"{len(chests)} chest locations ({len(kept_chests)} kept vanilla, {len(no_box)} with no box), "
-          f"{len(shinies)} shiny locations ({len(kept_shinies)} kept vanilla), {len(items)} items -> {OUT}")
+          f"{len(shinies)} shiny locations ({len(kept_shinies)} kept vanilla), {len(items)} items "
+          f"({len(progression['party'])} party members, {len(progression['vision'])} visions, "
+          f"{len(progression['key'])} key items) -> {OUT}")
 
 
 if __name__ == "__main__":

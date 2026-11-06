@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from Options import OptionGroup, OptionSet, PerGameCommonOptions, Range, Toggle
+from Options import DefaultOnToggle, OptionGroup, OptionSet, PerGameCommonOptions, Range, Toggle
 
 from .data import CHESTS, SHINIES
 
@@ -37,14 +37,47 @@ class ExcludedRegions(OptionSet):
     valid_keys = sorted({loc["region"] for loc in CHESTS + SHINIES})
 
 
+class ShufflePartyMembers(DefaultOnToggle):
+    """
+    EXPERIMENTAL. Adds the party members who join after the prologue (Fina, Lid, Nichol, Jake,
+    Sakura) to the item pool. One received joins the active party when there is room, and the
+    roster otherwise. The story still has them join at their usual time, so for now this lets
+    them join early. There is no logic for them yet.
+    """
+    display_name = "Shuffle Party Members"
+
+
+class ShuffleVisions(DefaultOnToggle):
+    """
+    EXPERIMENTAL. Adds all 26 visions to the item pool. A vision received before the story gives
+    the first ones (in the Town of Mitra) waits, and goes in once the save owns a vision. The
+    story still gives its own. There is no logic for them yet.
+    """
+    display_name = "Shuffle Visions"
+
+
+class ShuffleKeyItems(DefaultOnToggle):
+    """
+    EXPERIMENTAL. Adds the key items and artifacts to the item pool, one of each (43): keys,
+    quest items, Colosseum proofs and artifacts such as the Transporter. Left out: the DLC items,
+    Magicite, Tablet Shards and the items with no English name. The story still hands out its
+    own. There is no logic for them yet.
+    """
+    display_name = "Shuffle Key Items"
+
+
 @dataclass
 class FFResonanceOptions(PerGameCommonOptions):
     goal_story_checkpoint: GoalStoryCheckpoint
     include_shinies: IncludeShinies
     excluded_regions: ExcludedRegions
+    shuffle_party_members: ShufflePartyMembers
+    shuffle_visions: ShuffleVisions
+    shuffle_key_items: ShuffleKeyItems
 
 
 option_groups = [
     OptionGroup("Goal", [GoalStoryCheckpoint]),
     OptionGroup("Locations", [IncludeShinies, ExcludedRegions]),
+    OptionGroup("Items", [ShufflePartyMembers, ShuffleVisions, ShuffleKeyItems]),
 ]
