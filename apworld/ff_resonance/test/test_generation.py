@@ -1,6 +1,6 @@
 from BaseClasses import LocationProgressType
 
-from ..data import CHESTS, ITEMS, SHINIES, SHUFFLE_ID_LIMIT
+from ..data import CHESTS, ITEMS, NO_BOX, SHINIES, SHUFFLE_ID_LIMIT
 from ..locations import GOAL_EVENT, LOCATION_KEY_TO_ID
 from . import FFResonanceTestBase
 
@@ -57,6 +57,20 @@ class TestData(FFResonanceTestBase):
         for info in ITEMS.values():
             if info["kind"] == "item":
                 self.assertLess(info["game_id"], SHUFFLE_ID_LIMIT, info)
+
+    def test_rows_with_no_box_are_not_locations(self) -> None:
+        # Map 10050 (Dng_02Lan_41) has no level and no map table row: the game does not ship it.
+        self.assertIn("chest:10050:0", NO_BOX)
+        self.assertIn("chest:3000:0", NO_BOX)      # never seen in game, while 3000:1-6 were
+        keys = {loc["key"] for loc in CHESTS + SHINIES}
+        self.assertFalse(keys & set(NO_BOX))
+        self.assertNotIn("Item 5", {info["name"] for info in ITEMS.values()})
+
+    def test_shinies_come_from_the_game_files(self) -> None:
+        self.assertEqual(len(SHINIES), 92)
+        self.assertTrue(all(s["region"] == "World Map" for s in SHINIES))
+        unseen = sorted(int(s["key"].split(":")[2]) for s in SHINIES if not s["seen"])
+        self.assertEqual(unseen, [70, 71, 84, 85, 86, 87, 88, 89, 91])
 
     def test_mod_keys_map_to_ids(self) -> None:
         self.assertEqual(LOCATION_KEY_TO_ID["chest:3020:1"], 1_000_000_000 + 3020 * 1000 + 1)

@@ -256,7 +256,7 @@ Still to decide: whether to show a message first ("Skipping the prologue…"), a
 
 ## 5. Key items and gates from the item table
 
-**Known so far:** these ids are in `data/item_names.tsv`, and they match gates in [docs/progression.md](docs/progression.md):
+**Known so far:** these ids are in `data/game/items.tsv`, and they match gates in [docs/progression.md](docs/progression.md):
 
 | Item | Id | Gate |
 |---|---|---|

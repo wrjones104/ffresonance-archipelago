@@ -13,7 +13,7 @@ Related: [progression.md](progression.md) (the chapter-by-chapter reference), [I
 
 - **One region.** Every location is reachable from the start as far as logic goes. Late-game chests are simply late.
 - **No progression items.** Equipment is "useful", and consumables and gil are "filler". Key items, visions and party members stay where the game puts them, so the story can always be finished.
-- **Locations:** 216 chests in 10 regions, and 83 shinies on the world map (an option, off by default). 26 chests that hold items with id 13000 and up (visions, key items, valuables) keep their vanilla content and are not locations.
+- **Locations:** 202 chests in 10 regions, and 92 shinies on the world map (an option, off by default), all from the game's own files (world 0.2.0). Chests and shinies that hold items with id 13000 and up (visions, key items, valuables, Tablet Shards) keep their vanilla content and are not locations. So are the 15 chest rows with no box placed on any map.
 - **Goal:** reach a story checkpoint (`goal_story_checkpoint`, default 8050).
 - **Options:** the goal, `include_shinies` and `excluded_regions`.
 
@@ -104,24 +104,24 @@ The location regions today, with where each opens in the story:
 
 | Region | Chests | Opens (story) | Needs, beyond the story | Can you go back later? |
 |---|---|---|---|---|
-| Grandshelt | 47 | chapter 1 | | |
+| Grandshelt | 40 | chapter 1 | | |
 | Kol | 8 | chapter 1 (Village of Kol) | Chocobo? | |
-| Lan | 33 | ? | | |
-| Dirnado | 20 | chapter 2 | | |
+| Lan | 28 | ? | | |
+| Dirnado | 19 | chapter 2 | | |
 | Olderion | 23 | chapter 3 | | |
-| Zoldaad | 22 | chapter 4 | keys inside (Tunnel, Dungeon, Throne Room)? | |
+| Zoldaad | 21 | chapter 4 | keys inside (Tunnel, Dungeon, Throne Room)? | |
 | Mysidia | 25 | chapter 5 | Radar Pulse (story) | |
 | Gronoa | 17 | chapter 6 | Holy for the west | |
 | Pharm | 11 | chapter 7 | | |
 | Crystal Tower | 10 | chapter 8 | | |
-| World Map (shinies) | 83 | varies | airship, radar tiers | |
+| World Map (shinies) | 92 | varies | airship, radar tiers | |
 
 **What the game data dump gives this section (2026-11-06).** `data/game/` (README, "The game data dump") is read from the game's own files:
 - **The map graph.** `transitions.tsv` has 640 map exits on 143 maps, with the map and point each leads to. 18 of them have a condition (`{progress:N}` or `{flag:N}`). Logic regions can be built from it, not by hand.
 - **The game's own blockers.** `gimmicks.tsv` has 282 blocking boxes, 43 no-entry zones and 41 blocking bases. Many have a condition such as `!{flag:928}`. These show where the game already gates the map, and which flag opens each gate (idea 16).
 - **Airship landing points.** 81 on the world map, each with a destination id (idea 17).
 - **Field items.** 197 field items hold an item: 94 on the world map and 103 elsewhere. Today the world has 83 world-map shinies, from what was seen in game. All 95 rows in `data/shinies.tsv` match the dump.
-- **Chests.** The 238 chest table rows match `data/chests.tsv` exactly. 17 rows have no placed box on any map, for example all of `02Lan_41`, which ships only a background level. Some may be cut content. Check them in game before they count as locations.
+- **Chests.** The 238 chest table rows match `data/chests.tsv` exactly. A box is matched to its row by `m_Id`, and by its map or by its level's name (`gen_from_dump.box_matches`; round 3 confirmed both ways). 15 rows have no placed box on any map, and since world 0.2.0 they are not locations (`NO_BOX` in `data.py`). Among them is all of map 10050 (`02Lan_41`), which ships only a background level and has no map table row; its items 5 and 6 are not in any item table. Boxes with no `m_Id` (the native default, -1) are the open story chests that round 3 saw in map 2002.
 
 **Your call, and facts to fill in:**
 - Where is **Lan**, and when does it open?

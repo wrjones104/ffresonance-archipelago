@@ -20,9 +20,10 @@ class GoalStoryCheckpoint(Range):
 
 class IncludeShinies(Toggle):
     """
-    EXPERIMENTAL. Adds the shining spots ("shinies") seen so far as locations: 83, most on the
-    world map. The list is incomplete. Shinies still give their vanilla item as well, because the
-    mod cannot replace a shiny's reward yet.
+    EXPERIMENTAL. Adds the shining spots ("shinies") that hold consumables, equipment or gil as
+    locations: 92, all on the world map, read from the game's own files. Shinies elsewhere hold
+    Tablet Shards or key items, so they are not locations. Shinies still give their vanilla item
+    as well, because the mod cannot replace a shiny's reward yet.
     """
     display_name = "Include Shinies"
 

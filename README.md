@@ -22,7 +22,7 @@ The world is tested off-line: Archipelago's general tests pass with it, its own 
 - **ModSettings** (a Blueprint mod in `Content/Paks/LogicMods`, from the same modding tools as FFRSLib) is optional. In the field, messages ("Received ...", "Sent ...", "Archipelago is paused", "Prologue skipped") go to the mod's own item feed at the bottom right of the HUD (since 0.10.0, on by default). ModSettings' Toast panel takes them off the field (the title screen), when the feed has not been able to show anything for 10 seconds since the game started, and with `ffrap_feed off`. Without ModSettings those few only go to `UE4SS.log`.
 - **FFRSLib, FFRS_QoL, FFRBestiary and FFRRandomizer are not needed.** Their code is where the game calls come from (see "Where the game calls come from"), but this mod calls the game directly. FFRRandomizer should stay disabled (IDEAS.md, idea 10).
 
-1. **Mod.** Copy `FFRArchipelago/Scripts` and `FFRArchipelago/Assets` over the installed mod (0.11.2). Delete the old `ap_in.txt`, `ap_out.txt` and `ap_state.txt`, and keep `seen.tsv`. Keep FFRRandomizer disabled.
+1. **Mod.** Copy `FFRArchipelago/Scripts` and `FFRArchipelago/Assets` over the installed mod (0.11.3). Delete the old `ap_in.txt`, `ap_out.txt` and `ap_state.txt`, and keep `seen.tsv`. Keep FFRRandomizer disabled.
 2. **World.** Run `python tools/build_apworld.py`, then copy `dist/ff_resonance.apworld` into your Archipelago `custom_worlds` folder. Or, from source, copy `apworld/ff_resonance` into `worlds/`.
 3. **Seed.**
    - Copy `apworld/Final Fantasy Resonance.yaml` into Archipelago's `Players` folder and set a name.
@@ -80,14 +80,13 @@ apworld/Final Fantasy Resonance.yaml   example player options
 tools/fake_ap.py           fake Archipelago server for testing the mod alone
 tools/gen_apworld_data.py  data/*.tsv -> apworld/ff_resonance/data.py
 tools/build_apworld.py     apworld/ff_resonance -> dist/ff_resonance.apworld
-tools/import_item_names.py FFR-Randomizer's ItemNames.lua -> data/item_names.tsv
 tools/snapdiff.py          compares two ffrap_snapshot files
 tools/dump_game/           C# (CUE4Parse): the game's pak files -> dump/ (JSON; git ignores it)
 tools/gen_from_dump.py     dump/ -> data/game/*.tsv, and --check against data/*.tsv
-data/chests.tsv            every chest table row (ffrap_export): the chest location table
-data/shinies.tsv           shinies seen in game (the mod's seen.tsv)
-data/item_names.tsv        item id -> name, from FFR-Randomizer by LordMikoda (MIT)
-data/game/                 tables made from the game's own files (see "The game data dump")
+data/game/                 tables made from the game's own files (see "The game data dump");
+                           tools/gen_apworld_data.py builds the world from them
+data/chests.tsv            every chest table row, exported in game (ffrap_export): a record from play
+data/shinies.tsv           shinies seen in game (the mod's seen.tsv): marks a shiny "seen"
 docs/progression.md        the game's progression, chapter by chapter
 docs/logic.md              the progression logic design (draft)
 tests/                     every test; run them all with python tests/run_all.py (tests/README.md)
@@ -95,13 +94,13 @@ CLAUDE.md                  how we work, for Claude sessions: conventions, lesson
 FFRArchipelago/Assets/     the Archipelago logo for the title screen
 ```
 
-After `data/*.tsv` changes, run `python tools/gen_apworld_data.py` and commit the regenerated `data.py`.
+After `data/game/*.tsv` or `data/shinies.tsv` changes, run `python tools/gen_apworld_data.py` and commit the regenerated `data.py`.
 
 Ideas that are not on the test plan yet (Tablet Shards, skipping the prologue, an open-world mode) are in [IDEAS.md](IDEAS.md). The progression logic is being designed in [docs/logic.md](docs/logic.md).
 
 ## The game data dump
 
-`tools/dump_game` reads the game's pak files directly, without starting the game, and writes the data as JSON to `dump/`. `tools/gen_from_dump.py` turns that into tables in `data/game/`. These tables are the reference for items, characters, maps and placements. The other files in `data/` came from FFR-Randomizer or from in-game exports.
+`tools/dump_game` reads the game's pak files directly, without starting the game, and writes the data as JSON to `dump/`. `tools/gen_from_dump.py` turns that into tables in `data/game/`. These tables are the reference for items, characters, maps and placements, and the world is built from them (since world 0.2.0). The other files in `data/` are records from play.
 
 ```
 dotnet run --project tools/dump_game -- all
@@ -119,7 +118,7 @@ python tools/gen_from_dump.py --check
 | `items.tsv` | All 589 items in the six item tables: id, table, type, equipment detail, name, prices |
 | `units.tsv` | All 643 units: 11 playable (the 8 party members, and the guests Ignis, Alluvion and Charlotte), 26 visions, 10 summons (category `Beast`), enemies and bosses |
 | `maps.tsv` | All 186 maps: id, key (`01Gra_40`), English name, island, group |
-| `chests.tsv` | Every treasure box table row, in the columns of `data/chests.tsv` |
+| `chests.tsv` | Every treasure box table row, in the columns of `data/chests.tsv`, plus `boxes`: the placed boxes that are its box (`level:uid`). A row with none is not a location |
 | `treasure_actors.tsv` | Every treasure box placed on a map, with its `m_Id`, level and position |
 | `field_items.tsv` | Every field item placed on a map, in the columns of `data/shinies.tsv`, plus events, level and position |
 | `transitions.tsv` | Every map exit: from map, to map and point, and its condition. This is the map graph |
@@ -247,7 +246,7 @@ This was the first real Archipelago game: a new game, a local MultiServer, the 0
   - 30011 (Chocobo Saddle-Bike) did nothing visible. It may be unused, or need a condition we have not found.
 - **Bug 1, seed name:** the 0.6.7 client never stores the room's seed name, so the session key was `unknown:0:1`. Every seed with the same slot would get that key, and the mod would skip a new seed's items as already applied. Fixed in the client: it reads the seed name from `RoomInfo` itself, and it does not connect to the game if there is none.
 - **Bug 2, checks from another save:** the session started while an old save (story 1095) was loaded. The sync on that load reported `shiny:1000:150` from the old save into the new session. It was ignored because shinies are off, but a chest would have been sent. See open question 8.
-- **Item names:** items 5 and 6 have no name in `item_names.tsv`, so they showed as "Item 5" and "Item 6". Their vanilla chests are Mysidia Dungeon 45 Chest 0 and Olderion Dungeon 43 Chest 4.
+- **Item names:** items 5 and 6 have no name in `item_names.tsv`, so they showed as "Item 5" and "Item 6". Their vanilla chests are Mysidia Dungeon 45 Chest 0 and Olderion Dungeon 43 Chest 4. (The game data dump later showed why: items 5 and 6 are in no item table, and they come from chests in map 10050, a dungeon the game does not ship. World 0.2.0 drops those chests.)
 
 Rounds 6 to 9 (2026-11-05) worked out and tested the prologue skip; their results are in IDEAS.md, idea 2.
 
@@ -339,11 +338,19 @@ Rounds 6 to 9 (2026-11-05) worked out and tested the prologue skip; their result
 - **The fast check:** from the second chest on, the check and the pop-up text came in the same pass (for example, both at 16:33:11.23). No stutter.
 - **Found:** after reloading an older save (slot 0), chests opened again kept "1 gil". Their checks were already reported, and only a first report asked for the pop-up text, though the scouts were there.
 
-## Round 28 test plan (mod 0.11.2, world 0.1.4)
+## Round 29 test plan (mod 0.11.3, world 0.2.0)
 
-1. **Install.** Copy `FFRArchipelago/Scripts` over the installed mod. The log should say `version 0.11.2 loaded`.
-2. **Chests again after a reload:** open a few chests, go back to the title without saving (or load an older save), and open the same chests again. Each pop-up should say what the chest held, with no new `check` line in the log.
-3. **New chests** work as before.
+The world now comes from the game's own files (README, "The game data dump"). It has 202 chest locations (was 216) and 92 shinies (was 83). 14 chest rows were dropped because no box for them is placed on any map, among them all of map 10050, a dungeon the game does not ship. 9 world-map shinies are new: uids 70, 71, 84 to 89 and 91. Round 28 was not played, so its steps are here too.
+
+1. **Install.**
+   - Copy `FFRArchipelago/Scripts` over the installed mod. The log should say `version 0.11.3 loaded`.
+   - Copy `dist/ff_resonance.apworld` into Archipelago's `custom_worlds`, and generate a new seed. The client should say world 0.2.0.
+2. **Chests again after a reload** (from round 28): open a few chests, go back to the title without saving (or load an older save), and open the same chests again. Each pop-up should say what the chest held, with no new `check` line in the log.
+3. **The new shinies,** with `include_shinies` on. Pick up one or two of world-map shinies 70, 71, 84 to 89 and 91. Each should send a check (`check shiny:1000:<uid>` in the log).
+4. **Dropped chests.** Where you can, visit a map with a dropped row and run `ffrap_dump` there. Look for a chest that gives 1 gil and sends no check: that would be a real chest we dropped. The dropped rows are in `NO_BOX` in `apworld/ff_resonance/data.py`. The ones easiest to reach:
+   - Map 3000 (the first dungeon), row 0. Round 1 saw boxes 1 to 6 there and never row 0.
+   - Grandshelt Castle (map 2012), rows 2 to 4. The three boxes there with no row (uids 50, 52, 54) were open story chests in round 3.
+5. **Send** `UE4SS.log` (`[FFRAP]` lines) and `seen.tsv`.
 
 ## Open questions
 
@@ -369,7 +376,7 @@ Rounds 6 to 9 (2026-11-05) worked out and tested the prologue skip; their result
 
 1. Replace `fake_ap.py` with a real client: a CommonClient subclass that connects to the server, writes `ReceivedItems` to `ap_in.txt` and sends `ap_out.txt` checks as `LocationChecks`. Later it could become an embedded UE4SS C++ client.
 2. Build the apworld:
-   - Locations: 238 chests from `chests.tsv`, shinies, story checkpoints and bosses.
+   - Locations: chests and shinies from `data/game/`, story checkpoints and bosses.
    - Items: bag items, 26 visions, 8 party members, key items, gil.
    - Regions:
      - The linear first half is gated by the story counter.

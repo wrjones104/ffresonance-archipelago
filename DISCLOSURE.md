@@ -15,7 +15,7 @@ Claude Code (Anthropic), using Claude Opus models, in the Claude desktop app.
 **Written by Claude:**
 - The UE4SS Lua mod: `FFRArchipelago/Scripts/main.lua`, `game.lua` and `bridge.lua`.
 - The Archipelago world and client: everything in `apworld/ff_resonance`, including its tests and docs.
-- The tools in `tools/`: the fake server, the data generator, the apworld builder, the item-name importer, and the game data dump (`tools/dump_game`, built on the CUE4Parse library, and `tools/gen_from_dump.py`).
+- The tools in `tools/`: the fake server, the data generator, the apworld builder, and the game data dump (`tools/dump_game`, built on the CUE4Parse library, and `tools/gen_from_dump.py`).
 - Most of the text in `README.md`, `IDEAS.md` and `docs/progression.md`, with notes from me reworded and checked against the game data.
 - Research: reading the installed mods (FFR Modding Tools / FFRSLib, FFRS_QoL) and FFR-Randomizer to find out which engine calls and data tables to use.
 
@@ -45,7 +45,7 @@ Every change was tested in the real game, apart from the items marked "not teste
 
 ## Credits
 
-- **FFR-Randomizer** by LordMikoda (MIT): the item names in `data/item_names.tsv` and `data.py`. See `data/LICENSE-FFR-Randomizer.txt`.
+- **FFR-Randomizer** by LordMikoda (MIT): the item names in `data.py` came from it up to world 0.1.4. Since world 0.2.0 they come from the game's own files (`tools/dump_game`).
 - **FFR Modding Tools (FFRSLib)** by Kanaruu, and **FFRS_QoL**: the engine calls this mod uses. No code is copied, but the calls follow theirs. Their permissions are still to be checked; see `README.md`.
 - **FFRBestiary**: how the mod tells which save slot is loaded (0.5.0).
 - **Item and Chest Markers** by ZArkadia (Nexus mod 25): FFRS_QoL's shiny markers are based on it.

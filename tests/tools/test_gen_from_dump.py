@@ -65,23 +65,38 @@ def make_dump(root):
     }})
     write(root, f"{T}/Map/MapData/DT_MapData_01Gra.json", {"Rows": {
         "01Gra_40": {"ID": 3000, "Name": ftext("Grandshelt Isles"), "island": "eMapIslandType::Grandshelt", "GroupId": -1},
+        "01Gra_41": {"ID": 3001, "Name": ftext("Cave"), "island": "eMapIslandType::Grandshelt", "GroupId": -1},
+        "01Gra_02": {"ID": 2011, "Name": ftext("Capital"), "island": "eMapIslandType::Grandshelt", "GroupId": 2011},
     }})
     write(root, f"{T}/Shop/DT_ShopList.json", {"Rows": {
         "tools": {"ShopID": 0, "ItemList": [{"ItemId": 1, "Condition": "", "MaxOrderNum": -1, "PriceRatio": 1.0}]},
     }})
     write(root, f"{T}/Map/Gimmick/TreasureBox/CDT_MapGimmickTreasureBox.json",
-          {"Properties": {"ParentTables": [ref("DT_Dng_01Gra_40"), None]}})
+          {"Properties": {"ParentTables": [ref("DT_Dng_01Gra_40"), None, ref("DT_Town_01Gra_02")]}})
     write(root, f"{T}/Map/Gimmick/TreasureBox/DT_Dng_01Gra_40.json", {"Rows": {
         "Dng_01Gra_40_0": {"ID": 0, "mapId": 3000, "ItemId": 1, "ItemNum": 2, "Money": -1, "IsTrap": False, "battleGroupId": -1},
         "Dng_01Gra_40_1": {"ID": 1, "mapId": 3000, "ItemId": -1, "ItemNum": 1, "Money": 400, "IsTrap": False, "battleGroupId": -1},
+        "Dng_01Gra_40_2": {"ID": 2, "mapId": 3000, "ItemId": 4, "ItemNum": 1, "Money": -1, "IsTrap": False, "battleGroupId": -1},
+    }})
+    # Rows of one table can sit in other maps: 2001:0 in a level named after the table, 3001:3 in
+    # another level of its own map.
+    write(root, f"{T}/Map/Gimmick/TreasureBox/DT_Town_01Gra_02.json", {"Rows": {
+        "Town_01Gra_02_0": {"ID": 0, "mapId": 2001, "ItemId": 4, "ItemNum": 3, "Money": -1, "IsTrap": False, "battleGroupId": -1},
+        "Town_01Gra_02_3": {"ID": 3, "mapId": 3001, "ItemId": -1, "ItemNum": 1, "Money": 300, "IsTrap": False, "battleGroupId": -1},
     }})
     # A medal shiny takes its item from the class default; a spot has none; m_UniqueId 0 is not stored.
     level = "FFRS/Content/Map/Dng/01Gra/01Gra_40/GD/Dng_01Gra_40_GD.json"
     world = "FFRS/Content/Map/Wld/GD/Wld_01Gra_GD.json"
-    write(root, "maps/index.json", [{"path": level, "actors": 4}, {"path": world, "actors": 2}])
+    town = "FFRS/Content/Map/Town/01Gra/01Gra_02/GD/Town_01Gra_02_01_GD.json"
+    house = "FFRS/Content/Map/Dng/01Gra/01Gra_41/GD/Dng_01Gra_41_GD.json"
+    write(root, "maps/index.json", [{"path": level, "actors": 4}, {"path": world, "actors": 2},
+                                    {"path": town, "actors": 1}, {"path": house, "actors": 1}])
+    write(root, "maps/" + town, [{"Type": "BP_MapGimmick_TreasureBox_C", "Properties": {"m_Id": 0, "m_UniqueId": 4}}])
+    write(root, "maps/" + house, [{"Type": "BP_MapGimmick_TreasureBox_C", "Properties": {"m_Id": 3, "m_UniqueId": 23}}])
     write(root, "maps/" + level, [
-        {"Type": "BP_MapGimmick_TreasureBox_C", "Properties": {"m_UniqueId": 4}, "RootLocation": {"X": 1.4, "Y": 2, "Z": 3}},
+        {"Type": "BP_MapGimmick_TreasureBox_C", "Properties": {"m_Id": 0, "m_UniqueId": 4}, "RootLocation": {"X": 1.4, "Y": 2, "Z": 3}},
         {"Type": "BP_MapGimmick_TreasureBox002_C", "Properties": {"m_Id": 1, "m_UniqueId": 5}},
+        {"Type": "BP_MapGimmick_TreasureBox_C", "Properties": {"m_UniqueId": 50}},     # no m_Id: a story chest (-1)
         {"Type": "BP_MapGimmick_BlockingBox_C", "Properties": {"m_UniqueId": 7, "VisibleCondition": "!{flag:928}"}},
         {"Type": "BP_MapTransitionTrigger_C", "Properties": {"m_UniqueId": 8, "m_MapId": 1000, "m_PointID": 10200,
                                                               "m_IsUseCondion": True, "m_Condition": "{progress:0}>=4000"}},
@@ -143,16 +158,23 @@ def main():
         assert units["1001"]["category"] == "Playable" and units["10452"]["name"] == "Ifrit"
 
         maps = {r["key"]: r["id"] for r in tsv(game / "maps.tsv")}
-        assert maps == {"Wld": "1000", "01Gra_40": "3000"}, maps
+        assert maps == {"Wld": "1000", "01Gra_40": "3000", "01Gra_41": "3001", "01Gra_02": "2011"}, maps
         assert tsv(game / "shops.tsv")[0]["item"] == "1"
 
         chests = tsv(game / "chests.tsv")
-        assert [c["row"] for c in chests] == ["Dng_01Gra_40_0", "Dng_01Gra_40_1"]
+        assert [c["row"] for c in chests] == ["Dng_01Gra_40_0", "Dng_01Gra_40_1", "Dng_01Gra_40_2",
+                                              "Town_01Gra_02_0", "Town_01Gra_02_3"]
         assert chests[1]["Money"] == "400" and chests[0]["IsTrap"] == "false"
+        boxes_of = {c["row"]: c["boxes"] for c in chests}
+        assert boxes_of["Dng_01Gra_40_0"] == "Dng_01Gra_40:4", boxes_of
+        assert boxes_of["Dng_01Gra_40_2"] == "", boxes_of                       # no box: not a location
+        assert boxes_of["Town_01Gra_02_0"] == "Town_01Gra_02_01:4", boxes_of    # by table name
+        assert boxes_of["Town_01Gra_02_3"] == "Dng_01Gra_41:23", boxes_of       # by map
 
         boxes = tsv(game / "treasure_actors.tsv")
-        assert [(b["map"], b["ID"], b["uid"]) for b in boxes] == [("3000", "0", "4"), ("3000", "1", "5")], boxes
-        assert boxes[0]["x"] == "1", boxes[0]
+        assert [(b["map"], b["ID"], b["uid"]) for b in boxes] == [
+            ("2011", "0", "4"), ("3000", "-1", "50"), ("3000", "0", "4"), ("3000", "1", "5"), ("3001", "3", "23")], boxes
+        assert boxes[2]["x"] == "1", boxes[2]
 
         fields = {(r["map"], r["uid"]): r for r in tsv(game / "field_items.tsv")}
         assert fields[("1000", "4")]["item"] == "25004" and fields[("1000", "4")]["kind"] == "shiny"
@@ -171,6 +193,8 @@ def main():
         assert "name differs: 20005" in log, log
         assert "differs: Dng_01Gra_40_0: ItemNum 3 -> 2" in log, log
         assert "seen in game but not placed on a map: map 2015 uid 4" in log, log
+        assert "table row with no box on any map: Dng_01Gra_40_2" in log, log
+        assert "box with no table row: map 3000 ID -1 uid 50" in log, log
         assert "not seen in game yet: 1" in log, log
     print("ok")
 

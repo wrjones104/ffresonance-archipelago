@@ -2,10 +2,18 @@
 
     python tools/gen_apworld_data.py
 
-Inputs:
-    data/chests.tsv      every chest table row, exported in game with ffrap_export
-    data/shinies.tsv     shinies seen in game (from the mod's seen.tsv)
-    data/item_names.tsv  item id -> English name (from FFR-Randomizer, MIT)
+Inputs, from the game's own files (tools/dump_game, then tools/gen_from_dump.py):
+    data/game/items.tsv            item id -> English name
+    data/game/chests.tsv           every chest table row, with the placed boxes that are its box
+    data/game/field_items.tsv      every field item (shiny) placed on a map
+And from play:
+    data/shinies.tsv               shinies seen in game (the mod's seen.tsv): marks a shiny "seen"
+
+A chest table row is a location only when a box for it is placed on some map (the boxes
+column; gen_from_dump.box_matches says how a box is matched to its row). The rounds agree:
+map 3000 showed boxes 1-6 in round 1 and never row 0, which has no box. Rows with no box
+(for example all of map 10050, a dungeon the game does not ship) go to NO_BOX and are not
+locations.
 
 Which items move: the same kinds FFR-Randomizer moves (consumables, equipment, seeds), plus
 gil. Those are told apart by id range, read off the item tables: consumables and scrolls are
@@ -56,6 +64,8 @@ def read_tsv(name):
         return list(csv.DictReader(f, delimiter="\t"))
 
 
+
+
 def item_kind(item_id: int, money: int) -> str | None:
     if item_id < 0:
         return "gil" if money > 0 else None
@@ -77,7 +87,8 @@ def chest_name(row: str, chest_id: int) -> tuple[str, str]:
 
 
 def main() -> None:
-    names = {int(r["id"]): r["name"] for r in read_tsv("item_names.tsv")}
+    names = {int(r["id"]): r["name"] for r in read_tsv("game/items.tsv")}
+    seen_shinies = {(r["map"], r["uid"]) for r in read_tsv("shinies.tsv")}
     items: dict[int, dict] = {}      # AP item id -> item info
 
     def item_for(item_id: int, count: int, money: int) -> int | None:
@@ -96,9 +107,12 @@ def main() -> None:
                                  "game_id": item_id, "count": count, "category": kind})
         return ap_id
 
-    chests, kept_chests = [], []
-    for r in read_tsv("chests.tsv"):
+    chests, kept_chests, no_box = [], [], []
+    for r in read_tsv("game/chests.tsv"):
         map_id, chest_id = int(r["mapId"]), int(r["ID"])
+        if not r["boxes"]:
+            no_box.append(f"chest:{map_id}:{chest_id}")
+            continue
         item_id, count, money = int(r["ItemId"]), int(r["ItemNum"]), int(r["Money"])
         name, region = chest_name(r["row"], chest_id)
         ap_item = item_for(item_id, count, money)
@@ -107,15 +121,15 @@ def main() -> None:
         (chests if ap_item is not None else kept_chests).append(entry)
 
     shinies, kept_shinies = [], []
-    for r in read_tsv("shinies.tsv"):
-        if r["kind"] != "shiny":
+    for r in read_tsv("game/field_items.tsv"):
+        if r["kind"] != "shiny" or not r["map"]:
             continue
         map_id, uid = int(r["map"]), int(r["uid"])
         ap_item = item_for(int(r["item"]), int(r["count"]), int(r["money"]))
         place = "World Map" if map_id == WORLD_MAP else f"Map {map_id}"
         entry = {"key": f"shiny:{map_id}:{uid}", "name": f"{place} Shiny {uid}", "region": place,
                  "id": SHINY_LOCATION_BASE + map_id * 1000 + uid, "vanilla": ap_item,
-                 "condition": r.get("visible") or ""}
+                 "condition": r.get("visible") or "", "seen": (r["map"], r["uid"]) in seen_shinies}
         (shinies if ap_item is not None else kept_shinies).append(entry)
 
     # Item names must be unique: two ids with one English name get the id appended.
@@ -126,6 +140,8 @@ def main() -> None:
             items[ap_id]["name"] = f"{name} ({items[ap_id]['game_id']})"
         seen[items[ap_id]["name"]] = ap_id
 
+    chests.sort(key=lambda e: e["id"])
+    shinies.sort(key=lambda e: e["id"])
     location_names = [e["name"] for e in chests + shinies]
     assert len(location_names) == len(set(location_names)), "duplicate location names"
 
@@ -136,11 +152,14 @@ def main() -> None:
         f.write("ITEMS = " + pprint.pformat(items, width=110, sort_dicts=True) + "\n\n")
         f.write("# Chest locations: key (as the mod reports it), name, region, row, AP id, vanilla AP item\n")
         f.write("CHESTS = " + pprint.pformat(chests, width=110, sort_dicts=True) + "\n\n")
-        f.write("# Shiny locations seen so far (data/shinies.tsv); condition is the spot's VisibleCondition\n")
+        f.write("# Shiny locations (data/game/field_items.tsv); condition is the spot's VisibleCondition,\n"
+                "# seen is whether it was seen in game (data/shinies.tsv)\n")
         f.write("SHINIES = " + pprint.pformat(shinies, width=110, sort_dicts=True) + "\n\n")
         f.write("# Chests and shinies that keep vanilla key items or valuables: not locations\n")
-        f.write("KEPT_VANILLA = " + pprint.pformat(sorted(e["key"] for e in kept_chests + kept_shinies), width=110) + "\n")
-    print(f"{len(chests)} chest locations ({len(kept_chests)} kept vanilla), "
+        f.write("KEPT_VANILLA = " + pprint.pformat(sorted(e["key"] for e in kept_chests + kept_shinies), width=110) + "\n\n")
+        f.write("# Chest table rows with no box placed on any map: not locations\n")
+        f.write("NO_BOX = " + pprint.pformat(sorted(no_box), width=110) + "\n")
+    print(f"{len(chests)} chest locations ({len(kept_chests)} kept vanilla, {len(no_box)} with no box), "
           f"{len(shinies)} shiny locations ({len(kept_shinies)} kept vanilla), {len(items)} items -> {OUT}")
 
 

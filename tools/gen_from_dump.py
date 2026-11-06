@@ -5,9 +5,9 @@
     python tools/gen_from_dump.py --check           # also compares them with data/*.tsv
 
 The dump is the game's own data, read from its pak files, so these tables are the
-reference. data/item_names.tsv (from FFR-Randomizer), data/chests.tsv (ffrap_export)
-and data/shinies.tsv (shinies seen in game) came from other places; --check lists
-where they differ from the dump.
+reference, and tools/gen_apworld_data.py builds the world from them. data/chests.tsv
+(ffrap_export) and data/shinies.tsv (shinies seen in game) are records from play;
+--check lists where they differ from the dump.
 
 Outputs (data/game/):
     items.tsv        every item in the six item tables: id, table, type, detail, name, prices
@@ -144,8 +144,26 @@ def shops():
 
 # ---------------------------------------------------------------- chests
 
-def chests():
-    """Every row of the treasure box tables, in CDT_MapGimmickTreasureBox's parent order."""
+CHEST_COLUMNS = ["row", "mapId", "ID", "ItemId", "ItemNum", "Money", "IsTrap", "battleGroupId"]
+
+
+def box_matches(row, box):
+    """Whether a placed box (a treasure_actors row) is this chest table row's box.
+
+    The box's m_Id is the row's ID, and either the box's level is the row's map, or the
+    level's name starts with the row's table name. Both are needed: row 2001:0 is in level
+    Town_01Gra_02_01 (map 2011), and row Town_01Gra_02_3 (map 2015) in level Town_01Gra_04_01.
+    Round 3 confirmed both in game. A box with no m_Id (-1) is a story chest with no row.
+    """
+    if str(box[1]) != str(row[2]):
+        return False
+    table = row[0].rsplit("_", 1)[0]
+    return str(box[0]) == str(row[1]) or box[5] == table or box[5].startswith(table + "_")
+
+
+def chests(box_rows):
+    """Every row of the treasure box tables, in CDT_MapGimmickTreasureBox's parent order,
+    with the placed boxes that are its box (level:uid). A row with none is not a location."""
     composite = load(f"{TABLES}/Map/Gimmick/TreasureBox/CDT_MapGimmickTreasureBox.json")
     rows = []
     for parent in composite["Properties"]["ParentTables"]:
@@ -155,7 +173,9 @@ def chests():
         for key, r in table_rows(f"Map/Gimmick/TreasureBox/{name}").items():
             rows.append([key, r["mapId"], r["ID"], r["ItemId"], r["ItemNum"], r["Money"],
                          str(r["IsTrap"]).lower(), r["battleGroupId"]])
-    write_tsv("chests.tsv", ["row", "mapId", "ID", "ItemId", "ItemNum", "Money", "IsTrap", "battleGroupId"], rows)
+    for row in rows:
+        row.append(" ".join(f"{b[5]}:{b[2]}" for b in box_rows if box_matches(row, b)))
+    write_tsv("chests.tsv", CHEST_COLUMNS + ["boxes"], rows)
     return rows
 
 
@@ -235,10 +255,11 @@ def actors(by_key):
                 fields.append([kind, mid, uid, cls, item, props.get("m_ItemNum", 1), props.get("m_Money", -1),
                                condition(props), events(props), stem] + where)
             elif TREASURE.search(cls):
-                # The game looks a box up by the current map and m_Id (IsOpenTreasureBox(mapId, id)).
+                # m_Id is the box's chest table row ID. A box that does not store one has the native
+                # default, -1: round 3 saw those live (m_Id -1) as open story chests with no row.
                 # m_TreasureBoxData is an editor copy and is often empty, so it is only reported.
                 data = props.get("m_TreasureBoxData") or {}
-                boxes.append([mid, props.get("m_Id", 0), uid, cls, condition(props), stem] + where
+                boxes.append([mid, props.get("m_Id", -1), uid, cls, condition(props), stem] + where
                              + [f"{data.get('mapId', 0)}:{data.get('ID', 0)}"])
             elif TRANSITION.search(cls):
                 transitions.append([mid, stem, uid, props.get("m_MapId", ""), props.get("m_PointID", ""),
@@ -266,28 +287,30 @@ def actors(by_key):
 
 def check(item_rows, chest_rows, field_rows, box_rows):
     problems = 0
-    unmapped = [r for r in field_rows + box_rows if r[1] == "" or (r is not None and r in box_rows and r[0] == "")]
+    unmapped = sorted({r[9] for r in field_rows if r[1] == ""} | {r[5] for r in box_rows if r[0] == ""})
     if unmapped:
-        print(f"\n{len(unmapped)} field items or chests whose map file has no map id:")
-        for r in unmapped[:20]:
-            print("  ", r)
+        print(f"\nlevels with field items or chests but no map id: {' '.join(unmapped)}")
 
-    names = {int(r["id"]): r["name"] for r in read_tsv(os.path.join(DATA, "item_names.tsv"))}
-    game = {int(r[0]): r[4] for r in item_rows}
-    missing = sorted(set(game) - set(names))
-    extra = sorted(set(names) - set(game))
-    renamed = sorted(i for i in set(game) & set(names) if game[i] != names[i])
-    print(f"\nitem_names.tsv: {len(names)} ids, game: {len(game)} ids")
-    for i in missing:
-        print(f"  missing from item_names.tsv: {i} {game[i]}")
-    for i in extra:
-        print(f"  not in the game tables: {i} {names[i]}")
-    for i in renamed:
-        print(f"  name differs: {i} item_names.tsv={names[i]!r} game={game[i]!r}")
-    problems += len(missing) + len(extra) + len(renamed)
+    # data/item_names.tsv (from FFR-Randomizer) was retired once the dump replaced it;
+    # an old copy is still compared if one is there.
+    names_path = os.path.join(DATA, "item_names.tsv")
+    if os.path.exists(names_path):
+        names = {int(r["id"]): r["name"] for r in read_tsv(names_path)}
+        game = {int(r[0]): r[4] for r in item_rows}
+        missing = sorted(set(game) - set(names))
+        extra = sorted(set(names) - set(game))
+        renamed = sorted(i for i in set(game) & set(names) if game[i] != names[i])
+        print(f"\nitem_names.tsv: {len(names)} ids, game: {len(game)} ids")
+        for i in missing:
+            print(f"  missing from item_names.tsv: {i} {game[i]}")
+        for i in extra:
+            print(f"  not in the game tables: {i} {names[i]}")
+        for i in renamed:
+            print(f"  name differs: {i} item_names.tsv={names[i]!r} game={game[i]!r}")
+        problems += len(missing) + len(extra) + len(renamed)
 
     ours = {(r["mapId"], r["ID"]): r for r in read_tsv(os.path.join(DATA, "chests.tsv"))}
-    cols = ["row", "mapId", "ID", "ItemId", "ItemNum", "Money", "IsTrap", "battleGroupId"]
+    cols = CHEST_COLUMNS
     dumped = {(str(r[1]), str(r[2])): dict(zip(cols, map(str, r))) for r in chest_rows}
     print(f"\nchests.tsv: {len(ours)} rows, game: {len(dumped)} rows")
     for k in sorted(set(dumped) - set(ours)):
@@ -301,20 +324,21 @@ def check(item_rows, chest_rows, field_rows, box_rows):
             problems += 1
     problems += len(set(dumped) ^ set(ours))
 
-    # Treasure box actors point at a table row by (boxMap, ID).
-    placed_boxes = {}
-    for r in box_rows:
-        placed_boxes.setdefault((str(r[0]), str(r[1])), []).append(r)
-    print(f"\ntreasure box actors: {len(box_rows)}, table rows with an actor: "
-          f"{len(set(placed_boxes) & set(dumped))} of {len(dumped)}")
-    for k in sorted(set(dumped) - set(placed_boxes)):
-        print(f"  table row with no box on any map: {dumped[k]['row']}")
-    for k in sorted(set(placed_boxes) - set(dumped)):
-        for r in placed_boxes[k]:
-            print(f"  box with no table row: map {k[0]} ID {k[1]} uid {r[2]} on {r[5]} ({r[3]})")
-    for k, rs in sorted(placed_boxes.items()):
-        if len(rs) > 1:
-            print(f"  one row, {len(rs)} boxes: {k} on " + ", ".join(f"{r[5]} uid {r[2]}" for r in rs))
+    # Placed boxes against table rows (box_matches). tools/gen_apworld_data.py reads the
+    # boxes column: a row with no box is not a location.
+    boxes_by_row = {r[0]: [b for b in box_rows if box_matches(r, b)] for r in chest_rows}
+    matched = {id(b) for bs in boxes_by_row.values() for b in bs}
+    print(f"\ntreasure box actors: {len(box_rows)}, table rows with a box: "
+          f"{sum(1 for bs in boxes_by_row.values() if bs)} of {len(chest_rows)}")
+    for r in chest_rows:
+        if not boxes_by_row[r[0]]:
+            print(f"  table row with no box on any map: {r[0]} (map {r[1]}, item {r[3]}, gil {r[5]})")
+    for b in box_rows:
+        if id(b) not in matched:
+            print(f"  box with no table row: map {b[0]} ID {b[1]} uid {b[2]} on {b[5]} ({b[3]})")
+    for row, bs in sorted(boxes_by_row.items()):
+        if len(bs) > 1:
+            print(f"  one row, {len(bs)} boxes: {row} on " + ", ".join(f"{b[5]} uid {b[2]}" for b in bs))
 
     seen = {(r["map"], r["uid"]): r for r in read_tsv(os.path.join(DATA, "shinies.tsv"))}
     placed = {(str(r[1]), str(r[2])): r for r in field_rows}
@@ -344,8 +368,8 @@ def main():
     units()
     by_key = maps()
     shops()
-    chest_rows = chests()
     field_rows, box_rows = actors(by_key)
+    chest_rows = chests(box_rows)
     if args.check:
         problems = check(item_rows, chest_rows, field_rows, box_rows)
         print(f"\n{problems} differences")
