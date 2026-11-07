@@ -22,7 +22,7 @@ The world is tested off-line: Archipelago's general tests pass with it, its own 
 - **ModSettings** (a Blueprint mod in `Content/Paks/LogicMods`, from the same modding tools as FFRSLib) is optional. In the field, messages ("Received ...", "Sent ...", "Archipelago is paused", "Prologue skipped") go to the mod's own item feed at the bottom right of the HUD (since 0.10.0, on by default). ModSettings' Toast panel takes them off the field (the title screen), when the feed has not been able to show anything for 10 seconds since the game started, and with `ffrap_feed off`. Without ModSettings those few only go to `UE4SS.log`.
 - **FFRSLib, FFRS_QoL, FFRBestiary and FFRRandomizer are not needed.** Their code is where the game calls come from (see "Where the game calls come from"), but this mod calls the game directly. FFRRandomizer should stay disabled (IDEAS.md, idea 10).
 
-1. **Mod.** Copy `FFRArchipelago/Scripts` and `FFRArchipelago/Assets` over the installed mod (0.13.0). Delete the old `ap_in.txt`, `ap_out.txt` and `ap_state.txt`, and keep `seen.tsv`. Keep FFRRandomizer disabled.
+1. **Mod.** Copy `FFRArchipelago/Scripts` and `FFRArchipelago/Assets` over the installed mod (0.14.0). Delete the old `ap_in.txt`, `ap_out.txt` and `ap_state.txt`, and keep `seen.tsv`. Keep FFRRandomizer disabled.
 2. **World.** Run `python tools/build_apworld.py`, then copy `dist/ff_resonance.apworld` into your Archipelago `custom_worlds` folder. Or, from source, copy `apworld/ff_resonance` into `worlds/`.
 3. **Seed.**
    - Copy `apworld/Final Fantasy Resonance.yaml` into Archipelago's `Players` folder and set a name.
@@ -149,7 +149,8 @@ At run time the mod writes these files into its own folder: `ap_out.txt`, `ap_st
 | `ffrap_feed [on\|off\|test [plain]]` | The item feed at the bottom right of the field HUD: on by default; off sends messages to ModSettings' Toast. Kept in `ap_state.txt` as `itemfeed`. `test` shows three sample lines. Every step the feed takes is logged before it runs (`feed step: ...`), so a crash's last line names the call. `test plain` leaves out the styling. `check` logs what the engine says about the feed: the box's and each line's size, visibility and font. |
 | `ffrap_bind` | Link the loaded save to the client's session, in place of any earlier one. The same as `/bind` in the client. |
 | `ffrap_reset` | Set the loaded save's applied-item count to 0. Re-grants everything to it! |
-| `ffrap_scale <level\|low high\|party [range]\|off> [boss]` | Open world probe (docs/open_world.md, section 5): rewrites every enemy's level and stats in `DT_UnitParameter`. `30` puts every enemy at level 30. `10 20` pulls each enemy's own level into 10 to 20. `party 5` pulls it into the party's average level ± 5. `off` restores the shipped rows. Add `boss` to change bosses too. Not saved: a restart undoes it. |
+| `ffrap_scale <level\|low high\|party [range]\|off> [at %] [hp %] [power %] [boss] [follow]` | Open world probe (docs/open_world.md, section 5): rewrites every enemy's level and stats in `DT_UnitParameter`. `30` puts every enemy at level 30. `10 20` pulls each enemy's own level into 10 to 20. `party 5` pulls it into the party's average level ± 5. `off` restores the shipped rows. Options: `at 80` centres the party band on 80% of the party's level; `hp 70` and `power 80` set enemy HP, and enemy Attack and Intelligence, to 70% and 80%; `boss` changes bosses too; `follow` moves the party band again each time the party's level changes (on the field only). Not saved: a restart undoes it. |
+| `ffrap_noland <list\|spawn [half]\|move [half]\|cond <text>\|off>` | Open world probe (docs/open_world.md, section 4): the airship's no-landing boxes. `list` writes every box on the map to `noland.txt`. `spawn 3000` makes a new box around you, 3000 each way. `move 3000` moves the game's own Mysidia box around you and empties its condition. `cond <text>` sets the condition of those boxes (one word). `off` removes the new box and puts the Mysidia box back. Each step is logged first. Not saved. |
 | `ffrap_story [value]` | Open world probe: sets the loaded save's story counter to any value (FFRSLib's `ffrs_story_set` stops at 8050; the ending sets 9000). Only the counter, no flags. Save and reload to apply. Use it on a save that is not linked to a seed, or the client sees the story move. |
 | `ffrap_airship [condition\|off]` | Open world probe: shows or rewrites the airship's spawn condition (`DT_MapAirShip`, shipped `{progress:0}>=4250`). One word, no spaces. `off` restores it. Not saved. |
 | `ffrap_gate <subcommand>` | Experimental gate and custom key-item probe (IDEAS.md, idea 16): `spawn [combo\|box\|rock\|pot\|gate\|world] [dist] [scale]`, `item [id] [count]`, `require <item\|unit\|flag\|off> [id] [count]`, `lock`, `unlock`, `clear`, `status`. |
@@ -370,38 +371,56 @@ Rounds 6 to 9 (2026-11-05) worked out and tested the prologue skip; their result
 - **Probes for NPC gifts (idea 21):** talk events hand out items through `TalkEventData.ObtainItemList` and `CPP_TalkEventManager.m_ObtainItemList`, and `CPP_BFL_TalkEvent.SetExternalObtainItemList` sets a list from outside.
 - **Players' feedback** (the Archipelago Discord) asks mostly for open world. So open world comes first: [docs/open_world.md](docs/open_world.md).
 
-## Round 31 test plan (mod 0.13.0, world 0.3.1)
+**Round 31 (mod 0.13.0, 2026-11-07): stable; scaling works but is too hard; the open world plan changed.**
+- **No crashes.** Part A (the party-member item) was not tried; it moves to round 32.
+- **The start of the open world, found by you with FFRSLib's developer options:** set the story to 7090, then go to the Crystal Tower (map 3280). An event there moves the story to 8000 (the log has `story 7090 -> 8000` about 8 seconds after arriving, both times). After that the Crystal Tower is open and the airship is there. You flew to Olderion (map 2070) and opened two chests. Both checks went out; one chest pop-up was missed (`no chest pop-up on screen`, chest 2070:1).
+- **`ffrap_story` works:** 1005 -> 7090 and 1030 -> 7090 on a save not linked to the seed.
+- **Careful with the story on a linked save:** FFRSLib's story knob moved the linked save to 8050 (`story 8000 -> 8050`). 8050 is the goal of today's worlds, so if the client was connected, that seed sent its goal. Open world will not use the story as the goal.
+- **Enemy scaling works:** battles use the rewritten rows at once, with no map change.
+  - A level 1 party (Rain and Lasswell) with `ffrap_scale party 2` and `party 1` (enemies at levels 1 to 3): Mysidia's enemies "basically destroy the party".
+  - A level 52 party (Rain, Lasswell, Sakura, Fina) with `ffrap_scale party 1` (51 to 53): Grandshelt's enemies at level 51 are "pretty tough". A second run changed 0 rows, as it should.
+- **Why, found off-line (round 32):**
+  - **The low end:** real enemy attack grows about x5 from level 1 to 30, but round 31's growth rate moved it only x3.5. So a Mysidia enemy pulled to level 2 kept too much attack: the Soldier got 56, where shipped level 3 enemies have 45. Mod 0.14.0 uses a new curve that fits both ends; the Soldier now gets 41.
+  - **The high end:** the shipped game lets the party get well ahead of the enemies. Players' stats grow by a fixed amount per level, and late regions give a lot of EXP for what a level needs. Even if EXP is shared four ways, a party reaches about level 31 to 38 in Olderion (enemies 23), 37 to 45 in Zoldaad (27) and 40 or more in Mysidia (35). So enemies at the party's own level are much harder than the normal game. Mod 0.14.0 adds `at`, which centres the enemies on a share of the party's level, and `hp` and `power` knobs, to find good defaults in game.
+  - **Not the cause:** enemy skills. The median skill power is 12 to 24 in every region, and group sizes are the same (2 to 3 enemies).
+- **Your decisions:** no airship item: the airship is free from the start. Continents are locked by making them impossible to land on, except the ones unlocked. The start is the 7090 + Crystal Tower state above. `ffrap_airship` was not needed.
+- **Found in the game data (round 32):** the world map has 111 no-landing boxes (`BP_MapNonLandingArea_C`). Each has a condition string; while it holds, the airship cannot land in the box. Before story 5020, one big box (2400 x 6000) keeps the airship off Mysidia. So the game already locks a continent this way. See docs/open_world.md, section 4.
 
-Two parts. Part A is the party-member item, on a new seed. Part B is probes for open world, on a save that is **not** linked to a seed.
+## Round 32 test plan (mod 0.14.0, world 0.3.1)
 
-**Install.** Copy `FFRArchipelago/Scripts` over the installed mod. The log should say `version 0.13.0 loaded`. Copy `dist/ff_resonance.apworld` into Archipelago's `custom_worlds`. The client should say world 0.3.1.
+Three parts. Part A is enemy scaling with the new curve and knobs. Part B is the no-landing boxes. Part C is round 31's party-member test. Parts A and B use a save that is **not** linked to a seed (for example your 7090 + Crystal Tower save).
 
-**Part A: party members (world 0.3.1, a new seed).** Generate a new seed with `shuffle_party_members` on, and start from Archipelago on the title menu. Delete `ap_in.txt`, `ap_out.txt` and `ap_state.txt` first, and keep `seen.tsv`.
-1. **A party member from Archipelago** (or `ffrap_grant unit 1004` for Lid, `1006` for Archwitch Fina):
-   - With fewer than 4 in the party, the log should say `in the active party`. Is the member in the party menu? What level and gear? Can they fight?
-   - With a full party, the log should say `joined the roster`. Can you swap them in from the party menu?
-   - Later, when the story has that member join: does the event run normally?
-2. **Archwitch Fina** next to Fina: are both in the party menu, and can both fight?
+**Install.** Copy `FFRArchipelago/Scripts` over the installed mod. The log should say `version 0.14.0 loaded`. The apworld did not change (world 0.3.1).
 
-**Part B: open world probes (docs/open_world.md).** Use a save that is not linked to the seed: a plain New Game, or a copy of an old save. These probes change the save's story or the game's tables. A game restart undoes the table changes (`ffrap_scale`, `ffrap_airship`), but `ffrap_story` is written into the save when you save.
+**Part A: enemy levels.** Every `ffrap_scale` logs `scale: party level N (...), centre C (...%)` and a sample enemy. After each one, fight two or three battles and tell me how they felt: too easy, about right, or too hard. Note the EXP and gil too.
+1. **The low end, the level 1 party on Mysidia** (the case that went wrong):
+   - `ffrap_scale party 2`: the new curve alone. Is it still too hard?
+   - If yes: `ffrap_scale party 2 power 70`, then `ffrap_scale party 2 power 70 hp 70`.
+2. **The high end, the level 52 party** (Grandshelt, or anywhere):
+   - `ffrap_scale party 2`: enemies at about level 52, now with stronger stats than in round 31 (the curve fits the real level 50 enemies better). Probably hard.
+   - `ffrap_scale party 3 at 80`: enemies at about level 42. And `ffrap_scale party 3 at 70`: about level 36.
+   - Which `at` felt like the normal game at that point?
+3. **Follow:** `ffrap_scale party 3 at 80 follow` on a low-level save, then fight until someone levels up. The log should say `scale: party level 5 -> 6` and a new band, once you are back on the field.
+4. `ffrap_scale off` puts every enemy back.
 
-3. **Enemy levels.** On the world map near Mitra (Steel Bats, level 1):
-   - `ffrap_scale 30`. The log should say `scale: N rows changed; Steel Bat (2): level 1 -> 30, HP 68 -> ...`. Fight a battle. Are the enemies much stronger? How much EXP and gil did they give? If FFRBestiary shows enemy levels, what does it say?
-   - `ffrap_scale party 5`, then fight again. The log names the party's levels. The enemies should be close to the party's level.
-   - `ffrap_scale off`, then fight: back to normal.
-   - If the first battle after `ffrap_scale 30` was unchanged, change map once (enter and leave a town) and fight again. That tells us whether the game caches the rows.
-4. **The airship before its time.** On a save before the end of chapter 4 (story below 4250):
-   - `ffrap_airship` logs the shipped condition, `{progress:0}>=4250`.
-   - `ffrap_airship {progress:0}>=0`, then go to the world map (or leave and enter it again). Does the airship appear? Where? Can you board it, fly and land?
-   - `ffrap_airship off` restores it.
-5. **The cleared state.** On a scratch save: `ffrap_story 9000`, save, and reload.
-   - Look around Grandshelt and the world map. Is the airship there? Which towns and dungeons can you enter? What do NPCs say? Does anything look broken?
-   - Run `ffrap_snapshot story9000`, and send the `snap_story9000.tsv` file.
-   - If you, or a friend, has a save that has finished the game, an `ffrap_snapshot cleared` of it would be the best reference of all: it holds every flag the cleared world has.
-6. **Traps (idea 20), in a battle:** `ffrap_functions CPP_BFL_Battle CPP_UnitParameter CPP_ContFxAddRandStatusCondition` writes `functions.txt`. Send it.
-7. **Send** `UE4SS.log` (`[FFRAP]` lines), `functions.txt` and the snapshot files.
+**Part B: no-landing boxes (on the world map, in the airship).**
+5. `ffrap_noland list`. The log says how many boxes there are and where you are. Send `noland.txt`.
+6. **A new box:** fly over open land and run `ffrap_noland spawn 3000`. The log shows each step. Then try to land under you, and then about 2500 away (inside), and 4000 away (outside):
+   - Does the shadow turn red inside the box? Can you land outside it?
+   - If nothing changed, leave the world map and come back (enter a town and leave), and try again. That tells us whether the game reads the boxes only when the map loads.
+7. **The condition:** `ffrap_noland cond {progress:0}<0` (a condition that never holds). Can you land in the box now? Then `ffrap_noland cond {progress:0}>=0` (always holds): blocked again?
+8. **The game's own box:** `ffrap_noland off`, then `ffrap_noland move 3000` somewhere else, and try steps 6 and 7 with it. `ffrap_noland off` puts it back over Mysidia.
+9. **Walking across:** which continents can you reach without the airship (on foot, by Chocobo, by ship or through a cave)? A short list from memory is enough.
 
-From round 29, still open: the new world-map shinies (70, 71, 84 to 89 and 91), and dropped chest rows 2 to 4 at Grandshelt Castle (map 2012).
+**Part C: party members (world 0.3.1, a new seed).** Generate a new seed with `shuffle_party_members` on, and start from Archipelago on the title menu. Delete `ap_in.txt`, `ap_out.txt` and `ap_state.txt` first, and keep `seen.tsv`.
+10. **A party member from Archipelago** (or `ffrap_grant unit 1004` for Lid, `1006` for Archwitch Fina):
+    - With fewer than 4 in the party, the log should say `in the active party`. Is the member in the party menu? What level and gear? Can they fight?
+    - With a full party, the log should say `joined the roster`. Can you swap them in from the party menu?
+11. **Archwitch Fina** next to Fina: are both in the party menu, and can both fight?
+
+**Send** `UE4SS.log` (`[FFRAP]` lines), `noland.txt`, and your notes on how the battles felt.
+
+Still open from round 31: `ffrap_functions CPP_BFL_Battle CPP_UnitParameter CPP_ContFxAddRandStatusCondition` in a battle (traps, idea 20). From round 29: the new world-map shinies (70, 71, 84 to 89 and 91), and dropped chest rows 2 to 4 at Grandshelt Castle (map 2012).
 
 ## Open questions
 

@@ -879,10 +879,40 @@ assert L.eval("G.HasVision(13100)") is True
 print("party members and HasVision: ok")
 
 # 0.13.0: open world probes. Enemy rows rescaled by level (ffrap_scale), and the airship's
-# spawn condition (ffrap_airship)
+# spawn condition (ffrap_airship). 0.14.0: the curve (L / own)^b * e^(c (L - own)), capped at
+# level 70, and the hp and power knobs.
+import math
+CURVE = {"MaxHitPoint": (0.3675, 0.08917), "Attack": (0.3207, 0.02946), "Intelligence": (0.5644, 0.03269),
+         "Defence": (0.7752, 0.00867), "Experience": (-0.0647, 0.12967)}
+def ratio(stat, f, t):
+    b, c = CURVE[stat]
+    f, t = max(1, min(f, 70)), max(1, min(t, 70))
+    return (t / f) ** b * math.exp(c * (t - f))
+def scaled(v, stat, f, t, knob=100):
+    return max(1, math.floor(v * ratio(stat, f, t) * knob / 100 + 0.5))
 st = L.eval("G.ScaledStats({ Level = 1, MaxHitPoint = 68, MaxBreakPoint = 50, Attack = 30, Defence = 30,"
             " Intelligence = 15, Mind = 30, Agility = 13, Experience = 12, Money = 20 }, 11)")
-assert st.Level == 11 and st.MaxHitPoint == round(68 * 1.1084 ** 10) and st.Attack == round(30 * 1.0461 ** 10), dict(st)
+assert st.Level == 11 and st.MaxHitPoint == scaled(68, "MaxHitPoint", 1, 11), dict(st)
+assert st.Attack == scaled(30, "Attack", 1, 11) and st.Defence == scaled(30, "Defence", 1, 11), dict(st)
+# round 31's case: the Soldier (level 30, attack 189) pulled to level 3 now has about a level 3
+# enemy's attack (the shipped ones have 45), not 56
+down3 = L.eval("G.ScaledStats({ Level = 30, MaxHitPoint = 1000, Attack = 189, Experience = 30 }, 3)")
+assert 38 <= down3.Attack <= 46 and down3.Attack == scaled(189, "Attack", 30, 3), dict(down3)
+# the knobs: hp moves HP, power moves Attack and Intelligence, nothing else
+k = L.eval("G.ScaledStats({ Level = 10, MaxHitPoint = 500, Attack = 80, Intelligence = 50, Defence = 60 }, 10,"
+           " { hp = 50, power = 80 })")
+assert k.MaxHitPoint == 250 and k.Attack == 64 and k.Intelligence == 40 and k.Defence == 60, dict(k)
+# above level 70 the curve stops growing
+assert abs(L.eval("G.CurveRatio('MaxHitPoint', 70, 99)") - 1.0) < 1e-9
+assert abs(L.eval("G.CurveRatio('Attack', 99, 50)") - ratio("Attack", 70, 50)) < 1e-9
+assert L.eval("G.CurveRatio('MaxMagicPoint', 1, 50)") == 1
+# the band: centred on at% of the party's level
+a, b, c = L.execute("return G.LevelBand(40, 5, 80)")
+assert (a, b, c) == (27, 37, 32), (a, b, c)
+a, b, c = L.execute("return G.LevelBand(1, 2, 80)")
+assert (a, b, c) == (-1, 3, 1), (a, b, c)
+a, b, c = L.execute("return G.LevelBand(52, 1)")
+assert (a, b, c) == (51, 53, 52), (a, b, c)
 same = L.eval("G.ScaledStats({ Level = 7, MaxHitPoint = 300, Attack = 66, Money = 0 }, 7)")
 assert same.MaxHitPoint == 300 and same.Attack == 66 and same.Money == 0, dict(same)
 down = L.eval("G.ScaledStats({ Level = 50, MaxHitPoint = 3, Attack = 2 }, 1)")
@@ -919,14 +949,17 @@ end
 """)
 n, sample = L.execute("return G.ScaleEnemies('fixed', 20, nil, false)")
 assert n == 1 and "Steel Bat (2): level 1 -> 20" in sample, (n, sample)
-assert L.eval("unitRows.bat.Level") == 20 and L.eval("unitRows.bat.MaxHitPoint") == round(68 * 1.1084 ** 19)
+assert L.eval("unitRows.bat.Level") == 20 and L.eval("unitRows.bat.MaxHitPoint") == scaled(68, "MaxHitPoint", 1, 20)
 assert L.eval("unitRows.boss.Level") == 4 and L.eval("unitRows.rain.Level") == 1, "bosses and party left alone"
 n, _ = L.execute("return G.ScaleEnemies('fixed', 20, nil, false)")
 assert n == 0, "already scaled: nothing to do"
 # the next scale works from the shipped row, not from the scaled one
 n, _ = L.execute("return G.ScaleEnemies('clamp', 5, 15, true)")
 assert n == 2 and L.eval("unitRows.bat.Level") == 5 and L.eval("unitRows.boss.Level") == 5, n
-assert L.eval("unitRows.bat.MaxHitPoint") == round(68 * 1.1084 ** 4)
+assert L.eval("unitRows.bat.MaxHitPoint") == scaled(68, "MaxHitPoint", 1, 5)
+# the knobs reach the rows
+n, _ = L.execute("return G.ScaleEnemies('clamp', 5, 15, true, { hp = 50, power = 100 })")
+assert n == 2 and L.eval("unitRows.bat.MaxHitPoint") == scaled(68, "MaxHitPoint", 1, 5, 50), n
 n, _ = L.execute("return G.ScaleEnemies('off', nil, nil, true)")
 assert n == 2 and L.eval("unitRows.bat.MaxHitPoint") == 68 and L.eval("unitRows.boss.Experience") == 100, n
 
@@ -959,3 +992,73 @@ assert lv is None and "1002" in detail, (lv, detail)
 L.execute("mgr.m_pGameSaveData = makeSave({false}, { {SaveId=1, JoinStatus=0} }, 1130, 1, false)")
 assert L.eval("G.SetStoryCounter(9000)") == 9000 and L.eval("G.StoryCounter()") == 9000
 print("party level and story counter: ok")
+
+# 0.14.0: the no-landing boxes (ffrap_noland). The game's Mysidia box is moved and put back; a
+# spawned box is removed.
+L.execute(r"""
+local function makeBoxActor(name, x, y, z, ex, ey, ez, cond)
+  local box = { ex = ex, ey = ey, ez = ez }
+  function box:IsValid() return true end
+  function box:HasAnyInternalFlags() return false end
+  function box:HasAnyFlags() return false end
+  function box:GetUnscaledBoxExtent() return { X = self.ex, Y = self.ey, Z = self.ez } end
+  function box:SetBoxExtent(v) self.ex, self.ey, self.ez = v.X, v.Y, v.Z end
+  local a = { x = x, y = y, z = z, yaw = 0, m_Condition = cond, m_pBoxComponent = box, nm = name, dead = false }
+  function a:IsValid() return not self.dead end
+  function a:HasAnyInternalFlags() return false end
+  function a:HasAnyFlags() return false end
+  function a:GetFName() return fname(self.nm) end
+  function a:K2_GetActorLocation() return { X = self.x, Y = self.y, Z = self.z } end
+  function a:K2_GetActorRotation() return { Pitch = 0, Yaw = self.yaw, Roll = 0 } end
+  function a:K2_SetActorLocation(l) self.x, self.y, self.z = l.X, l.Y, l.Z end
+  function a:K2_SetActorRotation(r) self.yaw = r.Yaw end
+  function a:K2_DestroyActor() self.dead = true end
+  return a
+end
+nolandActors = {
+  makeBoxActor("BP_MapNonLandingArea_C_0", 16643, 21655, -33, 90, 210, 32, ""),
+  makeBoxActor("BP_MapNonLandingArea_C_42", -18053, -8493, 393, 2400, 6000, 700, "{progress:0}<5020"),
+}
+actorClasses["/Game/BP/Map/BP_MapNonLandingArea.BP_MapNonLandingArea_C"] = { cname = "BP_MapNonLandingArea_C",
+  IsValid = function() return true end }
+local spawnOld = fakeWorld.SpawnActor
+function fakeWorld:SpawnActor(cls, loc, rot)
+  if cls.cname == "BP_MapNonLandingArea_C" then
+    local a = makeBoxActor("BP_MapNonLandingArea_C_spawned", loc.X, loc.Y, loc.Z, 100, 100, 100, "")
+    nolandActors[#nolandActors + 1] = a
+    return a
+  end
+  return spawnOld(self, cls, loc, rot)
+end
+local prevFAO5 = FindAllOf
+function FindAllOf(c)
+  if c == "BP_MapNonLandingArea_C" then return nolandActors end
+  return prevFAO5(c)
+end
+fakePawn.x, fakePawn.y, fakePawn.z = 5000, 6000, 900
+""")
+boxes = L.eval("G.NoLandBoxes()")
+assert len(boxes) == 2 and boxes[2].cond == "{progress:0}<5020" and boxes[2].ex == 2400, dict(boxes[2])
+line = L.eval("G.NoLandLine(G.NoLandBoxes()[2])")
+assert line == 'BP_MapNonLandingArea_C_42 at (-18053, -8493, 393) half-size (2400, 6000, 700) yaw 0, condition "{progress:0}<5020"', line
+# move: the Mysidia box goes around the player, with an empty condition
+box, why = L.execute("local b, w = G.NoLandMove(4000); return b, w")
+assert why is None and box.x == 5000 and box.y == 6000 and box.ex == 4000 and box.ez == 3000 and box.cond == "", (dict(box), why)
+# spawn: a new box around the player
+box, why = L.execute("local b, w = G.NoLandSpawn(2500); return b, w")
+assert why is None and box.ex == 2500 and box.ey == 2500 and box.x == 5000, (dict(box), why)
+assert L.eval("#G.NoLandBoxes()") == 3
+# cond: written to both test boxes, not to the others
+n, last, err = L.execute("local n, l, e = G.NoLandCondition('{progress:0}<0'); return n, l, e")
+assert n == 2 and err is None and last.cond == "{progress:0}<0", (n, err)
+assert L.eval("nolandActors[2].m_Condition") == "{progress:0}<0" and L.eval("nolandActors[1].m_Condition") == ""
+# off: the spawned box is gone and the Mysidia box is back as shipped
+assert L.eval("G.NoLandOff()") == 2
+assert L.eval("nolandActors[3].dead") is True
+m = L.eval("nolandActors[2]")
+assert (m.x, m.y, m.z, m.m_pBoxComponent.ex, m.m_pBoxComponent.ey, m.m_Condition) == (-18053, -8493, 393, 2400, 6000, "{progress:0}<5020"), dict(m)
+# no Mysidia box on this map: refused
+L.execute("nolandActors = { nolandActors[1] }")
+box, why = L.execute("local b, w = G.NoLandMove(); return b, w")
+assert box is None and "not on this map" in why, why
+print("no-landing boxes: ok")

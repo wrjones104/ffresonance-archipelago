@@ -890,3 +890,51 @@ tick(3)
 assert list(G.log.values()).count("vision13100") == 2, list(G.log.values())
 assert list(G.log.values()).count("item1x1") == 1
 print("waiting vision: ok")
+
+# 15. 0.14.0: ffrap_scale's options (at, hp, power, boss, follow), and follow moving the band when
+# the party's level changes, on the field only
+L, G = boot()
+L.globals().G = G
+L.execute("""
+G.scaleCalls, G.partyLv, G.onField = {}, 40, true
+function G.PartyLevel() return G.partyLv, "1001:" .. G.partyLv end
+function G.LevelBand(lv, range, at)
+  local c = math.max(1, math.floor(lv * (at or 100) / 100 + 0.5))
+  return c - range, c + range, c
+end
+function G.OnField() return G.onField end
+function G.ScaleEnemies(mode, a, b, boss, knobs)
+  G.scaleCalls[#G.scaleCalls + 1] = string.format("%s %s %s %s hp%d power%d", mode, tostring(a), tostring(b),
+    tostring(boss), knobs.hp, knobs.power)
+  return 3, "sample"
+end
+""")
+calls = lambda: list(G.scaleCalls.values())
+L.execute('commands["ffrap_scale"]("ffrap_scale", {"party", "5", "at", "80", "hp", "70", "boss"})')
+assert calls() == ["clamp 27 37 true hp70 power100"], calls()
+L.execute('commands["ffrap_scale"]("ffrap_scale", {"30", "power", "90"})')
+assert calls()[-1] == "fixed 30 nil false hp100 power90", calls()
+L.execute('commands["ffrap_scale"]("ffrap_scale", {"20", "10"})')
+assert calls()[-1] == "clamp 10 20 false hp100 power100", calls()
+L.execute('commands["ffrap_scale"]("ffrap_scale", {"off"})')
+assert calls()[-1] == "off nil nil false hp100 power100", calls()
+L.execute('commands["ffrap_scale"]("ffrap_scale", {"what"})')
+assert len(calls()) == 4, "a bad command changes nothing"
+# follow: nothing while the level stands; a new band when it changes; nothing in a battle
+L.execute('commands["ffrap_scale"]("ffrap_scale", {"party", "3", "at", "50", "follow"})')
+assert calls()[-1] == "clamp 17 23 false hp100 power100", calls()
+tick = lambda n: [L.execute("tickFn()") for _ in range(n)]
+tick(20)
+assert len(calls()) == 5, calls()
+L.execute("G.partyLv = 42; G.onField = false")
+tick(20)
+assert len(calls()) == 5, "not off the field"
+L.execute("G.onField = true")
+tick(20)
+assert calls()[-1] == "clamp 18 24 false hp100 power100" and len(calls()) == 6, calls()
+# a plain ffrap_scale turns follow off
+L.execute('commands["ffrap_scale"]("ffrap_scale", {"off"})')
+L.execute("G.partyLv = 60")
+tick(20)
+assert calls()[-1] == "off nil nil false hp100 power100" and len(calls()) == 7, calls()
+print("scale options and follow: ok")

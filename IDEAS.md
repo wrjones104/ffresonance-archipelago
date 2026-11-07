@@ -633,6 +633,9 @@ The "Back" prompt that menus and the chest pop-up show at the bottom right also 
 
 **From the game data dump (2026-11-06).** The world map has 81 `BP_MapAirShipLandingPoint_C` actors, in `data/game/gimmicks.tsv`. Each has an `m_Id` (a map or point id, such as 2002 for Grandport) and a Japanese description. None has a condition of its own, so the game decides elsewhere which ones are open.
 
+**Found (round 32, 2026-11-07): the no-landing boxes.** The world map also has 111 `BP_MapNonLandingArea_C` actors: a box with an `m_Condition` string. While the condition holds (or when it is empty), the airship cannot land in the box. Before story 5020, one box of half-size 2400 x 6000 keeps the airship off Mysidia. So the game already gates a continent this way, and this idea is now the plan for continent locks (decided in round 31: the airship is free, continents are locked by landing). Details and rough continent positions: docs/open_world.md, section 4. Round 32 probes it with `ffrap_noland`.
+- The landing point ids start with the island's number: 1xxx Grandshelt, 2xxx Lanzelt, 3xxx Kolobos, 4xxx Dirnado, 5xxx Olderion, 6xxx Zoldaad, 7xxx Mysidia, 8xxx Gronoa, 9xxx Pharm, 10004 the Crystal Tower. 10xxx are optional caves and Legend shrines.
+
 ## 18. In-game menu for on-the-fly settings and modifiers
 
 **Idea:** Introduce our own in-game menu option with on-the-fly customizable settings, such as EXP, Gil (GP), and MRP (Magic/Resonance Points) modifiers, encounter rate adjustments (e.g. 0x / 0.5x / 1x / 2x / 4x), and Archipelago client status.

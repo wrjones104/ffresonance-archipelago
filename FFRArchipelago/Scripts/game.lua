@@ -1385,6 +1385,11 @@ local function FeedHost()
     return nil
 end
 
+-- True while the field HUD is on screen: not in a battle, a menu, an event or loading.
+function G.OnField()
+    return FeedHost() ~= nil
+end
+
 local function FeedName()
     feed.made = feed.made + 1
     return FName(FEED_PREFIX .. "_" .. feed.made)
@@ -2410,31 +2415,54 @@ function G.PollGate()
 end
 
 -- -------------------------------------------------------------------------------------------
--- Open world probes (round 31): enemy levels and the airship
+-- Open world probes (rounds 31 and 32): enemy levels, the airship, no-landing boxes
 -- -------------------------------------------------------------------------------------------
 -- Enemy stats are fixed per unit in DT_UnitParameter: no enemy has a level curve
--- (LevelParamId -1). So a scaled enemy is a rewritten row. The growth per level comes from a
--- fit over the 256 normal enemies of the encounter tables, log(stat) against level (r2 0.65 to
--- 0.86; docs/open_world.md). MP is left alone: it does not follow level (r2 0.09).
+-- (LevelParamId -1). So a scaled enemy is a rewritten row.
+--
+-- How a stat moves with level (round 32): a fit over the normal enemies of the encounter
+-- tables, log(stat) = a + b*log(level) + c*level (r2 0.48 to 0.88; docs/open_world.md).
+-- Only the ratio between two levels is used, so `a` drops out:
+--   stat at L = own stat * (L / own)^b * e^(c * (L - own)).
+-- Round 31 used a plain growth per level. That moved low enemies too little: a level 30
+-- enemy pulled to level 2 kept too much attack. Levels above 70 (the last level in the data)
+-- count as 70 for the curve. MP is left alone: it does not follow level.
 local UNIT_TABLE = "/Game/Datatable/Unit/DT_UnitParameter.DT_UnitParameter"
-G.ENEMY_GROWTH = {
-    MaxHitPoint = 1.1084, MaxBreakPoint = 1.0446, Attack = 1.0461, Defence = 1.0468,
-    Intelligence = 1.0619, Mind = 1.0484, Agility = 1.0473, Experience = 1.1359, Money = 1.1088,
+G.ENEMY_CURVE = {
+    MaxHitPoint = { 0.3675, 0.08917 }, MaxBreakPoint = { -0.1249, 0.05094 },
+    Attack = { 0.3207, 0.02946 }, Defence = { 0.7752, 0.00867 },
+    Intelligence = { 0.5644, 0.03269 }, Mind = { 0.7289, 0.01236 },
+    Agility = { 0.7853, 0.00899 }, Experience = { -0.0647, 0.12967 }, Money = { 0.0934, 0.09910 },
 }
+G.CURVE_TOP = 70
 local GROWTH_ORDER = { "MaxHitPoint", "MaxBreakPoint", "Attack", "Defence", "Intelligence", "Mind",
                        "Agility", "Experience", "Money" }
+-- Which stats each tuning knob multiplies: `hp` the HP, `power` the damage stats.
+local KNOB_STATS = { MaxHitPoint = "hp", Attack = "power", Intelligence = "power" }
 local CATEGORY_ENEMY, CATEGORY_BOSS = 2, 3     -- eUnitCategory
 G.MAX_LEVEL = 99
 
+-- How much a stat grows from level `from` to level `to` (a factor; 1 when they are equal).
+function G.CurveRatio(stat, from, to)
+    local k = G.ENEMY_CURVE[stat]
+    if not k then return 1 end
+    from = math.max(1, math.min(from, G.CURVE_TOP))
+    to = math.max(1, math.min(to, G.CURVE_TOP))
+    return (to / from) ^ k[1] * math.exp(k[2] * (to - from))
+end
+
 -- The stats of a unit moved from its own level to `level`. Pure: `orig` holds Level and the
--- stats in ENEMY_GROWTH. A stat that is 0 stays 0, and no other stat goes below 1.
-function G.ScaledStats(orig, level)
+-- stats in ENEMY_CURVE. `knobs` (optional) holds percentages: hp (MaxHitPoint) and power
+-- (Attack, Intelligence), 100 when missing. A stat that is 0 stays 0, and no other stat goes
+-- below 1.
+function G.ScaledStats(orig, level, knobs)
+    knobs = knobs or {}
     local out = { Level = level }
-    local steps = level - orig.Level
     for _, k in ipairs(GROWTH_ORDER) do
         local v = orig[k] or 0
         if v > 0 then
-            out[k] = math.max(1, math.floor(v * G.ENEMY_GROWTH[k] ^ steps + 0.5))
+            local knob = KNOB_STATS[k] and knobs[KNOB_STATS[k]] or 100
+            out[k] = math.max(1, math.floor(v * G.CurveRatio(k, orig.Level, level) * knob / 100 + 0.5))
         else
             out[k] = v
         end
@@ -2449,6 +2477,14 @@ function G.ScaledLevel(own, mode, a, b)
     if mode == "fixed" then lv = a
     elseif mode == "clamp" then lv = math.min(math.max(own, a), b) end
     return math.max(1, math.min(G.MAX_LEVEL, math.floor(lv)))
+end
+
+-- The band of enemy levels for a party level: centred on `at` percent of the party's level
+-- (100: the party's own level), plus or minus `range`. In the shipped game the party gets well
+-- ahead of the enemies from Olderion on (round 32), so `at` below 100 is closer to it.
+function G.LevelBand(partyLevel, range, at)
+    local c = math.max(1, math.floor(partyLevel * (at or 100) / 100 + 0.5))
+    return c - range, c + range, c
 end
 
 -- A party member's level: CPP_BFL_Unit:GetPlayableUnitLevel (FFRSLib's ffrs_unit_level reads
@@ -2489,10 +2525,10 @@ end
 
 local scaleOriginals = {}   -- unit id -> { Level = n, MaxHitPoint = n, ... } as the game shipped
 
--- Rescales every enemy row (and bosses too, if withBosses) by mode, a, b, as in ScaledLevel.
--- mode "off" restores the shipped rows. Returns how many rows changed, and one sample line
--- (the first enemy that changed) for the log.
-function G.ScaleEnemies(mode, a, b, withBosses)
+-- Rescales every enemy row (and bosses too, if withBosses) by mode, a, b, as in ScaledLevel,
+-- with the tuning knobs of ScaledStats. mode "off" restores the shipped rows. Returns how many
+-- rows changed, and one sample line (the first enemy that changed) for the log.
+function G.ScaleEnemies(mode, a, b, withBosses, knobs)
     local family = TableFamily(Find(UNIT_TABLE))
     if #family == 0 then return nil, "DT_UnitParameter not loaded" end
     local changed, sample = 0, nil
@@ -2512,7 +2548,7 @@ function G.ScaleEnemies(mode, a, b, withBosses)
                         scaleOriginals[id] = orig
                     end
                     local want = orig
-                    if mode ~= "off" then want = G.ScaledStats(orig, G.ScaledLevel(orig.Level, mode, a, b)) end
+                    if mode ~= "off" then want = G.ScaledStats(orig, G.ScaledLevel(orig.Level, mode, a, b), knobs) end
                     local diff = false
                     for _, k in ipairs(fields) do
                         if Int(row[k]) ~= want[k] then
@@ -2556,6 +2592,154 @@ function G.AirshipCondition(cond)
     end)
     if now == nil then return nil, err end
     return now
+end
+
+-- No-landing boxes (round 32). The world map has 111 BP_MapNonLandingArea_C actors.
+-- Each is a box (a CPP_MapAirShipCanNeverLandingBox component) with an m_Condition string;
+-- while the condition holds (or when it is empty), the airship cannot land in the box. Before
+-- story 5020 one big box (2400 x 6000, condition {progress:0}<5020) keeps the airship off
+-- Mysidia. So a continent lock can be the same: a big box with our own condition.
+local NOLAND_CLASS = "BP_MapNonLandingArea_C"
+local NOLAND_PKG, NOLAND_NAME = "/Game/BP/Map/BP_MapNonLandingArea", "BP_MapNonLandingArea"
+G.MYSIDIA_BOX_CONDITION = "{progress:0}<5020"
+local nolandSpawned = {}     -- actors spawned by the probe
+local nolandMoved = nil      -- { actor, x, y, z, ex, ey, ez, cond } of the game's box we moved
+
+local function BoxOf(actor)
+    local box
+    pcall(function() box = actor.m_pBoxComponent end)
+    if box and Alive(box) then return box end
+    pcall(function() box = actor.RootComponent end)
+    if box and Alive(box) then return box end
+    return nil
+end
+
+local function V3(v)
+    if v and type(v.X) == "number" then return v.X, v.Y, v.Z end
+    return nil
+end
+
+-- One box as a table: actor, name, x y z, extent ex ey ez, yaw, cond.
+local function BoxInfo(actor)
+    local info = { actor = actor, name = "?", cond = "" }
+    pcall(function() info.name = actor:GetFName():ToString() end)
+    pcall(function() info.x, info.y, info.z = V3(actor:K2_GetActorLocation()) end)
+    pcall(function() info.yaw = actor:K2_GetActorRotation().Yaw end)
+    local box = BoxOf(actor)
+    if box then
+        pcall(function() info.ex, info.ey, info.ez = V3(box:GetUnscaledBoxExtent()) end)
+        if not info.ex then pcall(function() info.ex, info.ey, info.ez = V3(box.BoxExtent) end) end
+    end
+    pcall(function() info.cond = AsText(actor.m_Condition) or "" end)
+    return info
+end
+
+local function BoxLine(i)
+    return string.format("%s at (%.0f, %.0f, %.0f) half-size (%s, %s, %s) yaw %s, condition \"%s\"",
+        i.name, i.x or 0, i.y or 0, i.z or 0, tostring(i.ex and math.floor(i.ex)), tostring(i.ey and math.floor(i.ey)),
+        tostring(i.ez and math.floor(i.ez)), tostring(i.yaw and math.floor(i.yaw)), tostring(i.cond))
+end
+G.NoLandLine = BoxLine
+
+-- Every no-landing box on the loaded map, as BoxInfo tables.
+function G.NoLandBoxes()
+    local out = {}
+    local ok, all = pcall(FindAllOf, NOLAND_CLASS)
+    for _, a in ipairs(ok and all or {}) do
+        if Alive(a) then out[#out + 1] = BoxInfo(a) end
+    end
+    return out
+end
+
+-- Puts a box at (x, y, z) with half-size (hx, hy, hz) and the condition `cond`. Each step goes
+-- to the trace (G.gateTrace) before it runs. Returns the box read back.
+local function PlaceBox(actor, x, y, z, hx, hy, hz, cond)
+    local box = BoxOf(actor)
+    if not box then return nil, "no box component" end
+    gateStep("noland: K2_SetActorLocation")
+    pcall(function() actor:K2_SetActorLocation({ X = x, Y = y, Z = z }, false, {}, true) end)
+    gateStep("noland: K2_SetActorRotation")
+    pcall(function() actor:K2_SetActorRotation({ Pitch = 0.0, Yaw = 0.0, Roll = 0.0 }, true) end)
+    gateStep("noland: SetBoxExtent")
+    local okExt, e = pcall(function() box:SetBoxExtent({ X = hx, Y = hy, Z = hz }, true) end)
+    if not okExt then return nil, "SetBoxExtent failed: " .. tostring(e) end
+    if cond then
+        gateStep("noland: write m_Condition")
+        local okC, ce = pcall(function() actor.m_Condition = cond end)
+        if not okC then return BoxInfo(actor), "m_Condition write failed: " .. tostring(ce) end
+    end
+    return BoxInfo(actor)
+end
+
+-- Spawns a new no-landing box around the player: `half` across (default 3000), from 3000
+-- below to 3000 above the player. Returns the box, or nil and why.
+function G.NoLandSpawn(half)
+    local pose, why = G.PlayerPose()
+    if not pose then return nil, why end
+    local cls = LoadBlueprintClass(NOLAND_PKG, NOLAND_NAME)
+    if not cls then return nil, "could not load " .. NOLAND_NAME .. "_C" end
+    gateStep("noland: SpawnActor")
+    local actor
+    pcall(function() actor = pose.world:SpawnActor(cls, { X = pose.x, Y = pose.y, Z = pose.z }, { Pitch = 0, Yaw = 0, Roll = 0 }) end)
+    if not (actor and Alive(actor)) then return nil, "SpawnActor failed" end
+    nolandSpawned[#nolandSpawned + 1] = actor
+    half = half or 3000
+    return PlaceBox(actor, pose.x, pose.y, pose.z, half, half, 3000, nil)
+end
+
+-- Moves the game's own Mysidia box (the one with condition {progress:0}<5020) around the
+-- player, with half-size `half` and an empty condition. Keeps where it was, for NoLandOff.
+function G.NoLandMove(half)
+    local pose, why = G.PlayerPose()
+    if not pose then return nil, why end
+    local target = nolandMoved and nolandMoved.actor
+    if not (target and Alive(target)) then
+        target = nil
+        for _, i in ipairs(G.NoLandBoxes()) do
+            if i.cond == G.MYSIDIA_BOX_CONDITION then target = i.actor; nolandMoved = i; break end
+        end
+    end
+    if not target then return nil, "the Mysidia box (condition " .. G.MYSIDIA_BOX_CONDITION .. ") is not on this map" end
+    half = half or 3000
+    return PlaceBox(target, pose.x, pose.y, pose.z, half, half, 3000, "")
+end
+
+-- Writes `cond` into every box the probe spawned or moved. Returns how many, and the last one.
+function G.NoLandCondition(cond)
+    local n, last, err = 0, nil, nil
+    local all = {}
+    for _, a in ipairs(nolandSpawned) do all[#all + 1] = a end
+    if nolandMoved then all[#all + 1] = nolandMoved.actor end
+    for _, a in ipairs(all) do
+        if Alive(a) then
+            gateStep("noland: write m_Condition")
+            local ok, e = pcall(function() a.m_Condition = cond end)
+            if ok then n = n + 1 else err = tostring(e) end
+            last = BoxInfo(a)
+        end
+    end
+    return n, last, err
+end
+
+-- Removes the spawned boxes and puts the moved one back. Returns how many were undone.
+function G.NoLandOff()
+    local n = 0
+    for _, a in ipairs(nolandSpawned) do
+        if Alive(a) then
+            gateStep("noland: K2_DestroyActor")
+            pcall(function() a:K2_DestroyActor() end)
+            n = n + 1
+        end
+    end
+    nolandSpawned = {}
+    local m = nolandMoved
+    if m and Alive(m.actor) then
+        PlaceBox(m.actor, m.x, m.y, m.z, m.ex or 2400, m.ey or 6000, m.ez or 700, m.cond)
+        if m.yaw and m.yaw ~= 0 then pcall(function() m.actor:K2_SetActorRotation({ Pitch = 0.0, Yaw = m.yaw, Roll = 0.0 }, true) end) end
+        n = n + 1
+    end
+    nolandMoved = nil
+    return n
 end
 
 return G

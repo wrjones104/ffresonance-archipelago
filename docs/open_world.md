@@ -4,6 +4,11 @@ How an open world seed could work. The story is skipped, the world is open, and 
 
 **Why now (round 30, 2026-11-06).** Players on the Archipelago Discord ask mostly for open world, and few want a story mode. So open world comes first, and story mode may never come. Open world also avoids story events that undo our items, such as the story swapping the two Finas.
 
+**Round 31 (2026-11-07): decided.**
+- **The start:** story 7090, then the Crystal Tower (map 3280), where an event moves the story to 8000. Then the Crystal Tower is open and the airship is there. You found this with FFRSLib's developer options. It replaces option A's 9000 (section 3).
+- **The airship is free** from the start. No airship item.
+- **Continents are locked by landing:** the airship cannot land on a continent until its item arrives. The game already does this for Mysidia before story 5020 (section 4).
+
 **How to use this document:** the same way as [logic.md](logic.md). Each section has what the game data shows, a *Suggestion*, and **Your call** where the decision is yours. Facts come from the game data dump (`data/game/`, `dump/`) unless a round is named. The research scripts are short and can be run again; their results are summarised here.
 
 Related: [logic.md](logic.md), [progression.md](progression.md), and [IDEAS.md](../IDEAS.md) ideas 3 (open world), 4 (vehicles), 16 (map blockers), 17 (airship landing limits) and 19 (a random starting party).
@@ -52,7 +57,9 @@ The story counter is `Progress[0]`. Every story gate is a condition such as `{pr
 
 **Option C: an early state with the story's gates rewritten.** Keep the counter low and rewrite every story condition to an item check. There are hundreds of conditions, and story events would still fire when you walk into them, in a strange order. Too fragile.
 
-*Suggestion:* option A. Round 31's `ffrap_story 9000` probe (on a save not linked to a seed) shows what the cleared world looks like with only the counter set. Next, we find which flags it needs. The best reference is a real cleared save: if you or a friend has one, an `ffrap_snapshot` of it gives every flag at once.
+**Decided (round 31):** story 7090, then the Crystal Tower, which sets 8000 through its own event (see the top of this document). The open questions for that state are the same as for option A: which towns, events and bosses are still there.
+
+*Earlier suggestion:* option A. Round 31's `ffrap_story 9000` probe (on a save not linked to a seed) shows what the cleared world looks like with only the counter set. Next, we find which flags it needs. The best reference is a real cleared save: if you or a friend has one, an `ffrap_snapshot` of it gives every flag at once.
 
 **Your call:** A, B, or something else? And where the player starts: Grandshelt, or a random continent?
 
@@ -60,13 +67,36 @@ The story counter is `Progress[0]`. Every story gate is a condition such as `{pr
 
 | Gate | How | State |
 |---|---|---|
-| **The airship** | Rewrite its spawn condition to an item check (`{item:N}>=1`), so it appears when the "Airship" item arrives | Round 31 probe: `ffrap_airship`. Can the condition be changed, and does the game read it again? |
-| **Continents** | No landing on a continent until its item arrives (idea 17). 81 landing points, each with a destination id | To find out: which call refuses a landing, or whether landing points can be switched off |
+| **The airship** | Free from the start (decided, round 31) | No item |
+| **Continents** | No landing on a continent until its item arrives (idea 17), with the game's own no-landing boxes (below) | Round 32 probe: `ffrap_noland` |
 | **Ships and the Chocobo** | The Chocobo is item 30002, and the game checks the item (round 5). Ship routes are story transitions | Chocobo: works. Ships: unknown at 9000 |
 | **Dungeons and choke points** | Our own blockers (idea 16), which work everywhere (mod 0.11.3). Or the game's own exits, with their condition rewritten | Blockers: work. Rewriting a live exit's condition: not tried |
 | **Key items the game checks** | The Throne Room Key door; the Cabin Key exit; the radar parts for world-map treasures | Already in the pool (world 0.3.0) |
 
-*Suggestion for a first set:* "Airship" plus one pass per continent group: Grandshelt, Lanzelt and Kolobos as the starting group (the map data lists them as neighbouring islands), then Dirnado, Olderion, Zoldaad, Mysidia, Gronoa, Pharm and the Crystal Tower. That is 8 progression items with clear meaning, and a big first sphere.
+**No-landing boxes (found in the game data, round 32).**
+- The world map has 111 `BP_MapNonLandingArea_C` actors. Each one is a box (a `CPP_MapAirShipCanNeverLandingBox` component, with a position, a half-size and a yaw) and an `m_Condition` string. While the condition holds, or when it is empty, the airship cannot land in the box.
+- There are 111 boxes. Most are small (under 700 units across) and have no condition. They keep the airship off town entrances and the like.
+- 12 have a condition. 7 are side-quest steps (`{progress:24}==10` and similar), and 2 test flag 95 (`!{flag:95}`, in Mysidia). 3 are story locks: `{progress:0}<5020` over Mysidia, `{progress:0}<6000` on Gronoa's landing spot (which also runs an event), and `{progress:0}<7020` in Pharm.
+- **The game locks a whole continent this way:** before story 5020, one box of half-size 2400 x 6000 x 700 at (-18053, -8493), condition `{progress:0}<5020`, covers Mysidia.
+- So a continent lock can be one or more big boxes per continent, with a condition the mod controls. To find out (round 32): whether a box we spawn or move works, and whether the game reads a changed condition at once or only when the map loads.
+- **Where the continents are** (from the landing points, whose ids start with the island: 1xxx Grandshelt, 2xxx Lanzelt, and so on; x and y in game units):
+
+| Continent | x | y |
+|---|---|---|
+| Grandshelt | 12000 to 18000 | 20000 to 22000 |
+| Lanzelt | 10000 to 13000 | 9000 to 15000 |
+| Kolobos | 3500 to 15000 | 10500 to 19000 |
+| Dirnado | 13000 to 21000 | -3000 to 5000 |
+| Olderion | -3000 to 5500 | -5000 to 5500 |
+| Zoldaad | -11000 to -1700 | 7000 to 18500 |
+| Mysidia | -19500 to -16000 | -11000 to -4000 |
+| Gronoa | 9000 to 16000 | -15000 to -13000 |
+| Pharm and the Crystal Tower | -11000 to -3500 | -19000 to -5500 |
+
+  These are rough. Kolobos and Lanzelt overlap, so they need more than one box each, or a shared one. `ffrap_noland list` and a few positions from the game will make them exact.
+- **Other ways across:** walking, the Chocobo, ships and caves can still cross between some continents. Those crossings need our blockers (idea 16) or their exits' conditions rewritten.
+
+*Earlier suggestion for a first set:* "Airship" plus one pass per continent group: Grandshelt, Lanzelt and Kolobos as the starting group (the map data lists them as neighbouring islands), then Dirnado, Olderion, Zoldaad, Mysidia, Gronoa, Pharm and the Crystal Tower. That is 8 progression items with clear meaning, and a big first sphere.
 
 **Your call:** which gates, and how many.
 
@@ -114,9 +144,34 @@ The story counter is `Progress[0]`. Every story gate is a condition such as `{pr
 
 **The other way: scale by sphere.** The apworld gives each region a level from the sphere where logic expects you to reach it, and the mod writes those levels once. That is fixed and fair, but it depends on the logic being good, and it does not help a player who goes off the expected route. *Suggestion:* the party clamp first; sphere scaling later as an option, if players want it.
 
-**To find out (round 31):** does a battle read the rewritten rows? `ffrap_scale` rewrites them; the next fight shows whether the enemies changed.
+**Round 31 results.** Battles read the rewritten rows at once. But the enemies were too hard at both ends: a level 1 party against Mysidia's enemies at levels 1 to 3, and a level 52 party against Grandshelt's enemies at levels 51 to 53.
 
-**Your call:** the default range, whether the party level is the average or the highest member, and whether bosses scale by default.
+**Why (round 32, off-line):**
+- **The growth rate was wrong at the ends.** Real enemies do not grow by a fixed rate per level. For example, attack grows about x5 from level 1 to 30, where a rate of 1.046 per level gives x3.5. So a level 30 enemy pulled to level 2 kept too much attack.
+- **The new curve:** log(stat) = a + b log(level) + c level, a fit over the same enemies (r² 0.88 for attack, 0.70 for HP). Only the ratio between two levels is used, so a drops out. Levels above 70, the last in the data, count as 70.
+
+| Stat | b | c | Fit (r²) |
+|---|---|---|---|
+| HP | 0.3675 | 0.08917 | 0.70 |
+| Break gauge | -0.1249 | 0.05094 | 0.48 |
+| Attack | 0.3207 | 0.02946 | 0.88 |
+| Defence | 0.7752 | 0.00867 | 0.83 |
+| Intelligence | 0.5644 | 0.03269 | 0.71 |
+| Mind | 0.7289 | 0.01236 | 0.75 |
+| Agility | 0.7853 | 0.00899 | 0.86 |
+| EXP | -0.0647 | 0.12967 | 0.84 |
+| Gil | 0.0934 | 0.09910 | 0.82 |
+
+- **The party is normally far ahead of the enemies.** Party members' stats grow by a fixed amount per level (Rain: about +70 HP and +5 attack). Required EXP is a running total (level 50 needs 98006), and late regions give a lot of it: a Pharm battle gives about 10200. Even if EXP is shared four ways, a party reaches about level 31 to 38 in Olderion (enemies 23), 37 to 45 in Zoldaad (27), and 40 or more in Mysidia (35). So in the shipped game the enemies are 10 or more levels below the party from mid-game on, and enemies at the party's own level are much harder than normal.
+- **Not the cause:** enemy skills and group sizes. The median skill power is 12 to 24 in every region, and groups average 2 to 3 enemies everywhere.
+- **Gear** is not in the party's base stats, and it adds a lot later on. Shipped level 50 enemies have about twice the base attack of a level 50 party member.
+
+**Mod 0.14.0** has the new curve and three knobs to try in game:
+- `at`: the centre of the band, as a share of the party's level. `at 80` with a level 50 party puts enemies at about 40.
+- `hp` and `power`: enemy HP, and enemy Attack and Intelligence, as percentages.
+- `follow`: the band moves when the party's level changes, on the field only.
+
+**Your call (after round 32):** the defaults for `at`, the range, `hp` and `power`; whether the party level is the average or the highest member; and whether bosses scale by default.
 
 ## 6. Locations in the cleared world
 
@@ -149,8 +204,9 @@ The story hands out the party, the first visions, the airship and the main key i
 
 ## 9. Order of work
 
-1. **Round 31 probes:** `ffrap_scale`, `ffrap_airship` and `ffrap_story 9000` (README, round 31 test plan).
-2. **The skip to the end:** the counter, the flags and the airship's place. A test on a save, with probes.
-3. **Enemy scaling:** the clamp, as options in the apworld, applied by the mod.
-4. **Gates:** the airship item, then continent locks.
-5. **The goal,** and regions and rules in the apworld (logic.md section 9).
+1. **Round 31 probes:** `ffrap_scale`, `ffrap_airship` and `ffrap_story 9000`. Done: scaling works but was too hard.
+2. **Round 32 probes:** the new scaling curve and knobs, and the no-landing boxes (`ffrap_noland`).
+3. **The skip to the open world:** story 7090 and the Crystal Tower's event, done by the mod for a new Archipelago game.
+4. **Enemy scaling:** the defaults from round 32, as options in the apworld, applied by the mod with `follow`.
+5. **Gates:** continent locks with no-landing boxes, plus blockers for the crossings that do not need the airship.
+6. **The goal,** and regions and rules in the apworld (logic.md section 9).
