@@ -291,25 +291,41 @@ World-map shinies verified as locations. Multiple crashes observed across differ
 - **Seen in the log:** loading slot 1 with no session logged about 90 `check` lines. This is by design: with no seed every save counts (fake_ap.py testing). The client drops any `ap_out.txt` line that has no matching `seed` line, so nothing reaches a server.
 - **Added in 0.20.0:** `UnlockVision` writes the eight keys and no longer needs an owned vision. `ffrap_noland spawn` lists its box for the shadow by itself. `shadow` adds only boxes not listed yet and logs only the entries that are not the game's own boxes.
 
-## Round 39 test plan (mod 0.20.0, world 0.3.1)
+**Round 39 (mod 0.20.0, 2026-11-08): visions were in the save but not usable; the red shadow lasts through boarding; the airship vanished after a town.**
+- **Part A, the first vision:**
+  - `vision 13017: ok (visionList 0 -> 1, synchro keys 8, HasVision true)`, and the same for 13128. So the grant works with no vision to copy from.
+  - No vision could be equipped, and no menu showed them. Leaving the Equip screen still warned about party members with no vision. Saving and reloading did not change this.
+  - In the log, `visionList 0 -> 1` a second time at 13:23:57 is from loading slot 0, the save written before the first grants. It is not a bug. The later save was slot 4.
+  - **Cause, off-line:** the Equip screen shows visions only with **event flag 24** on (`DA_ActionEquipment.VisionEnableFlagIdData`). The story turns on flags 21 and 24 at Mitra (`C01_014_04`, story 1090). The warning comes from a separate check that only counts owned visions, which is why it fired.
+  - The menu's other gates, from the same assets: 14 Equipment, 16 World Map, 18 Recovery, 19 Party, 26 the main menu (all already on), and **34 fast travel (off on our start)**.
+- **Part B, the box over time:**
+  - The shadow was red at once with no `shadow` command, and landing was blocked. Landing elsewhere and boarding again kept the red shadow and the block. So the listing lasts through boarding.
+  - **Going into a town made the airship disappear** (`map 1000 -> 2170 -> 1000`). So steps 9 and 10 could not finish, and whether a spawned box lasts through a map change is still unknown.
+  - **Cause, most likely, off-line:** the save has `Map.IsAlreadySpawnAirship`, and our start never set it. While the airship was being ridden it did not matter. After a map change the game has to place the airship again. `DT_MapAirShip` names `initSpawnPointId` 9000 for a first placement, and no map or landing table has a point 9000. This also fits round 34's unexplained missing airship.
+  - **No key item is involved:** the airship's only condition is `{progress:0}>=4250`, and no item in the data unlocks it.
+- `GameSaveData*.sav` files begin with `SVHD` and hold no readable field names, so saves can be compared only through `ffrap_snapshot`.
+- **Added in 0.21.0:** the open world start turns on flags 21 and 24 and, for the `air` arrival, sets `IsAlreadySpawnAirship`. `ffrap_airship state` logs the airship's save fields.
+
+## Round 40 test plan (mod 0.21.0, world 0.3.1)
 
 Two parts. Send the `[FFRAP]` lines of `UE4SS.log`, and tell me what you saw where a step asks. No client or seed is needed.
 
-**Install:** copy `FFRArchipelago/Scripts` over the installed mod. The log should say `version 0.20.0 loaded`. `Assets` and the apworld did not change.
+**Install:** copy `FFRArchipelago/Scripts` over the installed mod. The log should say `version 0.21.0 loaded`. `Assets` and the apworld did not change.
 
-**Part A: the first vision on an open world start:**
-1. Run `ffrap_openstart` at the title. If it says off, run `ffrap_openstart on`.
-2. Start New Game (Archipelago) and wait for the world map.
-3. Run `ffrap_grant vision 13017`. The log should have `visionList 0 -> 1, synchro keys 8`.
-4. Open the Visions menu. **Tell me:** is the vision listed? Can Rain equip it? Can Lasswell?
-5. Grant a second one, `ffrap_grant vision 13128`, and check that both are listed.
-6. Save, go back to the title and load that save. Are both still there and equipped?
+**Part A: equipping a vision:**
+1. Start New Game (Archipelago) with `ffrap_openstart` on. The log should have `skip: ok   visions enabled: flags 21 24 on`.
+2. On the world map, run `ffrap_grant vision 13017`, then `ffrap_grant vision 13128`.
+3. Open Equipment. **Tell me:** can you see the visions? Can Rain equip one and Lasswell the other?
+4. Fight a battle or two. Does anything look wrong with an equipped vision?
+5. Save, return to the title and load that save. Are both still equipped?
 
-**Part B: what happens to a box over time (in the airship, over open land):**
-7. Run `ffrap_noland spawn 2000`. The shadow should be red at once, with no `shadow` command.
-8. Fly out of the box, land outside it, walk a few steps and board again. Fly back over the box. **Tell me:** is the shadow red, gone or black? Can you land?
-9. Run `ffrap_noland shadow` and send that line. `115 -> 115` means the list was kept. `114 -> 115` means boarding rebuilt it.
-10. Land at a town, go in, come out, board and fly back. Run `ffrap_noland here`. **Tell me:** is the box still listed? Can you land there?
-11. `ffrap_noland off`.
+**Part B: the airship after a town:**
+6. Run `ffrap_airship state`. Expect `placed true`.
+7. Run `ffrap_noland spawn 2000` over open land. Fly out of the box.
+8. Land next to a town, go in, come back out. **Tell me:** is the airship where you left it? Can you board it?
+9. Run `ffrap_airship state` again.
+10. Fly back over the box and run `ffrap_noland here`. **Tell me:** is the box still listed? Is the shadow red? Can you land?
+11. Save on the world map with the airship landed, go to the title and load. Is the airship still there?
+12. `ffrap_noland off`.
 
-**Watch for:** the title rows, as last round.
+**If the airship is gone again:** run `ffrap_airship state` and send that line. It shows where the game thinks the airship is.

@@ -140,6 +140,8 @@ function G.MarkChatsPlayed(sd) G.chatsMarked = (G.chatsMarked or 0) + 1; return 
 function G.SaveData() return {} end
 function G.ChatState() return "56 rows" end
 function G.VisionKeys() return "1 visions" end
+function G.AirshipState() return "placed true" end
+function G.AirshipCondition(c) G.airshipWrote = c; return c end
 function G.NoLandShadow() return 0, 1, { "box" } end
 G.TITLE_NEW_GAME, G.TITLE_ARCHIPELAGO, G.titleAdds = 2, 5, 0
 G.titleOk = false   -- the title entry only once a section turns it on
@@ -1138,6 +1140,9 @@ assert (G.chatsMarked or 0) == 0
 L.execute('commands["ffrap_chats"]("ffrap_chats", {"done"})')
 assert G.chatsMarked == 1
 L.execute('commands["ffrap_visions"]("ffrap_visions", {})')
+# Round 39: `state` reads the airship's save fields and writes no spawn condition
+L.execute('commands["ffrap_airship"]("ffrap_airship", {"state"})')
+assert G.airshipWrote is None, G.airshipWrote
 print("open world start: ok")
 
 # 19. 0.17.0: probes for the opening's input lock. `ffrap_skip <slot> force` skips during the

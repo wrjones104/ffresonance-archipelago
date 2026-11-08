@@ -1797,13 +1797,19 @@ local function WriteArrival(sd, a)
             sd.Map.airShipLocation.Z = a.z
             sd.Map.airShipDirection = a.direction
             sd.Map.IsRidingAirShip = true
+            -- Round 39: the airship was gone after a visit to a town. While this is false the
+            -- game has not placed its airship yet, and its first placement (DT_MapAirShip's
+            -- initSpawnPointId 9000) names a point that is in no map or landing table.
+            sd.Map.IsAlreadySpawnAirship = true
         end
     end)
     local line = "arrival: map " .. a.map .. " at " .. a.x .. ", " .. a.y .. ", " .. a.z
     if a.airship then
         local riding
         pcall(function() riding = sd.Map.IsRidingAirShip end)
-        ok = ok and riding == true
+        local placed
+        pcall(function() placed = sd.Map.IsAlreadySpawnAirship end)
+        ok = ok and riding == true and placed == true
         line = line .. ", in the airship"
     end
     if a.flags then
@@ -1872,6 +1878,30 @@ function G.MarkChatsPlayed(sd)
     local ok = okMark and okQueue and marked == #G.CHAT_IDS and found and #bad == 0
     return ok, string.format("active time chats: %d of %d released and played (%d rows added), notices cleared%s, flag 31 on",
         marked, #G.CHAT_IDS, added, okQueue and "" or " FAILED")
+end
+
+-- Round 39: granted visions could not be equipped and had no place in the menus. The Equip
+-- screen shows visions only with event flag 24 on (DA_ActionEquipment.VisionEnableFlagIdData).
+-- The story turns on 21 and 24 together at Mitra (C01_014_04), which the open world start skips.
+local VISION_FLAGS = { 21, 24 }
+local function EnableVisions(sd)
+    local found, bad = SetFlags(sd, VISION_FLAGS)
+    return found and #bad == 0, "visions enabled: flags " .. table.concat(VISION_FLAGS, " ") .. " on"
+end
+
+-- The loaded save's airship fields as text, for the log.
+function G.AirshipState()
+    local sd = G.SaveData()
+    if not sd then return "no save loaded" end
+    local text
+    local ok = pcall(function()
+        local m = sd.Map
+        text = string.format("placed %s, riding %s, inside %s, at (%.0f, %.0f, %.0f), direction %s, island %s",
+            tostring(m.IsAlreadySpawnAirship), tostring(m.IsRidingAirShip), tostring(m.IsIntoTheAirShip),
+            m.airShipLocation.X, m.airShipLocation.Y, m.airShipLocation.Z,
+            tostring(Int(m.airShipDirection)), tostring(Int(m.airShipIslandType)))
+    end)
+    return ok and text or "could not read the airship fields"
 end
 
 -- The loaded save's chat state as text, for the log.
@@ -2003,7 +2033,10 @@ function G.SkipPrologue(opts)
     -- Where the reload puts the player: in front of the Earth Shrine, or at the Crystal Tower.
     step(WriteArrival(sd, a))
 
-    if opts and opts.openStart then step(G.MarkChatsPlayed(sd)) end
+    if opts and opts.openStart then
+        step(G.MarkChatsPlayed(sd))
+        step(EnableVisions(sd))
+    end
 
     return not failed, report
 end
@@ -2017,8 +2050,10 @@ function G.OpenStart()
     local okStory, story = WriteStory(sd, G.OPEN_START.story)
     local okMap, arrival = WriteArrival(sd, G.OPEN_START)
     local okChats, chats = G.MarkChatsPlayed(sd)
-    return okStory and okMap and okChats, { (okStory and "ok   " or "FAIL ") .. story,
-        (okMap and "ok   " or "FAIL ") .. arrival, (okChats and "ok   " or "FAIL ") .. chats }
+    local okVisions, visions = EnableVisions(sd)
+    return okStory and okMap and okChats and okVisions, { (okStory and "ok   " or "FAIL ") .. story,
+        (okMap and "ok   " or "FAIL ") .. arrival, (okChats and "ok   " or "FAIL ") .. chats,
+        (okVisions and "ok   " or "FAIL ") .. visions }
 end
 
 -- Round 9: a reload during the opening movie came up with no menus and no movement, and what

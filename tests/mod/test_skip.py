@@ -60,7 +60,8 @@ sd = obj({
   chat = { DataMap = chatMap({ ATC11 = { IsReleased = true, IsAlreadyPlayed = false } }),
            NoticeQueue = arr({ "ATC11" }), LatestNotice = "ATC11" },
   Map = { mapId = -1, unitLocation = { X = 0.0, Y = 0.0, Z = 0.0 }, unitDirection = 0,
-          airShipLocation = { X = -6748.5, Y = 7696.7, Z = 72.6 }, airShipDirection = 0, IsRidingAirShip = false },
+          airShipLocation = { X = -6748.5, Y = 7696.7, Z = 72.6 }, airShipDirection = 0, airShipIslandType = 0, IsRidingAirShip = false,
+          IsIntoTheAirShip = false, IsAlreadySpawnAirship = false },
 })
 bag = { [10699] = 1, [11301] = 1, [12029] = 1, [1] = 4 }
 visited, known, saved, reloaded = {}, {}, {}, {}
@@ -154,6 +155,10 @@ assert lua("#sd.chat.NoticeQueue") == 0 and lua("sd.chat.LatestNotice:ToString()
 assert lua("sd.chat.DataMap.rows.ATC11.IsAlreadyPlayed") is True and lua("sd.chat.DataMap.rows.ATC63.IsReleased") is True
 assert lua("G.ChatState()") == f"{CHATS} rows, {CHATS} released, {CHATS} played; notices [], latest None", lua("G.ChatState()")
 assert lua("sd.Progress.eventFlag[32]") is True, "flag 31 is what a chat row turns on"
+# Round 39: the Equip screen shows visions only with flag 24, and the story sets 21 with it
+assert "ok   visions enabled: flags 21 24 on" in list(report.values())
+assert lua("sd.Progress.eventFlag[22]") is True and lua("sd.Progress.eventFlag[25]") is True, "flag i is element i + 1"
+assert lua("sd.Map.IsAlreadySpawnAirship") is False, "the dock start leaves the airship alone"
 # the list of ids is the table's: every ATC row, and no Pinger or Nawatobi rows (dump/ is local)
 _chat_table = paths.REPO / "dump/tables/FFRS/Content/Datatable/Chat/Event/CDT_ChatEventData.json" if hasattr(paths, "REPO") else None
 if _chat_table and _chat_table.exists():
@@ -173,6 +178,7 @@ ok, report = L.execute("return G.OpenStart()")
 assert ok is True and list(report.values())[:2] == [
     f"ok   story counter -> {DOCK_STORY}", f"ok   arrival: map {TOWER_MAP} at -2704.8, -171166.7, 3002.2"], list(report.values())
 assert list(report.values())[2].startswith("ok   active time chats: 56 of 56"), list(report.values())
+assert list(report.values())[3] == "ok   visions enabled: flags 21 24 on", list(report.values())
 assert lua("G.StoryCounter()") == DOCK_STORY and lua("sd.Map.mapId") == TOWER_MAP
 assert lua("sd.Player.WinNum") == 12, "the rest of the save is left alone"
 # the "air" start: the world map, riding the airship beside the tower, with flag 31 on
@@ -181,6 +187,9 @@ ok, report = L.execute("return G.OpenStart()")
 assert ok is True and list(report.values())[1] == (
     f"ok   arrival: map {WORLD_MAP} at -5935.0, -8305.0, 2075.0, in the airship, flags 31 on"), list(report.values())
 assert lua("sd.Map.IsRidingAirShip") is True and lua("sd.Map.airShipDirection") == 2
+# Round 39: the airship stays on the map after a visit to a town only if it counts as placed
+assert lua("sd.Map.IsAlreadySpawnAirship") is True
+assert lua("G.AirshipState()") == "placed true, riding true, inside false, at (-5935, -8305, 2075), direction 2, island 0", lua("G.AirshipState()")
 assert (lua("sd.Map.airShipLocation.X"), lua("sd.Map.airShipLocation.Y"), lua("sd.Map.airShipLocation.Z")) == (-5935.0, -8305.0, 2075.0)
 assert lua("sd.Progress.eventFlag[32]") is True, "flag 31 is Lua element 32"
 # the "event" start: story 7090 at the dock, so the tower's two events play

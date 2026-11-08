@@ -203,7 +203,7 @@ kind  map  uid  row  item  count  money  visible-condition
 
 ## Playtesting and test plans
 
-In-game playtesting results (Rounds 1-38) and the current test plan (Round 39) are documented in [docs/playtesting.md](docs/playtesting.md).
+In-game playtesting results (Rounds 1-39) and the current test plan (Round 40) are documented in [docs/playtesting.md](docs/playtesting.md).
 Automated regression tests are documented in [tests/README.md](tests/README.md).
 
 ## Project status and open questions

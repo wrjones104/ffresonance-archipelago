@@ -41,7 +41,7 @@
 --   ffrap_noland <list|here|show|hide|lock|unlock|refresh|spawn|move|channel|shadow|cond|off>
 --                                probe: the airship's no-landing boxes
 --   ffrap_story <value>          probe: set the loaded save's story counter (any value; save and reload)
---   ffrap_airship [condition|off]  probe: the airship's spawn condition (shipped {progress:0}>=4250)
+--   ffrap_airship [condition|off|state]  probe: the airship's spawn condition (shipped {progress:0}>=4250); state logs its save fields
 --
 -- Each client session belongs to its saves. A new game started from the Archipelago entry on
 -- the title menu is linked to it at once and skips the prologue by itself (plain New Game stays
@@ -49,7 +49,7 @@
 -- follows the save slots the linked game is saved to. While any other save is loaded, the mod
 -- grants nothing, reports nothing and leaves the chests vanilla.
 
-local VERSION = "0.20.0"
+local VERSION = "0.21.0"
 local PROTOCOL = 1        -- the bridge protocol; the apworld's MOD_PROTOCOL
 
 local MOD_DIR = (debug.getinfo(1, "S").source:gsub("^@", ""):gsub("\\", "/"):match("^(.*/)Scripts/[^/]+$"))
@@ -1719,6 +1719,12 @@ end)
 -- ffrap_airship off: the shipped condition. The text is one word, with no spaces.
 command("ffrap_airship", function(p)
     local want = p[1]
+    if want and want:lower() == "state" then
+        local text = game.AirshipState()
+        log("airship: " .. text)
+        notify("Airship: " .. text)
+        return
+    end
     if want and want:lower() == "off" then want = game.AIRSHIP_CONDITION end
     if want then log("airship: writing spawn condition " .. want) end
     local now, err = game.AirshipCondition(want)

@@ -65,6 +65,7 @@ An Archipelago implementation for Final Fantasy Resonance (UE 5.6, game module `
 **Save and story facts:**
 - The story counter is `Progress.Progress[1]` in Lua (element 0).
 - `eventFlag` is 0-based in snapshots and 1-based in Lua (flag i is element i + 1).
+- Features are switched on by event flags in `EnableFlagIdData` fields of the UI's data assets: 14 Equipment, 16 World Map, 18 Recovery, 19 Party, 24 Visions, 26 main menu, 34 fast travel. A new start that skips the story must set them (round 39).
 - The prologue skip must run after story 1005 and the game's first autosave, or the opening movie's input lock survives the reload (round 9).
 
 **Tooling:**
