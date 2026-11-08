@@ -892,7 +892,8 @@ assert list(G.log.values()).count("item1x1") == 1
 print("waiting vision: ok")
 
 # 15. 0.14.0: ffrap_scale's options (at, hp, power, boss, follow), and follow moving the band when
-# the party's level changes, on the field only
+# the party's level changes, on the field only. 0.15.0: attack and magic apart, party mode's
+# defaults (range 2, at 80), and scale.txt.
 L, G = boot()
 L.globals().G = G
 L.execute("""
@@ -904,37 +905,67 @@ function G.LevelBand(lv, range, at)
 end
 function G.OnField() return G.onField end
 function G.ScaleEnemies(mode, a, b, boss, knobs)
-  G.scaleCalls[#G.scaleCalls + 1] = string.format("%s %s %s %s hp%d power%d", mode, tostring(a), tostring(b),
-    tostring(boss), knobs.hp, knobs.power)
-  return 3, "sample"
+  G.scaleCalls[#G.scaleCalls + 1] = string.format("%s %s %s %s hp%d atk%d mag%d", mode, tostring(a), tostring(b),
+    tostring(boss), knobs.hp, knobs.attack, knobs.magic)
+  return 3, "sample", { "1\tSoldier\tlevel 30 -> 3", "2\tBat\tlevel 1 -> 3" }
 end
 """)
 calls = lambda: list(G.scaleCalls.values())
 L.execute('commands["ffrap_scale"]("ffrap_scale", {"party", "5", "at", "80", "hp", "70", "boss"})')
-assert calls() == ["clamp 27 37 true hp70 power100"], calls()
+assert calls() == ["clamp 27 37 true hp70 atk100 mag100"], calls()
 L.execute('commands["ffrap_scale"]("ffrap_scale", {"30", "power", "90"})')
-assert calls()[-1] == "fixed 30 nil false hp100 power90", calls()
+assert calls()[-1] == "fixed 30 nil false hp100 atk90 mag90", calls()
+# attack and magic on their own; either one wins over power, in any order
+L.execute('commands["ffrap_scale"]("ffrap_scale", {"30", "attack", "60", "power", "80"})')
+assert calls()[-1] == "fixed 30 nil false hp100 atk60 mag80", calls()
+L.execute('commands["ffrap_scale"]("ffrap_scale", {"30", "magic", "120"})')
+assert calls()[-1] == "fixed 30 nil false hp100 atk100 mag120", calls()
 L.execute('commands["ffrap_scale"]("ffrap_scale", {"20", "10"})')
-assert calls()[-1] == "clamp 10 20 false hp100 power100", calls()
+assert calls()[-1] == "clamp 10 20 false hp100 atk100 mag100", calls()
 L.execute('commands["ffrap_scale"]("ffrap_scale", {"off"})')
-assert calls()[-1] == "off nil nil false hp100 power100", calls()
+assert calls()[-1] == "off nil nil false hp100 atk100 mag100", calls()
 L.execute('commands["ffrap_scale"]("ffrap_scale", {"what"})')
-assert len(calls()) == 4, "a bad command changes nothing"
+assert len(calls()) == 6, "a bad command changes nothing"
+# party alone: range 2 around 80% of the party's level (40 -> 32)
+L.execute('commands["ffrap_scale"]("ffrap_scale", {"party"})')
+assert calls()[-1] == "clamp 30 34 false hp100 atk100 mag100", calls()
+# the changed rows went to scale.txt, under a header line
+txt = read("scale.txt").splitlines()
+assert txt[0].startswith("-- ffrap_scale clamp 30 34") and txt[1] == "1\tSoldier\tlevel 30 -> 3" and len(txt) == 3, txt
 # follow: nothing while the level stands; a new band when it changes; nothing in a battle
 L.execute('commands["ffrap_scale"]("ffrap_scale", {"party", "3", "at", "50", "follow"})')
-assert calls()[-1] == "clamp 17 23 false hp100 power100", calls()
+assert calls()[-1] == "clamp 17 23 false hp100 atk100 mag100", calls()
 tick = lambda n: [L.execute("tickFn()") for _ in range(n)]
 tick(20)
-assert len(calls()) == 5, calls()
+assert len(calls()) == 8, calls()
 L.execute("G.partyLv = 42; G.onField = false")
 tick(20)
-assert len(calls()) == 5, "not off the field"
+assert len(calls()) == 8, "not off the field"
 L.execute("G.onField = true")
 tick(20)
-assert calls()[-1] == "clamp 18 24 false hp100 power100" and len(calls()) == 6, calls()
+assert calls()[-1] == "clamp 18 24 false hp100 atk100 mag100" and len(calls()) == 9, calls()
 # a plain ffrap_scale turns follow off
 L.execute('commands["ffrap_scale"]("ffrap_scale", {"off"})')
 L.execute("G.partyLv = 60")
 tick(20)
-assert calls()[-1] == "off nil nil false hp100 power100" and len(calls()) == 7, calls()
+assert calls()[-1] == "off nil nil false hp100 atk100 mag100" and len(calls()) == 10, calls()
 print("scale options and follow: ok")
+
+# 16. 0.15.0: ffrap_noland's commands reach game.lua with the right arguments
+L, G = boot()
+L.globals().G = G
+L.execute("""
+G.nl = {}
+local box = { name = "BOX", x = 1, y = 2, z = 3, ex = 4, ey = 5, ez = 6, yaw = 0, cond = "c" }
+function G.NoLandLine(b) return b.name end
+function G.NoLandLock(which, on) G.nl[#G.nl + 1] = "lock " .. which .. " " .. tostring(on) return box end
+function G.NoLandHere() G.nl[#G.nl + 1] = "here" return { box }, { x = 1, y = 2, z = 3 } end
+function G.NoLandShow(on, w) G.nl[#G.nl + 1] = "show " .. tostring(on) .. " " .. tostring(w) return 7 end
+function G.NoLandSpawn(half) G.nl[#G.nl + 1] = "spawn " .. tostring(half) return box end
+function G.NoLandOff() G.nl[#G.nl + 1] = "off" return 2 end
+""")
+for args in ('{"lock", "Pharm"}', '{"unlock", "mysidia"}', '{"here"}', '{"show", "30"}', '{"hide"}', '{"spawn"}', '{"off"}'):
+    L.execute('commands["ffrap_noland"]("ffrap_noland", %s)' % args)
+assert list(G.nl.values()) == ["lock pharm true", "lock mysidia false", "here", "show true 30", "show false nil",
+                               "spawn 2000", "off"], list(G.nl.values())
+print("noland commands: ok")

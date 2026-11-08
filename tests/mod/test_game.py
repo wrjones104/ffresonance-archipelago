@@ -898,10 +898,10 @@ assert st.Attack == scaled(30, "Attack", 1, 11) and st.Defence == scaled(30, "De
 # enemy's attack (the shipped ones have 45), not 56
 down3 = L.eval("G.ScaledStats({ Level = 30, MaxHitPoint = 1000, Attack = 189, Experience = 30 }, 3)")
 assert 38 <= down3.Attack <= 46 and down3.Attack == scaled(189, "Attack", 30, 3), dict(down3)
-# the knobs: hp moves HP, power moves Attack and Intelligence, nothing else
+# the knobs: hp moves HP, attack moves Attack, magic moves Intelligence, nothing else
 k = L.eval("G.ScaledStats({ Level = 10, MaxHitPoint = 500, Attack = 80, Intelligence = 50, Defence = 60 }, 10,"
-           " { hp = 50, power = 80 })")
-assert k.MaxHitPoint == 250 and k.Attack == 64 and k.Intelligence == 40 and k.Defence == 60, dict(k)
+           " { hp = 50, attack = 80, magic = 120 })")
+assert k.MaxHitPoint == 250 and k.Attack == 64 and k.Intelligence == 60 and k.Defence == 60, dict(k)
 # above level 70 the curve stops growing
 assert abs(L.eval("G.CurveRatio('MaxHitPoint', 70, 99)") - 1.0) < 1e-9
 assert abs(L.eval("G.CurveRatio('Attack', 99, 50)") - ratio("Attack", 70, 50)) < 1e-9
@@ -947,20 +947,22 @@ function StaticFindObject(p)
   return prevSFO3(p)
 end
 """)
-n, sample = L.execute("return G.ScaleEnemies('fixed', 20, nil, false)")
+n, sample, _ = L.execute("return G.ScaleEnemies('fixed', 20, nil, false)")
 assert n == 1 and "Steel Bat (2): level 1 -> 20" in sample, (n, sample)
 assert L.eval("unitRows.bat.Level") == 20 and L.eval("unitRows.bat.MaxHitPoint") == scaled(68, "MaxHitPoint", 1, 20)
 assert L.eval("unitRows.boss.Level") == 4 and L.eval("unitRows.rain.Level") == 1, "bosses and party left alone"
-n, _ = L.execute("return G.ScaleEnemies('fixed', 20, nil, false)")
+n, _, _ = L.execute("return G.ScaleEnemies('fixed', 20, nil, false)")
 assert n == 0, "already scaled: nothing to do"
 # the next scale works from the shipped row, not from the scaled one
-n, _ = L.execute("return G.ScaleEnemies('clamp', 5, 15, true)")
+n, _, _ = L.execute("return G.ScaleEnemies('clamp', 5, 15, true)")
 assert n == 2 and L.eval("unitRows.bat.Level") == 5 and L.eval("unitRows.boss.Level") == 5, n
 assert L.eval("unitRows.bat.MaxHitPoint") == scaled(68, "MaxHitPoint", 1, 5)
 # the knobs reach the rows
-n, _ = L.execute("return G.ScaleEnemies('clamp', 5, 15, true, { hp = 50, power = 100 })")
+n, _, lines = L.execute("return G.ScaleEnemies('clamp', 5, 15, true, { hp = 50 })")
 assert n == 2 and L.eval("unitRows.bat.MaxHitPoint") == scaled(68, "MaxHitPoint", 1, 5, 50), n
-n, _ = L.execute("return G.ScaleEnemies('off', nil, nil, true)")
+# a line per changed row, for scale.txt
+assert len(lines) == 2 and any(("level 1 -> 5\tHP %d\t" % scaled(68, "MaxHitPoint", 1, 5, 50)) in l for l in lines.values()), list(lines.values())
+n, _, _ = L.execute("return G.ScaleEnemies('off', nil, nil, true)")
 assert n == 2 and L.eval("unitRows.bat.MaxHitPoint") == 68 and L.eval("unitRows.boss.Experience") == 100, n
 
 assert L.eval("G.AirshipCondition()") == "{progress:0}>=4250"
@@ -996,13 +998,14 @@ print("party level and story counter: ok")
 # 0.14.0: the no-landing boxes (ffrap_noland). The game's Mysidia box is moved and put back; a
 # spawned box is removed.
 L.execute(r"""
-local function makeBoxActor(name, x, y, z, ex, ey, ez, cond)
+function makeBoxActor(name, x, y, z, ex, ey, ez, cond)
   local box = { ex = ex, ey = ey, ez = ez }
   function box:IsValid() return true end
   function box:HasAnyInternalFlags() return false end
   function box:HasAnyFlags() return false end
   function box:GetUnscaledBoxExtent() return { X = self.ex, Y = self.ey, Z = self.ez } end
   function box:SetBoxExtent(v) self.ex, self.ey, self.ez = v.X, v.Y, v.Z end
+  function box:SetHiddenInGame(h) self.hidden = h end
   local a = { x = x, y = y, z = z, yaw = 0, m_Condition = cond, m_pBoxComponent = box, nm = name, dead = false }
   function a:IsValid() return not self.dead end
   function a:HasAnyInternalFlags() return false end
@@ -1043,10 +1046,10 @@ line = L.eval("G.NoLandLine(G.NoLandBoxes()[2])")
 assert line == 'BP_MapNonLandingArea_C_42 at (-18053, -8493, 393) half-size (2400, 6000, 700) yaw 0, condition "{progress:0}<5020"', line
 # move: the Mysidia box goes around the player, with an empty condition
 box, why = L.execute("local b, w = G.NoLandMove(4000); return b, w")
-assert why is None and box.x == 5000 and box.y == 6000 and box.ex == 4000 and box.ez == 3000 and box.cond == "", (dict(box), why)
+assert why is None and box.x == 5000 and box.y == 6000 and box.z == 393 and box.ex == 4000 and box.ez == 700 and box.cond == "", (dict(box), why)
 # spawn: a new box around the player
 box, why = L.execute("local b, w = G.NoLandSpawn(2500); return b, w")
-assert why is None and box.ex == 2500 and box.ey == 2500 and box.x == 5000, (dict(box), why)
+assert why is None and box.ex == 2500 and box.ey == 2500 and box.x == 5000 and box.z == 393 and box.ez == 700, (dict(box), why)
 assert L.eval("#G.NoLandBoxes()") == 3
 # cond: written to both test boxes, not to the others
 n, last, err = L.execute("local n, l, e = G.NoLandCondition('{progress:0}<0'); return n, l, e")
@@ -1061,4 +1064,32 @@ assert (m.x, m.y, m.z, m.m_pBoxComponent.ex, m.m_pBoxComponent.ey, m.m_Condition
 L.execute("nolandActors = { nolandActors[1] }")
 box, why = L.execute("local b, w = G.NoLandMove(); return b, w")
 assert box is None and "not on this map" in why, why
+# 0.15.0: here, lock, unlock, show
+L.execute("""
+nolandActors[#nolandActors + 1] = makeBoxActor("BP_MapNonLandingArea_C_1", -5930, -17400, 240, 473, 304, 130, "{progress:0}<7020")
+nolandActors[#nolandActors].yaw = 0
+""")
+L.execute("fakePawn.x, fakePawn.y = -5900, -17200")
+here, pose = L.execute("return G.NoLandHere()")
+assert len(here) == 1 and here[1].name == "BP_MapNonLandingArea_C_1", [dict(h) for h in here.values()]
+L.execute("fakePawn.x, fakePawn.y = -5900, -17000")
+assert L.eval("#G.NoLandHere()") == 0
+# a box turned by its yaw: (0, 0) half-size 100 x 10, turned 90 degrees, holds (0, 50) but not (50, 0)
+assert L.eval("G.BoxHolds({ x = 0, y = 0, ex = 100, ey = 10, yaw = 90 }, 0, 50)") is True
+assert L.eval("G.BoxHolds({ x = 0, y = 0, ex = 100, ey = 10, yaw = 90 }, 50, 0)") is False
+assert L.eval("G.BoxHolds({ x = 0, y = 0, ex = 100, ey = 10, yaw = 0 }, 50, 0)") is True
+box, why = L.execute("local b, w = G.NoLandLock('pharm', true); return b, w")
+assert why is None and box.cond == "{progress:0}>=0" and box.x == -5930, (dict(box), why)
+box, why = L.execute("local b, w = G.NoLandLock('pharm', false); return b, w")
+assert why is None and box.cond == "{progress:0}<0", (dict(box), why)
+box, why = L.execute("local b, w = G.NoLandLock('gronoa', true); return b, w")
+assert box is None and "not on this map" in why, why
+box, why = L.execute("local b, w = G.NoLandLock('narshe', true); return b, w")
+assert box is None and "no story box" in why, why
+assert L.eval("G.NoLandShow(true, 25)") == 2
+assert L.eval("nolandActors[2].m_pBoxComponent.hidden") is False and L.eval("nolandActors[2].m_pBoxComponent.LineThickness") == 25
+assert L.eval("G.NoLandShow(false)") == 2 and L.eval("nolandActors[2].m_pBoxComponent.hidden") is True
+# off gives the story box its own condition back
+assert L.eval("G.NoLandOff()") == 1
+assert L.eval("nolandActors[2].m_Condition") == "{progress:0}<7020"
 print("no-landing boxes: ok")

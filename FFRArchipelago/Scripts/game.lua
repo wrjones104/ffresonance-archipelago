@@ -2437,8 +2437,9 @@ G.ENEMY_CURVE = {
 G.CURVE_TOP = 70
 local GROWTH_ORDER = { "MaxHitPoint", "MaxBreakPoint", "Attack", "Defence", "Intelligence", "Mind",
                        "Agility", "Experience", "Money" }
--- Which stats each tuning knob multiplies: `hp` the HP, `power` the damage stats.
-local KNOB_STATS = { MaxHitPoint = "hp", Attack = "power", Intelligence = "power" }
+-- Which stats each tuning knob multiplies: `hp` the HP, `attack` the physical damage stat,
+-- `magic` the magic one (round 33: physical hits were much stronger than spells).
+local KNOB_STATS = { MaxHitPoint = "hp", Attack = "attack", Intelligence = "magic" }
 local CATEGORY_ENEMY, CATEGORY_BOSS = 2, 3     -- eUnitCategory
 G.MAX_LEVEL = 99
 
@@ -2452,8 +2453,8 @@ function G.CurveRatio(stat, from, to)
 end
 
 -- The stats of a unit moved from its own level to `level`. Pure: `orig` holds Level and the
--- stats in ENEMY_CURVE. `knobs` (optional) holds percentages: hp (MaxHitPoint) and power
--- (Attack, Intelligence), 100 when missing. A stat that is 0 stays 0, and no other stat goes
+-- stats in ENEMY_CURVE. `knobs` (optional) holds percentages: hp (MaxHitPoint), attack
+-- (Attack) and magic (Intelligence), 100 when missing. A stat that is 0 stays 0, and no other stat goes
 -- below 1.
 function G.ScaledStats(orig, level, knobs)
     knobs = knobs or {}
@@ -2527,11 +2528,12 @@ local scaleOriginals = {}   -- unit id -> { Level = n, MaxHitPoint = n, ... } as
 
 -- Rescales every enemy row (and bosses too, if withBosses) by mode, a, b, as in ScaledLevel,
 -- with the tuning knobs of ScaledStats. mode "off" restores the shipped rows. Returns how many
--- rows changed, and one sample line (the first enemy that changed) for the log.
+-- rows changed, one sample line (the first enemy that changed) for the log, and a line per
+-- changed row (for scale.txt).
 function G.ScaleEnemies(mode, a, b, withBosses, knobs)
     local family = TableFamily(Find(UNIT_TABLE))
     if #family == 0 then return nil, "DT_UnitParameter not loaded" end
-    local changed, sample = 0, nil
+    local changed, sample, lines = 0, nil, {}
     local fields = { "Level" }
     for _, k in ipairs(GROWTH_ORDER) do fields[#fields + 1] = k end
     for _, dt in ipairs(family) do
@@ -2558,6 +2560,11 @@ function G.ScaleEnemies(mode, a, b, withBosses, knobs)
                     end
                     if diff then
                         changed = changed + 1
+                        lines[#lines + 1] = string.format(
+                            "%d\t%s\tlevel %d -> %d\tHP %d\tAttack %d\tIntelligence %d\tDefence %d\tMind %d\tEXP %d",
+                            id, AsText(row.Name) or "?", orig.Level, Int(row.Level) or -1, Int(row.MaxHitPoint) or -1,
+                            Int(row.Attack) or -1, Int(row.Intelligence) or -1, Int(row.Defence) or -1,
+                            Int(row.Mind) or -1, Int(row.Experience) or -1)
                         if not sample then
                             sample = string.format("%s (%d): level %d -> %d, HP %d -> %d, Attack %d -> %d, EXP %d -> %d",
                                 AsText(row.Name) or "?", id, orig.Level, Int(row.Level) or -1, orig.MaxHitPoint,
@@ -2570,7 +2577,7 @@ function G.ScaleEnemies(mode, a, b, withBosses, knobs)
             end)
         end)
     end
-    return changed, sample
+    return changed, sample, lines
 end
 
 -- The airship's spawn condition, in DT_MapAirShip (shipped: "{progress:0}>=4250", the end of
@@ -2597,13 +2604,23 @@ end
 -- No-landing boxes (round 32). The world map has 111 BP_MapNonLandingArea_C actors.
 -- Each is a box (a CPP_MapAirShipCanNeverLandingBox component) with an m_Condition string;
 -- while the condition holds (or when it is empty), the airship cannot land in the box. Before
--- story 5020 one big box (2400 x 6000, condition {progress:0}<5020) keeps the airship off
--- Mysidia. So a continent lock can be the same: a big box with our own condition.
+-- story 5020 one big box (2400 x 6000 x 700, condition {progress:0}<5020) keeps the airship
+-- off Mysidia. So a continent lock can be the same: a big box with our own condition. The
+-- Blueprint has no script: the box and the condition are read by C++ (CPP_MapNonLandingArea).
+--
+-- Round 32: a box spawned at the airship, 6000 tall, lifted the airship over it (its collision
+-- counts as ground), and the airship could still land. So boxes now go where the game puts
+-- its own: centred at height 393, 700 up and down, like the Mysidia box.
 local NOLAND_CLASS = "BP_MapNonLandingArea_C"
 local NOLAND_PKG, NOLAND_NAME = "/Game/BP/Map/BP_MapNonLandingArea", "BP_MapNonLandingArea"
 G.MYSIDIA_BOX_CONDITION = "{progress:0}<5020"
+G.NOLAND_Z, G.NOLAND_HALF_Z = 393, 700
+-- The game's three story locks, by the condition they ship with.
+G.STORY_BOXES = { mysidia = "{progress:0}<5020", gronoa = "{progress:0}<6000", pharm = "{progress:0}<7020" }
+G.COND_ALWAYS, G.COND_NEVER = "{progress:0}>=0", "{progress:0}<0"
 local nolandSpawned = {}     -- actors spawned by the probe
 local nolandMoved = nil      -- { actor, x, y, z, ex, ey, ez, cond } of the game's box we moved
+local nolandLocks = {}       -- which -> { actor, cond } of a story box whose condition we wrote
 
 local function BoxOf(actor)
     local box
@@ -2651,6 +2668,28 @@ function G.NoLandBoxes()
     return out
 end
 
+-- Whether the point (x, y) is inside the box `i` seen from above (the box turned by its yaw).
+-- Pure.
+function G.BoxHolds(i, x, y)
+    if not (i.x and i.ex and i.ey) then return false end
+    local r = math.rad(-(i.yaw or 0))
+    local dx, dy = x - i.x, y - i.y
+    local lx = dx * math.cos(r) - dy * math.sin(r)
+    local ly = dx * math.sin(r) + dy * math.cos(r)
+    return math.abs(lx) <= i.ex and math.abs(ly) <= i.ey
+end
+
+-- The boxes under the player (seen from above), and the player's pose.
+function G.NoLandHere()
+    local pose, why = G.PlayerPose()
+    if not pose then return nil, why end
+    local out = {}
+    for _, i in ipairs(G.NoLandBoxes()) do
+        if G.BoxHolds(i, pose.x, pose.y) then out[#out + 1] = i end
+    end
+    return out, pose
+end
+
 -- Puts a box at (x, y, z) with half-size (hx, hy, hz) and the condition `cond`. Each step goes
 -- to the trace (G.gateTrace) before it runs. Returns the box read back.
 local function PlaceBox(actor, x, y, z, hx, hy, hz, cond)
@@ -2671,8 +2710,8 @@ local function PlaceBox(actor, x, y, z, hx, hy, hz, cond)
     return BoxInfo(actor)
 end
 
--- Spawns a new no-landing box around the player: `half` across (default 3000), from 3000
--- below to 3000 above the player. Returns the box, or nil and why.
+-- Spawns a new no-landing box under the player: `half` across each way (default 2000), at the
+-- Mysidia box's height. Returns the box, or nil and why.
 function G.NoLandSpawn(half)
     local pose, why = G.PlayerPose()
     if not pose then return nil, why end
@@ -2680,15 +2719,16 @@ function G.NoLandSpawn(half)
     if not cls then return nil, "could not load " .. NOLAND_NAME .. "_C" end
     gateStep("noland: SpawnActor")
     local actor
-    pcall(function() actor = pose.world:SpawnActor(cls, { X = pose.x, Y = pose.y, Z = pose.z }, { Pitch = 0, Yaw = 0, Roll = 0 }) end)
+    pcall(function() actor = pose.world:SpawnActor(cls, { X = pose.x, Y = pose.y, Z = G.NOLAND_Z }, { Pitch = 0, Yaw = 0, Roll = 0 }) end)
     if not (actor and Alive(actor)) then return nil, "SpawnActor failed" end
     nolandSpawned[#nolandSpawned + 1] = actor
-    half = half or 3000
-    return PlaceBox(actor, pose.x, pose.y, pose.z, half, half, 3000, nil)
+    half = half or 2000
+    return PlaceBox(actor, pose.x, pose.y, G.NOLAND_Z, half, half, G.NOLAND_HALF_Z, nil)
 end
 
--- Moves the game's own Mysidia box (the one with condition {progress:0}<5020) around the
--- player, with half-size `half` and an empty condition. Keeps where it was, for NoLandOff.
+-- Moves the game's own Mysidia box (the one with condition {progress:0}<5020) under the
+-- player, with half-size `half`, its own height and an empty condition. Keeps where it was,
+-- for NoLandOff.
 function G.NoLandMove(half)
     local pose, why = G.PlayerPose()
     if not pose then return nil, why end
@@ -2700,8 +2740,8 @@ function G.NoLandMove(half)
         end
     end
     if not target then return nil, "the Mysidia box (condition " .. G.MYSIDIA_BOX_CONDITION .. ") is not on this map" end
-    half = half or 3000
-    return PlaceBox(target, pose.x, pose.y, pose.z, half, half, 3000, "")
+    half = half or 2000
+    return PlaceBox(target, pose.x, pose.y, nolandMoved.z or G.NOLAND_Z, half, half, nolandMoved.ez or G.NOLAND_HALF_Z, "")
 end
 
 -- Writes `cond` into every box the probe spawned or moved. Returns how many, and the last one.
@@ -2721,7 +2761,49 @@ function G.NoLandCondition(cond)
     return n, last, err
 end
 
--- Removes the spawned boxes and puts the moved one back. Returns how many were undone.
+-- One of the game's story boxes (mysidia, gronoa or pharm) locked (on: its condition always
+-- holds, so no landing) or unlocked (it never holds). The box stays where the game put it.
+-- Returns the box read back, or nil and why.
+function G.NoLandLock(which, on)
+    local orig = G.STORY_BOXES[which]
+    if not orig then return nil, "no story box called " .. tostring(which) .. " (mysidia, gronoa, pharm)" end
+    local rec = nolandLocks[which]
+    if not (rec and Alive(rec.actor)) then
+        rec = nil
+        for _, i in ipairs(G.NoLandBoxes()) do
+            if i.cond == orig then rec = { actor = i.actor, cond = orig }; break end
+        end
+        if not rec then return nil, "the " .. which .. " box (condition " .. orig .. ") is not on this map" end
+        nolandLocks[which] = rec
+    end
+    gateStep("noland: write m_Condition")
+    local want = on and G.COND_ALWAYS or G.COND_NEVER
+    local ok, e = pcall(function() rec.actor.m_Condition = want end)
+    if not ok then return BoxInfo(rec.actor), "m_Condition write failed: " .. tostring(e) end
+    return BoxInfo(rec.actor)
+end
+
+-- Draws the boxes (on) or hides them again. A box component is a shape, and shapes draw
+-- their outline when not hidden in game; whether this build draws them is the probe. The
+-- line width is a plain float field, written before the component is shown. Returns how many.
+function G.NoLandShow(on, width)
+    local n = 0
+    for _, i in ipairs(G.NoLandBoxes()) do
+        local box = BoxOf(i.actor)
+        if box then
+            if on then
+                gateStep("noland: LineThickness")
+                pcall(function() box.LineThickness = width or 40.0 end)
+            end
+            gateStep("noland: SetHiddenInGame")
+            if pcall(function() box:SetHiddenInGame(not on, false) end) then n = n + 1 end
+        end
+    end
+    return n
+end
+
+-- Removes the spawned boxes, puts the moved one back and gives the story boxes their own
+-- conditions again. Returns how many were undone.
 function G.NoLandOff()
     local n = 0
     for _, a in ipairs(nolandSpawned) do
@@ -2739,6 +2821,14 @@ function G.NoLandOff()
         n = n + 1
     end
     nolandMoved = nil
+    for which, rec in pairs(nolandLocks) do
+        if Alive(rec.actor) then
+            gateStep("noland: write m_Condition")
+            pcall(function() rec.actor.m_Condition = rec.cond end)
+            n = n + 1
+        end
+    end
+    nolandLocks = {}
     return n
 end
 

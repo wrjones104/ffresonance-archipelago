@@ -79,6 +79,8 @@ The story counter is `Progress[0]`. Every story gate is a condition such as `{pr
 - 12 have a condition. 7 are side-quest steps (`{progress:24}==10` and similar), and 2 test flag 95 (`!{flag:95}`, in Mysidia). 3 are story locks: `{progress:0}<5020` over Mysidia, `{progress:0}<6000` on Gronoa's landing spot (which also runs an event), and `{progress:0}<7020` in Pharm.
 - **The game locks a whole continent this way:** before story 5020, one box of half-size 2400 x 6000 x 700 at (-18053, -8493), condition `{progress:0}<5020`, covers Mysidia.
 - So a continent lock can be one or more big boxes per continent, with a condition the mod controls. To find out (round 32): whether a box we spawn or move works, and whether the game reads a changed condition at once or only when the map loads.
+- **Round 32 results:** `list` found the 111 boxes. A box spawned at the airship's height (z 1500, 3000 up and down) lifted the airship over it and broke the camera, and the airship could still land on it. So the box's collision counts as ground for the airship, and a box must sit on the ground, as the game's own do (the Mysidia box: centre height 393, 700 up and down). The Blueprint has no script: the C++ class `CPP_MapNonLandingArea` reads the box and the condition.
+- **Round 33 probes (mod 0.15.0):** `lock mysidia` (the game's own box, with a condition that always holds) tests whether a changed condition works at once. `spawn` now puts a new box at the ground height. `here` lists the boxes under the player, and `show` tries to draw them.
 - **Where the continents are** (from the landing points, whose ids start with the island: 1xxx Grandshelt, 2xxx Lanzelt, and so on; x and y in game units):
 
 | Continent | x | y |
@@ -171,7 +173,16 @@ The story counter is `Progress[0]`. Every story gate is a condition such as `{pr
 - `hp` and `power`: enemy HP, and enemy Attack and Intelligence, as percentages.
 - `follow`: the band moves when the party's level changes, on the field only.
 
-**Your call (after round 32):** the defaults for `at`, the range, `hp` and `power`; whether the party level is the average or the highest member; and whether bosses scale by default.
+**Round 32 results.**
+- `party 2 at 80` "feels much better" with a level 3 party. Mod 0.15.0 makes range 2 and `at 80` the defaults.
+- `follow` works: the band moved when the party levelled up, once back on the field.
+- **Physical hits are much stronger than spells:** a Hydra's Crush hit for almost 200, its Thundara for about 40. Crush is weaker on paper (power 18, one hit, against 22 times two hits), but the stats are not even. The curve keeps an enemy's own balance, and at low levels attack falls much less than intelligence (attack's b is 0.32, intelligence's 0.56). The Hydra (level 48: attack 505, intelligence 330) pulled to level 4 has attack 62 and intelligence 19.
+- Shipped low-level enemies are like that too: about 2.3 times more attack than intelligence at levels 1 to 10. But they only have plain attacks (power 12), and late enemies keep their strong skills when they are pulled down. If damage grows faster than attack (attack²/defence, as in many FF games), the gap grows.
+- **Party members join at their own levels** (Lid 11, Nichol 19), and the band follows the party's average. With a level 3 Rain, Lid and Nichol joining moved the band from 2 to 7.
+
+**Mod 0.15.0:** `attack` and `magic` knobs apart (`power` still sets both), and `scale.txt` with each enemy's new stats after every rescale.
+
+**Your call (after round 33):** the defaults for `attack` and `magic`; whether the party level is the average or the highest member; whether new members join at the party's level; and whether bosses scale by default.
 
 ## 6. Locations in the cleared world
 
@@ -205,8 +216,9 @@ The story hands out the party, the first visions, the airship and the main key i
 ## 9. Order of work
 
 1. **Round 31 probes:** `ffrap_scale`, `ffrap_airship` and `ffrap_story 9000`. Done: scaling works but was too hard.
-2. **Round 32 probes:** the new scaling curve and knobs, and the no-landing boxes (`ffrap_noland`).
-3. **The skip to the open world:** story 7090 and the Crystal Tower's event, done by the mod for a new Archipelago game.
-4. **Enemy scaling:** the defaults from round 32, as options in the apworld, applied by the mod with `follow`.
-5. **Gates:** continent locks with no-landing boxes, plus blockers for the crossings that do not need the airship.
-6. **The goal,** and regions and rules in the apworld (logic.md section 9).
+2. **Round 32 probes:** the new scaling curve and knobs, and the no-landing boxes (`ffrap_noland`). Done: `at 80` is much better; physical hits too strong; a box must sit on the ground.
+3. **Round 33 probes:** `attack` and `magic` knobs, and `ffrap_noland lock`, `spawn` at the ground height, `here` and `show`.
+4. **The skip to the open world:** story 7090 and the Crystal Tower's event, done by the mod for a new Archipelago game.
+5. **Enemy scaling:** the defaults from rounds 32 and 33, as options in the apworld, applied by the mod with `follow`.
+6. **Gates:** continent locks with no-landing boxes, plus blockers for the crossings that do not need the airship.
+7. **The goal,** and regions and rules in the apworld (logic.md section 9).

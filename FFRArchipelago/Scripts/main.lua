@@ -31,9 +31,10 @@
 --   ffrap_bind                   link the loaded save to the client's session (also /bind in the client)
 --   ffrap_reset                  set the loaded save's applied-item count to 0 (re-grants everything to it!)
 --   ffrap_gate <subcommand>      experimental: spawn conditional blockers and custom key items
---   ffrap_scale <level|low high|party n|off> [at %] [hp %] [power %] [boss] [follow]
+--   ffrap_scale <level|low high|party n|off> [at %] [hp %] [attack %] [magic %] [power %] [boss] [follow]
 --                                probe: rewrite every enemy's level and stats
---   ffrap_noland <list|spawn|move|cond|off>  probe: the airship's no-landing boxes
+--   ffrap_noland <list|here|show|hide|lock|unlock|spawn|move|cond|off>
+--                                probe: the airship's no-landing boxes
 --   ffrap_story <value>          probe: set the loaded save's story counter (any value; save and reload)
 --   ffrap_airship [condition|off]  probe: the airship's spawn condition (shipped {progress:0}>=4250)
 --
@@ -43,7 +44,7 @@
 -- follows the save slots the linked game is saved to. While any other save is loaded, the mod
 -- grants nothing, reports nothing and leaves the chests vanilla.
 
-local VERSION = "0.14.0"
+local VERSION = "0.15.0"
 local PROTOCOL = 1        -- the bridge protocol; the apworld's MOD_PROTOCOL
 
 local MOD_DIR = (debug.getinfo(1, "S").source:gsub("^@", ""):gsub("\\", "/"):match("^(.*/)Scripts/[^/]+$"))
@@ -1332,25 +1333,39 @@ command("ffrap_blank", function(p)
     notify("Chest blanking " .. (want and "on" or "off") .. ": " .. n .. " rows changed")
 end)
 
--- Open world probes (rounds 31 and 32, docs/open_world.md). None is saved: a game restart
+-- Open world probes (rounds 31 to 33, docs/open_world.md). None is saved: a game restart
 -- undoes them.
 --
 -- ffrap_scale 30: every enemy at level 30. ffrap_scale 10 20: each enemy's own level, pulled
--- into 10 to 20. ffrap_scale party 5: pulled into the party's average level, plus or minus 5.
+-- into 10 to 20. ffrap_scale party 2: pulled into 80% of the party's average level, plus or
+-- minus 2 (the defaults; round 32 found "party 2 at 80" much better than "party 2").
 -- ffrap_scale off: the shipped rows. Options, in any order after the numbers:
---   at 80      party mode: centre the band on 80% of the party's level (default 100)
+--   at 70      party mode: centre the band on 70% of the party's level (default 80)
 --   hp 70      enemy HP at 70% (default 100)
---   power 80   enemy Attack and Intelligence at 80% (default 100)
+--   attack 60  enemy Attack (physical damage) at 60% (default 100)
+--   magic 80   enemy Intelligence (magic damage) at 80% (default 100)
+--   power 80   both attack and magic, unless one is given on its own
 --   boss       change bosses too
 --   follow     party mode: do it again whenever the party's level changes (on the field only)
 local scaleFollow = nil   -- { range, at, knobs, withBosses, last } while "follow" is on
 
+-- Every rescale writes the changed rows to scale.txt (one enemy a line), so a hit seen in
+-- battle can be matched with the stats behind it.
 local function applyScale(mode, a, b, withBosses, knobs)
-    log(string.format("scale: %s %s %s, hp %d%%, power %d%%%s: starting", mode, tostring(a), tostring(b),
-        knobs.hp, knobs.power, withBosses and ", with bosses" or ""))
-    local n, sample = game.ScaleEnemies(mode, a, b, withBosses, knobs)
+    log(string.format("scale: %s %s %s, hp %d%%, attack %d%%, magic %d%%%s: starting", mode, tostring(a), tostring(b),
+        knobs.hp, knobs.attack, knobs.magic, withBosses and ", with bosses" or ""))
+    local n, sample, lines = game.ScaleEnemies(mode, a, b, withBosses, knobs)
     if n == nil then return nil, sample end
     log("scale: " .. n .. " rows changed" .. (sample and ("; " .. sample) or ""))
+    if lines and #lines > 0 then
+        local f = io.open(MOD_DIR .. "scale.txt", "w")
+        if f then
+            f:write(string.format("-- ffrap_scale %s %s %s, hp %d%%, attack %d%%, magic %d%%\n", mode, tostring(a),
+                tostring(b), knobs.hp, knobs.attack, knobs.magic))
+            for _, l in ipairs(lines) do f:write(l, "\n") end
+            f:close()
+        end
+    end
     return n
 end
 
@@ -1365,23 +1380,24 @@ end
 
 command("ffrap_scale", function(p)
     local withBosses, follow = false, false
-    local knobs, at = { hp = 100, power = 100 }, 100
+    local set, at = { hp = 100 }, 80
     local args = {}
     local i = 1
     while i <= #p do
         local w = tostring(p[i]):lower()
         if w == "boss" then withBosses = true
         elseif w == "follow" then follow = true
-        elseif (w == "at" or w == "hp" or w == "power") and tonumber(p[i + 1]) then
+        elseif (w == "at" or w == "hp" or w == "power" or w == "attack" or w == "magic") and tonumber(p[i + 1]) then
             local v = math.max(1, math.floor(tonumber(p[i + 1])))
-            if w == "at" then at = v else knobs[w] = v end
+            if w == "at" then at = v else set[w] = v end
             i = i + 1
         else args[#args + 1] = p[i] end
         i = i + 1
     end
+    local knobs = { hp = set.hp, attack = set.attack or set.power or 100, magic = set.magic or set.power or 100 }
     scaleFollow = nil
     if tostring(args[1]):lower() == "party" then
-        local range = tonumber(args[2]) or 5
+        local range = tonumber(args[2]) or 2
         local n, err, lv = scaleToParty(range, at, withBosses, knobs)
         if n == nil then
             notify("Scale failed: " .. tostring(err))
@@ -1397,7 +1413,7 @@ command("ffrap_scale", function(p)
     local a, b = tonumber(args[1]), tonumber(args[2])
     local mode = (tostring(args[1]):lower() == "off") and "off" or (a and b and "clamp") or (a and "fixed") or nil
     if not mode then
-        notify("Usage: ffrap_scale <level> | <low> <high> | party [range] | off  [at %] [hp %] [power %] [boss] [follow]")
+        notify("Usage: ffrap_scale <level> | <low> <high> | party [range] | off  [at %] [hp %] [attack %] [magic %] [power %] [boss] [follow]")
         return
     end
     if mode == "clamp" and a > b then a, b = b, a end
@@ -1422,11 +1438,20 @@ scaleTick = function()
 end
 
 -- ffrap_noland list: every no-landing box on this map, to noland.txt.
--- ffrap_noland spawn [half]: a new box around you, `half` across each way (default 3000).
--- ffrap_noland move [half]: the game's own Mysidia box, moved around you, condition emptied.
--- ffrap_noland cond <text>: the condition of those boxes (one word: {progress:0}<0 never holds).
--- ffrap_noland off: remove the spawned boxes and put the Mysidia box back.
+-- ffrap_noland here: the boxes under you (seen from above).
+-- ffrap_noland show [width] / hide: draw the boxes' outlines, or hide them again.
+-- ffrap_noland lock <mysidia|gronoa|pharm>: that story box stops landing (its condition always
+--   holds). unlock: it never holds. The box stays where the game put it.
+-- ffrap_noland spawn [half]: a new box under you, `half` across each way (default 2000), at
+--   the Mysidia box's height.
+-- ffrap_noland move [half]: the game's own Mysidia box, moved under you, condition emptied.
+-- ffrap_noland cond <text>: the condition of the spawned and moved boxes.
+-- ffrap_noland off: undo all of it.
 -- Every step is logged before it runs ("noland step: ...").
+local function poseText(pose)
+    return pose and string.format("%.0f, %.0f, %.0f", pose.x, pose.y, pose.z) or "?"
+end
+
 command("ffrap_noland", function(p)
     local what = (p[1] and p[1]:lower()) or "list"
     game.gateTrace = function(step) log("noland step: " .. step) end
@@ -1439,12 +1464,31 @@ command("ffrap_noland", function(p)
                 if f then f:write(line, "\n") end
             end
             if f then f:close() end
-            local pose = game.PlayerPose()
             log(string.format("noland: %d boxes on map %s, written to noland.txt; you are at (%s)", #boxes,
-                tostring(game.CurrentMap()), pose and string.format("%.0f, %.0f, %.0f", pose.x, pose.y, pose.z) or "?"))
+                tostring(game.CurrentMap()), poseText(game.PlayerPose())))
             notify("No-landing boxes: " .. #boxes .. " (noland.txt)")
+        elseif what == "here" then
+            local boxes, pose = game.NoLandHere()
+            if not boxes then
+                notify("No-landing: " .. tostring(pose))
+                return
+            end
+            log(string.format("noland: you are at (%s), under %d boxes", poseText(pose), #boxes))
+            for _, b in ipairs(boxes) do log("noland:   " .. game.NoLandLine(b)) end
+            notify("Under " .. #boxes .. " no-landing boxes" .. (boxes[1] and (": " .. boxes[1].name) or ""))
+        elseif what == "show" or what == "hide" then
+            local n = game.NoLandShow(what == "show", tonumber(p[2]))
+            log("noland: " .. what .. ": " .. n .. " boxes")
+            notify("No-landing boxes " .. (what == "show" and "shown" or "hidden") .. ": " .. n)
+        elseif what == "lock" or what == "unlock" then
+            local which = (p[2] or ""):lower()
+            local box, why = game.NoLandLock(which, what == "lock")
+            if box then log("noland: " .. what .. " " .. which .. ": " .. game.NoLandLine(box) .. (why and (" (" .. why .. ")") or "")) end
+            if not box or why then log("noland: " .. what .. " problem: " .. tostring(why)) end
+            notify("No-landing " .. which .. ": " .. (box and (what == "lock" and "locked" or "unlocked") or "failed")
+                .. (why and (": " .. why) or ""))
         elseif what == "spawn" or what == "move" then
-            local half = tonumber(p[2]) or 3000
+            local half = tonumber(p[2]) or 2000
             local box, why
             if what == "spawn" then box, why = game.NoLandSpawn(half) else box, why = game.NoLandMove(half) end
             if box then log("noland: " .. what .. ": " .. game.NoLandLine(box) .. (why and (" (" .. why .. ")") or "")) end
@@ -1461,7 +1505,7 @@ command("ffrap_noland", function(p)
             log("noland: off: " .. n .. " boxes undone")
             notify("No-landing boxes undone: " .. n)
         else
-            notify("Usage: ffrap_noland <list|spawn [half]|move [half]|cond <text>|off>")
+            notify("Usage: ffrap_noland <list|here|show|hide|lock <box>|unlock <box>|spawn [half]|move [half]|cond <text>|off>")
         end
     end)
     game.gateTrace = nil

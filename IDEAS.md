@@ -636,6 +636,8 @@ The "Back" prompt that menus and the chest pop-up show at the bottom right also 
 **Found (round 32, 2026-11-07): the no-landing boxes.** The world map also has 111 `BP_MapNonLandingArea_C` actors: a box with an `m_Condition` string. While the condition holds (or when it is empty), the airship cannot land in the box. Before story 5020, one box of half-size 2400 x 6000 keeps the airship off Mysidia. So the game already gates a continent this way, and this idea is now the plan for continent locks (decided in round 31: the airship is free, continents are locked by landing). Details and rough continent positions: docs/open_world.md, section 4. Round 32 probes it with `ffrap_noland`.
 - The landing point ids start with the island's number: 1xxx Grandshelt, 2xxx Lanzelt, 3xxx Kolobos, 4xxx Dirnado, 5xxx Olderion, 6xxx Zoldaad, 7xxx Mysidia, 8xxx Gronoa, 9xxx Pharm, 10004 the Crystal Tower. 10xxx are optional caves and Legend shrines.
 
+**Round 32 (2026-11-07):** a box spawned at the airship's height, 3000 up and down, lifted the airship over it and broke the camera, and the airship could still land on it. So the box's collision counts as ground for the airship. The game's own boxes sit on the ground (the Mysidia box: centre height 393, 700 up and down). The Blueprint has no script; the C++ class `CPP_MapNonLandingArea` reads the box and the condition. Mod 0.15.0 puts boxes at the ground height and adds `ffrap_noland lock mysidia`, which tests a changed condition on the game's own box.
+
 ## 18. In-game menu for on-the-fly settings and modifiers
 
 **Idea:** Introduce our own in-game menu option with on-the-fly customizable settings, such as EXP, Gil (GP), and MRP (Magic/Resonance Points) modifiers, encounter rate adjustments (e.g. 0x / 0.5x / 1x / 2x / 4x), and Archipelago client status.
@@ -688,6 +690,8 @@ The "Back" prompt that menus and the chest pop-up show at the bottom right also 
 - What level and gear a member has when they join before the story's own join (round 30 shows this with Fina, Lid, Nichol, Jake and Sakura).
 - What a story battle with `OverwriteBattleParty` does when that member has not joined.
 - Whether the party menu lets you swap in a member who joined the roster but not the active party.
+
+**Round 32 (2026-11-07):** members given by `ffrap_grant unit` work: they go into the active party when there is room, and into the roster when it is full, and you can swap them in. They join at their own story levels: Lid 11, Nichol 19, Archwitch Fina 3, Fina 6, next to a level 3 Rain. For open world, a member should probably join at the party's level (or its average). This also matters for enemy scaling, because the band follows the party's average level: Lid and Nichol joining moved it from 2 to 7.
 
 ## 20. Trap items, banked until the next battle
 
