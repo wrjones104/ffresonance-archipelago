@@ -1893,6 +1893,39 @@ function G.OpenStart()
     return okStory and okMap, { (okStory and "ok   " or "FAIL ") .. story, (okMap and "ok   " or "FAIL ") .. arrival }
 end
 
+-- Round 9: a reload during the opening movie came up with no menus and no movement, and what
+-- holds that lock is not known yet (IDEAS.md, idea 6). The player controller's own input
+-- switches, as text, to compare a locked game with a normal one.
+function G.InputState()
+    local pc = PlayerController()
+    if not pc then return "no PlayerController" end
+    local pawn, move, look = "?", "?", "?"
+    pcall(function() pawn = pc:K2_GetPawn():GetClass():GetFName():ToString() end)
+    pcall(function() move = tostring(pc:IsMoveInputIgnored()) end)
+    pcall(function() look = tostring(pc:IsLookInputIgnored()) end)
+    return string.format("controller %s, pawn %s, move input ignored %s, look input ignored %s",
+        pc:GetFName():ToString(), pawn, move, look)
+end
+
+-- The engine's own resets for a locked controller, one at a time. step(what) runs before each
+-- (it logs, so a crash names the call). Returns the steps that raised.
+function G.InputFix(step)
+    local pc = PlayerController()
+    if not pc then return { "no PlayerController" } end
+    local failed = {}
+    local function try(what, fn)
+        step(what)
+        local ok, err = pcall(fn)
+        if not ok then failed[#failed + 1] = what .. ": " .. tostring(err) end
+    end
+    try("ResetIgnoreInputFlags", function() pc:ResetIgnoreInputFlags() end)
+    try("EnableInput", function() pc:EnableInput(pc) end)
+    try("SetInputMode_GameOnly", function()
+        Find("/Script/UMG.Default__WidgetBlueprintLibrary"):SetInputMode_GameOnly(pc, false)
+    end)
+    return failed
+end
+
 -- Writes the loaded save to a slot and starts the field from that slot, as FFRSLib's
 -- ffrs_travel does. `map` is the map the skip wrote (default the Earth Shrine's). Returns ok
 -- and a detail.
@@ -2864,6 +2897,44 @@ function G.NoLandHere()
     return out, pose
 end
 
+-- Round 35: `lock pharm` did nothing that could be seen, and the Pharm story box was not found
+-- by eye. It sits at z 110 to 370, and some of Pharm is high ground, so the box may be buried.
+-- What is under the player: a line trace straight down on the Visibility channel, which the
+-- no-landing boxes block while their collision is on. The player's own actor (the airship in
+-- flight) is ignored. A no-landing box that is hit is listed, and the trace goes on from under
+-- its bottom, so the ground comes last. Returns a list of { name, z, box }, or nil and why.
+local TRACE_DOWN_TO = -20000
+local TRACE_MAX_HITS = 4
+function G.GroundUnder()
+    local pose, why = G.PlayerPose()
+    if not pose then return nil, why end
+    local ksl = Find("/Script/Engine.Default__KismetSystemLibrary")
+    if not ksl then return nil, "KismetSystemLibrary not found" end
+    local boxes = {}
+    for _, i in ipairs(G.NoLandBoxes()) do boxes[i.name] = i end
+    local hits, fromZ = {}, pose.z
+    for _ = 1, TRACE_MAX_HITS do
+        local hit, okHit = {}, false
+        gateStep("noland: LineTraceSingle from z " .. math.floor(fromZ))
+        local okCall, err = pcall(function()
+            okHit = ksl:LineTraceSingle(pose.pawn, { X = pose.x, Y = pose.y, Z = fromZ },
+                { X = pose.x, Y = pose.y, Z = TRACE_DOWN_TO }, 0, false, {}, 0, hit, true,
+                { R = 0, G = 0, B = 0, A = 0 }, { R = 0, G = 0, B = 0, A = 0 }, 0.0)
+        end)
+        if not okCall then return nil, "LineTraceSingle failed: " .. tostring(err) end
+        if not okHit then break end
+        local name, z = "?", nil
+        pcall(function() name = hit.HitObjectHandle.ReferenceObject:Get():GetFName():ToString() end)
+        pcall(function() z = hit.ImpactPoint.Z end)
+        if type(z) ~= "number" then break end
+        local box = boxes[name]
+        hits[#hits + 1] = { name = name, z = z, box = box ~= nil }
+        if not (box and box.z and box.ez) then break end
+        fromZ = box.z - box.ez - 1
+    end
+    return hits
+end
+
 -- Puts a box at (x, y, z) with half-size (hx, hy, hz) and the condition `cond`. Each step goes
 -- to the trace (G.gateTrace) before it runs. Returns the box read back.
 local function PlaceBox(actor, x, y, z, hx, hy, hz, cond)
@@ -2884,20 +2955,23 @@ local function PlaceBox(actor, x, y, z, hx, hy, hz, cond)
     return BoxInfo(actor)
 end
 
--- Spawns a new no-landing box under the player: `half` across each way (default 2000), at the
--- Mysidia box's height. Returns the box, or nil and why.
-function G.NoLandSpawn(half)
+-- Spawns a new no-landing box under the player: `half` across each way (default 2000), 1400
+-- tall, its top at `top` (default 1093: the Mysidia box's top). Round 35: on high ground the
+-- default box may be buried, so the top can be set above the ground that GroundUnder finds.
+-- Returns the box, or nil and why.
+function G.NoLandSpawn(half, top)
     local pose, why = G.PlayerPose()
     if not pose then return nil, why end
     local cls = LoadBlueprintClass(NOLAND_PKG, NOLAND_NAME)
     if not cls then return nil, "could not load " .. NOLAND_NAME .. "_C" end
+    local z = (top or (G.NOLAND_Z + G.NOLAND_HALF_Z)) - G.NOLAND_HALF_Z
     gateStep("noland: SpawnActor")
     local actor
-    pcall(function() actor = pose.world:SpawnActor(cls, { X = pose.x, Y = pose.y, Z = G.NOLAND_Z }, { Pitch = 0, Yaw = 0, Roll = 0 }) end)
+    pcall(function() actor = pose.world:SpawnActor(cls, { X = pose.x, Y = pose.y, Z = z }, { Pitch = 0, Yaw = 0, Roll = 0 }) end)
     if not (actor and Alive(actor)) then return nil, "SpawnActor failed" end
     nolandSpawned[#nolandSpawned + 1] = actor
     half = half or 2000
-    return PlaceBox(actor, pose.x, pose.y, G.NOLAND_Z, half, half, G.NOLAND_HALF_Z, nil)
+    return PlaceBox(actor, pose.x, pose.y, z, half, half, G.NOLAND_HALF_Z, nil)
 end
 
 -- Moves the game's own Mysidia box (the one with condition {progress:0}<5020) under the

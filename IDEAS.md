@@ -358,6 +358,8 @@ Plan: build option 1 first, because it is known to work. Then try option 2 as an
 
 **Still open:**
 - **Skipping the movie outright:** find what the opening holds the player's input with. `CPP_Task_NewGame` is the place to start (`ffrap_inspect` while a new game is starting).
+  - Round 35: the user wants New Game (Archipelago) to go from the opening movie straight to the open world, with no Fina segment. The recording has the movie (with Skip), the opening event (with Skip), a Move/Sprint tutorial pop-up, then about 3 s of Fina before the skip.
+  - Round 36 probes (mod 0.17.0): `ffrap_skip 0 force` makes the lock on purpose. `ffrap_input` logs the player controller's input switches in the movie, the locked game and a normal game, and `ffrap_input fix` tries the engine's resets. `ffrap_inspect CPP_InputManager <label>` and `ffrap_inspect CPP_Task_NewGame movie` keep each state in its own file.
 - **Our own on-screen text:** messages go through ModSettings' Toast panel, so without that mod a player sees nothing. Two ways:
   - **Use one of the game's own notices.** The executable names `CPP_VM_QuestNotice` and `CPP_DA_QuestNotice` (quest pop-ups), `CPP_WBP_ChatNotice` (`UI.Layout.Chat.Notice`) and `CPP_VM_BattleResult_Notification`. If one of them takes plain text, our messages look like the game's.
   - **Make our own widget:** a `TextBlock` (and later the logo) on a widget we create. This is the same work as the logo.

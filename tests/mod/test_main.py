@@ -239,6 +239,10 @@ return G
 '''
 
 
+# Lua that captures the mod's log lines, for boot(CAPTURE).
+CAPTURE = "logged = {}; print = function(s) logged[#logged + 1] = tostring(s) end"
+
+
 def boot(before=""):
     L = runtime()
     L.execute(before)
@@ -1007,7 +1011,7 @@ L.execute('G.check = { 300, 0, nil, false }')
 print("scale options and follow: ok")
 
 # 16. 0.15.0: ffrap_noland's commands reach game.lua with the right arguments
-L, G = boot()
+L, G = boot(CAPTURE)
 L.globals().G = G
 L.execute("""
 G.nl = {}
@@ -1018,20 +1022,27 @@ function G.NoLandCollision(b) return "collision of " .. b.name end
 function G.NoLandRefresh() G.nl[#G.nl + 1] = "refresh" return 1, 2, 1 end
 function G.NoLandHere() G.nl[#G.nl + 1] = "here" return { box }, { x = 1, y = 2, z = 3 } end
 function G.NoLandShow(on, w) G.nl[#G.nl + 1] = "show " .. tostring(on) .. " " .. tostring(w) return 7 end
-function G.NoLandSpawn(half) G.nl[#G.nl + 1] = "spawn " .. tostring(half) return box end
+function G.NoLandSpawn(half, top) G.nl[#G.nl + 1] = "spawn " .. tostring(half) .. " " .. tostring(top) return box end
+function G.GroundUnder()
+  return { { name = "BP_MapNonLandingArea_C_1", z = 370, box = true }, { name = "Landscape_1", z = 50, box = false } }
+end
 function G.NoLandOff() G.nl[#G.nl + 1] = "off" return 2 end
 """)
 for args in ('{"lock", "Pharm"}', '{"unlock", "mysidia"}', '{"here"}', '{"show", "30"}', '{"hide"}', '{"spawn"}',
-             '{"refresh"}', '{"off"}'):
+             '{"spawn", "3000", "2500"}', '{"refresh"}', '{"off"}'):
     L.execute('commands["ffrap_noland"]("ffrap_noland", %s)' % args)
 assert list(G.nl.values()) == ["lock pharm true", "lock mysidia false", "here", "show true 30", "show false nil",
-                               "spawn 2000", "refresh", "off"], list(G.nl.values())
+                               "spawn 2000 nil", "spawn 3000 2500", "refresh", "off"], list(G.nl.values())
+# 0.17.0: `here` logs what a trace straight down meets, and names the ground's height
+logged = list(L.globals().logged.values())
+assert any("trace down hit BP_MapNonLandingArea_C_1 (a no-landing box) at z 370" in s for s in logged), logged
+assert any("trace down hit Landscape_1 at z 50" in s for s in logged)
+assert any("Under 1 no-landing boxes: BOX; ground at z 50" in s for s in logged)
 print("noland commands: ok")
 
 # 17. 0.15.2 (round 33): the FFR Randomizer mod next to this one undoes our chest blanks and enemy
 # rescale every 3 seconds. Its enabled.txt, or a "FFRRandomizer : 1" line in mods.txt, turns it on.
 # The warning is logged at start and shown once, on the first save load.
-CAPTURE = "logged = {}; print = function(s) logged[#logged + 1] = tostring(s) end"
 WARNING = "FFR Randomizer is on"
 randomizer = os.path.join(MODS, "FFRRandomizer")
 os.makedirs(randomizer)
@@ -1103,3 +1114,37 @@ assert list(G.reloads.values())[reloads:] == [0], list(G.reloads.values())
 L.execute('commands["ffrap_openstart"]("ffrap_openstart", {"now", "4"})')
 assert list(G.reloads.values())[-1] == 4, "an explicit slot"
 print("open world start: ok")
+
+# 19. 0.17.0: probes for the opening's input lock. `ffrap_skip <slot> force` skips during the
+# opening (story 1000) anyway, and says so; without force it still waits for 1005. `ffrap_input`
+# logs the controller's state, and `fix` runs game.InputFix, logging each step.
+OPENING_STORY = 1000
+L, G = boot(CAPTURE)
+G.story = OPENING_STORY
+load(G, "SD_FORCE", "0")
+L.execute('commands["ffrap_skip"]("ffrap_skip", {"0"})')
+assert G.skipRuns == 0, "refused before 1005"
+L.execute('commands["ffrap_skip"]("ffrap_skip", {"0", "force"})')
+assert G.skipRuns == 1 and list(G.reloads.values())[-1] == 0, G.skipRuns
+logged = list(L.globals().logged.values())
+assert any(f"skip: forced at story {OPENING_STORY}" in s for s in logged), logged
+L.globals().G = G
+L.execute("""
+function G.InputState() return "controller PC, move input ignored " .. tostring(G.locked) end
+G.locked = true
+function G.InputFix(step) step("ResetIgnoreInputFlags"); G.locked = false; return { "EnableInput: no" } end
+""")
+L.execute('commands["ffrap_input"]("ffrap_input", {})')
+L.execute('commands["ffrap_input"]("ffrap_input", {"fix"})')
+logged = list(L.globals().logged.values())
+assert sum("input: controller PC, move input ignored true" in s for s in logged) == 2, logged
+assert any("input step: ResetIgnoreInputFlags" in s for s in logged)
+assert any("input: failed: EnableInput: no" in s for s in logged)
+assert any("input after fix: controller PC, move input ignored false" in s for s in logged)
+# ffrap_inspect's label keeps two states of one object in two files
+L.execute('function G.Inspect(target, out) out("object", target) return true end')
+L.execute('commands["ffrap_inspect"]("ffrap_inspect", {"CPP_InputManager", "locked"})')
+L.execute('commands["ffrap_inspect"]("ffrap_inspect", {"CPP_InputManager"})')
+assert read("inspect_CPP_InputManager_locked.tsv") == "object\tCPP_InputManager\n", read("inspect_CPP_InputManager_locked.tsv")
+assert read("inspect_CPP_InputManager.tsv") == "object\tCPP_InputManager\n"
+print("input lock probes: ok")

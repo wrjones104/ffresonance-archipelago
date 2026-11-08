@@ -1159,4 +1159,79 @@ L.execute("G.NoLandLock('pharm', true); G.NoLandRefresh()")
 assert L.eval("G.NoLandOff()") == 2
 assert L.eval("nolandActors[2].m_Condition") == "{progress:0}<7020" and L.eval("nolandActors[3].m_Condition") == "{progress:0}<7020"
 assert L.eval("nolandActors[2].m_pBoxComponent.coll") == 0 and L.eval("nolandActors[3].m_pBoxComponent.coll") == 0
+
+# 0.17.0 (round 35: the Pharm box may be buried under high ground): spawn takes the box's top,
+# and the trace down lists the no-landing boxes it meets (collision on) and then the ground.
+FLIGHT_Z, BOX_TOP, PHARM_GROUND, HIGH_GROUND = 1500, 2500, 50, 800
+box, why = L.execute(f"local b, w = G.NoLandSpawn(2000, {BOX_TOP}); return b, w")
+assert why is None and box.z == BOX_TOP - 700 and box.ez == 700, (dict(box), why)
+L.execute("G.NoLandOff()")
+L.execute(r"""
+groundZ = 0
+local ksl = {}
+function ksl:IsValid() return true end
+function ksl:HasAnyInternalFlags() return false end
+function ksl:HasAnyFlags() return false end
+-- the highest surface under the start: a box with its collision on, or the ground
+function ksl:LineTraceSingle(ctx, s, e, query, complex, ignore, draw, hit)
+  local bestZ, bestName = groundZ, "Landscape_1"
+  for _, a in ipairs(nolandActors) do
+    local b = a.m_pBoxComponent
+    local top = a.z + b.ez
+    if not a.dead and b.coll > 0 and top <= s.Z and top > bestZ and math.abs(s.X - a.x) <= b.ex and math.abs(s.Y - a.y) <= b.ey then
+      bestZ, bestName = top, a.nm
+    end
+  end
+  if bestZ > s.Z then return false end
+  local target = { nm = bestName }
+  function target:GetFName() return fname(self.nm) end
+  hit.HitObjectHandle = { ReferenceObject = { Get = function() return target end } }
+  hit.ImpactPoint = { X = s.X, Y = s.Y, Z = bestZ }
+  return true
+end
+local prevSFO6 = StaticFindObject
+function StaticFindObject(p)
+  if p == "/Script/Engine.Default__KismetSystemLibrary" then return ksl end
+  return prevSFO6(p)
+end
+""")
+L.execute(f"fakePawn.x, fakePawn.y, fakePawn.z = -5900, -17200, {FLIGHT_Z}; groundZ = {PHARM_GROUND}")
+L.execute("G.NoLandLock('pharm', true); G.NoLandRefresh()")
+hits = [dict(h) for h in L.eval("G.GroundUnder()").values()]
+assert hits == [{"name": "BP_MapNonLandingArea_C_1", "z": 370, "box": True},
+                {"name": "Landscape_1", "z": PHARM_GROUND, "box": False}], hits
+# high ground over the box: the trace stops at the ground and never meets the box
+L.execute(f"groundZ = {HIGH_GROUND}")
+hits = [dict(h) for h in L.eval("G.GroundUnder()").values()]
+assert hits == [{"name": "Landscape_1", "z": HIGH_GROUND, "box": False}], hits
+L.execute("G.NoLandOff()")
 print("no-landing boxes: ok")
+
+# 0.17.0: the input probe (the opening's input lock, round 9). The state reads the controller's
+# switches; fix runs the engine's resets in order, says each step first, and reports a failure.
+L.execute(r"""
+fakePC.moveIgnored, fakePC.lookIgnored, fakePC.calls = true, true, {}
+function fakePC:GetFName() return fname("BP_PlayerController_C_0") end
+function fakePC:IsMoveInputIgnored() return self.moveIgnored end
+function fakePC:IsLookInputIgnored() return self.lookIgnored end
+function fakePC:ResetIgnoreInputFlags() self.moveIgnored, self.lookIgnored = false, false; self.calls[#self.calls + 1] = "reset" end
+function fakePC:EnableInput(pc) error("EnableInput is not callable here") end
+local wbl = { IsValid = function() return true end, HasAnyInternalFlags = function() return false end,
+              HasAnyFlags = function() return false end }
+function wbl:SetInputMode_GameOnly(pc, flush) pc.calls[#pc.calls + 1] = "game only " .. tostring(flush) end
+local prevSFO7 = StaticFindObject
+function StaticFindObject(p)
+  if p == "/Script/UMG.Default__WidgetBlueprintLibrary" then return wbl end
+  return prevSFO7(p)
+end
+inputSteps = {}
+""")
+state = L.eval("G.InputState()")
+assert state == ("controller BP_PlayerController_C_0, pawn BP_MapUnit_Player_Field_C, move input ignored true, "
+                 "look input ignored true"), state
+failed = list(L.eval("G.InputFix(function(s) inputSteps[#inputSteps + 1] = s end)").values())
+assert list(L.eval("inputSteps").values()) == ["ResetIgnoreInputFlags", "EnableInput", "SetInputMode_GameOnly"]
+assert len(failed) == 1 and failed[0].startswith("EnableInput: "), failed
+assert list(L.eval("fakePC.calls").values()) == ["reset", "game only false"]
+assert "move input ignored false" in L.eval("G.InputState()")
+print("input probe: ok")

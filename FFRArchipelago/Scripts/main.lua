@@ -18,9 +18,10 @@
 --   ffrap_export                 every chest table row to chests.tsv
 --   ffrap_snapshot [name]        every field of the loaded save to snap_<name>.tsv (tools/snapdiff.py)
 --   ffrap_functions [class ...]  the functions of game classes to functions.txt (default: save-data classes)
---   ffrap_skip [slot]            skip the prologue on a new game; with a slot, save there and reload
+--   ffrap_skip [slot] [force]    skip the prologue on a new game; with a slot, save there and reload
+--   ffrap_input [fix]            probe: the player controller's input state; fix tries the engine's resets
 --   ffrap_openstart [on|off|at x y z|now [slot]]  test: the open world start (story 7090, Crystal Tower)
---   ffrap_inspect <class|path>   one object's fields and functions to inspect_<name>.tsv
+--   ffrap_inspect <class|path> [label]  one object's fields and functions to inspect_<name>[_label].tsv
 --   ffrap_title [list|add]       the Archipelago entry on the title menu (added at start-up)
 --   ffrap_notice [text]          experimental: show text with the game's quest-notice banner
 --   ffrap_logo                   the Archipelago logo on the mod's title line, by hand
@@ -46,7 +47,7 @@
 -- follows the save slots the linked game is saved to. While any other save is loaded, the mod
 -- grants nothing, reports nothing and leaves the chests vanilla.
 
-local VERSION = "0.16.1"
+local VERSION = "0.17.0"
 local PROTOCOL = 1        -- the bridge protocol; the apworld's MOD_PROTOCOL
 
 local MOD_DIR = (debug.getinfo(1, "S").source:gsub("^@", ""):gsub("\\", "/"):match("^(.*/)Scripts/[^/]+$"))
@@ -860,14 +861,18 @@ end
 -- opening scene can change flags and the position after a skip. Every step but the inventory
 -- sets an absolute value; the inventory changes are relative, so they are made once per save.
 local skipped = nil    -- the save object the skip was applied to
-local function runSkip(slot, why)
+-- `force` (ffrap_skip <slot> force) skips before story 1005 anyway: the round 36 probe of the
+-- opening's input lock, which a skip at that point is known to leave behind (round 9).
+local function runSkip(slot, why, force)
     local obj, story = game.SaveObjectName(), game.StoryCounter()
     if skipped ~= obj and (not story or story > game.SKIP_FROM_MAX) then
         notify("ffrap_skip works on a new game only (story " .. tostring(story) .. ", must be "
             .. game.SKIP_FROM_MAX .. " or lower)")
         return false
     end
-    if skipped ~= obj and story < game.SKIP_FROM_MIN then
+    if force and story < game.SKIP_FROM_MIN then
+        log("skip: forced at story " .. story .. " (before " .. game.SKIP_FROM_MIN .. "): expect the opening's input lock")
+    elseif skipped ~= obj and story < game.SKIP_FROM_MIN then
         notify("Wait until you can move (story " .. game.SKIP_FROM_MIN .. ", now " .. story .. "): a skip during "
             .. "the opening movie leaves you without menus or movement")
         return false
@@ -1342,10 +1347,11 @@ end)
 command("ffrap_inspect", function(p)
     local target = p and p[1]
     if not target then
-        notify("Usage: ffrap_inspect <class name or object path>")
+        notify("Usage: ffrap_inspect <class name or object path> [label]")
         return
     end
-    local name = target:gsub("^.*[/.]", ""):gsub("[^%w_%-]", "")
+    -- The label keeps two states of one object apart (round 36: locked and normal input).
+    local name = target:gsub("^.*[/.]", ""):gsub("[^%w_%-]", "") .. (p[2] and ("_" .. p[2]:gsub("[^%w_%-]", "")) or "")
     local f = io.open(MOD_DIR .. "inspect_" .. name .. ".tsv", "w")
     if not f then
         notify("Could not write inspect_" .. name .. ".tsv")
@@ -1609,7 +1615,16 @@ command("ffrap_noland", function(p)
                 log("noland:   " .. game.NoLandLine(b))
                 log("noland:     " .. game.NoLandCollision(b))
             end
-            notify("Under " .. #boxes .. " no-landing boxes" .. (boxes[1] and (": " .. boxes[1].name) or ""))
+            local hits, err = game.GroundUnder()
+            local ground = nil
+            for _, h in ipairs(hits or {}) do
+                log(string.format("noland:   trace down hit %s%s at z %.0f", h.name, h.box and " (a no-landing box)" or "", h.z))
+                if not h.box then ground = h.z end
+            end
+            if not hits then log("noland:   trace down: " .. tostring(err))
+            elseif #hits == 0 then log("noland:   trace down hit nothing") end
+            notify("Under " .. #boxes .. " no-landing boxes" .. (boxes[1] and (": " .. boxes[1].name) or "")
+                .. (ground and string.format("; ground at z %.0f", ground) or ""))
         elseif what == "show" or what == "hide" then
             local n = game.NoLandShow(what == "show", tonumber(p[2]))
             log("noland: " .. what .. ": " .. n .. " boxes")
@@ -1631,7 +1646,7 @@ command("ffrap_noland", function(p)
         elseif what == "spawn" or what == "move" then
             local half = tonumber(p[2]) or 2000
             local box, why
-            if what == "spawn" then box, why = game.NoLandSpawn(half) else box, why = game.NoLandMove(half) end
+            if what == "spawn" then box, why = game.NoLandSpawn(half, tonumber(p[3])) else box, why = game.NoLandMove(half) end
             if box then
                 log("noland: " .. what .. ": " .. game.NoLandLine(box) .. (why and (" (" .. why .. ")") or ""))
                 log("noland:     " .. game.NoLandCollision(box))
@@ -1649,7 +1664,7 @@ command("ffrap_noland", function(p)
             log("noland: off: " .. n .. " boxes undone")
             notify("No-landing boxes undone: " .. n)
         else
-            notify("Usage: ffrap_noland <list|here|show|hide|lock <box>|unlock <box>|refresh|spawn [half]|move [half]|cond <text>|off>")
+            notify("Usage: ffrap_noland <list|here|show|hide|lock <box>|unlock <box>|refresh|spawn [half] [top]|move [half]|cond <text>|off>")
         end
     end)
     game.gateTrace = nil
@@ -1710,7 +1725,7 @@ end)
 command("ffrap_skip", function(p)
     local slot = p and p[1] and tonumber(p[1])
     if p and p[1] and not slot then
-        notify("Usage: ffrap_skip [slot]   (0 is the autosave)")
+        notify("Usage: ffrap_skip [slot] [force]   (0 is the autosave)")
         return
     end
     if not game.InGame() then
@@ -1718,7 +1733,20 @@ command("ffrap_skip", function(p)
         return
     end
     followSave()
-    runSkip(slot, "command")
+    runSkip(slot, "command", p[2] == "force")
+end)
+
+-- ffrap_input [fix]: probe for the opening's input lock (round 9: a skip during the opening
+-- movie came up with no menus and no movement). Logs the player controller's input switches;
+-- `fix` tries the engine's own resets, logging each step before it runs.
+command("ffrap_input", function(p)
+    log("input: " .. game.InputState())
+    if p[1] == "fix" then
+        local failed = game.InputFix(function(step) log("input step: " .. step) end)
+        for _, f in ipairs(failed) do log("input: failed: " .. f) end
+        log("input after fix: " .. game.InputState())
+    end
+    notify("Input state written to the log")
 end)
 
 command("ffrap_reset", function()

@@ -193,34 +193,66 @@ World-map shinies verified as locations. Multiple crashes observed across differ
   - `ffrap_openstart now` writes the open world start into the loaded save, saves it to its slot and reloads. This needs no new game and no title-screen step. It is what round 31 did by hand: the skip first, then story 7090 and the travel.
   - Choosing New Game (Archipelago) now logs `title: open world start is on` (or `off`).
 
-## Round 35 test plan (mod 0.16.1, world 0.3.1)
+**Round 35 (mod 0.16.1, world 0.3.1, 2026-11-07, laptop): the open world start works both ways; Mysidia locks and unlocks without landing; the Pharm box was never under the airship.**
+- **`ffrap_openstart now`** (slot 0, story 1030, at the Earth Shrine): `story counter -> 7090`, `arrival: map 3280`, saved and reloaded. `story 7090 -> 8000` came 8 to 11 seconds after arriving, after two short cutscenes. Then the player stands at the tower's dock with the airship just below and can board it. It matches round 31's start by hand with FFRSLib.
+- **`ffrap_openstart on`, then New Game (Archipelago):** the log said `title: open world start is on`, and the automatic skip wrote story 7090 and map 3280 directly (`story 1005 -> 7090`). The same two cutscenes and `story 7090 -> 8000` followed.
+- **The recording (41 s, from the title to the world map):**
 
-Three parts. Send the `[FFRAP]` lines of `UE4SS.log`, and screenshots where asked.
+| Time | What happens |
+|---|---|
+| 0 to 2 s | Title, New Game (Archipelago) |
+| 3 to 11 s | Opening movie ("A great legend..."), with a Skip button |
+| 12 to 19 s | Opening event ("In a bygone era..."), with Auto, Log and Skip |
+| 20 to 21 s | Move/Sprint tutorial pop-up |
+| 22 to 24 s | Fina on the Battlefield (map 10040, story 1005), autosave; the skip reloads 2 s later |
+| 27 to 32 s | Two Crystal Tower events, both skippable; story 7090 -> 8000 |
+| 33 s | Control at the dock; "Crystal Tower, recommended level 55" |
+| 38 s | World map, in the airship next to the tower: the player boarded (`map 3280 -> 1000` in the log) |
 
-**Install:**
-- Copy `FFRArchipelago/Scripts` over the installed mod. The log should say `version 0.16.1 loaded`. Keep FFRRandomizer off: there should be no `FFR Randomizer is on` line. `Assets` and the apworld did not change (world 0.3.1).
-- The seed must have the default goal (story 8050). The open world start reaches story 8000, so a test seed with a lower goal (such as 1130) completes at once.
+- **What the user wants next:** New Game (Archipelago), watch or skip the opening movie, then the Crystal Tower dock with no Fina segment and no tower cutscenes.
+  - The tower cutscenes are story events. What they write should show in a save diff, as the prologue's did (round 6). Then the start can write story 8000 and the rest itself, so the events have nothing to play.
+  - The Fina segment is harder. A reload before story 1005 leaves the game with no menus and no movement (round 9), and what holds that lock is still unknown (IDEAS.md, idea 6). Round 36 makes the lock on purpose and probes it.
+- **The airship on the old save (slot 3):** `ffrap_airship` read the shipped condition `{progress:0}>=4250`, and the save is at story 8000 on map 1000. The open world start gives a fresh save with the airship, so this save no longer matters.
+- **No-landing boxes:**
+  - **Mysidia works without landing:** `lock mysidia` + `refresh` blocked landing at once, and `unlock mysidia` + `refresh` allowed it again. `refresh` switches the box's collision on (3) or off (0). The box's collision is what the game's landing check uses. At story 8000 the shipped Mysidia box has its collision off (enabled 0), because its condition `{progress:0}<5020` no longer holds.
+  - **Pharm:** `lock pharm` + `refresh` switched the Pharm story box's collision on (3). The landing was tried at (-4968, -17559). The box spans x -6403 to -5457 and y -17704 to -17096, so that spot is about 500 units east of it, and `here` said "under 0 boxes". The box was never under the airship.
+  - The Pharm box was not seen, although `show` drew it. It sits at z 110 to 370. If the ground there is higher, the box is buried. That fits the user's note that part of Pharm is too high for the airship. Mod 0.17.0's `here` measures the ground.
+  - `show` drew 111 boxes this time, as `list` found in round 32 (87 in round 33).
+  - `ffrap_functions CPP_MapNonLandingArea CPP_MapAirShipCanNeverLandingBox`: 0 functions on either class. `find_Landing.txt` names `CPP_MapManager.m_MapNonLandingAreaStorage`, `CPP_MapNonLandingAreaStorage.m_NonLandingAreaList` and `CPP_MapUnit_AirShip.m_NonLandingEvent`. Not needed while the collision switch works.
+  - Step 10 (the spawned box) was not run.
+- **Added in 0.17.0:**
+  - `ffrap_noland here` traces straight down and logs each no-landing box it meets (collision on) and the ground's height.
+  - `ffrap_noland spawn [half] [top]`: the box's top can be set (default 1093, the Mysidia box's top). The box stays 1400 tall.
+  - `ffrap_skip <slot> force` skips before story 1005, to make the opening's input lock on purpose.
+  - `ffrap_input [fix]` logs the player controller's input switches. `fix` runs the engine's resets (`ResetIgnoreInputFlags`, `EnableInput`, `SetInputMode_GameOnly`), logging each step before it runs.
+  - `ffrap_inspect <class> [label]` writes `inspect_<class>_<label>.tsv`, so two states of one object can be compared.
 
-**Part A: the open world start:**
-1. Connect the client. Load slot 0, the Archipelago game from the first run (story 1030, at the Earth Shrine). Once you can move, run `ffrap_openstart now`. The item feed says "Open world start: saved to slot 0 (map 3280, ...), reloading", and the log has:
-   - `openstart: ok   story counter -> 7090`
-   - `openstart: ok   arrival: map 3280 at -2830.0, -171140.0, 3000.0`
-2. Where do you land? Take a screenshot. Then run `ffrap_status`. Wait about 10 seconds: round 31 had `story 7090 -> 8000` about 8 seconds after arriving. Does a cutscene play?
-3. If the spot is bad (in a wall, falling, stuck): load slot 0 again if needed, then run `ffrap_openstart at 10590 12960 600` (next to the tower's other save point, near the tower's 8000 event) and `ffrap_openstart now` again. `at` lasts until the game closes. If the story is already past 7090 by then, that is fine: `now` writes 7090 again.
-4. Find the airship. The dock's exits fly back to the world map. Is the airship there? Fly out to the world map. What looks wrong: party (Rain and Lasswell at level 1), menus, a cutscene that repeats, missing features?
-5. Optional, the new game path: run `ffrap_openstart on`, then New Game (Archipelago). The log should say `title: open world start is on`, then `skip: ok   story counter -> 7090` and `skip (automatic): ... open world start (story 7090, Crystal Tower)`. At the title, check the log for the reply to `ffrap_openstart on`: nothing shows on screen there without ModSettings. `ffrap_openstart off` gives the normal start again.
+## Round 36 test plan (mod 0.17.0, world 0.3.1)
 
-**Part B: the missing airship (quick, on the save from round 34):**
-7. Load that save on the world map. Run `ffrap_airship` (it logs the airship's spawn condition) and `ffrap_status`. Also say which save slot round 33's airship tests used, if you remember, and whether the desktop and laptop share saves through Steam Cloud.
+Three parts. Send the `[FFRAP]` lines of `UE4SS.log` and the files each part names.
 
-**Part C: no-landing boxes (world map, in the airship; use the open world save from Part A):**
-8. Mysidia, without landing in between:
-   - Fly over Mysidia and run `ffrap_noland here`. Each box now has a second line: `collision: actor ..., enabled ..., profile ..., channels ...`.
-   - `ffrap_noland lock mysidia`, then `ffrap_noland here` again. Try to land (expect: still allowed, as in round 33).
-   - `ffrap_noland refresh`, then `here`, and try to land. Is landing blocked now, without a landing in between?
-   - `ffrap_noland unlock mysidia`, `refresh`, `here`, and try to land. Is it allowed again?
-   - Then land and take off once, and run `here` again. Did the `collision:` line change?
-9. Pharm: fly to the Pharm story box, around (-5930, -17400). `ffrap_noland show` draws it, which helps you find it. Run `ffrap_noland here`. Is it one small box? `lock pharm`, `refresh`, and try to land on that spot. Then try a spot a little away from it.
-10. Spawned box: over open land, `ffrap_noland spawn`, then `here`. Compare its `collision:` line with Mysidia's. Is the shadow gone again? Then `ffrap_noland cond {progress:0}<0` and `refresh`: can you land without a landing in between?
-11. `ffrap_noland off`.
-12. Run `ffrap_find Landing` and `ffrap_functions CPP_MapNonLandingArea CPP_MapAirShipCanNeverLandingBox`, and send `find_Landing.txt` and `functions.txt`. They may show a function that makes the game read the conditions again.
+**Install:** copy `FFRArchipelago/Scripts` over the installed mod. The log should say `version 0.17.0 loaded`. `Assets` and the apworld did not change (world 0.3.1). Keep the seed with the default goal (8050).
+
+**Part A: what the tower cutscenes write (save snapshots):**
+1. At the title, run `ffrap_openstart off`. Start New Game (Archipelago). You arrive at the Earth Shrine at story 1030, in slot 0.
+2. Run `ffrap_snapshot ow_before`, then `ffrap_openstart now`.
+3. Let both tower cutscenes play (do not skip them, in case skipping changes what they write). When you can move at the dock, run `ffrap_snapshot ow_dock`.
+4. Board the airship. On the world map, run `ffrap_snapshot ow_world`.
+5. Send `snap_ow_before.tsv`, `snap_ow_dock.tsv` and `snap_ow_world.tsv`. The diff shows what the events wrote. The next build can then write story 8000 and the rest itself, so the events have nothing to play.
+
+**Part B: the opening's input lock:**
+6. Start New Game (Archipelago) again (`ffrap_openstart` still off). During the opening movie (story 1000; the console works then), run:
+   - `ffrap_input`
+   - `ffrap_inspect CPP_InputManager movie`
+   - `ffrap_inspect CPP_Task_NewGame movie`
+   - `ffrap_skip 0 force`. This reloads at the Earth Shrine. Expect no menus and no movement (round 9). If the game then gets stuck past the steps below, quit to the title (Alt+F4 if needed).
+7. In the locked game, run `ffrap_input` and `ffrap_inspect CPP_InputManager locked`. Try to move and to open the menu.
+8. Run `ffrap_input fix`. Can you move now? Open the menu? Say which of the three work: moving, the camera, the menu.
+9. Load any normal save (slot 3, say). Run `ffrap_input` and `ffrap_inspect CPP_InputManager normal`, then `ffrap_find Opening`.
+10. Send every `inspect_*.tsv` and `find_Opening.txt`.
+
+**Part C: Pharm's ground (world map, in the airship; the open world save from Part A):**
+11. Fly over open land on Mysidia or Olderion where you can land. Run `ffrap_noland here`. The log has `trace down hit ... at z N`: the ground's height there.
+12. Fly to the Pharm story box, at (-5930, -17400). `here` logs your position, so use it to steer. Run `here` while over it. Does the trace meet the box (`(a no-landing box)`), or only the ground? Also run `here` over the high part of Pharm.
+13. Over Pharm land where you can land, run `here` and note the ground height G. Then `ffrap_noland spawn 2000` and try to land. If landing still works, run `ffrap_noland off`, then `ffrap_noland spawn 2000 <G + 300>` and try again. Does the airship rise over the box (round 32's tall box lifted it)?
+14. `ffrap_noland off`.
