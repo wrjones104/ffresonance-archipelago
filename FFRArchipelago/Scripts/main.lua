@@ -20,7 +20,7 @@
 --   ffrap_functions [class ...]  the functions of game classes to functions.txt (default: save-data classes)
 --   ffrap_skip [slot] [force]    skip the prologue on a new game; with a slot, save there and reload
 --   ffrap_input [fix]            probe: the player controller's input state; fix tries the engine's resets
---   ffrap_openstart [on|off|at x y z|now [slot]]  test: the open world start (story 7090, Crystal Tower)
+--   ffrap_openstart [on|off|dock|air|event|at x y z|now [slot]]  test: the open world start (story 8000)
 --   ffrap_inspect <class|path> [label]  one object's fields and functions to inspect_<name>[_label].tsv
 --   ffrap_title [list|add]       the Archipelago entry on the title menu (added at start-up)
 --   ffrap_notice [text]          experimental: show text with the game's quest-notice banner
@@ -36,7 +36,7 @@
 --   ffrap_scale <level|low high|party n|off> [at %] [hp %] [attack %] [magic %] [power %] [boss] [follow]
 --                                probe: rewrite every enemy's level and stats
 --   ffrap_scale [show <id|name>] probe: the rescale in force, or one enemy's rows in every unit table
---   ffrap_noland <list|here|show|hide|lock|unlock|refresh|spawn|move|cond|off>
+--   ffrap_noland <list|here|show|hide|lock|unlock|refresh|spawn|move|channel|cond|off>
 --                                probe: the airship's no-landing boxes
 --   ffrap_story <value>          probe: set the loaded save's story counter (any value; save and reload)
 --   ffrap_airship [condition|off]  probe: the airship's spawn condition (shipped {progress:0}>=4250)
@@ -47,7 +47,7 @@
 -- follows the save slots the linked game is saved to. While any other save is loaded, the mod
 -- grants nothing, reports nothing and leaves the chests vanilla.
 
-local VERSION = "0.17.0"
+local VERSION = "0.18.0"
 local PROTOCOL = 1        -- the bridge protocol; the apworld's MOD_PROTOCOL
 
 local MOD_DIR = (debug.getinfo(1, "S").source:gsub("^@", ""):gsub("\\", "/"):match("^(.*/)Scripts/[^/]+$"))
@@ -899,7 +899,7 @@ local function runSkip(slot, why, force)
         log("skip: slot " .. slot .. " linked before the reload: session slots [" .. slotsText(true) .. "]")
     end
     local saved, detail = game.SaveAndReload(slot, (openStart and game.OPEN_START or game.SKIP_ARRIVAL).map)
-    if openStart then detail = detail .. "; open world start (story " .. game.OPEN_START.story .. ", Crystal Tower)" end
+    if openStart then detail = detail .. "; open world start (" .. game.OPEN_START.name .. ", story " .. game.OPEN_START.story .. ")" end
     log("skip (" .. why .. "): " .. detail)
     -- The automatic skip is part of starting an Archipelago game, so it is only logged when it
     -- works (round 24); a failure, or a skip by command, is shown.
@@ -1193,11 +1193,12 @@ command("ffrap_feed", function(p)
     end
 end)
 
--- ffrap_openstart [on|off|at <x> <y> <z>|now [slot]]: whether the prologue skip goes to the
--- open world start (game.OPEN_START: story 7090 at the Crystal Tower) in place of the Earth
--- Shrine. Off by default; a test switch for now (round 35). `at` moves the arrival point for
--- this run only. `now` writes the open world start into the loaded save (one that has had the
--- skip), saves it to its slot (or `slot`) and reloads, with no new game.
+-- ffrap_openstart [on|off|dock|air|event|at <x> <y> <z>|now [slot]]: whether the prologue skip
+-- goes to the open world start (game.OPEN_START) in place of the Earth Shrine. Off by default; a
+-- test switch for now (round 35). `dock`, `air` and `event` choose the arrival for this run
+-- (game.OPEN_STARTS; dock is the default). `at` moves the arrival point for this run only.
+-- `now` writes the open world start into the loaded save (one that has had the skip), saves it
+-- to its slot (or `slot`) and reloads, with no new game.
 command("ffrap_openstart", function(p)
     local what = p and p[1]
     if what == "now" then
@@ -1223,6 +1224,8 @@ command("ffrap_openstart", function(p)
     elseif what == "on" or what == "off" then
         openStart = what == "on"
         saveState()
+    elseif game.OPEN_STARTS[what] then
+        game.OPEN_START = game.OPEN_STARTS[what]
     elseif what == "at" then
         local x, y, z = tonumber(p[2]), tonumber(p[3]), tonumber(p[4])
         if not (x and y and z) then
@@ -1232,8 +1235,8 @@ command("ffrap_openstart", function(p)
         game.OPEN_START.x, game.OPEN_START.y, game.OPEN_START.z = x, y, z
     end
     local a = game.OPEN_START
-    notify(string.format("Open world start is %s: story %d, map %d at %s, %s, %s (ffrap_openstart on|off|at x y z|now)",
-        openStart and "on" or "off", a.story, a.map, a.x, a.y, a.z))
+    notify(string.format("Open world start is %s (%s): story %d, map %d at %s, %s, %s (ffrap_openstart on|off|dock|air|event|at x y z|now)",
+        openStart and "on" or "off", a.name, a.story, a.map, a.x, a.y, a.z))
 end)
 
 -- ffrap_layout <text>: the chain of panels holding the on-screen text that holds <text>, to
@@ -1653,6 +1656,15 @@ command("ffrap_noland", function(p)
             end
             if not box or why then log("noland: " .. what .. " problem: " .. tostring(why)) end
             notify("No-landing box " .. (box and (what == "spawn" and "spawned" or "moved") or "failed") .. (why and (": " .. why) or ""))
+        elseif what == "channel" then
+            local ch, resp = tonumber(p[2]), tonumber(p[3])
+            if not (ch and resp and resp >= 0 and resp <= 2) then
+                notify("Usage: ffrap_noland channel <channel> <0 ignore|1 overlap|2 block>")
+                return
+            end
+            local n = game.NoLandChannel(ch, resp)
+            log("noland: channel " .. ch .. " -> " .. resp .. " on " .. n .. " spawned boxes")
+            notify("No-landing channel " .. ch .. " set to " .. resp .. " on " .. n .. " boxes")
         elseif what == "cond" then
             local cond = p[2] or ""
             local n, last, e = game.NoLandCondition(cond)
@@ -1664,7 +1676,7 @@ command("ffrap_noland", function(p)
             log("noland: off: " .. n .. " boxes undone")
             notify("No-landing boxes undone: " .. n)
         else
-            notify("Usage: ffrap_noland <list|here|show|hide|lock <box>|unlock <box>|refresh|spawn [half] [top]|move [half]|cond <text>|off>")
+            notify("Usage: ffrap_noland <list|here|show|hide|lock <box>|unlock <box>|refresh|spawn [half] [top]|move [half]|channel <n> <0-2>|cond <text>|off>")
         end
     end)
     game.gateTrace = nil

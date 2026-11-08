@@ -1183,9 +1183,13 @@ function ksl:LineTraceSingle(ctx, s, e, query, complex, ignore, draw, hit)
     end
   end
   if bestZ > s.Z then return false end
-  local target = { nm = bestName }
-  function target:GetFName() return fname(self.nm) end
-  hit.HitObjectHandle = { ReferenceObject = { Get = function() return target end } }
+  -- round 36: the game hands back the component; its owner is the actor
+  local owner = { nm = bestName }
+  function owner:GetFName() return fname(self.nm) end
+  local component = { nm = bestName == "Landscape_1" and "LandscapeHeightfieldCollisionComponent_77" or "BoxComponent" }
+  function component:GetFName() return fname(self.nm) end
+  function component:GetOwner() return owner end
+  hit.HitObjectHandle = { ReferenceObject = { Get = function() return component end } }
   hit.ImpactPoint = { X = s.X, Y = s.Y, Z = bestZ }
   return true
 end
@@ -1201,6 +1205,12 @@ hits = [dict(h) for h in L.eval("G.GroundUnder()").values()]
 assert hits == [{"name": "BP_MapNonLandingArea_C_1", "z": 370, "box": True},
                 {"name": "Landscape_1", "z": PHARM_GROUND, "box": False}], hits
 # high ground over the box: the trace stops at the ground and never meets the box
+# 0.18.0: a spawned box's response to one channel (the shadow probe); the game's boxes are left alone
+L.execute("G.NoLandSpawn(500)")
+L.execute("local b = nolandActors[#nolandActors].m_pBoxComponent; function b:SetCollisionResponseToChannel(ch, r) self.resp = { [ch] = r } end")
+assert L.eval("G.NoLandChannel(3, 0)") == 1
+assert L.eval("nolandActors[#nolandActors].m_pBoxComponent.resp[3]") == 0
+L.execute("G.NoLandOff()")
 L.execute(f"groundZ = {HIGH_GROUND}")
 hits = [dict(h) for h in L.eval("G.GroundUnder()").values()]
 assert hits == [{"name": "Landscape_1", "z": HIGH_GROUND, "box": False}], hits
@@ -1228,10 +1238,37 @@ inputSteps = {}
 """)
 state = L.eval("G.InputState()")
 assert state == ("controller BP_PlayerController_C_0, pawn BP_MapUnit_Player_Field_C, move input ignored true, "
-                 "look input ignored true"), state
+                 "look input ignored true; no CPP_InputManager"), state
 failed = list(L.eval("G.InputFix(function(s) inputSteps[#inputSteps + 1] = s end)").values())
 assert list(L.eval("inputSteps").values()) == ["ResetIgnoreInputFlags", "EnableInput", "SetInputMode_GameOnly"]
 assert len(failed) == 1 and failed[0].startswith("EnableInput: "), failed
 assert list(L.eval("fakePC.calls").values()) == ["reset", "game only false"]
 assert "move input ignored false" in L.eval("G.InputState()")
+# 0.18.0 (round 36: the controller's switches were false even in the locked game): the game's
+# own input manager. Its state goes on the line, and fix calls its EnableInput and its
+# ReregistrationCurrentMappingContext before the engine's resets.
+L.execute(r"""
+inputMgr = { enabled = false, calls = {} }
+function inputMgr:IsValid() return true end
+function inputMgr:HasAnyInternalFlags() return false end
+function inputMgr:HasAnyFlags() return false end
+function inputMgr:IsEnableInput() return self.enabled end
+function inputMgr:GetCurrentInputModeDebugString() return { ToString = function() return "UIOnly" end } end
+function inputMgr:GetAllIMCStackList()
+  local imc = { GetFName = function() return fname("IMC_Event") end }
+  return { imc }
+end
+function inputMgr:EnableInput() self.enabled = true; self.calls[#self.calls + 1] = "enable" end
+function inputMgr:ReregistrationCurrentMappingContext() self.calls[#self.calls + 1] = "reregister" end
+local prevFFO8 = FindFirstOf
+function FindFirstOf(c) if c == "CPP_InputManager" then return inputMgr end return prevFFO8(c) end
+inputSteps = {}
+""")
+state = L.eval("G.InputState()")
+assert state.endswith("; input manager: enabled false, mode UIOnly, mapping contexts 1 [IMC_Event]"), state
+failed = list(L.eval("G.InputFix(function(s) inputSteps[#inputSteps + 1] = s end)").values())
+assert list(L.eval("inputSteps").values())[:2] == ["CPP_InputManager:EnableInput",
+                                                  "CPP_InputManager:ReregistrationCurrentMappingContext"]
+assert list(L.eval("inputMgr.calls").values()) == ["enable", "reregister"]
+assert "input manager: enabled true" in L.eval("G.InputState()")
 print("input probe: ok")

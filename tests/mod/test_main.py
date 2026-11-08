@@ -133,7 +133,9 @@ function G.DumpFieldItems() end
 function G.ExportChests() return true, "238 rows" end
 G.SKIP_FROM_MIN, G.SKIP_FROM_MAX, G.skipRuns, G.reloads = 1005, 1005, 0, {}
 G.SKIP_ARRIVAL = { map = 3001 }
-G.OPEN_START = { story = 7090, map = 3280, x = -2830.0, y = -171140.0, z = 3000.0 }
+G.OPEN_STARTS = { dock = { name = "dock", story = 8000, map = 3280, x = -2704.8, y = -171166.7, z = 3002.2 },
+                  air = { name = "air", story = 8000, map = 1000, x = -5935.0, y = -8305.0, z = 2075.0 } }
+G.OPEN_START = G.OPEN_STARTS.dock
 G.TITLE_NEW_GAME, G.TITLE_ARCHIPELAGO, G.titleAdds = 2, 5, 0
 G.titleOk = false   -- the title entry only once a section turns it on
 function G.AddTitleEntry()
@@ -1027,12 +1029,13 @@ function G.GroundUnder()
   return { { name = "BP_MapNonLandingArea_C_1", z = 370, box = true }, { name = "Landscape_1", z = 50, box = false } }
 end
 function G.NoLandOff() G.nl[#G.nl + 1] = "off" return 2 end
+function G.NoLandChannel(ch, r) G.nl[#G.nl + 1] = "channel " .. ch .. " " .. r return 1 end
 """)
 for args in ('{"lock", "Pharm"}', '{"unlock", "mysidia"}', '{"here"}', '{"show", "30"}', '{"hide"}', '{"spawn"}',
-             '{"spawn", "3000", "2500"}', '{"refresh"}', '{"off"}'):
+             '{"spawn", "3000", "2500"}', '{"channel", "3", "0"}', '{"channel", "3", "7"}', '{"refresh"}', '{"off"}'):
     L.execute('commands["ffrap_noland"]("ffrap_noland", %s)' % args)
 assert list(G.nl.values()) == ["lock pharm true", "lock mysidia false", "here", "show true 30", "show false nil",
-                               "spawn 2000 nil", "spawn 3000 2500", "refresh", "off"], list(G.nl.values())
+                               "spawn 2000 nil", "spawn 3000 2500", "channel 3 0", "refresh", "off"], list(G.nl.values())
 # 0.17.0: `here` logs what a trace straight down meets, and names the ground's height
 logged = list(L.globals().logged.values())
 assert any("trace down hit BP_MapNonLandingArea_C_1 (a no-landing box) at z 370" in s for s in logged), logged
@@ -1113,6 +1116,11 @@ assert G.openStarts == 1 and G.reloadMap == OPEN_MAP, (G.openStarts, G.reloadMap
 assert list(G.reloads.values())[reloads:] == [0], list(G.reloads.values())
 L.execute('commands["ffrap_openstart"]("ffrap_openstart", {"now", "4"})')
 assert list(G.reloads.values())[-1] == 4, "an explicit slot"
+# 0.18.0: `air` chooses the world-map arrival for this run; the reload then expects map 1000
+L.execute('commands["ffrap_openstart"]("ffrap_openstart", {"air"})')
+assert any("Open world start is off (air): story 8000, map 1000" in s for s in L.globals().logged.values())
+L.execute('commands["ffrap_openstart"]("ffrap_openstart", {"now"})')
+assert G.reloadMap == 1000, G.reloadMap
 print("open world start: ok")
 
 # 19. 0.17.0: probes for the opening's input lock. `ffrap_skip <slot> force` skips during the

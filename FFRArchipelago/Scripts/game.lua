@@ -1711,12 +1711,20 @@ local SKIP_INVENTORY = {            -- item id, change. Fina's prologue gear goe
 local SKIP_MAPS = { 5010, 2013, 20000, 3001 }   -- known and visited
 G.SKIP_ARRIVAL = { map = 3001, x = -5775.0, y = 0.0, z = -197.85, direction = 2 }
 -- The open world start (round 31, found with FFRSLib's story and travel tools): story 7090,
--- then the Crystal Tower (map 3280). An event there moves the story to 8000 about 8 s after
--- arriving; then the tower is open and the airship is there. Round 31's arrival point was not
--- recorded. This one is the tower's airship dock, 400 units from save point 139
--- (-2830, -171540, 2900 in the dump), among the Enterprise's blocking boxes and the exits that
--- fly back to the world map.
-G.OPEN_START = { story = 7090, map = 3280, x = -2830.0, y = -171140.0, z = 3000.0, direction = 2 }
+-- then the Crystal Tower (map 3280), where two events move the story to 8000. Round 36's
+-- snapshots showed those events write nothing else into the save, so the start can write 8000
+-- itself and put the player where the events leave them, and then nothing plays. Arrivals:
+--   dock   story 8000 at the tower's dock, where the events end (the default)
+--   air    story 8000 on the world map, riding the airship beside the tower: what boarding at
+--          the dock wrote (the airship's place and direction, riding, event flag 31)
+--   event  story 7090 at the dock, near save point 139: the two events play (rounds 31, 35)
+G.OPEN_STARTS = {
+    dock = { name = "dock", story = 8000, map = 3280, x = -2704.8, y = -171166.7, z = 3002.2, direction = 2 },
+    air = { name = "air", story = 8000, map = 1000, x = -5935.0, y = -8305.0, z = 2075.0, direction = 2,
+            airship = true, flags = { 31 } },
+    event = { name = "event", story = 7090, map = 3280, x = -2830.0, y = -171140.0, z = 3000.0, direction = 2 },
+}
+G.OPEN_START = G.OPEN_STARTS.dock
 
 -- The unitParameterList entry for a unit id, or nil.
 local function UnitEntry(sd, unitId)
@@ -1745,8 +1753,27 @@ local function WriteStory(sd, n)
     return ok and G.StoryCounter() == n, "story counter -> " .. n
 end
 
--- The map and point a reload starts the player at, as FFRSLib's ffrs_travel writes them.
--- Returns ok and a report line.
+-- Event flags on and off. eventFlag is 0-based in the snapshots, so flag i is Lua element
+-- i + 1. Returns whether the flag array was found, and the flags that did not read back.
+local function SetFlags(sd, on, off)
+    local flags = nil
+    pcall(function() flags = sd.Progress.eventFlag end)
+    if not flags then return false, {} end
+    local bad = {}
+    local function setFlag(i, want)
+        local okSet = pcall(function() flags[i + 1] = want end)
+        local now
+        pcall(function() now = flags[i + 1] end)
+        if not okSet or now ~= want then bad[#bad + 1] = i end
+    end
+    for _, i in ipairs(on or {}) do setFlag(i, true) end
+    for _, i in ipairs(off or {}) do setFlag(i, false) end
+    return true, bad
+end
+
+-- The map and point a reload starts the player at, as FFRSLib's ffrs_travel writes them. An
+-- arrival with `airship` also puts the airship there with the player riding it, and `flags`
+-- are turned on (what boarding the airship wrote in round 36). Returns ok and a report line.
 local function WriteArrival(sd, a)
     local ok = pcall(function()
         sd.Map.mapId = a.map
@@ -1754,8 +1781,27 @@ local function WriteArrival(sd, a)
         sd.Map.unitLocation.Y = a.y
         sd.Map.unitLocation.Z = a.z
         sd.Map.unitDirection = a.direction
+        if a.airship then
+            sd.Map.airShipLocation.X = a.x
+            sd.Map.airShipLocation.Y = a.y
+            sd.Map.airShipLocation.Z = a.z
+            sd.Map.airShipDirection = a.direction
+            sd.Map.IsRidingAirShip = true
+        end
     end)
-    return ok and G.MapId() == a.map, "arrival: map " .. a.map .. " at " .. a.x .. ", " .. a.y .. ", " .. a.z
+    local line = "arrival: map " .. a.map .. " at " .. a.x .. ", " .. a.y .. ", " .. a.z
+    if a.airship then
+        local riding
+        pcall(function() riding = sd.Map.IsRidingAirShip end)
+        ok = ok and riding == true
+        line = line .. ", in the airship"
+    end
+    if a.flags then
+        local found, bad = SetFlags(sd, a.flags)
+        ok = ok and found and #bad == 0
+        line = line .. ", flags " .. table.concat(a.flags, " ") .. " on"
+    end
+    return ok and G.MapId() == a.map, line
 end
 
 -- Applies the skip to the loaded save. Saves nothing. Returns ok and a list of report lines,
@@ -1779,21 +1825,8 @@ function G.SkipPrologue(opts)
 
     step(WriteStory(sd, storyTo))
 
-    -- Event flags: eventFlag is 0-based in the snapshots, so flag i is Lua element i + 1.
-    local flags = nil
-    pcall(function() flags = sd.Progress.eventFlag end)
-    local bad = {}
-    local function setFlag(i, on)
-        local okSet = pcall(function() flags[i + 1] = on end)
-        local now
-        pcall(function() now = flags[i + 1] end)
-        if not okSet or now ~= on then bad[#bad + 1] = i end
-    end
-    if flags then
-        for _, i in ipairs(SKIP_FLAGS_ON) do setFlag(i, true) end
-        for _, i in ipairs(SKIP_FLAGS_OFF) do setFlag(i, false) end
-    end
-    step(flags ~= nil and #bad == 0, "event flags: " .. #SKIP_FLAGS_ON .. " on, " .. #SKIP_FLAGS_OFF .. " off"
+    local found, bad = SetFlags(sd, SKIP_FLAGS_ON, SKIP_FLAGS_OFF)
+    step(found and #bad == 0, "event flags: " .. #SKIP_FLAGS_ON .. " on, " .. #SKIP_FLAGS_OFF .. " off"
         .. (#bad > 0 and (" (failed: " .. table.concat(bad, " ") .. ")") or ""))
     -- Whether the game's own {flag:N} agrees with the array index, for the record.
     local libSays = G.GetFlag(SKIP_FLAGS_ON[1])
@@ -1894,8 +1927,20 @@ function G.OpenStart()
 end
 
 -- Round 9: a reload during the opening movie came up with no menus and no movement, and what
--- holds that lock is not known yet (IDEAS.md, idea 6). The player controller's own input
--- switches, as text, to compare a locked game with a normal one.
+-- holds that lock is not known yet (IDEAS.md, idea 6). The input state as text, to compare a
+-- locked game with a normal one: the player controller's own switches (round 36: false in the
+-- movie, the locked game and a normal game alike, so not those), then the game's own input
+-- manager (a world subsystem, new on each map): IsEnableInput, its input mode, and its stack of
+-- mapping contexts.
+local function ObjText(v)
+    if type(v) == "string" then return v end
+    local ok, s = pcall(function() return v:ToString() end)
+    if ok and type(s) == "string" then return s end
+    local okName, n = pcall(function() return v:GetFName():ToString() end)
+    if okName and type(n) == "string" then return n end
+    return tostring(v)
+end
+
 function G.InputState()
     local pc = PlayerController()
     if not pc then return "no PlayerController" end
@@ -1903,12 +1948,24 @@ function G.InputState()
     pcall(function() pawn = pc:K2_GetPawn():GetClass():GetFName():ToString() end)
     pcall(function() move = tostring(pc:IsMoveInputIgnored()) end)
     pcall(function() look = tostring(pc:IsLookInputIgnored()) end)
-    return string.format("controller %s, pawn %s, move input ignored %s, look input ignored %s",
+    local line = string.format("controller %s, pawn %s, move input ignored %s, look input ignored %s",
         pc:GetFName():ToString(), pawn, move, look)
+    local mgr = Live("CPP_InputManager")
+    if not mgr then return line .. "; no CPP_InputManager" end
+    local enabled, mode, stack = "?", "?", "?"
+    pcall(function() enabled = tostring(mgr:IsEnableInput()) end)
+    pcall(function() mode = ObjText(mgr:GetCurrentInputModeDebugString()) end)
+    pcall(function()
+        local list, names = mgr:GetAllIMCStackList(), {}
+        for i = 1, #list do names[#names + 1] = ObjText(list[i]) end
+        stack = #names .. " [" .. table.concat(names, ", ") .. "]"
+    end)
+    return string.format("%s; input manager: enabled %s, mode %s, mapping contexts %s", line, enabled, mode, stack)
 end
 
--- The engine's own resets for a locked controller, one at a time. step(what) runs before each
--- (it logs, so a crash names the call). Returns the steps that raised.
+-- Resets for a locked game, one at a time: the game's input manager first (EnableInput, then
+-- register its current mapping context again), then the engine's own. step(what) runs before
+-- each (it logs, so a crash names the call). Returns the steps that raised.
 function G.InputFix(step)
     local pc = PlayerController()
     if not pc then return { "no PlayerController" } end
@@ -1917,6 +1974,11 @@ function G.InputFix(step)
         step(what)
         local ok, err = pcall(fn)
         if not ok then failed[#failed + 1] = what .. ": " .. tostring(err) end
+    end
+    local mgr = Live("CPP_InputManager")
+    if mgr then
+        try("CPP_InputManager:EnableInput", function() mgr:EnableInput() end)
+        try("CPP_InputManager:ReregistrationCurrentMappingContext", function() mgr:ReregistrationCurrentMappingContext() end)
     end
     try("ResetIgnoreInputFlags", function() pc:ResetIgnoreInputFlags() end)
     try("EnableInput", function() pc:EnableInput(pc) end)
@@ -2923,8 +2985,12 @@ function G.GroundUnder()
         end)
         if not okCall then return nil, "LineTraceSingle failed: " .. tostring(err) end
         if not okHit then break end
-        local name, z = "?", nil
-        pcall(function() name = hit.HitObjectHandle.ReferenceObject:Get():GetFName():ToString() end)
+        -- Round 36: the hit is a component (BoxComponent, LandscapeHeightfieldCollisionComponent_80),
+        -- so the box is known by its owner's name.
+        local name, z, hitObj = "?", nil, nil
+        pcall(function() hitObj = hit.HitObjectHandle.ReferenceObject:Get() end)
+        pcall(function() name = hitObj:GetFName():ToString() end)
+        pcall(function() name = hitObj:GetOwner():GetFName():ToString() end)
         pcall(function() z = hit.ImpactPoint.Z end)
         if type(z) ~= "number" then break end
         local box = boxes[name]
@@ -2990,6 +3056,22 @@ function G.NoLandMove(half)
     if not target then return nil, "the Mysidia box (condition " .. G.MYSIDIA_BOX_CONDITION .. ") is not on this map" end
     half = half or 2000
     return PlaceBox(target, pose.x, pose.y, nolandMoved.z or G.NOLAND_Z, half, half, nolandMoved.ez or G.NOLAND_HALF_Z, "")
+end
+
+-- Round 36: over a spawned box the airship's shadow is gone. The boxes block the Visibility
+-- channel (3), which a shadow is likely placed with. Sets the spawned boxes' response to one
+-- channel (0 ignore, 1 overlap, 2 block), to find a setting that keeps the shadow and still
+-- blocks landing. Returns how many boxes took it.
+function G.NoLandChannel(channel, response)
+    local n = 0
+    for _, a in ipairs(nolandSpawned) do
+        local box = Alive(a) and BoxOf(a)
+        if box then
+            gateStep("noland: SetCollisionResponseToChannel " .. channel .. " " .. response)
+            if pcall(function() box:SetCollisionResponseToChannel(channel, response) end) then n = n + 1 end
+        end
+    end
+    return n
 end
 
 -- Writes `cond` into every box the probe spawned or moved. Returns how many, and the last one.

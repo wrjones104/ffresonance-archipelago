@@ -48,7 +48,8 @@ sd = obj({
   }),
   unitGuest = { HitPoint = 0, MagicPoint = 0 },
   Player = { WinNum = 0 },
-  Map = { mapId = -1, unitLocation = { X = 0.0, Y = 0.0, Z = 0.0 }, unitDirection = 0 },
+  Map = { mapId = -1, unitLocation = { X = 0.0, Y = 0.0, Z = 0.0 }, unitDirection = 0,
+          airShipLocation = { X = -6748.5, Y = 7696.7, Z = 72.6 }, airShipDirection = 0, IsRidingAirShip = false },
 })
 bag = { [10699] = 1, [11301] = 1, [12029] = 1, [1] = 4 }
 visited, known, saved, reloaded = {}, {}, {}, {}
@@ -125,25 +126,40 @@ assert lua("#reloaded") == 1, "no second reload"
 L.execute("""libs["/Script/mucha.Default__CPP_BFL_SaveData"].SaveGameData = function(_, slot) saved[#saved + 1] = slot end
   sd.Map.mapId = 3001""")
 
-# 0.16.0: the open world start writes story 7090 and the Crystal Tower's dock in place of 1030
-# and the Earth Shrine; the reload then checks for map 3280
-OPEN_STORY, OPEN_MAP = 7090, 3280
+# 0.16.0: the open world start replaces 1030 and the Earth Shrine; the reload then checks for its
+# map. 0.18.0 (round 36: the tower's two events wrote only story 8000): the default "dock" start
+# writes 8000 at the dock where those events leave the player, so they do not play.
+DOCK_STORY, EVENT_STORY, TOWER_MAP, WORLD_MAP = 8000, 7090, 3280, 1000
 ok, report = L.execute("return G.SkipPrologue({ inventory = false, openStart = true })")
 assert ok is True, list(report.values())
-assert f"ok   story counter -> {OPEN_STORY}" in list(report.values())
-assert lua("G.StoryCounter()") == OPEN_STORY and lua("sd.Map.mapId") == OPEN_MAP
-assert lua("sd.Map.unitLocation.X") == -2830.0 and lua("sd.Map.unitLocation.Y") == -171140.0
-ok, detail = L.execute(f"return G.SaveAndReload(0, {OPEN_MAP})")
-assert ok is True and detail == f"saved to slot 0 (map {OPEN_MAP}, flag 1 false), reloading", detail
+assert f"ok   story counter -> {DOCK_STORY}" in list(report.values())
+assert lua("G.StoryCounter()") == DOCK_STORY and lua("sd.Map.mapId") == TOWER_MAP
+assert lua("sd.Map.unitLocation.X") == -2704.8 and lua("sd.Map.unitLocation.Y") == -171166.7
+assert lua("sd.Map.IsRidingAirShip") is False, "the dock start leaves the airship alone"
+ok, detail = L.execute(f"return G.SaveAndReload(0, {TOWER_MAP})")
+assert ok is True and detail == f"saved to slot 0 (map {TOWER_MAP}, flag 1 false), reloading", detail
 ok, detail = L.execute("return G.SaveAndReload(0)")
-assert ok is False and f"map is {OPEN_MAP}" in detail and "not 3001" in detail, "the default still expects 3001"
+assert ok is False and f"map is {TOWER_MAP}" in detail and "not 3001" in detail, "the default still expects 3001"
 # 0.16.1: G.OpenStart writes only the story and the arrival, on a save that already had the skip
 L.execute("sd.Progress.Progress[1] = 1030; sd.Map.mapId = 3001; sd.Player.WinNum = 12")
 ok, report = L.execute("return G.OpenStart()")
 assert ok is True and list(report.values()) == [
-    f"ok   story counter -> {OPEN_STORY}", f"ok   arrival: map {OPEN_MAP} at -2830.0, -171140.0, 3000.0"], list(report.values())
-assert lua("G.StoryCounter()") == OPEN_STORY and lua("sd.Map.mapId") == OPEN_MAP
+    f"ok   story counter -> {DOCK_STORY}", f"ok   arrival: map {TOWER_MAP} at -2704.8, -171166.7, 3002.2"], list(report.values())
+assert lua("G.StoryCounter()") == DOCK_STORY and lua("sd.Map.mapId") == TOWER_MAP
 assert lua("sd.Player.WinNum") == 12, "the rest of the save is left alone"
+# the "air" start: the world map, riding the airship beside the tower, with flag 31 on
+L.execute("G.OPEN_START = G.OPEN_STARTS.air; sd.Progress.eventFlag[32] = false")
+ok, report = L.execute("return G.OpenStart()")
+assert ok is True and list(report.values())[1] == (
+    f"ok   arrival: map {WORLD_MAP} at -5935.0, -8305.0, 2075.0, in the airship, flags 31 on"), list(report.values())
+assert lua("sd.Map.IsRidingAirShip") is True and lua("sd.Map.airShipDirection") == 2
+assert (lua("sd.Map.airShipLocation.X"), lua("sd.Map.airShipLocation.Y"), lua("sd.Map.airShipLocation.Z")) == (-5935.0, -8305.0, 2075.0)
+assert lua("sd.Progress.eventFlag[32]") is True, "flag 31 is Lua element 32"
+# the "event" start: story 7090 at the dock, so the tower's two events play
+L.execute("G.OPEN_START = G.OPEN_STARTS.event")
+ok, report = L.execute("return G.OpenStart()")
+assert ok is True and lua("G.StoryCounter()") == EVENT_STORY and lua("sd.Map.mapId") == TOWER_MAP
+L.execute("G.OPEN_START = G.OPEN_STARTS.dock; sd.Map.IsRidingAirShip = false")
 
 # 0.7.0: an Archipelago item granted before the skip with a starter item's id is kept
 L.execute("bag = { [10699] = 1, [11301] = 1, [12029] = 1, [12000] = 1 }; sd.Progress.Progress[1] = 1005")
