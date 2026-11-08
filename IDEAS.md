@@ -17,6 +17,8 @@ The chapter-by-chapter progression (party, vehicles, gates, Visions, Espers) is 
 - They are found mostly in towns and dungeons, not on the world map. The progression overview says there are 99, across almost every town, dungeon and overworld segment.
 - There is a place in the game where you turn shards in for incremental rewards.
 
+**From the game data dump (2026-11-06):** all 99 Tablet Shards were located in `data/game/field_items.tsv` (`BP_MapGimmick_FieldItem_Medal_C`, item 25004), confirming the exact locations and counts.
+
 **To find out:**
 - How many shards exist, and where. Visiting maps fills `seen.tsv`, and a level-file read would give the full list.
 - How the turn-in works: an NPC, shop or event table. What gives the rewards, and how the game remembers which tiers are claimed (a flag, a counter, quest progress?).
@@ -211,7 +213,13 @@ Still to decide: whether to show a message first ("Skipping the prologue…"), a
 
 **Idea:** jump the story to a late point once (for example after the airship), so the world is open, and gate progress with Archipelago items instead of story events. Keep boss fights as locations if possible. The full story is long for an Archipelago run.
 
-**Round 30 (2026-11-06): this is now the main direction.** Players on the Archipelago Discord ask mostly for open world. The design draft, with what the game data says about the story counter, the airship, enemy levels and the cleared state (story 9000), is [docs/open_world.md](docs/open_world.md). Round 31 has its first probes.
+**Round 30 (2026-11-06): this is now the main direction.** Players on the Archipelago Discord ask mostly for open world. The design draft, with what the game data says about the story counter, the airship, enemy levels and the cleared state (story 9000), is [docs/open_world.md](docs/open_world.md).
+
+**Decided in rounds 31 and 32:**
+- Starting state: setting story to 7090 and transitioning to Crystal Tower (map 3280) fires an event advancing story to 8000, spawning the airship and opening the Crystal Tower.
+- The airship is free from the start; no airship item is required.
+- Continents are gated by landing restrictions using native `BP_MapNonLandingArea_C` boxes.
+- Enemy scaling rewrites `DT_UnitParameter` rows using calibrated curves with `attack`, `magic`, `hp`, and `follow` party tracking.
 
 **Known so far:**
 - After the airship most of the world is open, except places that need other story events.
@@ -246,15 +254,14 @@ Still to decide: whether to show a message first ("Skipping the prologue…"), a
 - **29520 Magitek Airship Passkey is cosmetic.** It changes how the airship looks and does not unlock it. You had one already, from a pre-registration reward. So the airship unlock is still unknown, and probably a story flag or the story counter.
 - **30011 Chocobo Saddle-Bike did nothing visible.** Its description says it turns a mounted chocobo into a motorcycle. It may be unused, or it may need a condition, for example granting it while riding, or after a map change.
 
+**Open world update (round 31):** the airship is free from the start once initialized at story 7090/8000. Continents are locked against landing instead. A separate airship unlock flag or item is therefore not needed for open world.
+
 **To find out:**
-1. **Airship flag test.** On a save just before the chapter 4 ending, snapshot the flag array before and after the airship unlock. The flags that flip are the candidates. This needs a new console command that dumps the flags (or the changed ones) to a file.
-2. **Where the airship is.** Even with the flag set, the airship may need placing on the world map (its map and point). The save's map data (`Map.mapId` plus a point id, per FFRSLib's travel notes) is where to look.
-3. **Saddle-Bike.** Try 30011 again while riding a chocobo, and after a map change.
-4. **What this means for the apworld:**
-   - "Chocobo" (item 30002) becomes a progression item now. Locations become gated by it: Kolobos and Felicitas.
-   - "Airship" becomes a progression item once its flag is known: Sanctums, volcanoes, ice islands and Whirlpool Hollow.
-   - Radar tiers gate the world-map treasures.
-   - This pairs with the open-world mode (idea 3). In story mode, if the story hands out the saddle, that vanilla grant would need blocking for the item to matter.
+1. **Saddle-Bike.** Try 30011 again while riding a chocobo, and after a map change.
+2. **What this means for the apworld:**
+   - "Chocobo" (item 30002) is a progression item gating Kolobos and Felicitas.
+   - Continents become gated by landing passes or region items, not an airship item.
+   - Radar tiers gate world-map treasures.
 
 ## 5. Key items and gates from the item table
 
@@ -607,7 +614,7 @@ The "Back" prompt that menus and the chest pop-up show at the bottom right also 
 - **Bypass behaviour.** Because gates are spawned by the mod at runtime, disabling UE4SS removes the physical barrier. Archipelago's server logic still withholds downstream progression items, and if stricter anti-bypass is ever needed the mod can check region coordinates on load or gate transitions directly.
 
 **Still to find out:**
-- **Exact item text fields (and our own item dump):** dump `DT_ValuableItemData.RowStruct` and the other `DT_*ItemData` tables directly from the game so we have authoritative vanilla item names and see which field controls the on-screen name of a custom row.
+- **Exact item text fields:** `tools/dump_game` completed the game data dump, generating `data/game/items.tsv` across all 6 item tables. Still to check: which field controls the on-screen name of a dynamically added custom row in `DT_ValuableItemData`.
 - **Save safety with custom item IDs:** check what happens if a save holding item `29901` is loaded with the mod disabled (or keep custom gate tokens in Archipelago's bridge state instead of `SaveDataInventory` if the vanilla menu dislikes unknown IDs).
 - **Gate catalog:** scout exact `(mapId, X, Y, Z, Yaw, Scale)` coordinates, gimmick visuals, and unlock rules for actual world-map bridges and dungeon doors (`ffrap_gate` can scout these in game).
 

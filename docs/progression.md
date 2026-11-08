@@ -10,7 +10,7 @@ A chapter-by-chapter overview of party members, vehicles, access gates, Visions 
 |---|---|---|---|
 | Vehicle | Chocobo | Chapter 1 (Village of Kol) | Travel from Grandshelt into the Kolobos / Felicitas region. **[data]** Artifacts 30002 "Choboco Saddle" and 30011 "Chocobo Saddle-Bike". |
 | Vehicle | Ferry / ship | Chapters 1, 3, 4 | Story transitions: Grandport to Dirnado (ch. 1->2), Olderion to Zoldaad (ch. 3->4). |
-| Vehicle | Airship (The Enterprise) | End of chapter 4 / start of 5 | Full world-map flight. Needed for isolated Sanctums, volcanoes, ice islands and Whirlpool Hollow. **[data]** Key item 29520 "Magitek Airship Passkey". |
+| Vehicle | Airship (The Enterprise) | End of chapter 4 / start of 5 | Full world-map flight. Needed for isolated Sanctums, volcanoes, ice islands and Whirlpool Hollow. **[data]** Key item 29520 "Magitek Airship Passkey" is a cosmetic skin (round 5). The airship spawns natively at story 8000 and is free from the start in open-world mode. |
 | Upgrade | Radar Pulse (base) | Chapter 5 (story) | Installed by Lid. Needed to scan the ocean SE of Pharm and reveal Mysidia. |
 | Upgrade | Radar: Magi-tenna | Chapter 5+ (hidden NPC behind an inn) | Tier 1 world-map treasures (Treasures 1-5, including Adamantite). **[data]** Item 27006. |
 | Upgrade | Radar: Resonance Stone | Chapter 7 (chest in Mt. Reizan) | Tier 2 world-map treasures. **[data]** Item 27007, in a chest kept vanilla (id >= 13000). |

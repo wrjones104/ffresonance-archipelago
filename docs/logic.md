@@ -38,7 +38,13 @@ This choice shapes everything else.
 - *For:* real routing, and big early spheres. This is what makes many Archipelago games fun.
 - *Against:* it needs a lot of game work first: opening lands without the story, with events and NPCs in a sensible state, and a goal that does not depend on story order.
 
-**Decided (round 30, 2026-11-06): open world first.** Players on the Archipelago Discord ask mostly for open world, and few want a story mode. The design is in [open_world.md](open_world.md). Story mode may come later, or not at all. The rest of this section is kept as earlier reference.
+**Decided (round 30, 2026-11-06): open world first.** Players on the Archipelago Discord ask mostly for open world, and few want a story mode. The design is in [open_world.md](open_world.md). Story mode may come later, or not at all.
+
+**Rounds 31 and 32 implementation decisions:**
+- Starting state initializes at story 7090 and transitions to the Crystal Tower (map 3280), triggering story 8000 with the airship spawned and Crystal Tower open.
+- The airship is free from the start with no separate airship progression item.
+- Continents are gated by airship landing restrictions via native `BP_MapNonLandingArea_C` boxes.
+- Enemy stats dynamically scale via `DT_UnitParameter` curve rewriting with `follow` party tracking.
 
 *Earlier suggestion:* story mode first, built so that open world can come later. The skip prologue work shows the story counter and flags can be set, so open world is not out of reach. But story mode can ship much sooner, and it teaches us which gates the game checks by item.
 
@@ -64,9 +70,9 @@ What a progression item can be depends on what the mod can grant and what the ga
 | Bag items (consumables, equipment, key items, artifacts) | `AddInventory` | yes, every round since round 1 |
 | Gil | `SetCurrentMoney` | yes (round 5) |
 | Visions | `visionList` plus `AddInventory`, the FFRSLib way | yes in round 1; an Archipelago item since world 0.3.0. One received before the save owns a vision waits (mod 0.12.0). Round 30 tests it |
-| Party members | `CPP_VM_Party:AddUnit`, and `JoinStatus` 0 when the party is full (mod 0.12.0) | an Archipelago item since world 0.3.0. The story sets `JoinStatus` itself, in talk events (IDEAS.md, idea 19). Round 30 tests it |
+| Party members | `CPP_VM_Party:AddUnit`, and `JoinStatus` 0 when the party is full (mod 0.12.0) | yes: verified in rounds 30 and 32. Units join active party or roster when full and are swappable |
 | Story flags | `SetFlag` | yes (the skip prologue sets 21) |
-| Vehicles | the Chocobo by item 30002 | yes: the saddle alone lets you ride (round 5). The airship is unknown: 29520 only changes how it looks |
+| Vehicles | the Chocobo by item 30002; airship free in open world | yes: Chocobo saddle alone enables riding (round 5). Airship is free from start in open world (round 31); continents gated by landing boxes |
 
 A gate only works as an Archipelago item if the game checks for the *item*, not for a story flag set at the same time. That is the main thing to test for each candidate (section 8).
 
@@ -77,7 +83,7 @@ Filled from progression.md and IDEAS.md idea 5.
 | Candidate | Item id | Gates | Game checks | Tested | In v1? |
 |---|---|---|---|---|---|
 | Chocobo (Choboco Saddle) | 30002 | Kolobos Island, the Felicitas region | the item | yes (round 5) | |
-| Airship | unknown | world-map flight: Sanctums, volcanoes, ice islands, Whirlpool Hollow | unknown (29520 is cosmetic) | no: needs the flag test (idea 4) | |
+| Airship | free in open world | world-map flight: Sanctums, volcanoes, ice islands, Whirlpool Hollow | native at story 8000 | yes (round 31): free from start; landing boxes gate continents | no |
 | Radar: Magi-tenna | 27006 | tier 1 world-map treasures | unknown | no | |
 | Radar: Resonance Stone | 27007 | tier 2 world-map treasures | unknown | no | |
 | Radar: High-Power Generator | 27008 | tier 3 world-map treasures | unknown | no | |
@@ -88,8 +94,8 @@ Filled from progression.md and IDEAS.md idea 5.
 | Dungeon Key, Throne Room Key | 20019, 20021 | Zoldaad Castle | unknown | no | |
 | Ruby Fragment (x3) | 20030 | Carbuncle | unknown | no | |
 | Broken Sword Hilt, Blade | 20031, 20032 | Odin (Iron Splitter) | unknown | no | |
-| Tablet Shards | 25004 | the Tablet Shard turn-in (idea 1) | unknown | no | |
-| Party members | units 1001-1008 (guests: 1013 Ignis, 1014 Alluvion, 1016 Charlotte) | battle strength; maybe story events | the story expects them | no | |
+| Tablet Shards | 25004 | the Tablet Shard turn-in (idea 1) | unknown | 99 confirmed in data dump | |
+| Party members | units 1001-1008 (guests: 1013 Ignis, 1014 Alluvion, 1016 Charlotte) | battle strength; maybe story events | the story expects them | yes (rounds 30 & 32) | |
 | Blocker passes (our own) | new | the choke points we block (idea 16) | the mod, since the gate is ours | no: needs idea 16 first | |
 | Visions (26), summons (10 units; Bahamut has two) | 13017-13130; units 10451-10460 | battle strength | - | no | |
 
@@ -143,8 +149,8 @@ Candidates for player customization:
 ## 8. Tests needed before the logic can rely on them
 
 1. For each key item in section 5: verify whether the gate opens with the item alone before story grant, and ensure the story functions normally if the item already exists in inventory.
-2. Airship: identify which flag or item enables flight (idea 4) via snapshot diff around story unlock.
-3. Party members: confirm whether `AddUnit` or setting `JoinStatus` grants fully functional party members early, and verify engine behavior during subsequent scripted joins.
+2. Airship: resolved for open world (free from start at story 8000; landing restriction boxes gate continents).
+3. Party members: confirmed in rounds 30 and 32; `AddUnit` grants playable units to party or roster, and roster units can be swapped into the active party.
 4. Revisiting: catalog which regions remain accessible after chapter completion.
 5. Kolobos: determine exact story unlock timing.
 6. Goal: verify whether story progression reliably reaches 8050 at game completion.

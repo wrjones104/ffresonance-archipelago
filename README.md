@@ -15,7 +15,7 @@ AI use: this project is built with Claude Code. [DISCLOSURE.md](DISCLOSURE.md) s
 
 ## Playing the MVP
 
-The world is tested off-line: Archipelago's general tests pass with it, its own tests pass, and a client end-to-end run against a local server passes, with a script standing in for the game. Round 5 played a full seed in the real game, up to the goal and a release (see "Test results so far").
+The world is tested off-line: Archipelago's general tests pass with it, its own tests pass, and a client end-to-end run against a local server passes, with a script standing in for the game. Round 5 played a full seed in the real game, up to the goal and a release (see [docs/playtesting.md](docs/playtesting.md)).
 
 **What the mod needs:**
 - **UE4SS**, the only thing it needs to run. ConsoleEnablerMod and BPModLoaderMod come with UE4SS. The console is only for the `ffrap_*` commands.
@@ -89,6 +89,8 @@ data/chests.tsv            every chest table row, exported in game (ffrap_export
 data/shinies.tsv           shinies seen in game (the mod's seen.tsv): marks a shiny "seen"
 docs/progression.md        the game's progression, chapter by chapter
 docs/logic.md              the progression logic design (draft)
+docs/open_world.md         open-world mode design (continent locks, enemy scaling)
+docs/playtesting.md        playtest round logs (Rounds 1-32) and active test plans
 tests/                     every test; run them all with python tests/run_all.py (tests/README.md)
 CLAUDE.md                  how we work, for Claude sessions: conventions, lessons, where things live
 FFRArchipelago/Assets/     the Archipelago logo for the title screen
@@ -96,7 +98,7 @@ FFRArchipelago/Assets/     the Archipelago logo for the title screen
 
 After `data/game/*.tsv` or `data/shinies.tsv` changes, run `python tools/gen_apworld_data.py` and commit the regenerated `data.py`.
 
-Ideas that are not on the test plan yet (Tablet Shards, skipping the prologue, an open-world mode) are in [IDEAS.md](IDEAS.md). The progression logic is being designed in [docs/logic.md](docs/logic.md).
+Ideas and ongoing research (Tablet Shards, trap items, NPC gifts, custom gates) are in [IDEAS.md](IDEAS.md). Open-world mode is designed in [docs/open_world.md](docs/open_world.md), and progression logic in [docs/logic.md](docs/logic.md).
 
 ## The game data dump
 
@@ -197,279 +199,24 @@ kind  map  uid  row  item  count  money  visible-condition
 - `map` and `uid` are the save's key: `IsOpenTreasureBox(map, uid)` answers for that location from anywhere in the game.
 - `row` is the chest table row (`mapId:ID`). For shinies this column holds the Blueprint class instead.
 
-## Test results so far
+## Playtesting and test plans
 
-**Round 1 (0.1.0, 2026-11-04): passed.**
-- **Grants:** bag items, vision unlock (with all 8 synchro keys), party add and the duplicate guards all worked. Party add refused a unit when the party was full.
-- **Story counter:** reported live (5062 → 5064).
-- **Chest checks:** reported live (`chest:3180:0`, `chest:3180:2`).
-- **The dump showed:**
-  - The chest table has 238 rows. Each row's `mapId` and `ID` match the live chest's `m_TreasureBoxData`, so `chest:<mapId>:<ID>` from the table is the location key. Row names do not encode the map.
-  - Gil chests have `ItemId = -1` and a `Money` value. `IsTrap` and `battleGroupId` are on every row.
-  - `IsOpenTreasureBox` answered `false` for two chests opened moments before. Live checks use the chest's own `m_IsOpen`, so they work. A reconnect re-sync needs the save, so round 2 finds out when the save catches up.
+In-game playtesting results (Rounds 1-32) and active test plans (Round 33) are documented in [docs/playtesting.md](docs/playtesting.md).
+Automated regression tests are documented in [tests/README.md](tests/README.md).
 
-**Round 2 (0.2.0, 2026-11-04): mostly passed, and it found three bugs.**
-- **Chest export:** 238 rows, 56 maps, no duplicate `mapId:ID` keys, 9 gil chests and no trap rows. Row `3020:0` has `battleGroupId 51`, so it is probably a guarded chest. The export is in `data/chests.tsv`.
-- **Shinies:**
-  - The reward is on the actor: `m_ItemId`, `m_ItemNum`, `m_Money` on `CPP_MapGimmick_ItemObjectBase`.
-  - `CPP_MapGimmick_FieldItem.m_IsOpen` is the picked-up flag.
-  - The save (`IsOpenTreasureBox(map, m_UniqueId)`) answers true the moment one is picked up.
-  - Classes seen: `BP_MapGimmick_FieldItem_C`, `_Child_C` and `_Medal_C`.
-  - The world map (1000) has 93 field items. 8 of them have no item and no money, only a `VisibleCondition`: they are story or quest points, not pick-ups.
-- **Save timing:** shinies are in the save at once. Chests never were, under `m_Id`, even after leaving the map and saving. So the save does not key chests by `m_Id`. 0.3.0 logs the other candidates (`m_UniqueId`, `TypeData.ID`, the row's map).
-- **Bug 1, wrong current map:** the save's `Map.mapId` lagged minutes behind the real map. Two chests from map 3180 were reported as `chest:1000:0` and `chest:1000:2`. Fixed: the current map is now `CPP_MapManager:GetSameMapId()` (as FFRS_QoL uses), and chests are keyed by their own table row.
-- **Bug 2, actors lingering after a map change:** a map's actors outlive the map change for a moment. Fixed: nothing is judged until the map id has held for 3 scans.
-- **Bug 3, blanking restore:** after `ffrap_blank off`, chests in the current map still gave 1 gil. They had spawned while blanking was on, so their "original" snapshot was already blank. Fixed: originals are keyed by the row's `mapId:ID`, and a spawned chest restores from those.
-- **Rowless chests:** four chests had `m_Id -1` (one in 2010, three already open in 3020). 0.3.0 keys them by `m_UniqueId` and records them in `seen.tsv` to find out what they are.
-- **Switching saves:** reported checks are per install, which is right for Archipelago, because a location checked once stays checked. Since mod 0.7.0 the applied-item count is per save (open question 5).
+## Project status and open questions
 
-**Round 3 (0.3.0, 2026-11-04): passed the steps that were run; the chest save key is found.**
-- **Map ids:** `GetSameMapId()` was right at once on every change (2002, 2001, 2015, 5200, 1000, 3001). The save's `Map.mapId` said 3020 the whole time you were in 2002 and 2001.
-- **Chest save key: `IsOpenTreasureBox(current map, m_UniqueId)`.** `TypeData.ID` is the same number.
-  - It was true for every opened chest: 3020:1, 3020:3 to 3020:6, 3001:0, 3001:1 and the rowless ones.
-  - It was false for every closed one.
-  - `m_Id` matched nothing. Its one "true" was a collision: `m_Id 7` of chest 3020:7 is the `m_UniqueId` of opened chest 3020:1.
-- **Rows and maps do not line up.** Rows `3020:*` sit in map 2002, and rows `2001:*` in map 2001. The row key stays the location key, and `seen.tsv` now records each chest's save key next to it.
-- **Rowless chests:** the three in 2002 (`u50`, `u52`, `u54`) had no item and no money and were already open. They look like story chests, whose contents come from an event. 0.3.1 records them but no longer reports them.
-- **Shinies:** live pickups (`shiny:1000:137`, `shiny:1000:3`) and already-looted ones (`100`, `150`) were reported. One field shiny (map 3001, uid 80, item 20001) is story-gated: `{progress:31}==20`. Map 2015 has a Medal shiny (item 25004). `seen.tsv` now lists 85 world-map shinies and 8 event spots.
-- **Story counter:** a jump made with the Modding Tools' story knob (1130 → 5010 → 1130) was reported as `story 5010`. The client should treat story reports as "reached at least N" and remember the highest value.
-- **Clean start:** deleting `ap_state.txt` but keeping `ap_in.txt` re-granted items 0 to 6. That is correct behaviour; the round 3 instructions were wrong. A clean start deletes all three `ap_*.txt` files and restarts the fake server.
-- **Not run yet:** whether the second chest gives its real item after `ffrap_blank off`.
+The MVP is functional: the mod receives items (bag items, gil, visions, party members, flags), reports location checks (chests, shinies), supports prologue skipping and session-bound saves, and communicates with the Archipelago client.
 
-**Round 5 (mod 0.4.0 with the MVP apworld and client, 2026-11-05): passed.**
-This was the first real Archipelago game: a new game, a local MultiServer, the 0.6.7 Launcher and the goal set to 1130.
-- **Checks and items:** 20 chests in 5 maps were each sent as a check before the goal. Each one gave 1 gil, and its real item arrived from the server with a "Received ..." toast about 1 second later.
-- **Reconnect:** the client was closed overnight and reconnected. The mod kept the session (17 items already applied) and granted nothing twice.
-- **Goal:** story 1130 sent the goal, and the toast showed once. The server's auto release then sent the other 196 items. The mod applied them 5 at a time, every half second, with one toast per batch. All 216 were applied, including the gil items (9930 -> 13930 gil), which is the first in-game test of gil grants.
-- **Blanking restore (from round 4):** after `ffrap_blank off`, chest 2020:1 gave its real item in the same map. After `ffrap_blank on`, chest 2020:0 gave 1 gil.
-- **Sync (from round 4):** `ffrap_sync` reported "0 new checks from 137 known locations", which is correct because nothing had been missed.
-- **Shinies:** shinies are off by default, so their checks (`shiny:1000:150`, `1000:137`, `2015:4`, `1000:127`) were reported and ignored by the client. A second Tablet Shard (Medal class) was found at map 2020, uid 5.
-- **Vehicles (IDEAS.md, idea 4):**
-  - `ffrap_grant item 30002` (Choboco Saddle) made the chocobo rideable. The chocobo is gated by the item alone.
-  - 29520 (Magitek Airship Passkey) only changes how the airship looks. It does not unlock the airship. You already had one, from a pre-registration reward.
-  - 30011 (Chocobo Saddle-Bike) did nothing visible. It may be unused, or need a condition we have not found.
-- **Bug 1, seed name:** the 0.6.7 client never stores the room's seed name, so the session key was `unknown:0:1`. Every seed with the same slot would get that key, and the mod would skip a new seed's items as already applied. Fixed in the client: it reads the seed name from `RoomInfo` itself, and it does not connect to the game if there is none.
-- **Bug 2, checks from another save:** the session started while an old save (story 1095) was loaded. The sync on that load reported `shiny:1000:150` from the old save into the new session. It was ignored because shinies are off, but a chest would have been sent. See open question 8.
-- **Item names:** items 5 and 6 have no name in `item_names.tsv`, so they showed as "Item 5" and "Item 6". Their vanilla chests are Mysidia Dungeon 45 Chest 0 and Olderion Dungeon 43 Chest 4. (The game data dump later showed why: items 5 and 6 are in no item table, and they come from chests in map 10050, a dungeon the game does not ship. World 0.2.0 drops those chests.)
+Remaining technical questions:
+- **Shiny blanking:** World-map shinies currently grant both their native pickup and the Archipelago item. Blanking requires patching actor reward fields on spawn.
+- **Grant timing:** Verifying safe grant windows during cutscenes and scripted boss transitions.
+- **Story reward suppression:** Suppressing native story rewards when those items are granted via Archipelago in open-world mode.
 
-Rounds 6 to 9 (2026-11-05) worked out and tested the prologue skip; their results are in IDEAS.md, idea 2.
+## Roadmap
 
-**Round 10 (mod 0.7.0, 2026-11-05): per-save item count passed; `/bind` not tested.**
-- **New game and skip:** the new game linked itself. `ffrap_skip 0` ran after the first autosave, and the reload linked slot 0 with 0 items.
-- **Per-save count:** the game was saved to slot 3 (`3=0`), and two chests in map 3001 then sent their checks and brought Briar Edge and Nodachi. Loading slot 3 again logged `slot 3 holds: 0 applied (was 2)` and granted both again. Saving to slot 4 recorded `4=2`, and loading slot 4 granted nothing. Loading slot 3 later granted both again, as it should.
-- **Pausing:** an older save (slot 1) and a second new game were both paused. `ffrap_skip` during the second game's opening movie was refused with the "wait until you can move" message.
-- **`/bind` not tested:** the client said "Could not find command bind". The session key was `unknown:0:1` too. Both mean the installed client was older than world 0.1.1, because the round 10 plan did not say to install the new apworld. World 0.1.3 makes this visible: the client logs its world version when it starts, and writes a `client` line to `ap_in.txt` that the mod logs (`client: world version 0.1.3`). Until the new apworld is installed, `ffrap_bind` in the game console does the same as `/bind`.
-
-**Round 11 (mod 0.7.2, world 0.1.3, 2026-11-05): passed.** With the current apworld installed, the session key had the seed's number, `/bind` linked an older save, and that save received every item. The title-screen probes ran: see IDEAS.md, idea 6.
-
-**Round 12 (mod 0.7.3, 2026-11-05): the title entry works.**
-- `ffrap_title add` added row 5. The menu showed it (as a second "New Game", at the bottom) only after a trip into a game and back: the menu reads its list when it is made.
-- Every choice logged `title: entry <n> chosen` (Continue 0, Load 1, Options 3, Quit 4). Choosing row 5 logged `entry 5`, showed "starting a new game for the seed" and started a normal new game. It was paused, because the session already had a save. 0.8.0 links it.
-- The row's fields are `EntryName` (the label), `DisplayProperty` (`bCheckSaveData`, `bCheckPlatform`, `DisplayPlatformMap`) and `SystemActionTag`.
-- `ffrap_find Opening` found `IsOpeningProcess` only on widgets (the finger cursor, menu titles, a combo box): a widget's open animation, not the game's opening. `ffrap_find NewGame` found the class `CPP_Task_NewGame`. No crash in game.
-
-**Round 13 (mod 0.8.0, 2026-11-05): passed.**
-- **The entry:** "title: Archipelago entry ready" came half a second after the mod loaded, and the entry was on the first title screen.
-- **Plain New Game:** it was paused, with the message pointing at the Archipelago entry.
-- **The Archipelago new game:** it linked to the new seed. The game autosaved to slot 0 two seconds after story 1005, and the skip ran by itself 1.5 seconds later (`skip (automatic): saved to slot 0 (map 3001, flag 1 false)`). It landed at the Earth Shrine, ready to play.
-- **Checks and items:** the two chests in map 3001 sent their checks and brought 400 Gil and an Ether. Loading slot 0 (saved before they arrived) granted both again, as it should.
-
-**Round 14 (mod 0.8.1, 2026-11-05): passed.**
-- **The title menu** read Continue, Load Game, New Game, New Game (Archipelago), Options, Quit Game (`entry order rebuilt as [0,1,2,5,3,4]`). Every entry still worked.
-- **The version line** showed "FFRArchipelago 0.8.1" above "1.0.1.0", and again after coming back from a game. The block is right-justified, though, so "1.0.1.0" moved right. 0.8.2 sets it to left-justified.
-- **New Game (Archipelago)** linked, delivered the seed's items, and skipped the prologue by itself. Three chests in map 3000 sent their checks.
-- **Notice probes:** `ffrap_find Notice` found 42 names, and `CPP_VM_QuestNotice` was inspected (IDEAS.md, idea 6).
-
-**Round 15 (mod 0.8.2, 2026-11-05): passed.**
-- **The title corner:** "FFRArchipelago 0.8.2" and "1.0.1.0" now both start at the left edge, in line with the copyright lines.
-- **The layout line:** the version text is `Text_ApplicationVersion` in an `OverlaySlot` of the `Overlay` `Overlay_UI`. Its siblings are `TextBlock_1` and `WidgetSwitcher_0`, the grandparent is `Overlay_3`, and it is all in `WBP_TitleLayout_C`.
-- **Messages:** the cyan line under the quest tracker in the recording ("Received Resonate Staff", and FFRS_QoL's "Normal speed") is this mod's message, drawn with ModSettings' Toast. `ffrap_notice` was not run.
-- **Functions:** `CPP_BFL_Chat.Notice` takes a chat event id (`InEventId`), not text, so it cannot show our messages.
-
-**Round 16 (mod 0.8.3, 2026-11-05):**
-- **The logo:** `ffrap_logo` worked with no crash. It put the logo above "FFRArchipelago 0.8.3" (`alignment 1/3, text padding 60,0,50,97, text height 43.2`). You asked for it on the same line as the version, so 0.8.4 puts it at the end of that line, one line high.
-- **The quest banner:** `ffrap_notice` showed nothing. The banner is likely driven by quest data and its own animation, not the title text. Dropped in favour of an item feed (IDEAS.md, idea 14).
-
-**Round 17 (mod 0.8.4, 2026-11-05): passed.**
-- **The logo** was added by itself at the end of "FFRArchipelago 0.8.4" (`24x25 at left 264.6, bottom 116.9`), and came back on the next title.
-- **The field HUD:** `ffrap_layout Quests` reached `WBP_FieldLayout_C`'s `Overlay_66`, which holds the minimap, the key list (`WBP_FieldFuncList2`), the quest tracker (`WBP_FieldQuestLayout`) and the place name. Two screenshots show the fullest HUDs: the bottom right is empty in both.
-- **The save card:** `ffrap_layout Tranquility` (on the Load screen) found `WBP_SaveData_Entry_C` with `Text_ChapterName`, `Text_PlaceName` and `Text_PlayLevel` (IDEAS.md, idea 11).
-
-**Round 18 (mod 0.9.0, 2026-11-05): the game crashed.** Continue, Load Game and New Game all ended in "Fatal error!". In each run the last log line was "Archipelago is paused": the first message after the load, and in 0.9.0 the first time the feed made its box on the field HUD. Only the feed is new there, so it is the cause. A crash in the engine stops the Lua before it can log, so the log does not say which call. 0.9.1 turns the feed off by default and logs each step before it runs.
-
-**Round 19 (mod 0.9.1, 2026-11-05): still crashed.** The feed was meant to be off, but it was on. 0.9.0 had written `feed 1` to `ap_state.txt` by itself, because it was on by default, and 0.9.1 read that as switched on. The second run logged one "Received ..." line per item, which only happens with the feed on. Those five items came during the opening movie, before the field HUD existed, so they waited in the feed's queue. The game crashed after story 1005, when the HUD appeared and the queue was shown. The step logging only ran for `ffrap_feed test`, so the log did not name the call. 0.9.2 ignores the old `feed` line (the switch is now `itemfeed`) and logs the feed's steps every time.
-
-**Round 20 (mod 0.9.2, 2026-11-05): the crash is found.**
-- **Loading:** no crash on load.
-- **`ffrap_feed test plain`** worked twice, with every step logged.
-- **`ffrap_feed test`** crashed the game twice. Both times the last line was `feed step: style: copy the key guide's font`, the call `tb:SetFont(guide.Text_Name.Font)`.
-- **Why:** a font (`FSlateFontInfo`) holds engine-only parts that a struct passed from Lua does not carry. The setters that take a Slate colour (`FSlateColor`) have the same problem.
-- **0.9.3** styles each line by writing its fields (font object, typeface, size, shadow colour, justification) before the line goes on screen. No setter is given a struct.
-
-**Round 21 (mod 0.9.3, 2026-11-05): no crash, but no lines showed.**
-- **What ran:** `ffrap_feed test` and the real items (`ffrap_feed on`, a `/bind` with five items, three chests) ran every step, and every line logged `line done`. None showed on screen.
-- **Two causes found:**
-  - **Alignment:** the alignment numbers were wrong. Unreal counts Fill 0, Left/Top 1, Center 2, Right/Bottom 3, and the feed used 2 for right, so the box was centred.
-  - **Font:** the font copy may have emptied the font. The key guide's text is a `CommonTextBlock`, which can take its font from a style when drawn and leave its own font object empty. A line with an empty font object draws nothing.
-- **The "Back" prompt:** menus and the chest pop-up put a "Back" prompt at the very bottom right.
-
-**Round 22 (mod 0.9.4, 2026-11-05): no lines showed, and `ffrap_feed check` showed why.**
-- **The HUD overlay the feed used:** `0x0, visible false`. Our box in it was too. In UE, `IsVisible` is false for a widget with no live on-screen widget behind it.
-- **The cause:** `FindFirstOf("WBP_FieldFuncList2_C")` found a copy of the key list that is never drawn, likely the template a widget Blueprint keeps. The feed went into that copy.
-- **The font:** the key guide font came back empty for the same reason (`none, the default font is kept`).
-- **Messages:** with the feed on, every message went to that invisible feed instead of ModSettings' Toast, so items showed only in the client.
-
-**Round 23 (mod 0.9.5, 2026-11-05): the item feed works.**
-- `ffrap_feed check` found 2 key lists, 1 on screen, and an overlay 525x400 and visible. The lines were 26 px tall in the game's own font, `SystemText` (`/Game/UI/Font/SystemText`).
-- Lines showed at the bottom right, right-justified with a shadow ("Received Celaeno Fragments", "Received Repeater Rifle", and the test lines).
-- **Chest items:** a chest's item line waits in the queue while the chest pop-up is up, and shows once it is closed: Monk's Prayer Beads arrived at 15:33:12.98 and its line was made at 15:33:13.48. So the feed never meets the pop-up's "Back" prompt.
-- **Your notes:** a little more space between lines, and a little longer on screen (you prefer them fading out over staying, as in TUNIC and Hollow Knight).
-
-**Round 24 (mod 0.10.0, 2026-11-05):**
-- **The feed:** on by default, with the new spacing and time, and it feels right. Chest items showed after the pop-up was closed ("Received Mist Hi-Potion x2", "Received Dreadwing Mallet", "Received Stout Armor").
-- **Messages that should be quiet:** "Prologue skipped ..." showed on a new game. The new game's "linked to the seed" went to the Toast during the opening movie.
-- **The pop-up probe:** it found no text holding "obtained", though the pop-up was up: twice the HUD stayed hidden for more than 10 s after a chest. The item line, "(gil icon) 1", is text with an icon in it, which in UE is a `RichTextBlock`, not a `TextBlock`. The probe only searched TextBlocks.
-- **The 10-second fallback misfired:** a chest pop-up held for 10 s sent its items to the Toast.
-
-**Round 25 (mod 0.10.1, 2026-11-05): passed.** The new game showed neither "linked to the seed" nor "Prologue skipped", and a chest pop-up held open still sent its item to the feed once closed. The `chest pop-up layout` lines from this round's log are still to be read (IDEAS.md, idea 13).
-
-**Round 26 (mod 0.11.0, world 0.1.4, 2026-11-05): passed, in a 4-player multiworld** (you, plus three automated slots: Rat1, Rat2 and Rat3).
-- Every chest's pop-up said what it held: your own items, and other players' ("Sent Monkey's Paw to Rat3", "Sent Tray of Lasagna to Rat1" and others in the log). The gil line was hidden.
-- Items from other players arrived in the feed ("Received Anti-Magic Gear from Rat1", "Received Phoenix Down x3 from Rat3"). Items that came during a menu waited until it closed.
-- **The wait:** the pop-up changed 0.5 to 1.5 s after it came up (chests are scanned once a second, and the text was set on the next half-second tick): "the wait is real".
-
-**Round 27 (mod 0.11.1, 2026-11-05):**
-- **The fast check:** from the second chest on, the check and the pop-up text came in the same pass (for example, both at 16:33:11.23). No stutter.
-- **Found:** after reloading an older save (slot 0), chests opened again kept "1 gil". Their checks were already reported, and only a first report asked for the pop-up text, though the scouts were there.
-
-**Round 29, first run (mod 0.11.3, world 0.2.0, 2026-11-06): stopped by a crash in the Earth Shrine.**
-- **Worked:** the new game for the seed, the skip, chest blanking (432 rows), and checks `chest:3001:0`, `3001:1`, `3000:1`, `3000:2` and `3000:3`, each with its item received and the pop-up text set. Row 3000:0, which world 0.2.0 dropped, did not turn up.
-- **The crash:** the game sat idle in menus for about 20 minutes, then crashed with "Fatal error!" on the next battle result screen (11:31). The game's report (`%LOCALAPPDATA%\FFRS\Saved\Crashes`) says `EXCEPTION_ACCESS_VIOLATION reading address 0` on the game thread.
-- **Where, from UE4SS.pdb:** a Lua function on a game-thread timer (`process_simple_actions` from the engine tick), inside two nested `pcall`s, indexed a UObject with a key that is not a string (`UObject __index` -> `get_string` on a null string). In UE4SS that happens with `obj[key]` where `key` is nil, a boolean or a table. A `pcall` cannot catch it.
-- **Whose:** the stack cannot say. Four Lua mods were running: this one, FFRSLib, FFRS_QoL and FFRBestiary. This mod logged nothing for the 20 minutes before the crash. It indexes UObjects only with fixed field names, and with dynamic ones only in probe commands and the skip, none of which ran. While idle, the log also shows two "Ref was not function" errors (11:15 and 11:23). Those are UE4SS calling a callback that is gone; FFRSLib registers and unregisters hooks on the fly as menus open.
-- **How the stack was read:** with Windows' `dbghelp` and `UE4SS.pdb`, against the offsets in `CrashContext.runtime-xml`. After a crash, send that folder along with the log.
-
-**Round 29, second run (mod 0.11.3, world 0.2.0, 2026-11-06): two more crashes, and the cause found.**
-- **Reopened chests** (round 28's step): after loading slot 0, chests 3000:2 and 3000:3 and later 3020:6 opened again with their pop-up text set and no new check. Chest 3000:1 logged "no chest pop-up on screen" and kept "1 gil".
-- **Checks:** chests 3000:4 to 3000:6, 2000:0 to 2000:4, 3020:1 and 3020:3 to 3020:6, and 2015:3, each with its item received.
-- **Shinies on the world map work as locations:** `shiny:1000:150`, `99`, `100`, `128`, `136`, `137`, `3` and `102` each sent a check, and the item came back. But each shiny also gave its own item: shinies are not blanked yet (open question 6). None of the 9 new uids was picked up yet. `shiny:2015:4` (the Medal, a Tablet Shard) was reported and is not a location, as expected.
-- **`ffrap_dump` on map 2002:** the chest rows there are 3020:0, 1 and 3 to 9. There is no box for row 3020:2, which world 0.2.0 dropped (`NO_BOX`). The three rowless boxes (uids 50, 52, 54) were open.
-- **Crashes:** at 13:15 (walking on map 2015) and 13:27 (in a shop, with the shop dialog open). The player sees crashes at random times: in battle, in town, in menus. FFRS_QoL was off. FFRSLib and FFRBestiary were still on in `mods.txt`. The player also plays a normal save with those mods and has never had a crash.
-- **All 17 crash reports from the last two days have the same shape:** an access violation on the game thread, from a Lua function on a UE4SS game-thread timer (`process_simple_actions`), inside two or three `pcall`s. But the place they crash differs each time: `get_string` on a null key (11:31, 13:27), `luaH_getshortstr` on a broken Lua table (09:50, 13:15), `FName` to text, `IsA` on a bad object, `lua_setiuservalue`, `FinishSpawningActor`.
-- **The cause:** one bad key would crash in one place. Crashes in a new place each time are what memory damage looks like, and here that comes from Lua running on two threads at once. Up to 0.11.3 this mod's two timers used `LoopAsync`. Its callback runs on UE4SS's async thread, in this mod's Lua state, ten times a second, while the game thread runs the queued tick in the same state. Lua is not safe on two threads at once. UE4SS 3.0.1 marks `LoopAsync` as deprecated, and its docs say the new timers have "better thread safety". FFRBestiary found the same thing (its 0.1.1 crashed "after an hour or so" with `LoopAsync`) and moved to `LoopInGameThreadWithDelay`. No other mod here runs `LoopAsync` all the time: FFRSLib uses it only in short probe commands.
-- **Fixed in 0.11.4:** both timers now use `LoopInGameThreadWithDelay`. Their callbacks run only on the game thread, so no Lua in this mod runs on UE4SS's async thread.
-
-**Round 30 (mod 0.11.4, then mod 0.12.0 and world 0.3.0, 2026-11-06): passed.**
-- **Part A, the crash fix:** no crashes since 0.11.4, with the usual mods on. Before, the game crashed within minutes to about an hour. The cause was `LoopAsync` (round 29).
-- **Part B, a new seed with the progression items:**
-  - The new location names came through.
-  - **Visions before Mitra waited.** `vision 13017` (Amelia, which arrived just after shiny 1000:150) and `vision 13128` (Noctis, just after chest 2000:1) logged `waits (the save owns no vision yet ...)`. Later items went on as usual. When the story gave Tronn and Leah (map 2000, 15:05:48), both went in with `(waited)` lines ("visionList 2 -> 3", then "3 -> 4"), and they were in the Visions menu.
-  - **Key items** arrived as bag items, for example the White Jade Stone (chest 3000:6) and the Transporter (chest 3020:5).
-  - **Fina joined at her story event as normal.** So did Tronn and Leah. No party member came from Archipelago yet, so the party-member item is still untested.
-  - **Found: the game can have both Finas at once.** Fina (1003) and Archwitch Fina (1006) are separate party members, though the story swaps them in and out. World 0.3.0 had only Fina. World 0.3.1 adds Archwitch Fina (the skip leaves her at level 1).
-- **Probes for traps (IDEAS.md, idea 20):** there is no `AddStatus` call. The game has continuous-effect classes for it: `CPP_ContFxAddRandStatusCondition` (a random status, like Bad Breath) and `CPP_ContFxAddStatusCondRegist`. Units read their statuses through `CPP_UnitParameter.GetStatusConditionList` and `HasStatusCondition`. `CPP_BFL_Battle` finds battle units: `GetBattleUnitByUnitId`, `GetBattleUnitListByRelation` and others.
-- **Probes for NPC gifts (idea 21):** talk events hand out items through `TalkEventData.ObtainItemList` and `CPP_TalkEventManager.m_ObtainItemList`, and `CPP_BFL_TalkEvent.SetExternalObtainItemList` sets a list from outside.
-- **Players' feedback** (the Archipelago Discord) asks mostly for open world. So open world comes first: [docs/open_world.md](docs/open_world.md).
-
-**Round 31 (mod 0.13.0, 2026-11-07): stable; scaling works but is too hard; the open world plan changed.**
-- **No crashes.** Part A (the party-member item) was not tried; it moves to round 32.
-- **The start of the open world, found by you with FFRSLib's developer options:** set the story to 7090, then go to the Crystal Tower (map 3280). An event there moves the story to 8000 (the log has `story 7090 -> 8000` about 8 seconds after arriving, both times). After that the Crystal Tower is open and the airship is there. You flew to Olderion (map 2070) and opened two chests. Both checks went out; one chest pop-up was missed (`no chest pop-up on screen`, chest 2070:1).
-- **`ffrap_story` works:** 1005 -> 7090 and 1030 -> 7090 on a save not linked to the seed.
-- **Careful with the story on a linked save:** FFRSLib's story knob moved the linked save to 8050 (`story 8000 -> 8050`). 8050 is the goal of today's worlds, so if the client was connected, that seed sent its goal. Open world will not use the story as the goal.
-- **Enemy scaling works:** battles use the rewritten rows at once, with no map change.
-  - A level 1 party (Rain and Lasswell) with `ffrap_scale party 2` and `party 1` (enemies at levels 1 to 3): Mysidia's enemies "basically destroy the party".
-  - A level 52 party (Rain, Lasswell, Sakura, Fina) with `ffrap_scale party 1` (51 to 53): Grandshelt's enemies at level 51 are "pretty tough". A second run changed 0 rows, as it should.
-- **Why, found off-line (round 32):**
-  - **The low end:** real enemy attack grows about x5 from level 1 to 30, but round 31's growth rate moved it only x3.5. So a Mysidia enemy pulled to level 2 kept too much attack: the Soldier got 56, where shipped level 3 enemies have 45. Mod 0.14.0 uses a new curve that fits both ends; the Soldier now gets 41.
-  - **The high end:** the shipped game lets the party get well ahead of the enemies. Players' stats grow by a fixed amount per level, and late regions give a lot of EXP for what a level needs. Even if EXP is shared four ways, a party reaches about level 31 to 38 in Olderion (enemies 23), 37 to 45 in Zoldaad (27) and 40 or more in Mysidia (35). So enemies at the party's own level are much harder than the normal game. Mod 0.14.0 adds `at`, which centres the enemies on a share of the party's level, and `hp` and `power` knobs, to find good defaults in game.
-  - **Not the cause:** enemy skills. The median skill power is 12 to 24 in every region, and group sizes are the same (2 to 3 enemies).
-- **Your decisions:** no airship item: the airship is free from the start. Continents are locked by making them impossible to land on, except the ones unlocked. The start is the 7090 + Crystal Tower state above. `ffrap_airship` was not needed.
-- **Found in the game data (round 32):** the world map has 111 no-landing boxes (`BP_MapNonLandingArea_C`). Each has a condition string; while it holds, the airship cannot land in the box. Before story 5020, one big box (2400 x 6000) keeps the airship off Mysidia. So the game already locks a continent this way. See docs/open_world.md, section 4.
-
-**Round 32 (mod 0.14.0, 2026-11-07): scaling much better at `at 80`; physical hits too strong; a spawned box lifts the airship.**
-- **No crashes.** You had a few minutes, so parts of the plan were not run.
-- **`ffrap_noland list`:** 111 boxes on map 1000, the same as the data dump (positions, sizes and conditions match).
-- **Scaling:**
-  - Low end (Rain and Lasswell at level 3): `party 3 at 80 follow`, then `party 2 at 80 follow` (centre 2, enemies at levels 0 to 4). It "feels much better at 2:80".
-  - High end (the level 52 save): `party 2` (levels 50 to 54) and `party 3 at 80` (39 to 45) were run. No notes yet on how they felt.
-  - **Follow works.** `scale: party level 3 -> 4` moved the band once you were back on the field. Loading another save moved it too (`4 -> 3`).
-  - **Physical hits are much stronger than spells:** an enemy's Thundara hit for about 40, its Crush for almost 200.
-- **Why physical hits are so strong (found off-line, round 33):**
-  - The enemy is the Hydra (Pharm, level 48). Thunder Gigas (level 45) is the other Pharm enemy with both Crush and a Thunder spell.
-  - On paper the spell is stronger. Crush is physical, power 18, one hit. Thundara is magic, power 22, two hits.
-  - The stats are not even. The Hydra has attack 505 and intelligence 330. Pulled to level 4, that is attack 62 and intelligence 19.
-  - Shipped low-level enemies look like that too. At levels 1 to 10 the typical enemy has about 2.3 times more attack than intelligence (the curve at level 4: attack 54, intelligence 23). But they only use plain attacks (power 12), not Crush (18).
-  - If damage grows faster than attack (attack²/defence, as in many FF games), three times the stat gives much more than three times the damage. The 200 against 40 fits that.
-  - **Party members joining raised the band.** Lid joined at level 11 and Nichol at 19, next to a level 3 Rain. The party average went to 9, so `follow` put the enemies at levels 4 to 10. A Hydra at level 10 has attack 100.
-  - Mod 0.15.0 splits `power` into `attack` and `magic` knobs. Every rescale writes `scale.txt` with each enemy's new stats, so a big hit can be matched to its numbers.
-- **Party members:** "worked totally fine".
-  - `ffrap_grant unit` gave Lid (1004) and Nichol (1005), who went into the active party.
-  - Archwitch Fina (1006) and Fina (1003) joined the roster, because the party was full. You could swap them in.
-  - They join at their own levels: Lid 11, Nichol 19, Archwitch Fina 3, Fina 6.
-  - **Not from a seed:** the log has no `Received` line for them, so they came from the command, not from Archipelago. The item from Archipelago calls the same code (`AddUnit`), and the tests cover that path. One run in a real seed is still good, but it is not urgent.
-- **No-landing boxes:**
-  - `spawn 3000` made a box 3000 each way, centred at the airship's height (z 1500), 3000 up and down. The airship rose over it and the camera went wrong. You could still land "on it".
-  - So the box's collision counts as ground for the airship. The game's own boxes sit on the ground: the Mysidia box is centred at height 393, 700 up and down.
-  - The second spawn and `cond {progress:0}<0` ran without errors, and the condition read back. You did not test landing further.
-  - The Blueprint has no script of its own. The box and its condition are read by C++ (`CPP_MapNonLandingArea`).
-  - Mod 0.15.0 puts boxes at the ground height. It adds `lock` and `unlock` for the game's own story boxes, `here` (which boxes are under you) and `show` (draw the outlines).
-
-## Round 33 test plan (mod 0.15.0, world 0.3.1)
-
-Two parts, both on a save that is **not** linked to a seed (your 7090 + Crystal Tower save is good). Part A is the no-landing boxes. Part B is scaling.
-
-**Install.** Copy `FFRArchipelago/Scripts` over the installed mod. The log should say `version 0.15.0 loaded`. The apworld did not change (world 0.3.1).
-
-**Part A: no-landing boxes (on the world map, in the airship).** Every step is logged as `noland step: ...` before it runs.
-1. **Outlines:** `ffrap_noland show`. Do lines appear around the boxes, near towns, for example? This may not work in the released game; that is fine. `ffrap_noland hide` hides them again.
-2. **Lock Mysidia:** this is the main test, and it uses the game's own box.
-   - Fly over Mysidia and run `ffrap_noland here`. The log should list `BP_MapNonLandingArea_C_42` with condition `{progress:0}<5020`.
-   - Land on Mysidia, to check that you can. Take off again.
-   - `ffrap_noland lock mysidia`. Can you still land on Mysidia? Does the shadow turn red?
-   - `ffrap_noland unlock mysidia`. Can you land now?
-3. **Pharm**, near where the save starts: `ffrap_noland lock pharm` and `unlock pharm` work the same way. Its box is small (about 950 x 600 at (-5930, -17400)). Use `here` to find it.
-4. **A new box:** fly over open land and run `ffrap_noland spawn`. It makes a box 2000 each way under you, at ground height.
-   - Does the airship stay at its normal height now?
-   - `ffrap_noland here` should list the new box. Can you land under you?
-   - `ffrap_noland cond {progress:0}<0` (never holds): can you land now?
-5. `ffrap_noland off` undoes everything in Part A.
-
-**Part B: scaling.** `ffrap_scale party` now means range 2 at 80%.
-6. **Low end** (Rain and Lasswell, low level), in Pharm: `ffrap_scale party follow`. Fight two or three battles, Hydras if you can. Then try `ffrap_scale party follow attack 70`, and `attack 50`. Which felt right?
-7. **High end** (the level 52 save): `ffrap_scale party`, then `ffrap_scale party at 70`. Which felt like the normal game?
-8. **Big hits:** when something hits very hard, note the enemy and the number. `scale.txt` in the mod folder lists every enemy's stats after the last rescale.
-
-**Send** `UE4SS.log` (`[FFRAP]` lines), `scale.txt`, and your notes.
-
-Still open: `ffrap_functions CPP_BFL_Battle CPP_UnitParameter CPP_ContFxAddRandStatusCondition` in a battle (traps, idea 20, from round 31). From round 29: the new world-map shinies (70, 71, 84 to 89 and 91), and dropped chest rows 2 to 4 at Grandshelt Castle (map 2012). Walking across: which continents you can reach without the airship (from round 32).
-
-## Open questions
-
-1. **Party members.** `AddUnit` puts a unit in the *active* party and fails when it is full. An Archipelago "party member" item should mean "has joined", which may be `JoinStatus` in `saveData.unitParameterList`.
-2. **Location list and save keys.** Chests and shinies are both in the save under `(GetSameMapId, m_UniqueId)`. The save answers at once and from anywhere (rounds 2 and 3). The chest table gives all 238 rows, but not their save keys. Shinies have no table at all. `seen.tsv` collects both as you play. The other options are ZArkadia's generated shiny list (197 spots across 52 maps, used with permission) or reading the level files.
-3. **Story chests and story-gated shinies.** Rowless chests with no reward look like story chests; what do they give, and through which event? Some shinies only appear under a story condition (map 3001 uid 80: `{progress:31}==20`), which the apworld's logic must respect.
-4. **Grant timing.** Is it safe to grant during battles, cutscenes and menus? So far the only guard is "save data and map manager exist" plus a 2-second settle.
-5. **Per-save item index (resolved in mod 0.7.0).** Previously the applied count was tracked once per install. The mod now tracks item counts per save slot so loading an older save re-grants missing items without duplication.
-   - The mod keeps every session item in memory, while `ap_state.txt` tracks received counts per linked slot (`slotItems 1=3,2=4`).
-   - When saving, the mod records the current count against that slot. Items granted afterward without saving are re-granted upon loading the slot.
-   - New games and saves newly bound via `/bind` start at count 0 and receive all items.
-   - The state file records the active save object and timestamp (`live <object>|<timestamp>`) so reloading the mod with the same save loaded does not duplicate grants.
-   - `ffrap_skip <slot>` links its slot with the item count at the moment of saving. Inventory adjustments are relative and applied once per save.
-   - The file reader restarts from offset 0 whenever the first line of `ap_in.txt` changes, ensuring new seeds with longer initial payloads are recognized immediately.
-6. **Vanilla rewards.**
-   - Chests: blanking to 1 gil and restoring both work (round 5).
-   - Shinies carry their reward on the actor, so the same trick should work on `m_ItemId` and `m_Money`. Not done yet: in round 29 each world-map shiny gave its own item as well as the Archipelago one.
-   - Story events that hand out party members, visions or key items need their own approach.
-7. **Gil.** Solved: `CPP_BFL_SaveDataPlayer` `GetCurrentMoney` / `SetCurrentMoney`, tested in round 5.
-8. **Checks from another save.** Fixed in 0.5.0 and tested off-line only: each session is linked to one save (see "Bridge format"), and every other save is paused. Not tested in game yet: that a new game has no slot until it is saved, and that a save's timestamp matches its slot summary in this game version. FFRBestiary relies on both.
-
-## After the POC
-
-1. Replace `fake_ap.py` with a real client: a CommonClient subclass that connects to the server, writes `ReceivedItems` to `ap_in.txt` and sends `ap_out.txt` checks as `LocationChecks`. Later it could become an embedded UE4SS C++ client.
-2. Build the apworld:
-   - Locations: chests and shinies from `data/game/`, story checkpoints and bosses.
-   - Items: bag items, 26 visions, 8 party members, key items, gil.
-   - Regions:
-     - The linear first half is gated by the story counter.
-     - After the airship, the continents (Grandshelt, Dirnado, Olderion, Zoldaad, Mysidia, Gronoa, Pharm) are gated by "unlock" items.
-     - The Crystal Tower is the goal.
+Active development is focused on Open-World Mode and Progression Logic:
+- **Open-world mode:** Starting at story 7090/8000 with the airship available and the Crystal Tower accessible. Details in [docs/open_world.md](docs/open_world.md).
+- **Continent gating:** Locking continent access via BP_MapNonLandingArea_C landing restriction boxes until regional unlock items are acquired.
+- **Dynamic enemy scaling:** Adjusting enemy level and stat curves in DT_UnitParameter relative to party level.
+- **Progression logic:** Building region graphs and access rules from game data transitions. Details in [docs/logic.md](docs/logic.md).
