@@ -209,6 +209,8 @@ Still to decide: whether to show a message first ("Skipping the prologue…"), a
 - What the prologue changes outside the save object. The reload in step 4 rebuilds what the game derives from the save at load time, but not anything that is never saved.
 - Which slot the skip should save to. It must not overwrite a save the player cares about.
 
+**The input lock, parked (round 38, 2026-11-08):** a skip during the opening movie still leaves no menus or movement. The controller's switches, the input manager's enabled state and its mapping contexts all read the same in a locked game and a normal one, and every reset we tried did nothing (rounds 36 to 38). The cost of leaving it is about 10 seconds per new game. Come back only with a new lead.
+
 ## 3. Non-story ("open world") mode
 
 **Idea:** jump the story to a late point once (for example after the airship), so the world is open, and gate progress with Archipelago items instead of story events. Keep boss fights as locations if possible. The full story is long for an Archipelago run.
@@ -653,6 +655,8 @@ The "Back" prompt that menus and the chest pop-up show at the bottom right also 
 - The landing point ids start with the island's number: 1xxx Grandshelt, 2xxx Lanzelt, 3xxx Kolobos, 4xxx Dirnado, 5xxx Olderion, 6xxx Zoldaad, 7xxx Mysidia, 8xxx Gronoa, 9xxx Pharm, 10004 the Crystal Tower. 10xxx are optional caves and Legend shrines.
 
 **Round 37 (2026-11-08):** the shadow is placed by a sphere trace, and the airship keeps a list of actors for that trace to ignore (`CPP_MapUnit_AirShip.m_ShadowDecalSphareTraceActorsToIgnore`). Changing the box's channels 3 and 4 did not obviously bring the shadow back. Round 38 adds our boxes to the list. The hoped-for result is the shadow on the ground, red, with landing still blocked.
+
+**Round 38 (2026-11-08): that is what happened.** The game lists its 111 boxes the same way. A box on the list looks and works like one of the game's own, and destroying it restores landing at once. So a continent lock needs no change to the game's landing check: a box per continent, listed for the shadow, destroyed when the item arrives. Still to learn (round 39): whether the listing lasts through boarding, and whether the box lasts through a map change.
 
 **Round 33 (2026-11-08):** changing a box's condition works, but only after the airship lands and takes off again. A new box reads its condition when it starts. The game's Pharm story box is one landing spot (about 950 x 600 units), so locking it does not lock Pharm. A spawned box hides the airship's shadow. Details: docs/open_world.md, section 4. Round 34 looks for a way to apply a change at once.
 

@@ -225,10 +225,14 @@ local function VisionRowExists(id)
     return visionRows[id] == true
 end
 
+-- A vision entry's synchro map has one key per party member. Read from the game's own entries
+-- in round 38 (`ffrap_visions`, a chapter 6 save).
+G.VISION_SYNCHRO_KEYS = { 1001, 1002, 1003, 1006, 1004, 1005, 1007, 1008 }
+
 -- Adds a vision to the save's vision list and to the bag, the way FFRSLib's ffrs_vision_unlock
--- does: grow visionList by one zeroed entry, set its ID, copy the synchro-map keys (one per
--- party member, at 0) from the first entry, then AddInventory(id, 1).
--- The save must already own one vision to copy the keys from; the game hands one out early.
+-- does: grow visionList by one zeroed entry, set its ID, write the synchro-map keys at 0, then
+-- AddInventory(id, 1). The keys were copied from the first entry until round 38, so a save with
+-- no vision had to wait for one, and the open world start never gets one from the story.
 function G.UnlockVision(id)
     local sd = G.SaveData()
     if not sd then return "retry", "no save data" end
@@ -244,9 +248,6 @@ function G.UnlockVision(id)
         return "retry", "visionList unreadable"
     end
     local n = #list
-    -- "wait", not "retry": the story hands out the first visions in Mitra, and the items after
-    -- this one must not wait for that (main.lua keeps it aside and tries it again).
-    if n == 0 then return "wait", "the save owns no vision yet to copy synchro keys from" end
 
     -- Reading one past the end grows a UE4SS TArray by a zeroed element.
     local okGrow = pcall(function() local _ = list[n + 1] end)
@@ -263,11 +264,11 @@ function G.UnlockVision(id)
     end
     local keys = 0
     pcall(function()
-        local from, to = list[1].synchroPoints, list[n + 1].synchroPoints
-        from:ForEach(function(key, _)
-            to:Add(key:get(), 0)
+        local to = list[n + 1].synchroPoints
+        for _, key in ipairs(G.VISION_SYNCHRO_KEYS) do
+            to:Add(key, 0)
             keys = keys + 1
-        end)
+        end
     end)
     local inv = Lib("CPP_BFL_SaveDataInventory")
     if inv and inv.AddInventory then pcall(function() inv:AddInventory(id, 1) end) end
@@ -2073,9 +2074,8 @@ function G.InputFix(step)
     return failed
 end
 
--- Round 37: on the open world start the save owns no vision, and no story event will give one,
--- so vision items wait for good (UnlockVision copies a new entry's synchro keys from the first
--- entry). The first entry's keys, to the log, so the keys can be written with no entry to copy.
+-- The first vision's entry and its synchro keys, to the log. Round 38 read G.VISION_SYNCHRO_KEYS
+-- with this; a future patch or DLC that adds a party member would show here.
 function G.VisionKeys()
     local sd = G.SaveData()
     if not sd then return "no save loaded" end
@@ -2962,6 +2962,7 @@ G.NOLAND_Z, G.NOLAND_HALF_Z = 393, 700
 G.STORY_BOXES = { mysidia = "{progress:0}<5020", gronoa = "{progress:0}<6000", pharm = "{progress:0}<7020" }
 G.COND_ALWAYS, G.COND_NEVER = "{progress:0}>=0", "{progress:0}<0"
 local nolandSpawned = {}     -- actors spawned by the probe
+local ShadowIgnoreAdd
 local nolandMoved = nil      -- { actor, x, y, z, ex, ey, ez, cond } of the game's box we moved
 local nolandCollision = {}   -- { actor, enabled } of boxes whose collision NoLandRefresh changed, as found
 local nolandLocks = {}       -- which -> { on = bool, boxes = { { actor, cond }, ... } }: story boxes we wrote
@@ -3123,6 +3124,41 @@ local function PlaceBox(actor, x, y, z, hx, hy, hz, cond)
     return BoxInfo(actor)
 end
 
+-- Adds the spawned boxes that are not listed yet to the shadow's ignore list on `pawn`. The
+-- airship's shadow is placed by a sphere trace, and the game lists every one of its own
+-- no-landing boxes for that trace to ignore (round 38: 111 boxes, the airship itself,
+-- CPP_MuchaWorldSetting and StaticMeshActor_2). A listed box gives the red shadow over it, and
+-- landing stays blocked. Returns the list's size before and after, and the names in it that are
+-- not the game's own boxes; nil when `pawn` is not the airship.
+ShadowIgnoreAdd = function(pawn)
+    local list
+    pcall(function() list = pawn.m_ShadowDecalSphareTraceActorsToIgnore end)
+    if not list then return nil end
+    local before = #list
+    local listed, ours = {}, {}
+    for i = 1, before do listed[ObjText(list[i])] = true end
+    for _, a in ipairs(nolandSpawned) do
+        if Alive(a) then
+            local name = ObjText(a)
+            ours[name] = true
+            if not listed[name] then
+                local n = #list
+                gateStep("noland: add to the shadow's ignore list")
+                pcall(function()
+                    local _ = list[n + 1]    -- reading one past the end grows a UE4SS TArray
+                    list[n + 1] = a
+                end)
+            end
+        end
+    end
+    local names = {}
+    for i = 1, #list do
+        local name = ObjText(list[i])
+        if ours[name] or not name:find("^BP_MapNonLandingArea_C_") then names[#names + 1] = name end
+    end
+    return before, #list, names
+end
+
 -- Spawns a new no-landing box under the player: `half` across each way (default 2000), 1400
 -- tall, its top at `top` (default 1093: the Mysidia box's top). Round 35: on high ground the
 -- default box may be buried, so the top can be set above the ground that GroundUnder finds.
@@ -3139,7 +3175,9 @@ function G.NoLandSpawn(half, top)
     if not (actor and Alive(actor)) then return nil, "SpawnActor failed" end
     nolandSpawned[#nolandSpawned + 1] = actor
     half = half or 2000
-    return PlaceBox(actor, pose.x, pose.y, z, half, half, G.NOLAND_HALF_Z, nil)
+    local box, problem = PlaceBox(actor, pose.x, pose.y, z, half, half, G.NOLAND_HALF_Z, nil)
+    ShadowIgnoreAdd(pose.pawn)   -- round 38: without this the shadow is gone over the box
+    return box, problem
 end
 
 -- Moves the game's own Mysidia box (the one with condition {progress:0}<5020) under the
@@ -3290,31 +3328,16 @@ function G.NoLandShow(on, width)
     return n
 end
 
--- Round 37: setting channels 3 and 4 did not bring the shadow back. The game data says why it
--- might not: the airship places its shadow with a sphere trace and keeps a list of actors for
--- that trace to ignore (CPP_MapUnit_AirShip.m_ShadowDecalSphareTraceActorsToIgnore). Adds the
--- spawned boxes to the list on the airship the player is riding, leaving the boxes' collision
--- alone. Returns the list's size before and after and its names, or nil and why.
+-- Round 37: setting channels 3 and 4 did not bring the shadow back; round 38: this list did
+-- (CPP_MapUnit_AirShip.m_ShadowDecalSphareTraceActorsToIgnore). A spawn now does it by itself.
+-- This adds any spawned box the airship the player is riding has not listed: after boarding
+-- again, say. Returns as ShadowIgnoreAdd, or nil and why.
 function G.NoLandShadow()
     local pose, why = G.PlayerPose()
     if not pose then return nil, why end
-    local list
-    pcall(function() list = pose.pawn.m_ShadowDecalSphareTraceActorsToIgnore end)
-    if not list then return nil, "the player is not riding the airship" end
-    local before = #list
-    for _, a in ipairs(nolandSpawned) do
-        if Alive(a) then
-            local n = #list
-            gateStep("noland: add to the shadow's ignore list")
-            pcall(function()
-                local _ = list[n + 1]    -- reading one past the end grows a UE4SS TArray
-                list[n + 1] = a
-            end)
-        end
-    end
-    local names = {}
-    for i = 1, #list do names[i] = ObjText(list[i]) end
-    return before, #list, names
+    local before, after, names = ShadowIgnoreAdd(pose.pawn)
+    if not before then return nil, "the player is not riding the airship" end
+    return before, after, names
 end
 
 -- Removes the spawned boxes, puts the moved one back and gives the story boxes their own

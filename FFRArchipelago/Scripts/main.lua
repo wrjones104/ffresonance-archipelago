@@ -49,7 +49,7 @@
 -- follows the save slots the linked game is saved to. While any other save is loaded, the mod
 -- grants nothing, reports nothing and leaves the chests vanilla.
 
-local VERSION = "0.19.0"
+local VERSION = "0.20.0"
 local PROTOCOL = 1        -- the bridge protocol; the apworld's MOD_PROTOCOL
 
 local MOD_DIR = (debug.getinfo(1, "S").source:gsub("^@", ""):gsub("\\", "/"):match("^(.*/)Scripts/[^/]+$"))
@@ -374,9 +374,9 @@ local function readInbox(initial)
     end
 end
 
--- Items that cannot go in yet, by index: a vision before the save owns any (the story hands out
--- the first ones in Mitra). A grant that answers "wait" goes here and the queue goes on. These
--- are tried again each pass. The list is rebuilt from the received visions whenever a save is
+-- Items that cannot go in yet, by index. A grant that answers "wait" goes here and the queue
+-- goes on. (Until 0.20.0 a vision answered "wait" while the save owned none; it no longer needs
+-- one, so nothing answers "wait" today.) These are tried again each pass. The list is rebuilt from the received visions whenever a save is
 -- loaded, because an older save can lack a vision that was unlocked after it was written.
 -- Only visions: they are the same item however often they are granted. A unit is not re-added,
 -- as the story itself makes some leave (Fina in chapter 3).

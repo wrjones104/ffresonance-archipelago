@@ -276,28 +276,40 @@ World-map shinies verified as locations. Multiple crashes observed across differ
   - `client: world version 0.3.0` and an `ap_in.txt` dated 2026-11-06: the client was not running. The 25 items came from the old bridge file. This does not affect the results.
 - **Tools added:** `dump_game structs <regex>` prints the fields of any class or struct from the usmap. `dump_game raw <path>` writes files such as the game's ini files to `dump/raw`.
 
-## Round 38 test plan (mod 0.19.0, world 0.3.1)
+**Round 38 (mod 0.19.0, 2026-11-08): the chats stay done; the shadow's ignore list gives the red shadow; the input manager looks the same in a locked game.**
+- **Part A, the air start and the chats:**
+  - The start worked, and none of the chats fired. `active time chats: 56 of 56 released and played (56 rows added)`, then `56 rows, 56 released, 56 played; notices [], latest None`.
+  - In the chat list some entries are greyed out, because the party members they need are not in the party. That is the game's own `RequiredUnitList` and is fine.
+  - The first New Game of the session went to the Earth Shrine: `ap_state.txt` had been cleared, so `openstart` was off. A fresh install does the same, so the seed should decide this.
+  - Step 6 (the arrival kept over a restart) did not run: the log has one mod start. The test suite covers it.
+- **Part B, the shadow: solved.** Over a spawned box the shadow was gone. `ffrap_noland shadow` brought it back, red. Landing stayed blocked. After `off` the shadow went black and landing worked.
+  - The game fills the list itself: 114 entries, which are the airship, 111 no-landing boxes, `CPP_MuchaWorldSetting` and `StaticMeshActor_2`. So a box that is on the list looks exactly like one of the game's own.
+- **Part C:**
+  - `ffrap_visions` on a chapter 6 save: 21 visions, keys `[1001, 1002, 1003, 1006, 1004, 1005, 1007, 1008]`. These are the eight party members. Mod 0.20.0 writes them itself, so a first vision no longer waits.
+  - `ffrap_input` shows `MUCHA_INPUT_MAPPING_CONTEXT_DATA`, 1 context, input enabled, in a normal game and in the locked game alike. (The name printed is the context's type, so two different contexts could still look the same.) So nothing we can read tells a locked game from a normal one. **Parked:** the cost is about 10 seconds per new game (IDEAS.md, idea 2).
+- **The title rows** were fine. The race is rare and did not happen in this log (`rebuilt` on the first try), so this is not proof yet. Watch for the `has no text yet` line.
+- **Seen in the log:** loading slot 1 with no session logged about 90 `check` lines. This is by design: with no seed every save counts (fake_ap.py testing). The client drops any `ap_out.txt` line that has no matching `seed` line, so nothing reaches a server.
+- **Added in 0.20.0:** `UnlockVision` writes the eight keys and no longer needs an owned vision. `ffrap_noland spawn` lists its box for the shadow by itself. `shadow` adds only boxes not listed yet and logs only the entries that are not the game's own boxes.
 
-Three short parts. Send the `[FFRAP]` lines of `UE4SS.log`, and tell me what you saw where a step asks.
+## Round 39 test plan (mod 0.20.0, world 0.3.1)
 
-**Install:** copy `FFRArchipelago/Scripts` over the installed mod. The log should say `version 0.19.0 loaded`. `Assets` and the apworld did not change.
+Two parts. Send the `[FFRAP]` lines of `UE4SS.log`, and tell me what you saw where a step asks. No client or seed is needed.
 
-**Part A: the air start and the chats:**
-1. At the title, run `ffrap_openstart`. The log should say `Open world start is on (air)`. If it says off, run `ffrap_openstart on`.
-2. Start New Game (Archipelago). The log should have `skip: ok   active time chats: 56 of 56 released and played` and end up on the world map in the airship.
-3. Run `ffrap_chats`. Expect `56 released, 56 played; notices []`.
-4. Fly, land at a town, walk around and take off again. Does an Active Time Chat notice or the Active Time Chat key ever show? Round 36 had three on the world map (ATC11, ATC34, ATC55).
-5. Is the chat list in the menu all right, if you can open it? Anything strange?
-6. Restart the game and run `ffrap_openstart air`, then restart again and run `ffrap_openstart`: it should still say `air`.
+**Install:** copy `FFRArchipelago/Scripts` over the installed mod. The log should say `version 0.20.0 loaded`. `Assets` and the apworld did not change.
 
-**Part B: the shadow (world map, in the airship, over open land):**
-7. Run `ffrap_noland spawn 2000`. The shadow should be gone.
-8. Run `ffrap_noland shadow`. The log says `shadow ignore list 0 -> 1 [...]` or similar. Please send that line.
-9. **Tell me:** is the shadow back? Is it the normal colour or red? Can you still not land?
-10. `ffrap_noland off`.
+**Part A: the first vision on an open world start:**
+1. Run `ffrap_openstart` at the title. If it says off, run `ffrap_openstart on`.
+2. Start New Game (Archipelago) and wait for the world map.
+3. Run `ffrap_grant vision 13017`. The log should have `visionList 0 -> 1, synchro keys 8`.
+4. Open the Visions menu. **Tell me:** is the vision listed? Can Rain equip it? Can Lasswell?
+5. Grant a second one, `ffrap_grant vision 13128`, and check that both are listed.
+6. Save, go back to the title and load that save. Are both still there and equipped?
 
-**Part C: two quick readings:**
-11. Load a save with visions (slot 3 has some) and run `ffrap_visions`. Run `ffrap_input` there too.
-12. Optional: only if you have a minute, since it ends in Alt+F4. Start New Game (Archipelago), run `ffrap_skip 0 force` in the movie, then run `ffrap_input` in the locked game. The mapping contexts should now have names.
+**Part B: what happens to a box over time (in the airship, over open land):**
+7. Run `ffrap_noland spawn 2000`. The shadow should be red at once, with no `shadow` command.
+8. Fly out of the box, land outside it, walk a few steps and board again. Fly back over the box. **Tell me:** is the shadow red, gone or black? Can you land?
+9. Run `ffrap_noland shadow` and send that line. `115 -> 115` means the list was kept. `114 -> 115` means boarding rebuilt it.
+10. Land at a town, go in, come out, board and fly back. Run `ffrap_noland here`. **Tell me:** is the box still listed? Can you land there?
+11. `ffrap_noland off`.
 
-**Watch for:** the title rows. If they ever break, send that log. Otherwise, a line like `title: entry order could not order: row 3 has no text yet` followed by `rebuilt` means the race happened and the fix handled it.
+**Watch for:** the title rows, as last round.

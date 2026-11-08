@@ -1225,18 +1225,19 @@ L.execute("G.NoLandOff()")
 # Round 37: the shadow's own ignore list on the airship takes the spawned boxes
 assert L.eval("select(2, G.NoLandShadow())") == "the player is not riding the airship"
 L.execute(r"""
-local items = { { get = function() return { GetFName = function() return fname("SomeActor") end } end } }
+local items = { { get = function() return { GetFName = function() return fname("SomeActor") end } end },
+                { get = function() return { GetFName = function() return fname("BP_MapNonLandingArea_C_3") end } end } }
 fakePawn.m_ShadowDecalSphareTraceActorsToIgnore = setmetatable({}, {
   __len = function() return #items end,
   __index = function(_, k) if k == #items + 1 then items[k] = { get = function() return { GetFName = function() return fname("grown") end } end } end return items[k] end,
   __newindex = function(_, k, v) items[k] = { get = function() return v end } end,
 })
-G.NoLandSpawn(500)
-local a = nolandActors[#nolandActors]; a.GetFName = function() return fname("Spawned_1") end
+G.NoLandSpawn(500)                 -- round 38: a spawn lists the box by itself
 shadowResult = { G.NoLandShadow() }
 """)
-assert L.eval("shadowResult[1]") == 1 and L.eval("shadowResult[2]") == 2, (L.eval("shadowResult[1]"), L.eval("shadowResult[2]"))
-assert list(L.eval("shadowResult[3]").values()) == ["SomeActor", "Spawned_1"], list(L.eval("shadowResult[3]").values())
+assert L.eval("shadowResult[1]") == 3 and L.eval("shadowResult[2]") == 3, "listed by the spawn, and not listed twice"
+names = list(L.eval("shadowResult[3]").values())
+assert len(names) == 2 and names[0] == "SomeActor" and "BP_MapNonLandingArea_C_3" not in names, names
 L.execute("fakePawn.m_ShadowDecalSphareTraceActorsToIgnore = nil; G.NoLandOff()")
 L.execute(f"groundZ = {HIGH_GROUND}")
 hits = [dict(h) for h in L.eval("G.GroundUnder()").values()]
@@ -1315,4 +1316,36 @@ visionSD.visionList = { { ID = 13017, synchroPoints = { ForEach = function(_, fn
   for _, k in ipairs(keys) do fn({ get = function() return k end }) end end } } }
 """)
 assert L.eval("G.VisionKeys()") == "1 visions; the first is 13017, its synchro keys [1001, 1002]", L.eval("G.VisionKeys()")
+# Round 38: a save with no vision gets the entry with its keys written, with nothing to copy
+L.execute(r"""
+local owned = {}
+local function fobj(t) t.IsValid = function() return true end; t.HasAnyInternalFlags = function() return false end
+  t.HasAnyFlags = function() return false end; return t end
+local visionLib = fobj({ HasVision = function(_, id) return owned[id] == true end })
+local invLib = fobj({ AddInventory = function(_, id) owned[id] = true end })
+local visionTable = fobj({ ForEachRow = function(_, fn) fn(nil, { ID = 13017 }) end })
+local prevSFO9 = StaticFindObject
+function StaticFindObject(p)
+  if p:find("CPP_BFL_Vision", 1, true) then return visionLib end
+  if p:find("CPP_BFL_SaveDataInventory", 1, true) then return invLib end
+  if p:find("DT_VisionItemData", 1, true) then return visionTable end
+  return prevSFO9(p)
+end
+visionItems = {}
+visionSD.visionList = setmetatable({}, {
+  __len = function() return #visionItems end,
+  __index = function(_, k)
+    if k == #visionItems + 1 then
+      local keys = { n = 0 }
+      visionItems[k] = { ID = 0, awakeningPoint = 1, synchroPoints = { Add = function(_, key, v) keys.n = keys.n + 1; keys[key] = v end }, keys = keys }
+    end
+    return visionItems[k]
+  end,
+})
+G.SaveData = function() return visionSD end
+""")
+code, detail = L.execute("return G.UnlockVision(13017)")
+assert code == "ok" and "visionList 0 -> 1, synchro keys 8" in detail, (code, detail)
+assert L.eval("visionItems[1].ID") == 13017 and L.eval("visionItems[1].awakeningPoint") == 0
+assert L.eval("visionItems[1].keys.n") == 8 and L.eval("visionItems[1].keys[1006]") == 0
 L.execute("G.SaveData = savedSaveData")
