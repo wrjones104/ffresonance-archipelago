@@ -281,6 +281,17 @@ for k, name, save, action, plats in ((0, "Continue", True, "None", 0), (1, "Load
 assert L.eval("rowOf(4).DisplayProperty.DisplayPlatformMap[1]") == 1 and L.eval("rowOf(4).DisplayProperty.bCheckPlatform") is True
 ok, detail = L.execute("return G.OrderTitleEntries()")
 assert ok is True and detail == "already in order", detail
+# Round 37: a label read while its string table is still loading is left in place: the rebuild
+# would write the placeholder as plain text. The order waits for the next check.
+L.execute("titleDA.EntryPropertyMap = tmap(titleRows()); G.AddTitleEntry()")
+L.execute("rowOf(3).EntryName = FText('<MISSING STRING TABLE ENTRY>')")
+ok, detail = L.execute("return G.OrderTitleEntries()")
+assert ok is False and detail == "row 3 has no text yet (string table not loaded), so the order waits", detail
+assert L.eval("keysOf()") == "0,1,2,3,4,5", "the map is untouched"
+L.execute("rowOf(3).EntryName = FText('Options')")
+ok, detail = L.execute("return G.OrderTitleEntries()")
+assert ok is True and detail == "rebuilt as [0,1,2,5,3,4]", detail
+assert L.eval("rowOf(3).EntryName:ToString()") == "Options"
 # a map that cannot be emptied: the order is left alone and the spare row taken out again
 L.execute("titleDA.EntryPropertyMap = tmap(titleRows(), true)")
 L.execute("G.AddTitleEntry()")
@@ -1211,6 +1222,22 @@ L.execute("local b = nolandActors[#nolandActors].m_pBoxComponent; function b:Set
 assert L.eval("G.NoLandChannel(3, 0)") == 1
 assert L.eval("nolandActors[#nolandActors].m_pBoxComponent.resp[3]") == 0
 L.execute("G.NoLandOff()")
+# Round 37: the shadow's own ignore list on the airship takes the spawned boxes
+assert L.eval("select(2, G.NoLandShadow())") == "the player is not riding the airship"
+L.execute(r"""
+local items = { { get = function() return { GetFName = function() return fname("SomeActor") end } end } }
+fakePawn.m_ShadowDecalSphareTraceActorsToIgnore = setmetatable({}, {
+  __len = function() return #items end,
+  __index = function(_, k) if k == #items + 1 then items[k] = { get = function() return { GetFName = function() return fname("grown") end } end } end return items[k] end,
+  __newindex = function(_, k, v) items[k] = { get = function() return v end } end,
+})
+G.NoLandSpawn(500)
+local a = nolandActors[#nolandActors]; a.GetFName = function() return fname("Spawned_1") end
+shadowResult = { G.NoLandShadow() }
+""")
+assert L.eval("shadowResult[1]") == 1 and L.eval("shadowResult[2]") == 2, (L.eval("shadowResult[1]"), L.eval("shadowResult[2]"))
+assert list(L.eval("shadowResult[3]").values()) == ["SomeActor", "Spawned_1"], list(L.eval("shadowResult[3]").values())
+L.execute("fakePawn.m_ShadowDecalSphareTraceActorsToIgnore = nil; G.NoLandOff()")
 L.execute(f"groundZ = {HIGH_GROUND}")
 hits = [dict(h) for h in L.eval("G.GroundUnder()").values()]
 assert hits == [{"name": "Landscape_1", "z": HIGH_GROUND, "box": False}], hits
@@ -1255,8 +1282,9 @@ function inputMgr:HasAnyFlags() return false end
 function inputMgr:IsEnableInput() return self.enabled end
 function inputMgr:GetCurrentInputModeDebugString() return { ToString = function() return "UIOnly" end } end
 function inputMgr:GetAllIMCStackList()
+  -- Round 37: an element comes back in a wrapper, and the object is inside it
   local imc = { GetFName = function() return fname("IMC_Event") end }
-  return { imc }
+  return { { get = function() return imc end } }
 end
 function inputMgr:EnableInput() self.enabled = true; self.calls[#self.calls + 1] = "enable" end
 function inputMgr:ReregistrationCurrentMappingContext() self.calls[#self.calls + 1] = "reregister" end
@@ -1272,3 +1300,19 @@ assert list(L.eval("inputSteps").values())[:2] == ["CPP_InputManager:EnableInput
 assert list(L.eval("inputMgr.calls").values()) == ["enable", "reregister"]
 assert "input manager: enabled true" in L.eval("G.InputState()")
 print("input probe: ok")
+
+# Round 37: the first vision's synchro keys, for a save with no vision to copy them from
+L.execute(r"""
+visionSD = { IsValid = function() return true end, HasAnyInternalFlags = function() return false end,
+             HasAnyFlags = function() return false end, visionList = {} }
+savedSaveData = G.SaveData
+G.SaveData = function() return visionSD end
+""")
+assert L.eval("G.VisionKeys()") == "visionList is empty"
+L.execute(r"""
+local keys = { 1001, 1002 }
+visionSD.visionList = { { ID = 13017, synchroPoints = { ForEach = function(_, fn)
+  for _, k in ipairs(keys) do fn({ get = function() return k end }) end end } } }
+""")
+assert L.eval("G.VisionKeys()") == "1 visions; the first is 13017, its synchro keys [1001, 1002]", L.eval("G.VisionKeys()")
+L.execute("G.SaveData = savedSaveData")

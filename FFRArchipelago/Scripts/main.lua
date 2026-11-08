@@ -21,6 +21,8 @@
 --   ffrap_skip [slot] [force]    skip the prologue on a new game; with a slot, save there and reload
 --   ffrap_input [fix]            probe: the player controller's input state; fix tries the engine's resets
 --   ffrap_openstart [on|off|dock|air|event|at x y z|now [slot]]  test: the open world start (story 8000)
+--   ffrap_chats [done]           the loaded save's Active Time Chats; done marks them all played
+--   ffrap_visions                the first vision's synchro keys, to the log
 --   ffrap_inspect <class|path> [label]  one object's fields and functions to inspect_<name>[_label].tsv
 --   ffrap_title [list|add]       the Archipelago entry on the title menu (added at start-up)
 --   ffrap_notice [text]          experimental: show text with the game's quest-notice banner
@@ -36,7 +38,7 @@
 --   ffrap_scale <level|low high|party n|off> [at %] [hp %] [attack %] [magic %] [power %] [boss] [follow]
 --                                probe: rewrite every enemy's level and stats
 --   ffrap_scale [show <id|name>] probe: the rescale in force, or one enemy's rows in every unit table
---   ffrap_noland <list|here|show|hide|lock|unlock|refresh|spawn|move|channel|cond|off>
+--   ffrap_noland <list|here|show|hide|lock|unlock|refresh|spawn|move|channel|shadow|cond|off>
 --                                probe: the airship's no-landing boxes
 --   ffrap_story <value>          probe: set the loaded save's story counter (any value; save and reload)
 --   ffrap_airship [condition|off]  probe: the airship's spawn condition (shipped {progress:0}>=4250)
@@ -47,7 +49,7 @@
 -- follows the save slots the linked game is saved to. While any other save is loaded, the mod
 -- grants nothing, reports nothing and leaves the chests vanilla.
 
-local VERSION = "0.18.0"
+local VERSION = "0.19.0"
 local PROTOCOL = 1        -- the bridge protocol; the apworld's MOD_PROTOCOL
 
 local MOD_DIR = (debug.getinfo(1, "S").source:gsub("^@", ""):gsub("\\", "/"):match("^(.*/)Scripts/[^/]+$"))
@@ -99,6 +101,7 @@ local FEED_WAIT_MAX = 10     -- seconds messages wait for the feed before they g
 -- the Toast after FEED_WAIT_MAX.
 local feedOn = true          -- ffrap_feed on|off; kept in ap_state.txt
 local openStart = false      -- ffrap_openstart on|off: the skip goes to the open world; kept in ap_state.txt
+local openArrival = nil      -- ffrap_openstart dock|air|event, kept once the user picks one
 local feedQueue = {}
 local feedQueueSince = nil   -- when the oldest waiting message came
 local feedShown = false      -- the feed has shown a line in this run
@@ -250,6 +253,10 @@ local function loadState()
         -- old key is ignored.
         if key == "itemfeed" then feedOn = value == "1" end
         if key == "openstart" then openStart = value == "1" end
+        if key == "openarrival" and game.OPEN_STARTS[value] then
+            openArrival = value
+            game.OPEN_START = game.OPEN_STARTS[value]
+        end
         if key == "seed" and value ~= "" then state.seed = value end
         if key == "slots" then
             for slot in value:gmatch("%d+") do state.slots[tonumber(slot)] = true end
@@ -269,6 +276,7 @@ local function saveState()
     f:write("blank\t", state.blank and "1" or "0", "\n")
     f:write("itemfeed\t", feedOn and "1" or "0", "\n")
     f:write("openstart\t", openStart and "1" or "0", "\n")
+    if openArrival then f:write("openarrival\t", openArrival, "\n") end
     f:write("seed\t", state.seed or "", "\n")
     f:write("slots\t", slotsText(), "\n")
     f:write("slotItems\t", slotsText(true), "\n")
@@ -1195,8 +1203,9 @@ end)
 
 -- ffrap_openstart [on|off|dock|air|event|at <x> <y> <z>|now [slot]]: whether the prologue skip
 -- goes to the open world start (game.OPEN_START) in place of the Earth Shrine. Off by default; a
--- test switch for now (round 35). `dock`, `air` and `event` choose the arrival for this run
--- (game.OPEN_STARTS; dock is the default). `at` moves the arrival point for this run only.
+-- test switch for now (round 35). `dock`, `air` and `event` choose the arrival (game.OPEN_STARTS;
+-- air is the default, and a choice is kept: round 37 lost `air` at a restart). `at` moves the
+-- arrival point for this run only.
 -- `now` writes the open world start into the loaded save (one that has had the skip), saves it
 -- to its slot (or `slot`) and reloads, with no new game.
 command("ffrap_openstart", function(p)
@@ -1226,6 +1235,8 @@ command("ffrap_openstart", function(p)
         saveState()
     elseif game.OPEN_STARTS[what] then
         game.OPEN_START = game.OPEN_STARTS[what]
+        openArrival = what
+        saveState()
     elseif what == "at" then
         local x, y, z = tonumber(p[2]), tonumber(p[3]), tonumber(p[4])
         if not (x and y and z) then
@@ -1665,6 +1676,14 @@ command("ffrap_noland", function(p)
             local n = game.NoLandChannel(ch, resp)
             log("noland: channel " .. ch .. " -> " .. resp .. " on " .. n .. " spawned boxes")
             notify("No-landing channel " .. ch .. " set to " .. resp .. " on " .. n .. " boxes")
+        elseif what == "shadow" then
+            local before, after, names = game.NoLandShadow()
+            if not before then
+                notify("Shadow list: " .. tostring(after))
+            else
+                log("noland: shadow ignore list " .. before .. " -> " .. after .. " [" .. table.concat(names, ", ") .. "]")
+                notify("Shadow ignore list: " .. before .. " -> " .. after)
+            end
         elseif what == "cond" then
             local cond = p[2] or ""
             local n, last, e = game.NoLandCondition(cond)
@@ -1676,7 +1695,7 @@ command("ffrap_noland", function(p)
             log("noland: off: " .. n .. " boxes undone")
             notify("No-landing boxes undone: " .. n)
         else
-            notify("Usage: ffrap_noland <list|here|show|hide|lock <box>|unlock <box>|refresh|spawn [half] [top]|move [half]|channel <n> <0-2>|cond <text>|off>")
+            notify("Usage: ffrap_noland <list|here|show|hide|lock <box>|unlock <box>|refresh|spawn [half] [top]|move [half]|channel <n> <0-2>|shadow|cond <text>|off>")
         end
     end)
     game.gateTrace = nil
@@ -1759,6 +1778,26 @@ command("ffrap_input", function(p)
         log("input after fix: " .. game.InputState())
     end
     notify("Input state written to the log")
+end)
+
+-- ffrap_chats [done]: the loaded save's Active Time Chats, and `done` marks them all played (the
+-- open world start does this by itself: round 37).
+command("ffrap_chats", function(p)
+    if p[1] == "done" then
+        local ok, line = game.MarkChatsPlayed(game.SaveData())
+        log("chats: " .. line)
+        if not ok then notify("Active Time Chats: failed (see the log)") end
+    end
+    local text = game.ChatState()
+    log("chats: " .. text)
+    notify("Active Time Chats: " .. text)
+end)
+
+-- ffrap_visions: the first vision's synchro keys (round 37), for vision items on a save with none.
+command("ffrap_visions", function()
+    local text = game.VisionKeys()
+    log("visions: " .. text)
+    notify("Visions: " .. text)
 end)
 
 command("ffrap_reset", function()

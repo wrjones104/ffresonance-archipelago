@@ -136,6 +136,11 @@ G.SKIP_ARRIVAL = { map = 3001 }
 G.OPEN_STARTS = { dock = { name = "dock", story = 8000, map = 3280, x = -2704.8, y = -171166.7, z = 3002.2 },
                   air = { name = "air", story = 8000, map = 1000, x = -5935.0, y = -8305.0, z = 2075.0 } }
 G.OPEN_START = G.OPEN_STARTS.dock
+function G.MarkChatsPlayed(sd) G.chatsMarked = (G.chatsMarked or 0) + 1; return G.chatsOk ~= false, "marked" end
+function G.SaveData() return {} end
+function G.ChatState() return "56 rows" end
+function G.VisionKeys() return "1 visions" end
+function G.NoLandShadow() return 0, 1, { "box" } end
 G.TITLE_NEW_GAME, G.TITLE_ARCHIPELAGO, G.titleAdds = 2, 5, 0
 G.titleOk = false   -- the title entry only once a section turns it on
 function G.AddTitleEntry()
@@ -1121,6 +1126,18 @@ L.execute('commands["ffrap_openstart"]("ffrap_openstart", {"air"})')
 assert any("Open world start is off (air): story 8000, map 1000" in s for s in L.globals().logged.values())
 L.execute('commands["ffrap_openstart"]("ffrap_openstart", {"now"})')
 assert G.reloadMap == 1000, G.reloadMap
+# Round 37: `air` was lost at a restart and the next start came up at the dock. A choice is kept
+# under its own key, and a game with no choice writes no key
+assert "openarrival\tair\n" in read("ap_state.txt"), read("ap_state.txt")
+L, G = boot()
+assert G.OPEN_START.name == "air", G.OPEN_START.name
+# ffrap_chats shows the state; `done` marks them and says so in the log
+G.ready = True
+L.execute('commands["ffrap_chats"]("ffrap_chats", {})')
+assert (G.chatsMarked or 0) == 0
+L.execute('commands["ffrap_chats"]("ffrap_chats", {"done"})')
+assert G.chatsMarked == 1
+L.execute('commands["ffrap_visions"]("ffrap_visions", {})')
 print("open world start: ok")
 
 # 19. 0.17.0: probes for the opening's input lock. `ffrap_skip <slot> force` skips during the

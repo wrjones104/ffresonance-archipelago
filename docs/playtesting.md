@@ -249,28 +249,55 @@ World-map shinies verified as locations. Multiple crashes observed across differ
   - `ffrap_noland here` knows a no-landing box by the hit component's owner.
   - `ffrap_noland channel <n> <0|1|2>` sets the spawned boxes' response to one collision channel: a probe for the missing shadow.
 
-## Round 37 test plan (mod 0.18.0, world 0.3.1)
+**Round 37 (mod 0.18.0, 2026-11-08): the air start is the choice; the input lock survives every reset; the broken title rows are our bug.**
+- **Part A, the start with no events:**
+  - `dock` and `air` both worked. Story 8000, no cutscenes, "Chapter 8 - Beyond Hope" at the dock.
+  - **The user prefers `air`.** Mod 0.19.0 makes it the default.
+  - The arrival was not kept over a restart. `air` was set at 12:40, the game restarted at 12:44, and the next start came up at the dock. Fixed in 0.19.0.
+  - The user wants a welcome window on a new game, later (IDEAS.md, idea 22).
+- **Part B, the opening's input lock:** a forced skip reached the airship, but no `ffrap_input fix` step helped, and the user had to quit with Alt+F4.
+  - In the movie: pawn `BP_MapUnit_Player_C`, input manager enabled, 2 mapping contexts.
+  - In the locked game: pawn `BP_MapUnitAirShip_C`, input manager enabled, 1 mapping context, move and look not ignored. The fix's five steps ran without an error and changed nothing.
+  - The contexts logged as `LocalUnrealParam: 00000000713B9288`, so their names were lost. The elements are wrapped and need `:get()`. Fixed in 0.19.0.
+  - Slot 3 was loaded afterwards, but `ffrap_input` was not run there, so there is no normal game to compare.
+  - So the lock is not in the engine's switches or the manager's `EnableInput`. The cost of leaving it: the player waits for story 1005 or skips the movie by hand, about 10 seconds. Not worth many more rounds.
+- **Part C, the shadow:**
+  - `spawn 2000` at (-3927, -17437), then `channel 3 0`, then `channel 4 0`. The user went on to channel 4, so channel 3 most likely did not bring the shadow back. The log cannot show the shadow, and the result was not reported.
+  - `here` at (-5857, -17263): the trace now passes the spawned box and hits `Landscape_1` at z 115. The trace is on channel 3, so the channel change worked. The shadow does not depend on that channel alone.
+  - The plan's step 13 could not work. At story 8000 the Pharm story box's condition `{progress:0}<7020` is false, so its collision is off (enabled 0), and a trace passes it. The step needs a save before story 7020.
+- **Off-line after the round:**
+  - **The shadow has its own ignore list.** `CPP_MapUnit_AirShip` has `m_ShadowDecalSphareTraceActorsToIgnore`: a sphere trace places the shadow decal, and this list holds the actors it passes through. A sphere trace can test object types, which response channels do not change. Mod 0.19.0 adds `ffrap_noland shadow`.
+  - The custom channels, from `DefaultEngine.ini`: 14 Env_Train, 15 NPC, 16 Minimap, 17 DitherObject, 18 PingerPoint, 19 Pinger, 20 MinimapRecive. Channels 3 and 4 are Visibility and Camera. The profile `AirShipCanNeverLanding` ignores Pawn, Env_Train, PingerPoint and Pinger.
+- **Other notes from the user:**
+  - **Broken title rows:** at random and rarely, every row but ours read `<MISSING STRING TABLE ENTRY>` until a restart. **Cause, from the code:** `OrderTitleEntries` reads each label as text and writes it back as plain text. A label read before its string table has loaded gives the placeholder, and we then saved the placeholder as the label. The first check runs about half a second after the mod loads, so it was a race. Fixed in 0.19.0: the order waits until every label has its text, with the map untouched.
+  - **Active Time Chats should all be marked complete.** The save has `chat.DataMap` (one row per chat, with `IsReleased` and `IsAlreadyPlayed`), `chat.NoticeQueue` and `chat.LatestNotice`. Mod 0.19.0 marks all 56 on an open world start.
+- **Seen in the log:**
+  - **Vision items wait for good on an open world start.** `item 8 vision 13017 x1: waits (the save owns no vision yet to copy synchro keys from)`. The story gives the first visions in Mitra, and the open world start skips that. `ffrap_visions` (0.19.0) logs the keys on a save that has visions, so the mod can write them with no entry to copy.
+  - `client: world version 0.3.0` and an `ap_in.txt` dated 2026-11-06: the client was not running. The 25 items came from the old bridge file. This does not affect the results.
+- **Tools added:** `dump_game structs <regex>` prints the fields of any class or struct from the usmap. `dump_game raw <path>` writes files such as the game's ini files to `dump/raw`.
 
-Three parts. Send the `[FFRAP]` lines of `UE4SS.log`, and screenshots where asked.
+## Round 38 test plan (mod 0.19.0, world 0.3.1)
 
-**Install:** copy `FFRArchipelago/Scripts` over the installed mod. The log should say `version 0.18.0 loaded`. `Assets` and the apworld did not change (world 0.3.1). Keep the seed with the default goal (8050).
+Three short parts. Send the `[FFRAP]` lines of `UE4SS.log`, and tell me what you saw where a step asks.
 
-**Part A: the start with no tower events:**
-1. At the title, run `ffrap_openstart on`. The log says "Open world start is on (dock): story 8000, map 3280 at -2704.8, -171166.7, 3002.2".
-2. Start New Game (Archipelago). Skip the movie and the opening event if you like. When the skip runs, the log should have `skip: ok   story counter -> 8000` and `skip (automatic): ... open world start (dock, story 8000)`.
-3. Expect the tower dock with no cutscenes, and "Chapter 8 - Beyond Hope" on screen. Take a screenshot. Board the airship. Does anything look wrong?
-4. Back at the title, run `ffrap_openstart air`, then start New Game (Archipelago) again. Expect the world map, riding the airship beside the tower. Fly, land somewhere, take off, and go back into the tower. Does it all work? Is anything missing (the shadow, the music, the menu)?
-5. Which start do you prefer, `dock` or `air`?
+**Install:** copy `FFRArchipelago/Scripts` over the installed mod. The log should say `version 0.19.0 loaded`. `Assets` and the apworld did not change.
 
-**Part B: the opening's input lock, with the input manager:**
-6. Start New Game (Archipelago) once more (`ffrap_openstart` still on). During the opening movie, run `ffrap_input`, then `ffrap_skip 0 force`.
-7. In the locked game, run `ffrap_input`. Try to move, turn the camera and open the menu.
-8. Run `ffrap_input fix`. Try again: which of moving, the camera and the menu work now?
-9. Load any normal save and run `ffrap_input`, for comparison.
+**Part A: the air start and the chats:**
+1. At the title, run `ffrap_openstart`. The log should say `Open world start is on (air)`. If it says off, run `ffrap_openstart on`.
+2. Start New Game (Archipelago). The log should have `skip: ok   active time chats: 56 of 56 released and played` and end up on the world map in the airship.
+3. Run `ffrap_chats`. Expect `56 released, 56 played; notices []`.
+4. Fly, land at a town, walk around and take off again. Does an Active Time Chat notice or the Active Time Chat key ever show? Round 36 had three on the world map (ATC11, ATC34, ATC55).
+5. Is the chat list in the menu all right, if you can open it? Anything strange?
+6. Restart the game and run `ffrap_openstart air`, then restart again and run `ffrap_openstart`: it should still say `air`.
 
-**Part C: the shadow (world map, in the airship, over Pharm or any open land):**
-10. Run `ffrap_noland spawn 2000` and check the shadow is gone and landing is blocked.
-11. Run `ffrap_noland channel 3 0`. Is the shadow back? Is landing still blocked?
-12. If the shadow is still gone, run `ffrap_noland channel 4 0` and check again.
-13. Fly over the Pharm story box, around (-5930, -17400), and run `ffrap_noland here`. The log should now say `trace down hit BP_MapNonLandingArea_C_1 (a no-landing box) at z 371`, then the ground below it.
-14. `ffrap_noland off`.
+**Part B: the shadow (world map, in the airship, over open land):**
+7. Run `ffrap_noland spawn 2000`. The shadow should be gone.
+8. Run `ffrap_noland shadow`. The log says `shadow ignore list 0 -> 1 [...]` or similar. Please send that line.
+9. **Tell me:** is the shadow back? Is it the normal colour or red? Can you still not land?
+10. `ffrap_noland off`.
+
+**Part C: two quick readings:**
+11. Load a save with visions (slot 3 has some) and run `ffrap_visions`. Run `ffrap_input` there too.
+12. Optional: only if you have a minute, since it ends in Alt+F4. Start New Game (Archipelago), run `ffrap_skip 0 force` in the movie, then run `ffrap_input` in the locked game. The mapping contexts should now have names.
+
+**Watch for:** the title rows. If they ever break, send that log. Otherwise, a line like `title: entry order could not order: row 3 has no text yet` followed by `rebuilt` means the race happened and the fix handled it.

@@ -32,6 +32,15 @@ end
 local function obj(t) t.IsValid = function() return true end
   t.HasAnyInternalFlags = function() return false end; t.HasAnyFlags = function() return false end; return t end
 
+function FName(t) return { s = t, ToString = function(self) return self.s end } end
+-- A TMap of chat rows, keyed by name; Add makes an empty row, as the engine zeroes one.
+function chatMap(rows)
+  local m = { rows = rows }
+  function m:ForEach(fn) for id, row in pairs(self.rows) do
+    fn({ get = function() return FName(id) end }, { get = function() return row end }) end end
+  function m:Add(k, v) self.rows[k:ToString()] = { IsReleased = false, IsAlreadyPlayed = false } end
+  return m
+end
 local flags = {} for i = 1, 1300 do flags[i] = false end
 flags[2], flags[9] = true, true                       -- flags 1 and 8: on if the skip runs at 1005
 local zeros = {} for i = 1, 20 do zeros[i] = 0 end
@@ -48,6 +57,8 @@ sd = obj({
   }),
   unitGuest = { HitPoint = 0, MagicPoint = 0 },
   Player = { WinNum = 0 },
+  chat = { DataMap = chatMap({ ATC11 = { IsReleased = true, IsAlreadyPlayed = false } }),
+           NoticeQueue = arr({ "ATC11" }), LatestNotice = "ATC11" },
   Map = { mapId = -1, unitLocation = { X = 0.0, Y = 0.0, Z = 0.0 }, unitDirection = 0,
           airShipLocation = { X = -6748.5, Y = 7696.7, Z = 72.6 }, airShipDirection = 0, IsRidingAirShip = false },
 })
@@ -129,10 +140,26 @@ L.execute("""libs["/Script/mucha.Default__CPP_BFL_SaveData"].SaveGameData = func
 # 0.16.0: the open world start replaces 1030 and the Earth Shrine; the reload then checks for its
 # map. 0.18.0 (round 36: the tower's two events wrote only story 8000): the default "dock" start
 # writes 8000 at the dock where those events leave the player, so they do not play.
+# Round 37: the user chose the air start, so it is the default.
 DOCK_STORY, EVENT_STORY, TOWER_MAP, WORLD_MAP = 8000, 7090, 3280, 1000
+assert lua("G.OPEN_START.name") == "air", lua("G.OPEN_START.name")
+L.execute("G.OPEN_START = G.OPEN_STARTS.dock")
 ok, report = L.execute("return G.SkipPrologue({ inventory = false, openStart = true })")
 assert ok is True, list(report.values())
 assert f"ok   story counter -> {DOCK_STORY}" in list(report.values())
+# Round 37: an open world start marks every Active Time Chat as released and played
+CHATS = 56
+assert f"ok   active time chats: {CHATS} of {CHATS} released and played ({CHATS - 1} rows added), notices cleared, flag 31 on" in list(report.values())
+assert lua("#sd.chat.NoticeQueue") == 0 and lua("sd.chat.LatestNotice:ToString()") == "None"
+assert lua("sd.chat.DataMap.rows.ATC11.IsAlreadyPlayed") is True and lua("sd.chat.DataMap.rows.ATC63.IsReleased") is True
+assert lua("G.ChatState()") == f"{CHATS} rows, {CHATS} released, {CHATS} played; notices [], latest None", lua("G.ChatState()")
+assert lua("sd.Progress.eventFlag[32]") is True, "flag 31 is what a chat row turns on"
+# the list of ids is the table's: every ATC row, and no Pinger or Nawatobi rows (dump/ is local)
+_chat_table = paths.REPO / "dump/tables/FFRS/Content/Datatable/Chat/Event/CDT_ChatEventData.json" if hasattr(paths, "REPO") else None
+if _chat_table and _chat_table.exists():
+    import json
+    _ids = sorted(k for k in json.loads(_chat_table.read_text(encoding="utf8"))["Rows"] if k.startswith("ATC"))
+    assert sorted(L.eval("G.CHAT_IDS").values()) == _ids
 assert lua("G.StoryCounter()") == DOCK_STORY and lua("sd.Map.mapId") == TOWER_MAP
 assert lua("sd.Map.unitLocation.X") == -2704.8 and lua("sd.Map.unitLocation.Y") == -171166.7
 assert lua("sd.Map.IsRidingAirShip") is False, "the dock start leaves the airship alone"
@@ -143,8 +170,9 @@ assert ok is False and f"map is {TOWER_MAP}" in detail and "not 3001" in detail,
 # 0.16.1: G.OpenStart writes only the story and the arrival, on a save that already had the skip
 L.execute("sd.Progress.Progress[1] = 1030; sd.Map.mapId = 3001; sd.Player.WinNum = 12")
 ok, report = L.execute("return G.OpenStart()")
-assert ok is True and list(report.values()) == [
+assert ok is True and list(report.values())[:2] == [
     f"ok   story counter -> {DOCK_STORY}", f"ok   arrival: map {TOWER_MAP} at -2704.8, -171166.7, 3002.2"], list(report.values())
+assert list(report.values())[2].startswith("ok   active time chats: 56 of 56"), list(report.values())
 assert lua("G.StoryCounter()") == DOCK_STORY and lua("sd.Map.mapId") == TOWER_MAP
 assert lua("sd.Player.WinNum") == 12, "the rest of the save is left alone"
 # the "air" start: the world map, riding the airship beside the tower, with flag 31 on
@@ -160,6 +188,15 @@ L.execute("G.OPEN_START = G.OPEN_STARTS.event")
 ok, report = L.execute("return G.OpenStart()")
 assert ok is True and lua("G.StoryCounter()") == EVENT_STORY and lua("sd.Map.mapId") == TOWER_MAP
 L.execute("G.OPEN_START = G.OPEN_STARTS.dock; sd.Map.IsRidingAirShip = false")
+
+# the plain prologue skip leaves the chats alone, and a save with no chat data fails the step only
+L.execute("sd.chat.DataMap.rows = {}")
+ok, report = L.execute("return G.SkipPrologue({ inventory = false })")
+assert ok is True and lua("next(sd.chat.DataMap.rows)") is None
+L.execute("savedChat = sd.chat; sd.chat = nil")
+ok, report = L.execute("return G.OpenStart()")
+assert ok is False and list(report.values())[2] == "FAIL active time chats: the save has no chat data"
+L.execute("sd.chat = savedChat; G.OPEN_START = G.OPEN_STARTS.dock")
 
 # 0.7.0: an Archipelago item granted before the skip with a starter item's id is kept
 L.execute("bag = { [10699] = 1, [11301] = 1, [12029] = 1, [12000] = 1 }; sd.Progress.Progress[1] = 1005")

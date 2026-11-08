@@ -980,6 +980,7 @@ G.TITLE_LABEL = "New Game (Archipelago)"
 -- The menu lists the rows in the map's own order, so the Archipelago row goes under New Game
 -- by rebuilding the map in this order (OrderTitleEntries).
 local TITLE_ORDER = { 0, 1, 2, 5, 3, 4 }
+local TITLE_TEXT_MISSING = "MISSING STRING TABLE ENTRY"
 
 -- The title data asset, loaded when asked to and not loaded yet (as FFRSLib loads the System Menu
 -- one: the menu reads its asset when it is made, so a row added later shows only next time).
@@ -1077,6 +1078,13 @@ function G.OrderTitleEntries()
     if table.concat(keys, ",") == table.concat(TITLE_ORDER, ",") then return true, "already in order" end
     for _, k in ipairs(TITLE_ORDER) do
         if not rows[k] then return false, "row " .. k .. " is missing, so the order is left alone" end
+        -- Round 37: every row but ours read "<MISSING STRING TABLE ENTRY>", at random, until a
+        -- restart. A label reads like that while its string table is still loading, and the
+        -- rebuild below writes each label back as plain text, so the placeholder became the
+        -- label for that run. The order waits for the next check, with the map untouched.
+        if k ~= G.TITLE_ARCHIPELAGO and (rows[k].name == "" or rows[k].name:find(TITLE_TEXT_MISSING, 1, true)) then
+            return false, "row " .. k .. " has no text yet (string table not loaded), so the order waits"
+        end
     end
     rows[G.TITLE_ARCHIPELAGO].name = G.TITLE_LABEL
     -- A spare key proves an empty row is accepted; emptying the map removes it again.
@@ -1714,9 +1722,10 @@ G.SKIP_ARRIVAL = { map = 3001, x = -5775.0, y = 0.0, z = -197.85, direction = 2 
 -- then the Crystal Tower (map 3280), where two events move the story to 8000. Round 36's
 -- snapshots showed those events write nothing else into the save, so the start can write 8000
 -- itself and put the player where the events leave them, and then nothing plays. Arrivals:
---   dock   story 8000 at the tower's dock, where the events end (the default)
+--   dock   story 8000 at the tower's dock, where the events end
 --   air    story 8000 on the world map, riding the airship beside the tower: what boarding at
---          the dock wrote (the airship's place and direction, riding, event flag 31)
+--          the dock wrote (the airship's place and direction, riding, event flag 31). The
+--          default since round 37, when the user chose it over the dock
 --   event  story 7090 at the dock, near save point 139: the two events play (rounds 31, 35)
 G.OPEN_STARTS = {
     dock = { name = "dock", story = 8000, map = 3280, x = -2704.8, y = -171166.7, z = 3002.2, direction = 2 },
@@ -1724,7 +1733,7 @@ G.OPEN_STARTS = {
             airship = true, flags = { 31 } },
     event = { name = "event", story = 7090, map = 3280, x = -2830.0, y = -171140.0, z = 3000.0, direction = 2 },
 }
-G.OPEN_START = G.OPEN_STARTS.dock
+G.OPEN_START = G.OPEN_STARTS.air
 
 -- The unitParameterList entry for a unit id, or nil.
 local function UnitEntry(sd, unitId)
@@ -1802,6 +1811,87 @@ local function WriteArrival(sd, a)
         line = line .. ", flags " .. table.concat(a.flags, " ") .. " on"
     end
     return ok and G.MapId() == a.map, line
+end
+
+-- A game value as text: a name, a string or an object's name. Array elements can come back in a
+-- UE4SS wrapper that needs :get() first (round 37: the mapping contexts logged as
+-- "LocalUnrealParam: 00000000713B9288").
+local function ObjText(v)
+    if type(v) == "string" then return v end
+    local okGet, inner = pcall(function() return v:get() end)
+    if okGet and inner ~= nil then v = inner end
+    if type(v) == "string" then return v end
+    local ok, s = pcall(function() return v:ToString() end)
+    if ok and type(s) == "string" then return s end
+    local okName, n = pcall(function() return v:GetFName():ToString() end)
+    if okName and type(n) == "string" then return n end
+    return tostring(v)
+end
+
+-- Active Time Chats (round 37: the user wants them all done). The 56 chats of DT_ChatEventData
+-- (the rows named ATCnn; the table's Pinger and Nawatobi rows are mini-game lines, not chats).
+-- The save keeps one row per chat in chat.DataMap (IsReleased, IsAlreadyPlayed), and the chats
+-- waiting to be announced in chat.NoticeQueue. Every chat row turns on event flag 31.
+local CHAT_NUMBERS = { 1, 2, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 16, 17, 18, 19, 21, 22, 23, 24, 25, 26, 27, 28,
+                       29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 47, 48, 49, 50, 51, 52,
+                       53, 54, 55, 56, 59, 61, 62, 63 }
+G.CHAT_IDS = {}
+for i, n in ipairs(CHAT_NUMBERS) do G.CHAT_IDS[i] = string.format("ATC%02d", n) end
+
+-- Marks every Active Time Chat as released and played, and empties the notice queue. A missing
+-- row is added empty and filled in the map, the way the title rows are. Safe to run again.
+-- Returns ok and a report line.
+function G.MarkChatsPlayed(sd)
+    local chat, map
+    pcall(function() chat = sd.chat; map = chat.DataMap end)
+    if not map then return false, "active time chats: the save has no chat data" end
+    local have, wanted = {}, {}
+    if not pcall(function() map:ForEach(function(k) have[k:get():ToString()] = true end) end) then
+        return false, "active time chats: could not read the save's rows"
+    end
+    local added = 0
+    for _, id in ipairs(G.CHAT_IDS) do
+        wanted[id] = true
+        if not have[id] and pcall(function() map:Add(FName(id), {}) end) then added = added + 1 end
+    end
+    local marked = 0
+    local okMark = pcall(function()
+        map:ForEach(function(k, v)
+            if wanted[k:get():ToString()] then
+                local row = v:get()
+                row.IsReleased = true
+                row.IsAlreadyPlayed = true
+                marked = marked + 1
+            end
+        end)
+    end)
+    local okQueue = pcall(function() chat.NoticeQueue:Empty() end)
+    pcall(function() chat.LatestNotice = FName("None") end)
+    local found, bad = SetFlags(sd, { 31 })
+    local ok = okMark and okQueue and marked == #G.CHAT_IDS and found and #bad == 0
+    return ok, string.format("active time chats: %d of %d released and played (%d rows added), notices cleared%s, flag 31 on",
+        marked, #G.CHAT_IDS, added, okQueue and "" or " FAILED")
+end
+
+-- The loaded save's chat state as text, for the log.
+function G.ChatState()
+    local sd = G.SaveData()
+    if not sd then return "no save loaded" end
+    local rows, released, played, queue = 0, 0, 0, {}
+    local ok = pcall(function()
+        sd.chat.DataMap:ForEach(function(_, v)
+            local row = v:get()
+            rows = rows + 1
+            if row.IsReleased then released = released + 1 end
+            if row.IsAlreadyPlayed then played = played + 1 end
+        end)
+        local list = sd.chat.NoticeQueue
+        for i = 1, #list do queue[i] = ObjText(list[i]) end
+    end)
+    if not ok then return "could not read the chat data" end
+    local latest = "?"
+    pcall(function() latest = ObjText(sd.chat.LatestNotice) end)
+    return string.format("%d rows, %d released, %d played; notices [%s], latest %s", rows, released, played, table.concat(queue, ", "), latest)
 end
 
 -- Applies the skip to the loaded save. Saves nothing. Returns ok and a list of report lines,
@@ -1912,6 +2002,8 @@ function G.SkipPrologue(opts)
     -- Where the reload puts the player: in front of the Earth Shrine, or at the Crystal Tower.
     step(WriteArrival(sd, a))
 
+    if opts and opts.openStart then step(G.MarkChatsPlayed(sd)) end
+
     return not failed, report
 end
 
@@ -1923,7 +2015,9 @@ function G.OpenStart()
     if not sd then return false, { "FAIL no save loaded" } end
     local okStory, story = WriteStory(sd, G.OPEN_START.story)
     local okMap, arrival = WriteArrival(sd, G.OPEN_START)
-    return okStory and okMap, { (okStory and "ok   " or "FAIL ") .. story, (okMap and "ok   " or "FAIL ") .. arrival }
+    local okChats, chats = G.MarkChatsPlayed(sd)
+    return okStory and okMap and okChats, { (okStory and "ok   " or "FAIL ") .. story,
+        (okMap and "ok   " or "FAIL ") .. arrival, (okChats and "ok   " or "FAIL ") .. chats }
 end
 
 -- Round 9: a reload during the opening movie came up with no menus and no movement, and what
@@ -1932,15 +2026,6 @@ end
 -- movie, the locked game and a normal game alike, so not those), then the game's own input
 -- manager (a world subsystem, new on each map): IsEnableInput, its input mode, and its stack of
 -- mapping contexts.
-local function ObjText(v)
-    if type(v) == "string" then return v end
-    local ok, s = pcall(function() return v:ToString() end)
-    if ok and type(s) == "string" then return s end
-    local okName, n = pcall(function() return v:GetFName():ToString() end)
-    if okName and type(n) == "string" then return n end
-    return tostring(v)
-end
-
 function G.InputState()
     local pc = PlayerController()
     if not pc then return "no PlayerController" end
@@ -1986,6 +2071,23 @@ function G.InputFix(step)
         Find("/Script/UMG.Default__WidgetBlueprintLibrary"):SetInputMode_GameOnly(pc, false)
     end)
     return failed
+end
+
+-- Round 37: on the open world start the save owns no vision, and no story event will give one,
+-- so vision items wait for good (UnlockVision copies a new entry's synchro keys from the first
+-- entry). The first entry's keys, to the log, so the keys can be written with no entry to copy.
+function G.VisionKeys()
+    local sd = G.SaveData()
+    if not sd then return "no save loaded" end
+    local list
+    if not pcall(function() list = sd.visionList end) or not list then return "visionList unreadable" end
+    if #list == 0 then return "visionList is empty" end
+    local keys, id = {}, "?"
+    pcall(function() id = tostring(Int(list[1].ID)) end)
+    pcall(function()
+        list[1].synchroPoints:ForEach(function(k) keys[#keys + 1] = tostring(Int(k:get())) end)
+    end)
+    return string.format("%d visions; the first is %s, its synchro keys [%s]", #list, id, table.concat(keys, ", "))
 end
 
 -- Writes the loaded save to a slot and starts the field from that slot, as FFRSLib's
@@ -3186,6 +3288,33 @@ function G.NoLandShow(on, width)
         end
     end
     return n
+end
+
+-- Round 37: setting channels 3 and 4 did not bring the shadow back. The game data says why it
+-- might not: the airship places its shadow with a sphere trace and keeps a list of actors for
+-- that trace to ignore (CPP_MapUnit_AirShip.m_ShadowDecalSphareTraceActorsToIgnore). Adds the
+-- spawned boxes to the list on the airship the player is riding, leaving the boxes' collision
+-- alone. Returns the list's size before and after and its names, or nil and why.
+function G.NoLandShadow()
+    local pose, why = G.PlayerPose()
+    if not pose then return nil, why end
+    local list
+    pcall(function() list = pose.pawn.m_ShadowDecalSphareTraceActorsToIgnore end)
+    if not list then return nil, "the player is not riding the airship" end
+    local before = #list
+    for _, a in ipairs(nolandSpawned) do
+        if Alive(a) then
+            local n = #list
+            gateStep("noland: add to the shadow's ignore list")
+            pcall(function()
+                local _ = list[n + 1]    -- reading one past the end grows a UE4SS TArray
+                list[n + 1] = a
+            end)
+        end
+    end
+    local names = {}
+    for i = 1, #list do names[i] = ObjText(list[i]) end
+    return before, #list, names
 end
 
 -- Removes the spawned boxes, puts the moved one back and gives the story boxes their own

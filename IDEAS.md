@@ -652,6 +652,8 @@ The "Back" prompt that menus and the chest pop-up show at the bottom right also 
 **Found (round 32, 2026-11-07): the no-landing boxes.** The world map also has 111 `BP_MapNonLandingArea_C` actors: a box with an `m_Condition` string. While the condition holds (or when it is empty), the airship cannot land in the box. Before story 5020, one box of half-size 2400 x 6000 keeps the airship off Mysidia. So the game already gates a continent this way, and this idea is now the plan for continent locks (decided in round 31: the airship is free, continents are locked by landing). Details and rough continent positions: docs/open_world.md, section 4. Round 32 probes it with `ffrap_noland`.
 - The landing point ids start with the island's number: 1xxx Grandshelt, 2xxx Lanzelt, 3xxx Kolobos, 4xxx Dirnado, 5xxx Olderion, 6xxx Zoldaad, 7xxx Mysidia, 8xxx Gronoa, 9xxx Pharm, 10004 the Crystal Tower. 10xxx are optional caves and Legend shrines.
 
+**Round 37 (2026-11-08):** the shadow is placed by a sphere trace, and the airship keeps a list of actors for that trace to ignore (`CPP_MapUnit_AirShip.m_ShadowDecalSphareTraceActorsToIgnore`). Changing the box's channels 3 and 4 did not obviously bring the shadow back. Round 38 adds our boxes to the list. The hoped-for result is the shadow on the ground, red, with landing still blocked.
+
 **Round 33 (2026-11-08):** changing a box's condition works, but only after the airship lands and takes off again. A new box reads its condition when it starts. The game's Pharm story box is one landing spot (about 950 x 600 units), so locking it does not lock Pharm. A spawned box hides the airship's shadow. Details: docs/open_world.md, section 4. Round 34 looks for a way to apply a change at once.
 
 **Round 32 (2026-11-07):** a box spawned at the airship's height, 3000 up and down, lifted the airship over it and broke the camera, and the airship could still land on it. So the box's collision counts as ground for the airship. The game's own boxes sit on the ground (the Mysidia box: centre height 393, 700 up and down). The Blueprint has no script; the C++ class `CPP_MapNonLandingArea` reads the box and the condition. Mod 0.15.0 puts boxes at the ground height and adds `ffrap_noland lock mysidia`, which tests a changed condition on the game's own box.
@@ -758,3 +760,12 @@ The "Back" prompt that menus and the chest pop-up show at the bottom right also 
 - **To blank a gift:** the talk event tables are data tables, like the chest table (`CDT_TalkEventData_Prod` is a composite). Their `ObtainItemList` rows can be emptied the same way.
 
 **To find out:** whether emptying a row's `ObtainItemList` stops the gift and leaves the event's text as it was; and, for open world, which gifts are still there at story 9000 (docs/open_world.md, section 6).
+
+## 22. A welcome window on an Archipelago new game
+
+**Idea (round 37, 2026-11-08):** a dialogue window when an Archipelago new game starts: a short welcome to the mod and some tips. Not urgent.
+
+**To find out:**
+- Which of the game's own windows can show our text. The game's notices and tutorial windows are the first things to look at (idea 8's notes on `CPP_WBP_ChatNotice` and the quest notice).
+- When to show it: after the reload on the world map, once per save, and not while the item feed is busy.
+- What to say: how to connect the client, what the airship and continents do, and where the checks are.

@@ -10,6 +10,8 @@
 //   dotnet run --project tools/dump_game -- maps [path filter] [--classes <regex>]
 //   dotnet run --project tools/dump_game -- assets <path prefix>
 //   dotnet run --project tools/dump_game -- files | enums | text
+//   dotnet run --project tools/dump_game -- raw <path prefix>     (any file as it is, such as an ini)
+//   dotnet run --project tools/dump_game -- structs <regex>       (class and struct fields, from the usmap)
 // Options: --game <Paks dir>, --usmap <file>, --oodle <dll>, --out <dir>.
 //
 // It needs two files that the game does not ship:
@@ -79,6 +81,12 @@ switch (command)
     case "assets":
         if (filter == "") Fail("assets needs a path prefix, for example FFRS/Content/Data");
         DumpAssets(filter); break;
+    case "raw":
+        if (filter == "") Fail("raw needs a path prefix, for example FFRS/Config");
+        DumpRaw(filter); break;
+    case "structs":
+        if (filter == "") Fail("structs needs a regex, for example ^CPP_Save");
+        DumpStructs(filter); break;
     default: Fail($"Unknown command {command}"); break;
 }
 
@@ -93,6 +101,39 @@ File.WriteAllText(Path.Combine(outDir, "manifest.json"), JsonConvert.SerializeOb
 }, json));
 if (failures.Count > 0) Console.WriteLine($"{failures.Count} packages failed; see manifest.json");
 return failures.Count > 0 ? 2 : 0;
+
+// Files as they are in the paks (config files and the like), under dump/raw.
+void DumpRaw(string prefix)
+{
+    var count = 0;
+    foreach (var path in provider.Files.Keys.Where(k => k.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)))
+    {
+        var full = Path.Combine(outDir, "raw", path);
+        Directory.CreateDirectory(Path.GetDirectoryName(full)!);
+        File.WriteAllBytes(full, provider.Files[path].Read());
+        count++;
+    }
+    Console.WriteLine($"raw: {count} files");
+}
+
+// The fields of every class and struct whose name matches, as the usmap has them. This answers
+// "what fields does this save struct have" with no game running.
+void DumpStructs(string pattern)
+{
+    var regex = new Regex(pattern);
+    var lines = new List<string>();
+    foreach (var (name, type) in provider.MappingsForGame!.Types.OrderBy(t => t.Key, StringComparer.Ordinal))
+    {
+        if (!regex.IsMatch(name)) continue;
+        lines.Add($"{name} : {type.SuperType ?? "-"}");
+        foreach (var prop in type.Properties.Values)
+            lines.Add($"    {prop.Name}: {TypeText(prop.MappingType)}");
+    }
+    Write("structs.txt", string.Join("\n", lines) + "\n");
+    Console.WriteLine($"structs: {lines.Count} lines in structs.txt");
+}
+
+static string TypeText(object? t) => JsonConvert.SerializeObject(t, new JsonSerializerSettings { NullValueHandling = NullValueHandling.Ignore });
 
 // Every mounted path, one per line.
 void DumpFiles()

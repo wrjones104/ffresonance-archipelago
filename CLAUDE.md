@@ -42,6 +42,7 @@ An Archipelago implementation for Final Fantasy Resonance (UE 5.6, game module `
   - `ETextJustify`: Left 0, Center 1, Right 2.
   - `ESlateVisibility`: Visible 0, Collapsed 1, Hidden 2.
 - **Text with icons is a `RichTextBlock`**, which is not a `TextBlock`. Search both.
+- **Never save a label read back as text before its string table has loaded.** It reads `<MISSING STRING TABLE ENTRY>`, and writing that back makes it the label (round 37).
 
 **Threads:**
 - **Never use `LoopAsync` or `ExecuteAsync`**: their callbacks run Lua on UE4SS's async thread while the game thread runs Lua in the same state. The game crashed at random, in a new place each time. Use `LoopInGameThreadWithDelay` and `ExecuteInGameThreadWithDelay` (round 29).
@@ -55,7 +56,7 @@ An Archipelago implementation for Final Fantasy Resonance (UE 5.6, game module `
   - `ffrap_find <text>`: classes, functions and fields by name.
   - `ffrap_layout <text>`: the panels around some on-screen text.
   - `ffrap_functions`: function signatures.
-  - Off-line, before a probe: `data/game/*.tsv`, or `dotnet run --project tools/dump_game -- assets <path>` for any asset's properties.
+  - Off-line, before a probe: `data/game/*.tsv`, or `dotnet run --project tools/dump_game -- assets <path>` for any asset's properties, `structs <regex>` for any class's or struct's fields, and `raw <path>` for files such as the game's ini files.
 
 **Shipping risky changes:**
 - **A crash in the engine ends the game before Lua can log.** Ship risky UI work behind a test command, off by default, that logs each step before it runs.
