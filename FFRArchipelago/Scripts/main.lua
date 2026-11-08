@@ -33,7 +33,8 @@
 --   ffrap_gate <subcommand>      experimental: spawn conditional blockers and custom key items
 --   ffrap_scale <level|low high|party n|off> [at %] [hp %] [attack %] [magic %] [power %] [boss] [follow]
 --                                probe: rewrite every enemy's level and stats
---   ffrap_noland <list|here|show|hide|lock|unlock|spawn|move|cond|off>
+--   ffrap_scale [show <id|name>] probe: the rescale in force, or one enemy's rows in every unit table
+--   ffrap_noland <list|here|show|hide|lock|unlock|refresh|spawn|move|cond|off>
 --                                probe: the airship's no-landing boxes
 --   ffrap_story <value>          probe: set the loaded save's story counter (any value; save and reload)
 --   ffrap_airship [condition|off]  probe: the airship's spawn condition (shipped {progress:0}>=4250)
@@ -44,7 +45,7 @@
 -- follows the save slots the linked game is saved to. While any other save is loaded, the mod
 -- grants nothing, reports nothing and leaves the chests vanilla.
 
-local VERSION = "0.15.0"
+local VERSION = "0.15.1"
 local PROTOCOL = 1        -- the bridge protocol; the apworld's MOD_PROTOCOL
 
 local MOD_DIR = (debug.getinfo(1, "S").source:gsub("^@", ""):gsub("\\", "/"):match("^(.*/)Scripts/[^/]+$"))
@@ -1348,6 +1349,7 @@ end)
 --   boss       change bosses too
 --   follow     party mode: do it again whenever the party's level changes (on the field only)
 local scaleFollow = nil   -- { range, at, knobs, withBosses, last } while "follow" is on
+local scaleLast = nil     -- { mode, a, b, withBosses, knobs, text } of the rescale in force
 
 -- Every rescale writes the changed rows to scale.txt (one enemy a line), so a hit seen in
 -- battle can be matched with the stats behind it.
@@ -1357,6 +1359,12 @@ local function applyScale(mode, a, b, withBosses, knobs)
     local n, sample, lines = game.ScaleEnemies(mode, a, b, withBosses, knobs)
     if n == nil then return nil, sample end
     log("scale: " .. n .. " rows changed" .. (sample and ("; " .. sample) or ""))
+    if mode == "off" then scaleLast = nil
+    else
+        local band = mode == "fixed" and ("every enemy at level " .. tostring(a))
+            or string.format("levels %s to %s", tostring(math.max(1, a)), tostring(b))
+        scaleLast = { mode = mode, a = a, b = b, withBosses = withBosses, knobs = knobs, text = band }
+    end
     if lines and #lines > 0 then
         local f = io.open(MOD_DIR .. "scale.txt", "w")
         if f then
@@ -1375,7 +1383,17 @@ local function scaleToParty(range, at, withBosses, knobs)
     local a, b, c = game.LevelBand(lv, range, at)
     log("scale: party level " .. lv .. " (" .. detail .. "), centre " .. c .. " (" .. at .. "%), range " .. range)
     local n, err = applyScale("clamp", a, b, withBosses, knobs)
-    return n, err, lv
+    return n, err, lv, a, b
+end
+
+-- What is in force, as one line: the band, follow, and whether the table still holds it.
+local function scaleStatus()
+    if not scaleLast then return "no rescale in force (shipped enemies)" end
+    local text = scaleLast.text .. (scaleFollow and (", follow on (party level " .. tostring(scaleFollow.last) .. ")") or ", follow off")
+    local checked, differ, sample, reloaded = game.ScaleCheck()
+    if checked == nil then return text .. "; check: " .. tostring(differ) end
+    return string.format("%s; table check: %d rows, %d differ%s%s", text, checked, differ,
+        sample and (" (" .. sample .. ")") or "", reloaded and ", the table is a new object (loaded again)" or "")
 end
 
 command("ffrap_scale", function(p)
@@ -1395,10 +1413,25 @@ command("ffrap_scale", function(p)
         i = i + 1
     end
     local knobs = { hp = set.hp, attack = set.attack or set.power or 100, magic = set.magic or set.power or 100 }
+    local first = tostring(args[1]):lower()
+    -- No arguments: say what is in force. "show": one enemy's rows (round 33).
+    if args[1] == nil and not follow and not withBosses then
+        local line = scaleStatus()
+        log("scale: " .. line)
+        notify("Scale: " .. line)
+        return
+    end
+    if first == "show" then
+        local what = table.concat(args, " ", 2)
+        log("scale: rows for \"" .. what .. "\": " .. scaleStatus())
+        for _, l in ipairs(game.UnitRows(what)) do log("scale:   " .. l) end
+        notify("Unit rows for \"" .. what .. "\" written to the log")
+        return
+    end
     scaleFollow = nil
-    if tostring(args[1]):lower() == "party" then
+    if first == "party" then
         local range = tonumber(args[2]) or 2
-        local n, err, lv = scaleToParty(range, at, withBosses, knobs)
+        local n, err, lv, lo, hi = scaleToParty(range, at, withBosses, knobs)
         if n == nil then
             notify("Scale failed: " .. tostring(err))
             return
@@ -1407,7 +1440,8 @@ command("ffrap_scale", function(p)
             scaleFollow = { range = range, at = at, knobs = knobs, withBosses = withBosses, last = lv }
             log("scale: follow on: the band moves when the party's level changes")
         end
-        notify("Enemies rescaled to the party: " .. n .. " rows changed" .. (follow and " (follow on)" or ""))
+        notify(string.format("Enemies rescaled to party level %d: levels %d to %d, %d rows changed%s", lv,
+            math.max(1, lo), hi, n, follow and " (follow on)" or ""))
         return
     end
     local a, b = tonumber(args[1]), tonumber(args[2])
@@ -1422,14 +1456,30 @@ command("ffrap_scale", function(p)
         notify("Scale failed: " .. tostring(err))
         return
     end
-    notify("Enemies " .. (mode == "off" and "back to normal" or "rescaled") .. ": " .. n .. " rows changed")
+    notify("Enemies " .. (mode == "off" and "back to normal" or ("rescaled, " .. scaleLast.text)) .. ": " .. n .. " rows changed")
 end)
 
 -- With "follow" on: when the party's level has changed, move the band. Only while the field HUD
 -- is on screen, so never in a battle.
+local SCALE_CHECK_EVERY = 2   -- scale ticks (of STATUS_EVERY) between table checks
+local scaleChecks = 0
 scaleTick = function()
+    if not game.OnField() then return end
+    -- Round 33: a battle showed a level the last rescale did not give. If the table no longer
+    -- holds what we wrote (loaded again, or written by something else), say so and write it again.
+    scaleChecks = scaleChecks + 1
+    if scaleLast and scaleChecks % SCALE_CHECK_EVERY == 0 then
+        local checked, differ, sample, reloaded = game.ScaleCheck()
+        if checked and (differ > 0 or reloaded) then
+            log(string.format("scale: the table changed under us: %d of %d rows differ%s%s; writing it again", differ,
+                checked, sample and (" (" .. sample .. ")") or "", reloaded and ", the table is a new object" or ""))
+            local l = scaleLast
+            if scaleFollow then scaleToParty(scaleFollow.range, scaleFollow.at, scaleFollow.withBosses, scaleFollow.knobs)
+            else applyScale(l.mode, l.a, l.b, l.withBosses, l.knobs) end
+        end
+    end
     local f = scaleFollow
-    if not f or not game.OnField() then return end
+    if not f then return end
     local lv = game.PartyLevel()
     if not lv or lv == f.last then return end
     log("scale: party level " .. tostring(f.last) .. " -> " .. lv)
@@ -1441,7 +1491,10 @@ end
 -- ffrap_noland here: the boxes under you (seen from above).
 -- ffrap_noland show [width] / hide: draw the boxes' outlines, or hide them again.
 -- ffrap_noland lock <mysidia|gronoa|pharm>: that story box stops landing (its condition always
---   holds). unlock: it never holds. The box stays where the game put it.
+--   holds). unlock: it never holds. The box stays where the game put it. Every box with that
+--   story condition is written.
+-- ffrap_noland refresh: round 34 probe. The boxes we changed get their collision switched on
+--   or off to match their condition now, to see if that applies them without landing.
 -- ffrap_noland spawn [half]: a new box under you, `half` across each way (default 2000), at
 --   the Mysidia box's height.
 -- ffrap_noland move [half]: the game's own Mysidia box, moved under you, condition emptied.
@@ -1474,7 +1527,10 @@ command("ffrap_noland", function(p)
                 return
             end
             log(string.format("noland: you are at (%s), under %d boxes", poseText(pose), #boxes))
-            for _, b in ipairs(boxes) do log("noland:   " .. game.NoLandLine(b)) end
+            for _, b in ipairs(boxes) do
+                log("noland:   " .. game.NoLandLine(b))
+                log("noland:     " .. game.NoLandCollision(b))
+            end
             notify("Under " .. #boxes .. " no-landing boxes" .. (boxes[1] and (": " .. boxes[1].name) or ""))
         elseif what == "show" or what == "hide" then
             local n = game.NoLandShow(what == "show", tonumber(p[2]))
@@ -1482,16 +1538,26 @@ command("ffrap_noland", function(p)
             notify("No-landing boxes " .. (what == "show" and "shown" or "hidden") .. ": " .. n)
         elseif what == "lock" or what == "unlock" then
             local which = (p[2] or ""):lower()
-            local box, why = game.NoLandLock(which, what == "lock")
-            if box then log("noland: " .. what .. " " .. which .. ": " .. game.NoLandLine(box) .. (why and (" (" .. why .. ")") or "")) end
-            if not box or why then log("noland: " .. what .. " problem: " .. tostring(why)) end
-            notify("No-landing " .. which .. ": " .. (box and (what == "lock" and "locked" or "unlocked") or "failed")
+            local boxes, why = game.NoLandLock(which, what == "lock")
+            for _, box in ipairs(boxes or {}) do
+                log("noland: " .. what .. " " .. which .. ": " .. game.NoLandLine(box))
+                log("noland:     " .. game.NoLandCollision(box))
+            end
+            if not boxes or why then log("noland: " .. what .. " problem: " .. tostring(why)) end
+            notify("No-landing " .. which .. ": " .. (boxes and ((what == "lock" and "locked " or "unlocked ") .. #boxes .. " box(es)") or "failed")
                 .. (why and (": " .. why) or ""))
+        elseif what == "refresh" then
+            local nOn, nOff, onType = game.NoLandRefresh()
+            log(string.format("noland: refresh: collision on (%d) for %d boxes, off for %d", onType, nOn, nOff))
+            notify(string.format("No-landing refresh: %d on, %d off", nOn, nOff))
         elseif what == "spawn" or what == "move" then
             local half = tonumber(p[2]) or 2000
             local box, why
             if what == "spawn" then box, why = game.NoLandSpawn(half) else box, why = game.NoLandMove(half) end
-            if box then log("noland: " .. what .. ": " .. game.NoLandLine(box) .. (why and (" (" .. why .. ")") or "")) end
+            if box then
+                log("noland: " .. what .. ": " .. game.NoLandLine(box) .. (why and (" (" .. why .. ")") or ""))
+                log("noland:     " .. game.NoLandCollision(box))
+            end
             if not box or why then log("noland: " .. what .. " problem: " .. tostring(why)) end
             notify("No-landing box " .. (box and (what == "spawn" and "spawned" or "moved") or "failed") .. (why and (": " .. why) or ""))
         elseif what == "cond" then
@@ -1505,7 +1571,7 @@ command("ffrap_noland", function(p)
             log("noland: off: " .. n .. " boxes undone")
             notify("No-landing boxes undone: " .. n)
         else
-            notify("Usage: ffrap_noland <list|here|show|hide|lock <box>|unlock <box>|spawn [half]|move [half]|cond <text>|off>")
+            notify("Usage: ffrap_noland <list|here|show|hide|lock <box>|unlock <box>|refresh|spawn [half]|move [half]|cond <text>|off>")
         end
     end)
     game.gateTrace = nil

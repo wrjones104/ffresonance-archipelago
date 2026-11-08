@@ -137,28 +137,42 @@ World-map shinies verified as locations. Multiple crashes observed across differ
 - Party member additions (`ffrap_grant unit`) worked: units join active party when space permits or roster when full, joining at their native levels (Lid 11, Nichol 19, Archwitch Fina 3, Fina 6).
 - No-landing boxes: spawning boxes at flight altitude lifted the airship and broke the camera. Game's native boxes sit on the terrain (Mysidia center z 393). Mod 0.15.0 places boxes at ground level and adds `lock`/`unlock` controls for native continent boxes.
 
-## Round 33 test plan (mod 0.15.0, world 0.3.1)
+**Round 33 (mod 0.15.0, 2026-11-08): box outlines work; changed conditions need a landing; Pharm lock did nothing; scaling gave the wrong levels.**
+- **Outlines:** `ffrap_noland show` draws the boxes. `hide` hides them.
+- **Mysidia:** `lock mysidia` and `unlock mysidia` both work, but only after the airship lands and takes off again. The condition is written at once (the log reads it back), so the game reads a box's condition only at some moments: when the box starts, and when the airship lands or takes off.
+- **Pharm:** `lock pharm` did not stop landing. The log looks fine. Unlock could not be judged. The likely reason (found off-line): the game's Pharm story box is small. Round 32's box list has it at (-5930, -17400), half-size 473 x 304: about 950 x 600 units, over one spot. It is not a continent lock, so most of Pharm stays open.
+- **`spawn`:**
+  - The airship kept its normal height (round 32's box lifted it).
+  - Landing was blocked at once, with no landing needed. A new box reads its condition when it starts, and the condition was empty.
+  - The airship's shadow was gone over the box.
+  - `cond {progress:0}<0` (never holds) took effect only after a landing and take-off, as on Mysidia.
+- **Scaling:** enemies in Pharm were level 45 and too strong. The log and `scale.txt` looked fine. The screenshot shows a Metal Gigantuar at level 45. It ships at level 52, and only one unit row has that name. So the table *was* rewritten, but with a band whose top is 45, as for a level 52 party (`party 3 at 80` gives 39 to 45). The low-level band (about level 3) was not in force in that battle. Not known yet: which command set it, or whether the table changed after the rescale. Mod 0.15.1 logs the band on screen, checks the table every 10 seconds on the field, and writes it again if it changed.
+- Waiting for: the `[FFRAP]` lines of `UE4SS.log` and `scale.txt` from this round.
 
-Two parts, both executed on an unbound save (such as the 7090 + Crystal Tower save).
+## Round 34 test plan (mod 0.15.1, world 0.3.1)
 
-**Installation:**
-Copy `FFRArchipelago/Scripts` over the installed mod directory. Log should verify `version 0.15.0 loaded`. Apworld is unchanged (0.3.1).
+Two parts, on a save not linked to a seed (such as the 7090 + Crystal Tower save). Send the `[FFRAP]` lines of `UE4SS.log`, `scale.txt` and `noland.txt`.
 
-**Part A: no-landing boxes (world map, in airship):**
-1. Outlines: run `ffrap_noland show` to check if debug collision wireframes render. Run `ffrap_noland hide` to remove.
-2. Lock Mysidia:
-   - Fly over Mysidia and run `ffrap_noland here`. Log should show `BP_MapNonLandingArea_C_42` with condition `{progress:0}<5020`.
-   - Verify landing is permitted, then take off.
-   - Run `ffrap_noland lock mysidia`. Check if the landing shadow turns red and landing is blocked.
-   - Run `ffrap_noland unlock mysidia` and verify landing is restored.
-3. Pharm: test `ffrap_noland lock pharm` and `unlock pharm` on the Pharm landing box.
-4. Custom ground box: fly over open land and run `ffrap_noland spawn`.
-   - Confirm the airship maintains normal flight elevation.
-   - Verify `ffrap_noland here` reports the spawned box and landing is blocked.
-   - Run `ffrap_noland cond {progress:0}<0` to ensure landing is re-enabled.
-5. Run `ffrap_noland off` to clean up all test boxes.
+**Install:** copy `FFRArchipelago/Scripts` over the installed mod. The log should say `version 0.15.1 loaded`. `Assets` and the apworld did not change (world 0.3.1).
 
-**Part B: scaling:**
-6. Low level (Rain and Lasswell at low level in Pharm): test `ffrap_scale party follow`. Evaluate combat feel, then test `attack 70` and `attack 50`.
-7. High level (level 52 save): compare `ffrap_scale party` against `ffrap_scale party at 70`.
-8. Damage inspection: when encountering severe spikes, note the enemy and value. Compare against exported rows in `scale.txt`.
+**Before you start:** if you still have round 33's `UE4SS.log` and `scale.txt`, please send them. They show which band was in force in the Metal Gigantuar fight.
+
+**Part A: scaling (do this first, in Pharm, with the low-level party):**
+1. Load the save and run `ffrap_scale party follow`. The on-screen message now names the band: "Enemies rescaled to party level N: levels A to B". Write down N, A and B.
+2. Run `ffrap_scale` with nothing after it. It says what is in force and checks the table ("table check: R rows, 0 differ").
+3. Run `ffrap_scale show metal gigantuar`. The log lists the Metal Gigantuar row in every unit table the game has loaded, with its level now and the level we wanted.
+4. Fight two or three battles. Note each enemy's level on the battle screen. If any is outside A to B, take a screenshot, then run `ffrap_scale` and `ffrap_scale show <that enemy's name>` straight after the battle.
+5. Look in the log for `scale: the table changed under us`. If it is there, the game loaded the table again (or something wrote it), and the mod wrote our rows back.
+6. Then `ffrap_scale party follow attack 70`, and `ffrap_scale party follow attack 50`. How do the fights feel?
+
+**Part B: no-landing boxes (world map, in the airship):**
+7. Mysidia, without landing in between:
+   - Fly over Mysidia and run `ffrap_noland here`. Each box now has a second line: `collision: actor ..., enabled ..., profile ..., channels ...`.
+   - `ffrap_noland lock mysidia`, then `ffrap_noland here` again. Try to land (expect: still allowed, as in round 33).
+   - `ffrap_noland refresh`, then `here`, and try to land. Is landing blocked now, without a landing in between?
+   - `ffrap_noland unlock mysidia`, `refresh`, `here`, and try to land. Is it allowed again?
+   - Then land and take off once, and run `here` again. Did the `collision:` line change?
+8. Pharm: fly to the Pharm story box, around (-5930, -17400). `ffrap_noland show` draws it, which helps you find it. Run `ffrap_noland here`. Is it one small box? `lock pharm`, `refresh`, and try to land on that spot. Then try a spot a little away from it.
+9. Spawned box: over open land, `ffrap_noland spawn`, then `here`. Compare its `collision:` line with Mysidia's. Is the shadow gone again? Then `ffrap_noland cond {progress:0}<0` and `refresh`: can you land without a landing in between?
+10. `ffrap_noland off`.
+11. Run `ffrap_find Landing` and `ffrap_functions CPP_MapNonLandingArea CPP_MapAirShipCanNeverLandingBox`, and send `find_Landing.txt` and `functions.txt`. They may show a function that makes the game read the conditions again.

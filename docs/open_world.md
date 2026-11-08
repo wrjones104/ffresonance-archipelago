@@ -79,6 +79,11 @@ The story counter is `Progress[0]`. Every story gate is a condition such as `{pr
 - A continent lock can be implemented as one or more large boxes per continent with mod-controlled conditions.
 - In round 32 testing, a box spawned at airship height (z 1500) lifted the airship over it and broke the camera while still permitting landing. Because the box collision counts as ground, boxes must sit on the terrain like native game boxes (e.g. Mysidia center height 393). The Blueprint has no script; the C++ class `CPP_MapNonLandingArea` reads the box and condition.
 - Round 33 probes (mod 0.15.0): `lock mysidia` tests immediate condition evaluation on native boxes, `spawn` places new boxes at ground level, `here` lists boxes under the player, and `show` draws outlines.
+- **Round 33 results:**
+  - **A changed condition waits for a landing.** `lock mysidia` and `unlock mysidia` worked only after the airship landed and took off again. A spawned box blocked landing at once, but a new condition on it also waited for a landing. So the game reads a box's condition when the box starts, and again when the airship lands or takes off. For continent locks this matters only when an unlock item arrives in flight: the player would have to land somewhere first. Round 34 probes `refresh` (setting the box's collision ourselves) and looks for a function that re-reads the conditions.
+  - **The Pharm story box is one landing spot, not the continent.** Half-size 473 x 304 at (-5930, -17400). Locking it cannot lock Pharm. Pharm (and Gronoa, whose story box is also on its landing spot) will need our own big boxes, like Mysidia's.
+  - **A spawned box hides the airship's shadow.** It sits at the Mysidia box's height (393, 700 up and down), so its top can be above the ground where it was spawned. Round 34 compares its collision with the game's own boxes (`here` now logs it).
+  - `show` draws the box outlines. Useful for placing continent boxes.
 
 **Continent bounds (from landing points, with island-prefixed IDs; x/y in game units):**
 
@@ -157,6 +162,7 @@ MP does not correlate with level (r² 0.09) and remains unchanged.
 
 - In the shipped game, parties normally out-level enemies by 10 or more levels from mid-game onward. Late-game enemies placed at exact party levels hit much harder than expected.
 - Mod 0.14.0 introduced `at` (band center percentage), `hp`/`power` multipliers, and dynamic `follow` tracking. Mod 0.15.0 splits `attack` and `magic` controls and exports `scale.txt` after each rescale.
+- **Round 33:** a Metal Gigantuar in Pharm showed level 45. It ships at 52, so our rewrite did reach the battle, but with a band for a level 52 party, not the low-level one being tested. Which command set it is not known yet. Mod 0.15.1 shows the band on screen, and checks every 10 seconds on the field that the table still holds what we wrote. If the game ever loads the table again, the check writes it back, and the log says so. For the real feature this check stays: a rescale must survive map changes and save loads.
 
 ## 6. Locations in the cleared world
 
@@ -189,8 +195,9 @@ The story natively awards party members, starter visions, the airship, and key i
 
 1. Round 31 probes (`ffrap_scale`, `ffrap_airship`, `ffrap_story 9000`): confirmed scaling works and exposed difficulty spikes.
 2. Round 32 probes: validated `at 80` scaling curve and grounded no-landing boxes (`ffrap_noland`).
-3. Round 33 probes: test separate `attack`/`magic` multipliers, box locking, ground-height spawning, and box queries.
-4. Skip to open world: implement automated story 7090 initialization and Crystal Tower event trigger on new game.
-5. Enemy scaling integration: package tested curves into apworld options applied via `follow`.
-6. Gates: continent locks using landing exclusion zones and choke-point blockers for overland crossings.
-7. Goal and logic rules: define regions, events, and completion conditions in apworld.
+3. Round 33 probes: test separate `attack`/`magic` multipliers, box locking, ground-height spawning, and box queries. Results: locks apply after a landing; the Pharm story box is one spot; the scaling band in force was not the expected one.
+4. Round 34 probes: the table check, `ffrap_scale show`, box collision and `refresh`.
+5. Skip to open world: implement automated story 7090 initialization and Crystal Tower event trigger on new game.
+6. Enemy scaling integration: package tested curves into apworld options applied via `follow`.
+7. Gates: continent locks using landing exclusion zones and choke-point blockers for overland crossings.
+8. Goal and logic rules: define regions, events, and completion conditions in apworld.

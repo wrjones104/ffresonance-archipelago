@@ -2525,6 +2525,23 @@ function G.SetStoryCounter(n)
 end
 
 local scaleOriginals = {}   -- unit id -> { Level = n, MaxHitPoint = n, ... } as the game shipped
+local scaleWanted = nil     -- unit id -> the level the last rescale wrote (nil: none, or "off")
+local scaleTables = nil     -- the tables the last rescale wrote, as "name@address" text
+
+-- A table as text: its full name and its address, so a table loaded again (a new object at
+-- a new address) can be told from the one we wrote.
+local function TableKey(dt)
+    local name, addr = "?", nil
+    pcall(function() name = dt:GetFullName() end)
+    pcall(function() addr = dt:GetAddress() end)
+    return name .. "@" .. tostring(addr)
+end
+
+local function TableKeys(family)
+    local keys = {}
+    for _, dt in ipairs(family) do keys[#keys + 1] = TableKey(dt) end
+    return table.concat(keys, ", ")
+end
 
 -- Rescales every enemy row (and bosses too, if withBosses) by mode, a, b, as in ScaledLevel,
 -- with the tuning knobs of ScaledStats. mode "off" restores the shipped rows. Returns how many
@@ -2534,6 +2551,7 @@ function G.ScaleEnemies(mode, a, b, withBosses, knobs)
     local family = TableFamily(Find(UNIT_TABLE))
     if #family == 0 then return nil, "DT_UnitParameter not loaded" end
     local changed, sample, lines = 0, nil, {}
+    local wanted = {}
     local fields = { "Level" }
     for _, k in ipairs(GROWTH_ORDER) do fields[#fields + 1] = k end
     for _, dt in ipairs(family) do
@@ -2551,6 +2569,7 @@ function G.ScaleEnemies(mode, a, b, withBosses, knobs)
                     end
                     local want = orig
                     if mode ~= "off" then want = G.ScaledStats(orig, G.ScaledLevel(orig.Level, mode, a, b), knobs) end
+                    wanted[id] = want.Level
                     local diff = false
                     for _, k in ipairs(fields) do
                         if Int(row[k]) ~= want[k] then
@@ -2577,7 +2596,85 @@ function G.ScaleEnemies(mode, a, b, withBosses, knobs)
             end)
         end)
     end
+    if mode == "off" then scaleWanted, scaleTables = nil, nil
+    else scaleWanted, scaleTables = wanted, TableKeys(family) end
     return changed, sample, lines
+end
+
+-- Round 33: a Pharm enemy showed a level that the last rescale did not give it. Whether the
+-- table still holds what the last rescale wrote. Returns how many rows it checked, how many
+-- differ, one sample ("Metal Gigantuar (298): level 52, wrote 3"), and whether the table is a
+-- different object now (loaded again). nil when no rescale is in force, or the table is gone.
+function G.ScaleCheck()
+    if not scaleWanted then return nil, "no rescale in force" end
+    local family = TableFamily(Find(UNIT_TABLE))
+    if #family == 0 then return nil, "DT_UnitParameter not loaded" end
+    local checked, differ, sample = 0, 0, nil
+    for _, dt in ipairs(family) do
+        pcall(function()
+            dt:ForEachRow(function(_, row)
+                pcall(function()
+                    local id = Int(row.ID)
+                    local want = id and scaleWanted[id]
+                    if not want then return end
+                    checked = checked + 1
+                    local lv = Int(row.Level)
+                    if lv ~= want then
+                        differ = differ + 1
+                        sample = sample or string.format("%s (%d): level %s, wrote %d", AsText(row.Name) or "?", id,
+                            tostring(lv), want)
+                    end
+                end)
+            end)
+        end)
+    end
+    return checked, differ, sample, TableKeys(family) ~= scaleTables
+end
+
+-- The rows of one unit (by id, or by a piece of its name) in every unit table loaded, not only
+-- the one at UNIT_TABLE: a second copy of the table would explain a battle that ignores our
+-- rewrite. Returns lines of text: the table, then the row's level and stats, and what the last
+-- rescale wanted.
+function G.UnitRows(what)
+    local id = tonumber(what)
+    local needle = (not id) and tostring(what or ""):lower() or nil
+    local tables, seen = {}, {}
+    local function add(dt)
+        if dt and Alive(dt) then
+            local k = TableKey(dt)
+            if not seen[k] then seen[k] = true; tables[#tables + 1] = dt end
+        end
+    end
+    for _, dt in ipairs(TableFamily(Find(UNIT_TABLE))) do add(dt) end
+    local ok, all = pcall(FindAllOf, "DataTable")
+    for _, dt in ipairs(ok and all or {}) do
+        local name = ""
+        pcall(function() name = dt:GetFullName() end)
+        if name:find("UnitParameter", 1, true) and not name:find("Calc", 1, true) then add(dt) end
+    end
+    local out = {}
+    for _, dt in ipairs(tables) do
+        out[#out + 1] = "table " .. TableKey(dt)
+        pcall(function()
+            dt:ForEachRow(function(rowName, row)
+                pcall(function()
+                    local rid = Int(row.ID)
+                    local name = AsText(row.Name) or "?"
+                    if (id and rid == id) or (needle and needle ~= "" and name:lower():find(needle, 1, true)) then
+                        local orig = scaleOriginals[rid]
+                        out[#out + 1] = string.format(
+                            "  %d %s (row %s, category %s): level %s, HP %s, Attack %s, Intelligence %s, Defence %s; shipped level %s; last rescale wanted %s",
+                            rid or -1, name, RowName(rowName), tostring(Int(row.Category)), tostring(Int(row.Level)),
+                            tostring(Int(row.MaxHitPoint)), tostring(Int(row.Attack)), tostring(Int(row.Intelligence)),
+                            tostring(Int(row.Defence)), tostring(orig and orig.Level or Int(row.Level)),
+                            tostring(scaleWanted and scaleWanted[rid] or "nothing"))
+                    end
+                end)
+            end)
+        end)
+    end
+    if #tables == 0 then out[1] = "no unit table loaded" end
+    return out
 end
 
 -- The airship's spawn condition, in DT_MapAirShip (shipped: "{progress:0}>=4250", the end of
@@ -2620,7 +2717,8 @@ G.STORY_BOXES = { mysidia = "{progress:0}<5020", gronoa = "{progress:0}<6000", p
 G.COND_ALWAYS, G.COND_NEVER = "{progress:0}>=0", "{progress:0}<0"
 local nolandSpawned = {}     -- actors spawned by the probe
 local nolandMoved = nil      -- { actor, x, y, z, ex, ey, ez, cond } of the game's box we moved
-local nolandLocks = {}       -- which -> { actor, cond } of a story box whose condition we wrote
+local nolandCollision = {}   -- { actor, enabled } of boxes whose collision NoLandRefresh changed, as found
+local nolandLocks = {}       -- which -> { on = bool, boxes = { { actor, cond }, ... } }: story boxes we wrote
 
 local function BoxOf(actor)
     local box
@@ -2657,6 +2755,33 @@ local function BoxLine(i)
         tostring(i.ez and math.floor(i.ez)), tostring(i.yaw and math.floor(i.yaw)), tostring(i.cond))
 end
 G.NoLandLine = BoxLine
+
+-- Round 33: a changed condition took effect only after the airship landed and took off again,
+-- and a spawned box hid the airship's shadow. So the game reads the condition at some moments
+-- and does something to the box; the collision is the first guess. A box's collision as text:
+-- the actor's switch, the component's ECollisionEnabled (0 none, 1 query, 2 physics, 3 both),
+-- its profile and object type, and its response to channels 0 to 7 and 14 to 31 (the game's
+-- own channels), one digit each (0 ignore, 1 overlap, 2 block).
+local COLLISION_CHANNELS = { 0, 1, 2, 3, 4, 5, 6, 7, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31 }
+function G.NoLandCollision(i)
+    local actor = i.actor
+    local box = actor and BoxOf(actor)
+    if not box then return "no box component" end
+    local actorOn, enabled, profile, objType, hidden = "?", "?", "?", "?", "?"
+    pcall(function() actorOn = tostring(actor:GetActorEnableCollision()) end)
+    pcall(function() enabled = tostring(Int(box:GetCollisionEnabled())) end)
+    pcall(function() profile = box:GetCollisionProfileName():ToString() end)
+    pcall(function() objType = tostring(Int(box:GetCollisionObjectType())) end)
+    pcall(function() hidden = tostring(box.bHiddenInGame) end)
+    local low, high = {}, {}
+    for _, ch in ipairs(COLLISION_CHANNELS) do
+        local r = "?"
+        pcall(function() r = tostring(Int(box:GetCollisionResponseToChannel(ch))) end)
+        if ch < 14 then low[#low + 1] = r else high[#high + 1] = r end
+    end
+    return string.format("collision: actor %s, enabled %s, profile %s, object type %s, channels 0-7 %s, 14-31 %s, hidden %s",
+        actorOn, enabled, profile, objType, table.concat(low), table.concat(high), hidden)
+end
 
 -- Every no-landing box on the loaded map, as BoxInfo tables.
 function G.NoLandBoxes()
@@ -2764,23 +2889,79 @@ end
 -- One of the game's story boxes (mysidia, gronoa or pharm) locked (on: its condition always
 -- holds, so no landing) or unlocked (it never holds). The box stays where the game put it.
 -- Returns the box read back, or nil and why.
+-- Every box with the story condition is written (round 33: a lock that did nothing may have
+-- missed a second box). Returns the boxes read back (a list), or nil and why.
 function G.NoLandLock(which, on)
     local orig = G.STORY_BOXES[which]
     if not orig then return nil, "no story box called " .. tostring(which) .. " (mysidia, gronoa, pharm)" end
     local rec = nolandLocks[which]
-    if not (rec and Alive(rec.actor)) then
-        rec = nil
+    local live = rec and #rec.boxes > 0
+    for _, b in ipairs(rec and rec.boxes or {}) do
+        if not Alive(b.actor) then live = false end
+    end
+    if not live then
+        rec = { boxes = {} }
         for _, i in ipairs(G.NoLandBoxes()) do
-            if i.cond == orig then rec = { actor = i.actor, cond = orig }; break end
+            if i.cond == orig then rec.boxes[#rec.boxes + 1] = { actor = i.actor, cond = orig } end
         end
-        if not rec then return nil, "the " .. which .. " box (condition " .. orig .. ") is not on this map" end
+        if #rec.boxes == 0 then return nil, "the " .. which .. " box (condition " .. orig .. ") is not on this map" end
         nolandLocks[which] = rec
     end
-    gateStep("noland: write m_Condition")
+    rec.on = on
     local want = on and G.COND_ALWAYS or G.COND_NEVER
-    local ok, e = pcall(function() rec.actor.m_Condition = want end)
-    if not ok then return BoxInfo(rec.actor), "m_Condition write failed: " .. tostring(e) end
-    return BoxInfo(rec.actor)
+    local out, err = {}, nil
+    for _, b in ipairs(rec.boxes) do
+        gateStep("noland: write m_Condition")
+        local ok, e = pcall(function() b.actor.m_Condition = want end)
+        if not ok then err = "m_Condition write failed: " .. tostring(e) end
+        out[#out + 1] = BoxInfo(b.actor)
+    end
+    return out, err
+end
+
+-- Round 34 probe: make the boxes we changed take effect now, without landing. Each box's
+-- collision is switched on (as on a box with no condition, which always blocks) when its
+-- condition is one that holds, and off when it never holds. Only conditions we wrote are
+-- judged: "" and COND_ALWAYS hold, COND_NEVER does not; other boxes are left alone. Returns
+-- how many were switched on and off, and the collision value used for "on".
+function G.NoLandRefresh()
+    local onType
+    for _, i in ipairs(G.NoLandBoxes()) do
+        if i.cond == "" then
+            local b = BoxOf(i.actor)
+            pcall(function() onType = Int(b:GetCollisionEnabled()) end)
+            if onType and onType > 0 then break end
+            onType = nil
+        end
+    end
+    onType = onType or 1
+    local targets = {}
+    for _, a in ipairs(nolandSpawned) do targets[#targets + 1] = a end
+    if nolandMoved then targets[#targets + 1] = nolandMoved.actor end
+    for _, rec in pairs(nolandLocks) do
+        for _, b in ipairs(rec.boxes) do targets[#targets + 1] = b.actor end
+    end
+    local nOn, nOff = 0, 0
+    for _, a in ipairs(targets) do
+        if Alive(a) then
+            local cond = BoxInfo(a).cond
+            local want = nil
+            if cond == "" or cond == G.COND_ALWAYS then want = onType elseif cond == G.COND_NEVER then want = 0 end
+            local box = BoxOf(a)
+            if want and box then
+                local was
+                pcall(function() was = Int(box:GetCollisionEnabled()) end)
+                local known = false
+                for _, c in ipairs(nolandCollision) do if c.actor == a then known = true end end
+                if not known and was then nolandCollision[#nolandCollision + 1] = { actor = a, enabled = was } end
+                gateStep("noland: SetCollisionEnabled " .. want)
+                if pcall(function() box:SetCollisionEnabled(want) end) then
+                    if want > 0 then nOn = nOn + 1 else nOff = nOff + 1 end
+                end
+            end
+        end
+    end
+    return nOn, nOff, onType
 end
 
 -- Draws the boxes (on) or hides them again. A box component is a shape, and shapes draw
@@ -2821,14 +3002,24 @@ function G.NoLandOff()
         n = n + 1
     end
     nolandMoved = nil
-    for which, rec in pairs(nolandLocks) do
-        if Alive(rec.actor) then
-            gateStep("noland: write m_Condition")
-            pcall(function() rec.actor.m_Condition = rec.cond end)
-            n = n + 1
+    for _, rec in pairs(nolandLocks) do
+        for _, b in ipairs(rec.boxes) do
+            if Alive(b.actor) then
+                gateStep("noland: write m_Condition")
+                pcall(function() b.actor.m_Condition = b.cond end)
+                n = n + 1
+            end
         end
     end
     nolandLocks = {}
+    for _, c in ipairs(nolandCollision) do
+        local box = Alive(c.actor) and BoxOf(c.actor)
+        if box then
+            gateStep("noland: SetCollisionEnabled " .. c.enabled)
+            pcall(function() box:SetCollisionEnabled(c.enabled) end)
+        end
+    end
+    nolandCollision = {}
     return n
 end
 

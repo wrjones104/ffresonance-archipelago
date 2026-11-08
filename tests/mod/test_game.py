@@ -962,8 +962,42 @@ n, _, lines = L.execute("return G.ScaleEnemies('clamp', 5, 15, true, { hp = 50 }
 assert n == 2 and L.eval("unitRows.bat.MaxHitPoint") == scaled(68, "MaxHitPoint", 1, 5, 50), n
 # a line per changed row, for scale.txt
 assert len(lines) == 2 and any(("level 1 -> 5\tHP %d\t" % scaled(68, "MaxHitPoint", 1, 5, 50)) in l for l in lines.values()), list(lines.values())
+# 0.15.1: the check sees what the last rescale wrote; a row written over, or a table loaded
+# again, shows up
+checked, differ, sample, reloaded = L.execute("return G.ScaleCheck()")
+assert (checked, differ, sample, reloaded) == (2, 0, None, False), (checked, differ, sample, reloaded)
+L.execute("unitRows.bat.Level = 1")
+checked, differ, sample, reloaded = L.execute("return G.ScaleCheck()")
+assert (checked, differ, reloaded) == (2, 1, False) and sample == "Steel Bat (2): level 1, wrote 5", sample
+L.execute("function unitDT:GetAddress() return 4096 end; function unitDT:HasAnyInternalFlags() return false end; function unitDT:HasAnyFlags() return false end")
+assert L.execute("return G.ScaleCheck()")[3] is True, "a new address is a table loaded again"
+L.execute("G.ScaleEnemies('clamp', 5, 15, true, { hp = 50 })")
+assert L.execute("return G.ScaleCheck()")[1:] == (0, None, False)
+# the rows of one unit, by id or name, in every unit table
+L.execute("""
+local prevFAO6 = FindAllOf
+copyDT = { rows = { x = { ID = 2, Category = 2, Name = FText("Steel Bat"), Level = 33 } } }
+function copyDT:IsValid() return true end
+function copyDT:HasAnyInternalFlags() return false end
+function copyDT:HasAnyFlags() return false end
+function copyDT:GetFullName() return "DataTable /Game/Other/DT_UnitParameter_Copy" end
+function copyDT:ForEachRow(fn) for k, r in pairs(self.rows) do fn(fname(k), r) end end
+calcDT = { rows = {} }
+for k, v in pairs(copyDT) do if type(v) == "function" then calcDT[k] = v end end
+function calcDT:GetFullName() return "DataTable /Game/Datatable/Unit/DT_UnitParameterCalc" end
+function FindAllOf(c)
+  if c == "DataTable" then return { copyDT, calcDT, unitDT } end
+  return prevFAO6(c)
+end
+""")
+rows = list(L.eval("G.UnitRows('steel')").values())
+assert len(rows) == 4 and rows[0].startswith("table DataTable /Game/Datatable/Unit/DT_UnitParameter@4096"), rows
+assert "2 Steel Bat (row bat, category 2): level 5" in rows[1] and "shipped level 1; last rescale wanted 5" in rows[1], rows
+assert rows[2].startswith("table DataTable /Game/Other/DT_UnitParameter_Copy") and "level 33" in rows[3], rows
+assert len(list(L.eval("G.UnitRows('9004')").values())) == 3, "by id; the copy has no row 9004"
 n, _, _ = L.execute("return G.ScaleEnemies('off', nil, nil, true)")
 assert n == 2 and L.eval("unitRows.bat.MaxHitPoint") == 68 and L.eval("unitRows.boss.Experience") == 100, n
+assert L.execute("return G.ScaleCheck()")[0] is None, "nothing in force after off"
 
 assert L.eval("G.AirshipCondition()") == "{progress:0}>=4250"
 assert L.eval("G.AirshipCondition('{progress:0}>=0')") == "{progress:0}>=0"
@@ -1006,6 +1040,12 @@ function makeBoxActor(name, x, y, z, ex, ey, ez, cond)
   function box:GetUnscaledBoxExtent() return { X = self.ex, Y = self.ey, Z = self.ez } end
   function box:SetBoxExtent(v) self.ex, self.ey, self.ez = v.X, v.Y, v.Z end
   function box:SetHiddenInGame(h) self.hidden = h end
+  box.coll = (cond == "" or cond == "{progress:0}<5020") and 1 or 0
+  function box:GetCollisionEnabled() return self.coll end
+  function box:SetCollisionEnabled(v) self.coll = v end
+  function box:GetCollisionProfileName() return fname("NoLanding") end
+  function box:GetCollisionObjectType() return 14 end
+  function box:GetCollisionResponseToChannel(ch) if ch == 14 then return 2 elseif ch == 3 then return 0 else return 1 end end
   local a = { x = x, y = y, z = z, yaw = 0, m_Condition = cond, m_pBoxComponent = box, nm = name, dead = false }
   function a:IsValid() return not self.dead end
   function a:HasAnyInternalFlags() return false end
@@ -1078,18 +1118,33 @@ assert L.eval("#G.NoLandHere()") == 0
 assert L.eval("G.BoxHolds({ x = 0, y = 0, ex = 100, ey = 10, yaw = 90 }, 0, 50)") is True
 assert L.eval("G.BoxHolds({ x = 0, y = 0, ex = 100, ey = 10, yaw = 90 }, 50, 0)") is False
 assert L.eval("G.BoxHolds({ x = 0, y = 0, ex = 100, ey = 10, yaw = 0 }, 50, 0)") is True
-box, why = L.execute("local b, w = G.NoLandLock('pharm', true); return b, w")
-assert why is None and box.cond == "{progress:0}>=0" and box.x == -5930, (dict(box), why)
-box, why = L.execute("local b, w = G.NoLandLock('pharm', false); return b, w")
-assert why is None and box.cond == "{progress:0}<0", (dict(box), why)
+# collision as text
+col = L.eval("G.NoLandCollision(G.NoLandBoxes()[1])")
+assert col == ("collision: actor ?, enabled 1, profile NoLanding, object type 14, channels 0-7 11101111, "
+               "14-31 211111111111111111, hidden nil"), col
+# 0.15.1: every box with the story condition is locked (a second Pharm box here)
+L.execute("""
+nolandActors[#nolandActors + 1] = makeBoxActor("BP_MapNonLandingArea_C_7", -6500, -17000, 240, 100, 100, 50, "{progress:0}<7020")
+""")
+boxes, why = L.execute("local b, w = G.NoLandLock('pharm', true); return b, w")
+assert why is None and len(boxes) == 2 and boxes[1].cond == "{progress:0}>=0" and boxes[1].x == -5930, why
+assert L.eval("nolandActors[3].m_Condition") == "{progress:0}>=0"
+# refresh: the locked boxes get the collision of a box with no condition (1), now
+n_on, n_off, on_type = L.execute("return G.NoLandRefresh()")
+assert (n_on, n_off, on_type) == (2, 0, 1) and L.eval("nolandActors[2].m_pBoxComponent.coll") == 1
+boxes, why = L.execute("local b, w = G.NoLandLock('pharm', false); return b, w")
+assert why is None and boxes[2].cond == "{progress:0}<0", why
+assert L.execute("return G.NoLandRefresh()") == (0, 2, 1) and L.eval("nolandActors[3].m_pBoxComponent.coll") == 0
 box, why = L.execute("local b, w = G.NoLandLock('gronoa', true); return b, w")
 assert box is None and "not on this map" in why, why
 box, why = L.execute("local b, w = G.NoLandLock('narshe', true); return b, w")
 assert box is None and "no story box" in why, why
-assert L.eval("G.NoLandShow(true, 25)") == 2
+assert L.eval("G.NoLandShow(true, 25)") == 3
 assert L.eval("nolandActors[2].m_pBoxComponent.hidden") is False and L.eval("nolandActors[2].m_pBoxComponent.LineThickness") == 25
-assert L.eval("G.NoLandShow(false)") == 2 and L.eval("nolandActors[2].m_pBoxComponent.hidden") is True
-# off gives the story box its own condition back
-assert L.eval("G.NoLandOff()") == 1
-assert L.eval("nolandActors[2].m_Condition") == "{progress:0}<7020"
+assert L.eval("G.NoLandShow(false)") == 3 and L.eval("nolandActors[2].m_pBoxComponent.hidden") is True
+# off gives the story boxes their own condition and collision back
+L.execute("G.NoLandLock('pharm', true); G.NoLandRefresh()")
+assert L.eval("G.NoLandOff()") == 2
+assert L.eval("nolandActors[2].m_Condition") == "{progress:0}<7020" and L.eval("nolandActors[3].m_Condition") == "{progress:0}<7020"
+assert L.eval("nolandActors[2].m_pBoxComponent.coll") == 0 and L.eval("nolandActors[3].m_pBoxComponent.coll") == 0
 print("no-landing boxes: ok")

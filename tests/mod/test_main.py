@@ -904,6 +904,11 @@ function G.LevelBand(lv, range, at)
   return c - range, c + range, c
 end
 function G.OnField() return G.onField end
+G.check = { 0, 0, nil, false }
+function G.ScaleCheck() return G.check[1], G.check[2], G.check[3], G.check[4] end
+function G.UnitRows(w) G.shown = w; return { "table T@1", "  298 Metal Gigantuar: level 45" } end
+logged = {}
+print = function(s) logged[#logged + 1] = tostring(s) end
 function G.ScaleEnemies(mode, a, b, boss, knobs)
   G.scaleCalls[#G.scaleCalls + 1] = string.format("%s %s %s %s hp%d atk%d mag%d", mode, tostring(a), tostring(b),
     tostring(boss), knobs.hp, knobs.attack, knobs.magic)
@@ -944,11 +949,43 @@ assert len(calls()) == 8, "not off the field"
 L.execute("G.onField = true")
 tick(20)
 assert calls()[-1] == "clamp 18 24 false hp100 atk100 mag100" and len(calls()) == 9, calls()
+# 0.15.1: ffrap_scale alone says what is in force; the notice names the band
+logs = lambda: list(L.globals().logged.values())
+assert any("rescaled to party level 40: levels 17 to 23" in l for l in logs()), logs()
+L.execute('commands["ffrap_scale"]("ffrap_scale", {})')
+assert len(calls()) == 9, "the status changes nothing"
+assert any("scale: levels 18 to 24, follow on (party level 42); table check: 0 rows, 0 differ" in l for l in logs()), logs()
+# show: one enemy's rows, by name or id
+L.execute('commands["ffrap_scale"]("ffrap_scale", {"show", "metal", "gigantuar"})')
+assert G.shown == "metal gigantuar" and any("298 Metal Gigantuar: level 45" in l for l in logs()), logs()
+# the table no longer holds what we wrote: logged and written again, on the field only
+L.execute('G.check = { 300, 12, "Metal Gigantuar (298): level 52, wrote 20", false }')
+L.execute("G.onField = false")
+tick(40)
+assert len(calls()) == 9, "nothing off the field"
+L.execute("G.onField = true")
+tick(20)
+assert len(calls()) == 10 and calls()[-1] == "clamp 18 24 false hp100 atk100 mag100", calls()
+assert any("the table changed under us: 12 of 300 rows differ (Metal Gigantuar (298): level 52, wrote 20)" in l
+           for l in logs()), logs()
+L.execute('G.check = { 300, 0, nil, false }')
 # a plain ffrap_scale turns follow off
 L.execute('commands["ffrap_scale"]("ffrap_scale", {"off"})')
 L.execute("G.partyLv = 60")
 tick(20)
-assert calls()[-1] == "off nil nil false hp100 atk100 mag100" and len(calls()) == 10, calls()
+assert calls()[-1] == "off nil nil false hp100 atk100 mag100" and len(calls()) == 11, calls()
+L.execute('commands["ffrap_scale"]("ffrap_scale", {})')
+assert any("no rescale in force" in l for l in logs()), logs()
+# off: the check does not run, so nothing is written again
+L.execute('G.check = { 300, 12, "x", true }')
+tick(40)
+assert len(calls()) == 11, calls()
+# a fixed level keeps its own text, and is written again as it was
+L.execute('commands["ffrap_scale"]("ffrap_scale", {"30"})')
+assert any("rescaled, every enemy at level 30" in l for l in logs()), logs()
+tick(20)
+assert calls()[-1] == "fixed 30 nil false hp100 atk100 mag100" and len(calls()) == 13, calls()
+L.execute('G.check = { 300, 0, nil, false }')
 print("scale options and follow: ok")
 
 # 16. 0.15.0: ffrap_noland's commands reach game.lua with the right arguments
@@ -958,14 +995,17 @@ L.execute("""
 G.nl = {}
 local box = { name = "BOX", x = 1, y = 2, z = 3, ex = 4, ey = 5, ez = 6, yaw = 0, cond = "c" }
 function G.NoLandLine(b) return b.name end
-function G.NoLandLock(which, on) G.nl[#G.nl + 1] = "lock " .. which .. " " .. tostring(on) return box end
+function G.NoLandLock(which, on) G.nl[#G.nl + 1] = "lock " .. which .. " " .. tostring(on) return { box } end
+function G.NoLandCollision(b) return "collision of " .. b.name end
+function G.NoLandRefresh() G.nl[#G.nl + 1] = "refresh" return 1, 2, 1 end
 function G.NoLandHere() G.nl[#G.nl + 1] = "here" return { box }, { x = 1, y = 2, z = 3 } end
 function G.NoLandShow(on, w) G.nl[#G.nl + 1] = "show " .. tostring(on) .. " " .. tostring(w) return 7 end
 function G.NoLandSpawn(half) G.nl[#G.nl + 1] = "spawn " .. tostring(half) return box end
 function G.NoLandOff() G.nl[#G.nl + 1] = "off" return 2 end
 """)
-for args in ('{"lock", "Pharm"}', '{"unlock", "mysidia"}', '{"here"}', '{"show", "30"}', '{"hide"}', '{"spawn"}', '{"off"}'):
+for args in ('{"lock", "Pharm"}', '{"unlock", "mysidia"}', '{"here"}', '{"show", "30"}', '{"hide"}', '{"spawn"}',
+             '{"refresh"}', '{"off"}'):
     L.execute('commands["ffrap_noland"]("ffrap_noland", %s)' % args)
 assert list(G.nl.values()) == ["lock pharm true", "lock mysidia false", "here", "show true 30", "show false nil",
-                               "spawn 2000", "off"], list(G.nl.values())
+                               "spawn 2000", "refresh", "off"], list(G.nl.values())
 print("noland commands: ok")
