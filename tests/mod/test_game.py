@@ -947,18 +947,18 @@ function StaticFindObject(p)
   return prevSFO3(p)
 end
 """)
-n, sample, _ = L.execute("return G.ScaleEnemies('fixed', 20, nil, false)")
+n, sample, _ = L.execute("return G.ScaleEnemies('fixed', 20, nil, false)")[:3]
 assert n == 1 and "Steel Bat (2): level 1 -> 20" in sample, (n, sample)
 assert L.eval("unitRows.bat.Level") == 20 and L.eval("unitRows.bat.MaxHitPoint") == scaled(68, "MaxHitPoint", 1, 20)
 assert L.eval("unitRows.boss.Level") == 4 and L.eval("unitRows.rain.Level") == 1, "bosses and party left alone"
-n, _, _ = L.execute("return G.ScaleEnemies('fixed', 20, nil, false)")
+n, _, _ = L.execute("return G.ScaleEnemies('fixed', 20, nil, false)")[:3]
 assert n == 0, "already scaled: nothing to do"
 # the next scale works from the shipped row, not from the scaled one
-n, _, _ = L.execute("return G.ScaleEnemies('clamp', 5, 15, true)")
+n, _, _ = L.execute("return G.ScaleEnemies('clamp', 5, 15, true)")[:3]
 assert n == 2 and L.eval("unitRows.bat.Level") == 5 and L.eval("unitRows.boss.Level") == 5, n
 assert L.eval("unitRows.bat.MaxHitPoint") == scaled(68, "MaxHitPoint", 1, 5)
 # the knobs reach the rows
-n, _, lines = L.execute("return G.ScaleEnemies('clamp', 5, 15, true, { hp = 50 })")
+n, _, lines = L.execute("return G.ScaleEnemies('clamp', 5, 15, true, { hp = 50 })")[:3]
 assert n == 2 and L.eval("unitRows.bat.MaxHitPoint") == scaled(68, "MaxHitPoint", 1, 5, 50), n
 # a line per changed row, for scale.txt
 assert len(lines) == 2 and any(("level 1 -> 5\tHP %d\t" % scaled(68, "MaxHitPoint", 1, 5, 50)) in l for l in lines.values()), list(lines.values())
@@ -966,9 +966,10 @@ assert len(lines) == 2 and any(("level 1 -> 5\tHP %d\t" % scaled(68, "MaxHitPoin
 # again, shows up
 checked, differ, sample, reloaded = L.execute("return G.ScaleCheck()")
 assert (checked, differ, sample, reloaded) == (2, 0, None, False), (checked, differ, sample, reloaded)
-L.execute("unitRows.bat.Level = 1")
+L.execute("for k, v in pairs({ Level = 1, MaxHitPoint = 68, MaxBreakPoint = 50, Attack = 30, Defence = 30, Intelligence = 15,"
+          " Mind = 30, Agility = 13, Experience = 12, Money = 20 }) do unitRows.bat[k] = v end")
 checked, differ, sample, reloaded = L.execute("return G.ScaleCheck()")
-assert (checked, differ, reloaded) == (2, 1, False) and sample == "Steel Bat (2): level 1, wrote 5", sample
+assert (checked, differ, reloaded) == (2, 1, False) and sample == "Steel Bat (2): level 1, HP 68, wrote level 5", sample
 L.execute("function unitDT:GetAddress() return 4096 end; function unitDT:HasAnyInternalFlags() return false end; function unitDT:HasAnyFlags() return false end")
 assert L.execute("return G.ScaleCheck()")[3] is True, "a new address is a table loaded again"
 L.execute("G.ScaleEnemies('clamp', 5, 15, true, { hp = 50 })")
@@ -992,12 +993,23 @@ end
 """)
 rows = list(L.eval("G.UnitRows('steel')").values())
 assert len(rows) == 4 and rows[0].startswith("table DataTable /Game/Datatable/Unit/DT_UnitParameter@4096"), rows
-assert "2 Steel Bat (row bat, category 2): level 5" in rows[1] and "shipped level 1; last rescale wanted 5" in rows[1], rows
+assert "2 Steel Bat (row bat, category 2): level 5" in rows[1] and "game's level 1; last rescale wanted 5" in rows[1], rows
 assert rows[2].startswith("table DataTable /Game/Other/DT_UnitParameter_Copy") and "level 33" in rows[3], rows
 assert len(list(L.eval("G.UnitRows('9004')").values())) == 3, "by id; the copy has no row 9004"
-n, _, _ = L.execute("return G.ScaleEnemies('off', nil, nil, true)")
+n, _, _ = L.execute("return G.ScaleEnemies('off', nil, nil, true)")[:3]
 assert n == 2 and L.eval("unitRows.bat.MaxHitPoint") == 68 and L.eval("unitRows.boss.Experience") == 100, n
 assert L.execute("return G.ScaleCheck()")[0] is None, "nothing in force after off"
+# round 33: the game writes its own values into a row (Steel Bat at level 47 in the open world
+# save). The next rescale takes them as the base, and off gives them back, not the shipped ones.
+L.execute("G.ScaleEnemies('fixed', 10, nil, false)")
+L.execute("for k, v in pairs({ Level = 47, MaxHitPoint = 4800, Attack = 422, Experience = 1760 }) do unitRows.bat[k] = v end")
+n, sample, _, game_changed = L.execute("return G.ScaleEnemies('fixed', 10, nil, false)")
+assert n == 1 and game_changed == 1 and "level 47 -> 10, HP 4800 -> " in sample, (n, game_changed, sample)
+assert L.eval("unitRows.bat.MaxHitPoint") == scaled(4800, "MaxHitPoint", 47, 10)
+n, _, _, game_changed = L.execute("return G.ScaleEnemies('fixed', 10, nil, false)")
+assert n == 0 and game_changed == 0, "our own write is not the game's"
+L.execute("G.ScaleEnemies('off')")
+assert L.eval("unitRows.bat.Level") == 47 and L.eval("unitRows.bat.MaxHitPoint") == 4800, "off gives the game's row back"
 
 assert L.eval("G.AirshipCondition()") == "{progress:0}>=4250"
 assert L.eval("G.AirshipCondition('{progress:0}>=0')") == "{progress:0}>=0"

@@ -2524,7 +2524,13 @@ function G.SetStoryCounter(n)
     return G.StoryCounter()
 end
 
-local scaleOriginals = {}   -- unit id -> { Level = n, MaxHitPoint = n, ... } as the game shipped
+-- Round 33's log: the first rescale of a run read Steel Bat (shipped level 1, HP 68) as level
+-- 47, HP 4800, and after each save load 214 rows no longer held what we wrote. So the game
+-- writes enemy rows itself, at least when a save loads. "Original" is therefore the game's
+-- latest values, not the shipped ones: a row that changed since our last write gives a new
+-- original.
+local scaleOriginals = {}   -- unit id -> { Level = n, MaxHitPoint = n, ... } as the game last had it
+local scaleWrote = {}       -- unit id -> the values we last wrote into that row
 local scaleWanted = nil     -- unit id -> the level the last rescale wrote (nil: none, or "off")
 local scaleTables = nil     -- the tables the last rescale wrote, as "name@address" text
 
@@ -2544,13 +2550,14 @@ local function TableKeys(family)
 end
 
 -- Rescales every enemy row (and bosses too, if withBosses) by mode, a, b, as in ScaledLevel,
--- with the tuning knobs of ScaledStats. mode "off" restores the shipped rows. Returns how many
--- rows changed, one sample line (the first enemy that changed) for the log, and a line per
--- changed row (for scale.txt).
+-- with the tuning knobs of ScaledStats. mode "off" restores the game's own rows. Returns how
+-- many rows changed, one sample line (the first enemy that changed) for the log, a line per
+-- changed row (for scale.txt), and how many rows the game had changed since our last write
+-- (their values became the new originals).
 function G.ScaleEnemies(mode, a, b, withBosses, knobs)
     local family = TableFamily(Find(UNIT_TABLE))
     if #family == 0 then return nil, "DT_UnitParameter not loaded" end
-    local changed, sample, lines = 0, nil, {}
+    local changed, sample, lines, gameChanged = 0, nil, {}, 0
     local wanted = {}
     local fields = { "Level" }
     for _, k in ipairs(GROWTH_ORDER) do fields[#fields + 1] = k end
@@ -2561,10 +2568,18 @@ function G.ScaleEnemies(mode, a, b, withBosses, knobs)
                     local cat = Int(row.Category)
                     if not (cat == CATEGORY_ENEMY or (withBosses and cat == CATEGORY_BOSS)) then return end
                     local id = Int(row.ID)
+                    local now = {}
+                    for _, k in ipairs(fields) do now[k] = Int(row[k]) or 0 end
                     local orig = scaleOriginals[id]
+                    local wrote = scaleWrote[id]
+                    if orig and wrote then
+                        for _, k in ipairs(fields) do
+                            if now[k] ~= wrote[k] then orig = nil end
+                        end
+                        if not orig then gameChanged = gameChanged + 1 end
+                    end
                     if not orig then
-                        orig = {}
-                        for _, k in ipairs(fields) do orig[k] = Int(row[k]) or 0 end
+                        orig = now
                         scaleOriginals[id] = orig
                     end
                     local want = orig
@@ -2572,11 +2587,12 @@ function G.ScaleEnemies(mode, a, b, withBosses, knobs)
                     wanted[id] = want.Level
                     local diff = false
                     for _, k in ipairs(fields) do
-                        if Int(row[k]) ~= want[k] then
+                        if now[k] ~= want[k] then
                             row[k] = want[k]
                             diff = true
                         end
                     end
+                    scaleWrote[id] = want
                     if diff then
                         changed = changed + 1
                         lines[#lines + 1] = string.format(
@@ -2598,12 +2614,12 @@ function G.ScaleEnemies(mode, a, b, withBosses, knobs)
     end
     if mode == "off" then scaleWanted, scaleTables = nil, nil
     else scaleWanted, scaleTables = wanted, TableKeys(family) end
-    return changed, sample, lines
+    return changed, sample, lines, gameChanged
 end
 
 -- Round 33: a Pharm enemy showed a level that the last rescale did not give it. Whether the
 -- table still holds what the last rescale wrote. Returns how many rows it checked, how many
--- differ, one sample ("Metal Gigantuar (298): level 52, wrote 3"), and whether the table is a
+-- differ, one sample ("Metal Gigantuar (298): level 45, HP 9000, wrote level 3"), and whether the table is a
 -- different object now (loaded again). nil when no rescale is in force, or the table is gone.
 function G.ScaleCheck()
     if not scaleWanted then return nil, "no rescale in force" end
@@ -2621,8 +2637,8 @@ function G.ScaleCheck()
                     local lv = Int(row.Level)
                     if lv ~= want then
                         differ = differ + 1
-                        sample = sample or string.format("%s (%d): level %s, wrote %d", AsText(row.Name) or "?", id,
-                            tostring(lv), want)
+                        sample = sample or string.format("%s (%d): level %s, HP %s, wrote level %d", AsText(row.Name) or "?",
+                            id, tostring(lv), tostring(Int(row.MaxHitPoint)), want)
                     end
                 end)
             end)
@@ -2663,7 +2679,7 @@ function G.UnitRows(what)
                     if (id and rid == id) or (needle and needle ~= "" and name:lower():find(needle, 1, true)) then
                         local orig = scaleOriginals[rid]
                         out[#out + 1] = string.format(
-                            "  %d %s (row %s, category %s): level %s, HP %s, Attack %s, Intelligence %s, Defence %s; shipped level %s; last rescale wanted %s",
+                            "  %d %s (row %s, category %s): level %s, HP %s, Attack %s, Intelligence %s, Defence %s; game's level %s; last rescale wanted %s",
                             rid or -1, name, RowName(rowName), tostring(Int(row.Category)), tostring(Int(row.Level)),
                             tostring(Int(row.MaxHitPoint)), tostring(Int(row.Attack)), tostring(Int(row.Intelligence)),
                             tostring(Int(row.Defence)), tostring(orig and orig.Level or Int(row.Level)),

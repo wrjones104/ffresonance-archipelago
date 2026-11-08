@@ -146,8 +146,20 @@ World-map shinies verified as locations. Multiple crashes observed across differ
   - Landing was blocked at once, with no landing needed. A new box reads its condition when it starts, and the condition was empty.
   - The airship's shadow was gone over the box.
   - `cond {progress:0}<0` (never holds) took effect only after a landing and take-off, as on Mysidia.
-- **Scaling:** enemies in Pharm were level 45 and too strong. The log and `scale.txt` looked fine. The screenshot shows a Metal Gigantuar at level 45. It ships at level 52, and only one unit row has that name. So the table *was* rewritten, but with a band whose top is 45, as for a level 52 party (`party 3 at 80` gives 39 to 45). The low-level band (about level 3) was not in force in that battle. Not known yet: which command set it, or whether the table changed after the rescale. Mod 0.15.1 logs the band on screen, checks the table every 10 seconds on the field, and writes it again if it changed.
-- Waiting for: the `[FFRAP]` lines of `UE4SS.log` and `scale.txt` from this round.
+- **What the log shows for the boxes:**
+  - `show` drew 87 boxes, not the 111 that `list` found in round 32. Some boxes may have no box component, or sit in parts of the map that were not loaded. Not important for now.
+  - There is one Pharm story box: `BP_MapNonLandingArea_C_1` at (-5930, -17400), half-size 473 x 304 x 130. That confirms it covers one spot.
+  - The spawned box was at (152, 904), on Olderion.
+- **Scaling:** enemies in Pharm were level 45 and too strong. The screenshot shows a Metal Gigantuar at level 45. The data dump has it at level 52, and only one unit row has that name. The log explains most of it:
+  - `ffrap_scale party follow` worked: party level 3, band 0 to 4, 357 rows changed.
+  - **The game writes enemy rows itself.** The first rescale of the run read Steel Bat (ID 2) as level 47, HP 4800, attack 422, EXP 1760. The dump has it at level 1, HP 68. IDs are unique in the dump. So by then the game had already put other values in that row (this save is at story 8000).
+  - **A save load undoes our rescale.** After each save load (20:33:05 and 20:33:46), the same `party follow` command had to change 214 rows again. Without a change in between, it would have changed none. `follow` did not notice, because the party level stayed 3.
+  - So the level 45 Metal Gigantuar was most likely the game's own value, fought after a load and before the next manual rescale. Our band (0 to 4) cannot give 45.
+  - Afterwards, on the level 52 save (slot 1), follow moved the band to 40 to 44, then `off` restored the rows.
+- **Fixed in 0.15.1:**
+  - The table check (every 10 seconds on the field) writes our rows back after a load, and logs `scale: the table changed under us`.
+  - Our "original" for a row is now the game's latest values, not the first values we read. A row the game changed since our last write gives a new original, and the log says how many (`the game had changed N rows`). So `off` gives back the game's own rows.
+- **To find out off-line (the dump):** where the game gets Steel Bat's level 47 values (HP 4800, attack 422, EXP 1760). Look for another unit table, a second row for the same unit, or a table of enemy levels by story or area. This may be the game's own post-story enemy levels. If so, it matters for open world.
 
 ## Round 34 test plan (mod 0.15.1, world 0.3.1)
 
@@ -155,24 +167,26 @@ Two parts, on a save not linked to a seed (such as the 7090 + Crystal Tower save
 
 **Install:** copy `FFRArchipelago/Scripts` over the installed mod. The log should say `version 0.15.1 loaded`. `Assets` and the apworld did not change (world 0.3.1).
 
-**Before you start:** if you still have round 33's `UE4SS.log` and `scale.txt`, please send them. They show which band was in force in the Metal Gigantuar fight.
+**Off-line, before the round (Claude, local session):** search the dump for where Steel Bat's level 47 row comes from (HP 4800, attack 422, EXP 1760), and for Metal Gigantuar at level 45. If a table is found, the plan below may change.
 
 **Part A: scaling (do this first, in Pharm, with the low-level party):**
-1. Load the save and run `ffrap_scale party follow`. The on-screen message now names the band: "Enemies rescaled to party level N: levels A to B". Write down N, A and B.
-2. Run `ffrap_scale` with nothing after it. It says what is in force and checks the table ("table check: R rows, 0 differ").
-3. Run `ffrap_scale show metal gigantuar`. The log lists the Metal Gigantuar row in every unit table the game has loaded, with its level now and the level we wanted.
-4. Fight two or three battles. Note each enemy's level on the battle screen. If any is outside A to B, take a screenshot, then run `ffrap_scale` and `ffrap_scale show <that enemy's name>` straight after the battle.
-5. Look in the log for `scale: the table changed under us`. If it is there, the game loaded the table again (or something wrote it), and the mod wrote our rows back.
-6. Then `ffrap_scale party follow attack 70`, and `ffrap_scale party follow attack 50`. How do the fights feel?
+1. Start the game fresh and load the low-level save. Before any rescale, run `ffrap_scale show steel bat` and `ffrap_scale show metal gigantuar`. This logs the game's own values for them in this save.
+2. Run `ffrap_scale party follow`. The on-screen message now names the band: "Enemies rescaled to party level N: levels A to B". Write down N, A and B.
+3. Run `ffrap_scale` with nothing after it. It says what is in force and checks the table ("table check: R rows, 0 differ").
+4. Save, then load that save from the menu. Stay on the field for 10 seconds. The log should say `scale: the table changed under us` and write the rows again. Then run `ffrap_scale show metal gigantuar`. The log lists the Metal Gigantuar row in every unit table the game has loaded, with its level now and the level we wanted.
+5. Fight two or three battles. Note each enemy's level on the battle screen. If any is outside A to B, take a screenshot, then run `ffrap_scale` and `ffrap_scale show <that enemy's name>` straight after the battle.
+6. Look in the log for more `scale: the table changed under us` lines, for example after battles or map changes. Each one says when the game writes the rows.
+7. Then `ffrap_scale party follow attack 70`, and `ffrap_scale party follow attack 50`. How do the fights feel?
+8. Load the level 52 save, run `ffrap_scale show steel bat`, and compare with step 1. Do the game's values depend on the save?
 
 **Part B: no-landing boxes (world map, in the airship):**
-7. Mysidia, without landing in between:
+9. Mysidia, without landing in between:
    - Fly over Mysidia and run `ffrap_noland here`. Each box now has a second line: `collision: actor ..., enabled ..., profile ..., channels ...`.
    - `ffrap_noland lock mysidia`, then `ffrap_noland here` again. Try to land (expect: still allowed, as in round 33).
    - `ffrap_noland refresh`, then `here`, and try to land. Is landing blocked now, without a landing in between?
    - `ffrap_noland unlock mysidia`, `refresh`, `here`, and try to land. Is it allowed again?
    - Then land and take off once, and run `here` again. Did the `collision:` line change?
-8. Pharm: fly to the Pharm story box, around (-5930, -17400). `ffrap_noland show` draws it, which helps you find it. Run `ffrap_noland here`. Is it one small box? `lock pharm`, `refresh`, and try to land on that spot. Then try a spot a little away from it.
-9. Spawned box: over open land, `ffrap_noland spawn`, then `here`. Compare its `collision:` line with Mysidia's. Is the shadow gone again? Then `ffrap_noland cond {progress:0}<0` and `refresh`: can you land without a landing in between?
-10. `ffrap_noland off`.
-11. Run `ffrap_find Landing` and `ffrap_functions CPP_MapNonLandingArea CPP_MapAirShipCanNeverLandingBox`, and send `find_Landing.txt` and `functions.txt`. They may show a function that makes the game read the conditions again.
+10. Pharm: fly to the Pharm story box, around (-5930, -17400). `ffrap_noland show` draws it, which helps you find it. Run `ffrap_noland here`. Is it one small box? `lock pharm`, `refresh`, and try to land on that spot. Then try a spot a little away from it.
+11. Spawned box: over open land, `ffrap_noland spawn`, then `here`. Compare its `collision:` line with Mysidia's. Is the shadow gone again? Then `ffrap_noland cond {progress:0}<0` and `refresh`: can you land without a landing in between?
+12. `ffrap_noland off`.
+13. Run `ffrap_find Landing` and `ffrap_functions CPP_MapNonLandingArea CPP_MapAirShipCanNeverLandingBox`, and send `find_Landing.txt` and `functions.txt`. They may show a function that makes the game read the conditions again.

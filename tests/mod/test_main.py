@@ -912,7 +912,7 @@ print = function(s) logged[#logged + 1] = tostring(s) end
 function G.ScaleEnemies(mode, a, b, boss, knobs)
   G.scaleCalls[#G.scaleCalls + 1] = string.format("%s %s %s %s hp%d atk%d mag%d", mode, tostring(a), tostring(b),
     tostring(boss), knobs.hp, knobs.attack, knobs.magic)
-  return 3, "sample", { "1\tSoldier\tlevel 30 -> 3", "2\tBat\tlevel 1 -> 3" }
+  return 3, "sample", { "1\tSoldier\tlevel 30 -> 3", "2\tBat\tlevel 1 -> 3" }, G.gameChanged
 end
 """)
 calls = lambda: list(G.scaleCalls.values())
@@ -968,23 +968,27 @@ tick(20)
 assert len(calls()) == 10 and calls()[-1] == "clamp 18 24 false hp100 atk100 mag100", calls()
 assert any("the table changed under us: 12 of 300 rows differ (Metal Gigantuar (298): level 52, wrote 20)" in l
            for l in logs()), logs()
+L.execute("G.gameChanged = 12")
+L.execute('commands["ffrap_scale"]("ffrap_scale", {"party", "3", "at", "50", "follow"})')
+assert any("the game had changed 12 rows since our last write" in l for l in logs()), logs()
+L.execute("G.gameChanged = nil")
 L.execute('G.check = { 300, 0, nil, false }')
 # a plain ffrap_scale turns follow off
 L.execute('commands["ffrap_scale"]("ffrap_scale", {"off"})')
 L.execute("G.partyLv = 60")
 tick(20)
-assert calls()[-1] == "off nil nil false hp100 atk100 mag100" and len(calls()) == 11, calls()
+assert calls()[-1] == "off nil nil false hp100 atk100 mag100" and len(calls()) == 12, calls()
 L.execute('commands["ffrap_scale"]("ffrap_scale", {})')
 assert any("no rescale in force" in l for l in logs()), logs()
 # off: the check does not run, so nothing is written again
 L.execute('G.check = { 300, 12, "x", true }')
 tick(40)
-assert len(calls()) == 11, calls()
+assert len(calls()) == 12, calls()
 # a fixed level keeps its own text, and is written again as it was
 L.execute('commands["ffrap_scale"]("ffrap_scale", {"30"})')
 assert any("rescaled, every enemy at level 30" in l for l in logs()), logs()
 tick(20)
-assert calls()[-1] == "fixed 30 nil false hp100 atk100 mag100" and len(calls()) == 13, calls()
+assert calls()[-1] == "fixed 30 nil false hp100 atk100 mag100" and len(calls()) == 14, calls()
 L.execute('G.check = { 300, 0, nil, false }')
 print("scale options and follow: ok")
 

@@ -162,7 +162,12 @@ MP does not correlate with level (r² 0.09) and remains unchanged.
 
 - In the shipped game, parties normally out-level enemies by 10 or more levels from mid-game onward. Late-game enemies placed at exact party levels hit much harder than expected.
 - Mod 0.14.0 introduced `at` (band center percentage), `hp`/`power` multipliers, and dynamic `follow` tracking. Mod 0.15.0 splits `attack` and `magic` controls and exports `scale.txt` after each rescale.
-- **Round 33:** a Metal Gigantuar in Pharm showed level 45. It ships at 52, so our rewrite did reach the battle, but with a band for a level 52 party, not the low-level one being tested. Which command set it is not known yet. Mod 0.15.1 shows the band on screen, and checks every 10 seconds on the field that the table still holds what we wrote. If the game ever loads the table again, the check writes it back, and the log says so. For the real feature this check stays: a rescale must survive map changes and save loads.
+- **Round 33: the game writes enemy rows itself.**
+  - A Metal Gigantuar in Pharm showed level 45 while our band was 0 to 4. The dump has it at 52.
+  - In the same run, the first rescale read Steel Bat (ID 2, level 1 and HP 68 in the dump) as level 47, HP 4800, attack 422, EXP 1760. The save was at story 8000.
+  - After each save load, 214 enemy rows no longer held what we wrote.
+  - So the game puts its own values into `DT_UnitParameter` rows, at least when a save loads. They may be the game's own post-story enemy levels. Where they come from is the next off-line question: another table, or more rows in the dump.
+  - Mod 0.15.1 checks the table every 10 seconds on the field and writes it again if it changed. It also takes the game's latest values as each row's original. The real feature needs both: a rescale must survive save loads, and it must start from the game's values for that save.
 
 ## 6. Locations in the cleared world
 

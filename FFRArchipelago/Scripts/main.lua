@@ -1340,7 +1340,7 @@ end)
 -- ffrap_scale 30: every enemy at level 30. ffrap_scale 10 20: each enemy's own level, pulled
 -- into 10 to 20. ffrap_scale party 2: pulled into 80% of the party's average level, plus or
 -- minus 2 (the defaults; round 32 found "party 2 at 80" much better than "party 2").
--- ffrap_scale off: the shipped rows. Options, in any order after the numbers:
+-- ffrap_scale off: the game's own rows back. Options, in any order after the numbers:
 --   at 70      party mode: centre the band on 70% of the party's level (default 80)
 --   hp 70      enemy HP at 70% (default 100)
 --   attack 60  enemy Attack (physical damage) at 60% (default 100)
@@ -1356,9 +1356,12 @@ local scaleLast = nil     -- { mode, a, b, withBosses, knobs, text } of the resc
 local function applyScale(mode, a, b, withBosses, knobs)
     log(string.format("scale: %s %s %s, hp %d%%, attack %d%%, magic %d%%%s: starting", mode, tostring(a), tostring(b),
         knobs.hp, knobs.attack, knobs.magic, withBosses and ", with bosses" or ""))
-    local n, sample, lines = game.ScaleEnemies(mode, a, b, withBosses, knobs)
+    local n, sample, lines, gameChanged = game.ScaleEnemies(mode, a, b, withBosses, knobs)
     if n == nil then return nil, sample end
     log("scale: " .. n .. " rows changed" .. (sample and ("; " .. sample) or ""))
+    if gameChanged and gameChanged > 0 then
+        log("scale: the game had changed " .. gameChanged .. " rows since our last write; their new values are the base now")
+    end
     if mode == "off" then scaleLast = nil
     else
         local band = mode == "fixed" and ("every enemy at level " .. tostring(a))
