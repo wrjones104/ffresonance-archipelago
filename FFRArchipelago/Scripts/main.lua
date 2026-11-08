@@ -19,6 +19,7 @@
 --   ffrap_snapshot [name]        every field of the loaded save to snap_<name>.tsv (tools/snapdiff.py)
 --   ffrap_functions [class ...]  the functions of game classes to functions.txt (default: save-data classes)
 --   ffrap_skip [slot]            skip the prologue on a new game; with a slot, save there and reload
+--   ffrap_openstart [on|off|at x y z]  test: the skip goes to the open world start (story 7090, Crystal Tower)
 --   ffrap_inspect <class|path>   one object's fields and functions to inspect_<name>.tsv
 --   ffrap_title [list|add]       the Archipelago entry on the title menu (added at start-up)
 --   ffrap_notice [text]          experimental: show text with the game's quest-notice banner
@@ -45,7 +46,7 @@
 -- follows the save slots the linked game is saved to. While any other save is loaded, the mod
 -- grants nothing, reports nothing and leaves the chests vanilla.
 
-local VERSION = "0.15.2"
+local VERSION = "0.16.0"
 local PROTOCOL = 1        -- the bridge protocol; the apworld's MOD_PROTOCOL
 
 local MOD_DIR = (debug.getinfo(1, "S").source:gsub("^@", ""):gsub("\\", "/"):match("^(.*/)Scripts/[^/]+$"))
@@ -96,6 +97,7 @@ local FEED_WAIT_MAX = 10     -- seconds messages wait for the feed before they g
 -- On unless switched off: it works since 0.9.5 (round 23), and messages it cannot show go to
 -- the Toast after FEED_WAIT_MAX.
 local feedOn = true          -- ffrap_feed on|off; kept in ap_state.txt
+local openStart = false      -- ffrap_openstart on|off: the skip goes to the open world; kept in ap_state.txt
 local feedQueue = {}
 local feedQueueSince = nil   -- when the oldest waiting message came
 local feedShown = false      -- the feed has shown a line in this run
@@ -246,6 +248,7 @@ local function loadState()
         -- was on by default), and 0.9.1 took that as switched on and crashed (round 19), so the
         -- old key is ignored.
         if key == "itemfeed" then feedOn = value == "1" end
+        if key == "openstart" then openStart = value == "1" end
         if key == "seed" and value ~= "" then state.seed = value end
         if key == "slots" then
             for slot in value:gmatch("%d+") do state.slots[tonumber(slot)] = true end
@@ -264,6 +267,7 @@ local function saveState()
     f:write("applied\t", state.applied, "\n")
     f:write("blank\t", state.blank and "1" or "0", "\n")
     f:write("itemfeed\t", feedOn and "1" or "0", "\n")
+    f:write("openstart\t", openStart and "1" or "0", "\n")
     f:write("seed\t", state.seed or "", "\n")
     f:write("slots\t", slotsText(), "\n")
     f:write("slotItems\t", slotsText(true), "\n")
@@ -867,7 +871,7 @@ local function runSkip(slot, why)
         return false
     end
     local again = skipped == obj
-    local okRun, ok, report = pcall(game.SkipPrologue, { inventory = not again })
+    local okRun, ok, report = pcall(game.SkipPrologue, { inventory = not again, openStart = openStart })
     if not okRun then
         notify("Prologue skip raised an error: " .. tostring(ok))
         return false
@@ -887,7 +891,8 @@ local function runSkip(slot, why)
         saveState()
         log("skip: slot " .. slot .. " linked before the reload: session slots [" .. slotsText(true) .. "]")
     end
-    local saved, detail = game.SaveAndReload(slot)
+    local saved, detail = game.SaveAndReload(slot, (openStart and game.OPEN_START or game.SKIP_ARRIVAL).map)
+    if openStart then detail = detail .. "; open world start (story " .. game.OPEN_START.story .. ", Crystal Tower)" end
     log("skip (" .. why .. "): " .. detail)
     -- The automatic skip is part of starting an Archipelago game, so it is only logged when it
     -- works (round 24); a failure, or a skip by command, is shown.
@@ -1179,6 +1184,27 @@ command("ffrap_feed", function(p)
     else
         notify("Item feed is " .. (feedOn and "on" or "off") .. " (ffrap_feed on|off|test)")
     end
+end)
+
+-- ffrap_openstart [on|off|at <x> <y> <z>]: whether the prologue skip goes to the open world
+-- start (game.OPEN_START: story 7090 at the Crystal Tower) in place of the Earth Shrine. Off by
+-- default; a test switch for now (round 35). `at` moves the arrival point for this run only.
+command("ffrap_openstart", function(p)
+    local what = p and p[1]
+    if what == "on" or what == "off" then
+        openStart = what == "on"
+        saveState()
+    elseif what == "at" then
+        local x, y, z = tonumber(p[2]), tonumber(p[3]), tonumber(p[4])
+        if not (x and y and z) then
+            notify("Usage: ffrap_openstart at <x> <y> <z>")
+            return
+        end
+        game.OPEN_START.x, game.OPEN_START.y, game.OPEN_START.z = x, y, z
+    end
+    local a = game.OPEN_START
+    notify(string.format("Open world start is %s: story %d, map %d at %s, %s, %s (ffrap_openstart on|off|at x y z)",
+        openStart and "on" or "off", a.story, a.map, a.x, a.y, a.z))
 end)
 
 -- ffrap_layout <text>: the chain of panels holding the on-screen text that holds <text>, to

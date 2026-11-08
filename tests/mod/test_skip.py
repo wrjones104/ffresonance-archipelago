@@ -125,6 +125,19 @@ assert lua("#reloaded") == 1, "no second reload"
 L.execute("""libs["/Script/mucha.Default__CPP_BFL_SaveData"].SaveGameData = function(_, slot) saved[#saved + 1] = slot end
   sd.Map.mapId = 3001""")
 
+# 0.16.0: the open world start writes story 7090 and the Crystal Tower's dock in place of 1030
+# and the Earth Shrine; the reload then checks for map 3280
+OPEN_STORY, OPEN_MAP = 7090, 3280
+ok, report = L.execute("return G.SkipPrologue({ inventory = false, openStart = true })")
+assert ok is True, list(report.values())
+assert f"ok   story counter -> {OPEN_STORY}" in list(report.values())
+assert lua("G.StoryCounter()") == OPEN_STORY and lua("sd.Map.mapId") == OPEN_MAP
+assert lua("sd.Map.unitLocation.X") == -2830.0 and lua("sd.Map.unitLocation.Y") == -171140.0
+ok, detail = L.execute(f"return G.SaveAndReload(0, {OPEN_MAP})")
+assert ok is True and detail == f"saved to slot 0 (map {OPEN_MAP}, flag 1 false), reloading", detail
+ok, detail = L.execute("return G.SaveAndReload(0)")
+assert ok is False and f"map is {OPEN_MAP}" in detail and "not 3001" in detail, "the default still expects 3001"
+
 # 0.7.0: an Archipelago item granted before the skip with a starter item's id is kept
 L.execute("bag = { [10699] = 1, [11301] = 1, [12029] = 1, [12000] = 1 }; sd.Progress.Progress[1] = 1005")
 ok, report = L.execute("return G.SkipPrologue()")

@@ -132,6 +132,8 @@ function G.DumpChests() end
 function G.DumpFieldItems() end
 function G.ExportChests() return true, "238 rows" end
 G.SKIP_FROM_MIN, G.SKIP_FROM_MAX, G.skipRuns, G.reloads = 1005, 1005, 0, {}
+G.SKIP_ARRIVAL = { map = 3001 }
+G.OPEN_START = { story = 7090, map = 3280, x = -2830.0, y = -171140.0, z = 3000.0 }
 G.TITLE_NEW_GAME, G.TITLE_ARCHIPELAGO, G.titleAdds = 2, 5, 0
 G.titleOk = false   -- the title entry only once a section turns it on
 function G.AddTitleEntry()
@@ -165,8 +167,14 @@ function G.TitleVersionLine(line)
 end
 function G.TitleLogo(path, line) G.logos[#G.logos + 1] = path; return "added", "20x21" end
 function G.DescribeWidget(w) G.describes = G.describes + 1; return "widget TextBlock" end
-function G.SkipPrologue() G.skipRuns = G.skipRuns + 1; G.story = 1030; return true, { "ok   stub" } end
-function G.SaveAndReload(slot) G.reloads[#G.reloads + 1] = slot; return true, "saved to slot " .. slot .. ", reloading" end
+function G.SkipPrologue(opts)
+  G.skipRuns = G.skipRuns + 1; G.skipOpen = opts.openStart; G.story = opts.openStart and 7090 or 1030
+  return true, { "ok   stub" }
+end
+function G.SaveAndReload(slot, map)
+  G.reloads[#G.reloads + 1] = slot; G.reloadMap = map
+  return true, "saved to slot " .. slot .. ", reloading"
+end
 G.TEST_KEY_ID, G.gate, G.injectedItems = 29901, nil, {}
 function G.HasActiveGate() return G.gate ~= nil end
 function G.PlayerPose()
@@ -1048,3 +1056,26 @@ open(os.path.join(MODS, "mods.txt"), "w").write("Keybinds : 1\nFFRRandomizer : 1
 assert warnings_after_two_loads() == (1, 2)
 os.remove(os.path.join(MODS, "mods.txt"))
 print("randomizer warning: ok")
+
+# 18. 0.16.0: ffrap_openstart on makes the prologue skip go to the open world start (story 7090,
+# the Crystal Tower). Off by default; the switch is kept in ap_state.txt; `at` moves the arrival.
+OPEN_MAP, SHRINE_MAP = 3280, 3001
+L, G = boot()
+G.story = 1005
+load(G, "SD_OPEN", "0")
+L.execute('commands["ffrap_skip"]("ffrap_skip", {"0"})')
+assert G.skipOpen is False and G.reloadMap == SHRINE_MAP, (G.skipOpen, G.reloadMap)
+L.execute('commands["ffrap_openstart"]("ffrap_openstart", {"on"})')
+assert "openstart\t1\n" in read("ap_state.txt"), read("ap_state.txt")
+L.execute('commands["ffrap_openstart"]("ffrap_openstart", {"at", "100", "-200", "300.5"})')
+assert (G.OPEN_START.x, G.OPEN_START.y, G.OPEN_START.z) == (100, -200, 300.5)
+L.execute('commands["ffrap_openstart"]("ffrap_openstart", {"at", "100"})')
+assert G.OPEN_START.x == 100, "a short `at` changes nothing"
+L, G = boot()                                     # the switch survives a restart
+G.story = 1005
+load(G, "SD_OPEN2", "0")
+L.execute('commands["ffrap_skip"]("ffrap_skip", {"0"})')
+assert G.skipOpen is True and G.reloadMap == OPEN_MAP, (G.skipOpen, G.reloadMap)
+L.execute('commands["ffrap_openstart"]("ffrap_openstart", {"off"})')
+assert "openstart\t0\n" in read("ap_state.txt")
+print("open world start: ok")

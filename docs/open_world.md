@@ -200,9 +200,9 @@ The story natively awards party members, starter visions, the airship, and key i
 
 1. Round 31 probes (`ffrap_scale`, `ffrap_airship`, `ffrap_story 9000`): confirmed scaling works and exposed difficulty spikes.
 2. Round 32 probes: validated `at 80` scaling curve and grounded no-landing boxes (`ffrap_noland`).
-3. Round 33 probes: test separate `attack`/`magic` multipliers, box locking, ground-height spawning, and box queries. Results: locks apply after a landing; the Pharm story box is one spot; the scaling band in force was not the expected one.
-4. Round 34 probes: the table check, `ffrap_scale show`, box collision and `refresh`.
-5. Skip to open world: implement automated story 7090 initialization and Crystal Tower event trigger on new game.
+3. Round 33 probes: test separate `attack`/`magic` multipliers, box locking, ground-height spawning, and box queries. Results: locks apply after a landing; the Pharm story box is one spot; the scaling band in force was not the expected one (the FFR Randomizer mod rewrote it).
+4. Round 34 probes: the table check and `ffrap_scale show`. Results: the game does not write enemy rows; `attack 50` felt best at party level 3 in Pharm. The box probes wait for round 35 (no airship on that save).
+5. Skip to open world: mod 0.16.0's `ffrap_openstart on` makes the Archipelago new game's skip write story 7090 and an arrival in the Crystal Tower (round 35 test). Once it works, it becomes an apworld option sent in slot data.
 6. Enemy scaling integration: package tested curves into apworld options applied via `follow`.
 7. Gates: continent locks using landing exclusion zones and choke-point blockers for overland crossings.
 8. Goal and logic rules: define regions, events, and completion conditions in apworld.

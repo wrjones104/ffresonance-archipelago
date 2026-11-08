@@ -171,32 +171,50 @@ World-map shinies verified as locations. Multiple crashes observed across differ
 - So there is no sign yet that the game itself changes `DT_UnitParameter`. Rounds 1 to 32 ran on the desktop without the randomizer, so their results stand, round 31 and 32's scaling included. Only round 33's scaling and chest results are affected.
 - Fixed in 0.15.2: the mod warns in the log at start, and once on screen when a save loads, if FFRRandomizer is enabled (`enabled.txt`, or `FFRRandomizer : 1` in `mods.txt`). The log text `the game had changed N rows` is now `something else had changed N rows`. IDEAS.md, idea 10 has the details.
 
-## Round 34 test plan (mod 0.15.2, world 0.3.1)
+**Round 34 (mod 0.15.1, world 0.3.1, 2026-11-07, laptop): scaling holds without the randomizer; Part B not run (no airship).**
+- 0.15.2 was not installed yet (the log says 0.15.1). FFRRandomizer was off: no `[FFRRandomizer]` lines.
+- **The game does not write enemy rows.** Before any rescale, Steel Bat was level 1, HP 68 and Metal Gigantuar level 52, as in the dump. After a rescale, many save loads and battles, the table check read `367 rows, 0 differ`, and there was not one `table changed under us` line all session. Round 33's rewrites were the randomizer's.
+- The level 52 save (slot 1) had Steel Bat at level 1 too. The game's values do not depend on the save.
+- `follow` moved the band each time a load changed the party level (3, 1, 3, 4, 3, 53, 8, 3), and the on-screen message named the band ("levels 1 to 4").
+- **Feel, in Pharm at party level 3 and band 1 to 4:** `attack 50` felt best. Two caveats from the user:
+  - It is not known yet how 50 holds up at higher levels.
+  - The bear enemies' skills may be strong on their own. Nearly everything else only cast magic, and that did very little damage.
+- **Part B was not run: the airship was gone** on the save used for it. Not explained yet:
+  - Round 33's airship tests ran on the same laptop, also without FFRSLib, so FFRSLib's absence alone does not explain it.
+  - FFRRandomizer does not touch the airship (nothing in its code does).
+  - The user also tried `ffrap_story 8000` on a new Archipelago game (slot 0). The counter changed, but that alone is not the open world start: round 31 went to the Crystal Tower at 7090, and an event there set 8000.
+- **Added in 0.16.0: the open world start on an Archipelago new game.** `ffrap_openstart on` makes the prologue skip write story 7090 and an arrival in the Crystal Tower (map 3280) in place of story 1030 and the Earth Shrine. It is the same save, save to slot, reload as the skip. FFRSLib's `ffrs_story_set` and `ffrs_travel` do the same writes, so the mod does not need FFRSLib for it. The arrival is the tower's airship dock, near save point 139. Round 31's arrival point was not recorded, so this spot is a guess from the dump.
 
-Two parts, on a save not linked to a seed (such as the 7090 + Crystal Tower save). Send the `[FFRAP]` lines of `UE4SS.log`, `scale.txt` and `noland.txt`.
+## Round 35 test plan (mod 0.16.0, world 0.3.1)
+
+Three parts. Send the `[FFRAP]` lines of `UE4SS.log`, and screenshots where asked.
 
 **Install:**
-- **Turn FFRRandomizer off first:** delete (or rename) `ue4ss/Mods/FFRRandomizer/enabled.txt`. It was on in round 33 and it undid the rescale every 3 seconds. Leave its other files alone.
-- Copy `FFRArchipelago/Scripts` over the installed mod. The log should say `version 0.15.2 loaded`, and no `FFR Randomizer is on` line. There should be no `[FFRRandomizer]` lines at all. `Assets` and the apworld did not change (world 0.3.1).
+- Copy `FFRArchipelago/Scripts` over the installed mod. The log should say `version 0.16.0 loaded`. Keep FFRRandomizer off: there should be no `FFR Randomizer is on` line. `Assets` and the apworld did not change (world 0.3.1).
+- The seed for Part A must have the default goal (story 8050). The open world start reaches story 8000, so a test seed with a lower goal (such as 1130) completes at once.
 
-**Part A: scaling (do this first, in Pharm, with the low-level party):**
-1. Start the game and load the low-level save. Before any rescale, run `ffrap_scale show steel bat` and `ffrap_scale show metal gigantuar`. Expect the dump's values: Steel Bat level 1, HP 68; Metal Gigantuar level 52.
-2. Run `ffrap_scale party follow`. The on-screen message names the band: "Enemies rescaled to party level N: levels A to B". Write down N, A and B.
-3. Run `ffrap_scale` with nothing after it. It says what is in force and checks the table ("table check: R rows, 0 differ").
-4. Save, then load that save from the menu. Stay on the field for 20 seconds. Expect **no** `scale: the table changed under us` line: with the randomizer off, nothing should write the table. Then run `ffrap_scale show metal gigantuar`: its level should be the one we wanted. If the line does come, the game does write the rows after all; send the log.
-5. Fight two or three battles. Note each enemy's level on the battle screen. All should be within A to B. If any is outside, take a screenshot, then run `ffrap_scale` and `ffrap_scale show <that enemy's name>` straight after the battle.
-6. Look in the log for any `scale: the table changed under us` line, for example after battles or map changes. Expect none.
-7. How do the fights feel at the default (`at 80`)? Then `ffrap_scale party follow attack 70`, and `ffrap_scale party follow attack 50`. In round 33 the randomizer put its own values back, so this is the first test of the `attack` knob.
-8. Load the level 52 save and run `ffrap_scale show steel bat`. Expect level 1, as in step 1. The values should not depend on the save.
+**Part A: the open world start (new game):**
+1. At the title screen, open the console and run `ffrap_openstart on`. The message says "Open world start is on: story 7090, map 3280 at -2830.0, -171140.0, 3000.0". The switch is kept in `ap_state.txt` until you turn it off.
+2. Connect the client to a fresh seed, then choose New Game (Archipelago). Play the opening until you can move. The automatic skip runs then. The log should have:
+   - `skip: ok   story counter -> 7090`
+   - `skip: ok   arrival: map 3280 at -2830.0, -171140.0, 3000.0`
+   - `skip (automatic): saved to slot 0 (map 3280, ...), reloading; open world start (story 7090, Crystal Tower)`
+3. Where do you land? Take a screenshot. Then run `ffrap_status`. Wait about 10 seconds: round 31 had `story 7090 -> 8000` about 8 seconds after arriving. Does a cutscene play?
+4. If the spot is bad (in a wall, falling, stuck): run `ffrap_openstart at 10590 12960 600` (next to the tower's other save point, near the tower's 8000 event), then start another New Game (Archipelago). `at` lasts until the game closes.
+5. Find the airship. The dock's exits fly back to the world map. Is the airship there? Fly out to the world map. What looks wrong: party (Rain and Lasswell at level 1), menus, a cutscene that repeats, missing features?
+6. Leave `ffrap_openstart on` for now if it worked. `ffrap_openstart off` gives the normal start again.
 
-**Part B: no-landing boxes (world map, in the airship):**
-9. Mysidia, without landing in between:
+**Part B: the missing airship (quick, on the save from round 34):**
+7. Load that save on the world map. Run `ffrap_airship` (it logs the airship's spawn condition) and `ffrap_status`. Also say which save slot round 33's airship tests used, if you remember, and whether the desktop and laptop share saves through Steam Cloud.
+
+**Part C: no-landing boxes (world map, in the airship; use the open world save from Part A):**
+8. Mysidia, without landing in between:
    - Fly over Mysidia and run `ffrap_noland here`. Each box now has a second line: `collision: actor ..., enabled ..., profile ..., channels ...`.
    - `ffrap_noland lock mysidia`, then `ffrap_noland here` again. Try to land (expect: still allowed, as in round 33).
    - `ffrap_noland refresh`, then `here`, and try to land. Is landing blocked now, without a landing in between?
    - `ffrap_noland unlock mysidia`, `refresh`, `here`, and try to land. Is it allowed again?
    - Then land and take off once, and run `here` again. Did the `collision:` line change?
-10. Pharm: fly to the Pharm story box, around (-5930, -17400). `ffrap_noland show` draws it, which helps you find it. Run `ffrap_noland here`. Is it one small box? `lock pharm`, `refresh`, and try to land on that spot. Then try a spot a little away from it.
-11. Spawned box: over open land, `ffrap_noland spawn`, then `here`. Compare its `collision:` line with Mysidia's. Is the shadow gone again? Then `ffrap_noland cond {progress:0}<0` and `refresh`: can you land without a landing in between?
-12. `ffrap_noland off`.
-13. Run `ffrap_find Landing` and `ffrap_functions CPP_MapNonLandingArea CPP_MapAirShipCanNeverLandingBox`, and send `find_Landing.txt` and `functions.txt`. They may show a function that makes the game read the conditions again.
+9. Pharm: fly to the Pharm story box, around (-5930, -17400). `ffrap_noland show` draws it, which helps you find it. Run `ffrap_noland here`. Is it one small box? `lock pharm`, `refresh`, and try to land on that spot. Then try a spot a little away from it.
+10. Spawned box: over open land, `ffrap_noland spawn`, then `here`. Compare its `collision:` line with Mysidia's. Is the shadow gone again? Then `ffrap_noland cond {progress:0}<0` and `refresh`: can you land without a landing in between?
+11. `ffrap_noland off`.
+12. Run `ffrap_find Landing` and `ffrap_functions CPP_MapNonLandingArea CPP_MapAirShipCanNeverLandingBox`, and send `find_Landing.txt` and `functions.txt`. They may show a function that makes the game read the conditions again.

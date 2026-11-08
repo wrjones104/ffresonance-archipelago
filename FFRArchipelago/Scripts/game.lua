@@ -1710,6 +1710,13 @@ local SKIP_INVENTORY = {            -- item id, change. Fina's prologue gear goe
 }
 local SKIP_MAPS = { 5010, 2013, 20000, 3001 }   -- known and visited
 G.SKIP_ARRIVAL = { map = 3001, x = -5775.0, y = 0.0, z = -197.85, direction = 2 }
+-- The open world start (round 31, found with FFRSLib's story and travel tools): story 7090,
+-- then the Crystal Tower (map 3280). An event there moves the story to 8000 about 8 s after
+-- arriving; then the tower is open and the airship is there. Round 31's arrival point was not
+-- recorded. This one is the tower's airship dock, 400 units from save point 139
+-- (-2830, -171540, 2900 in the dump), among the Enterprise's blocking boxes and the exits that
+-- fly back to the world map.
+G.OPEN_START = { story = 7090, map = 3280, x = -2830.0, y = -171140.0, z = 3000.0, direction = 2 }
 
 -- The unitParameterList entry for a unit id, or nil.
 local function UnitEntry(sd, unitId)
@@ -1737,8 +1744,12 @@ end
 -- opts.inventory = false leaves the inventory alone. Its changes are relative, so that an
 -- Archipelago item granted before the skip with the same id as a starter item is kept, and they
 -- must be made once per save. Every other step sets an absolute value and can run again.
+-- opts.openStart = true writes the open world start (G.OPEN_START) in place of story 1030 and
+-- the Earth Shrine.
 function G.SkipPrologue(opts)
     local doInventory = not (opts and opts.inventory == false)
+    local storyTo = (opts and opts.openStart) and G.OPEN_START.story or G.SKIP_STORY
+    local a = (opts and opts.openStart) and G.OPEN_START or G.SKIP_ARRIVAL
     local report, failed = {}, false
     local function step(ok, what)
         report[#report + 1] = (ok and "ok   " or "FAIL ") .. what
@@ -1748,8 +1759,8 @@ function G.SkipPrologue(opts)
     if not sd then return false, { "FAIL no save loaded" } end
 
     -- The story counter, as FFRSLib's ffrs_story_set writes it.
-    local okStory = pcall(function() sd.Progress.Progress[1] = G.SKIP_STORY end)
-    step(okStory and G.StoryCounter() == G.SKIP_STORY, "story counter -> " .. G.SKIP_STORY)
+    local okStory = pcall(function() sd.Progress.Progress[1] = storyTo end)
+    step(okStory and G.StoryCounter() == storyTo, "story counter -> " .. storyTo)
 
     -- Event flags: eventFlag is 0-based in the snapshots, so flag i is Lua element i + 1.
     local flags = nil
@@ -1848,8 +1859,7 @@ function G.SkipPrologue(opts)
     step(perMap ~= nil and #mapBad == 0, "maps known and visited: " .. table.concat(SKIP_MAPS, ", ")
         .. (#mapBad > 0 and (" (failed: " .. table.concat(mapBad, ", ") .. ")") or ""))
 
-    -- Where the reload puts the player: in front of the Earth Shrine.
-    local a = G.SKIP_ARRIVAL
+    -- Where the reload puts the player: in front of the Earth Shrine, or at the Crystal Tower.
     local okMap = pcall(function()
         sd.Map.mapId = a.map
         sd.Map.unitLocation.X = a.x
@@ -1863,8 +1873,10 @@ function G.SkipPrologue(opts)
 end
 
 -- Writes the loaded save to a slot and starts the field from that slot, as FFRSLib's
--- ffrs_travel does. Returns ok and a detail.
-function G.SaveAndReload(slot)
+-- ffrs_travel does. `map` is the map the skip wrote (default the Earth Shrine's). Returns ok
+-- and a detail.
+function G.SaveAndReload(slot, map)
+    map = map or G.SKIP_ARRIVAL.map
     local lib = Lib("CPP_BFL_SaveData")
     if not (lib and lib.SaveGameData) then return false, "CPP_BFL_SaveData not found" end
     local ok, err = pcall(function() lib:SaveGameData(slot) end)
@@ -1873,9 +1885,9 @@ function G.SaveAndReload(slot)
     -- the same, the reload would land on the prologue map again, so say so.
     local mapNow, flag1 = G.MapId(), G.GetFlag(1)
     local kept = "map " .. tostring(mapNow) .. ", flag 1 " .. tostring(flag1)
-    if mapNow ~= G.SKIP_ARRIVAL.map then
+    if mapNow ~= map then
         return false, "saved to slot " .. slot .. ", but the save's map is " .. tostring(mapNow)
-            .. " after saving, not " .. G.SKIP_ARRIVAL.map .. " (SaveGameData wrote the real position). Not reloading"
+            .. " after saving, not " .. map .. " (SaveGameData wrote the real position). Not reloading"
     end
     local mgr = Live("CPP_MapManager")
     if not mgr then return false, "saved to slot " .. slot .. " (" .. kept .. "), but no map manager to reload with: load the slot by hand" end
