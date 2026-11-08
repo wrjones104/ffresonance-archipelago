@@ -137,6 +137,13 @@ ok, detail = L.execute(f"return G.SaveAndReload(0, {OPEN_MAP})")
 assert ok is True and detail == f"saved to slot 0 (map {OPEN_MAP}, flag 1 false), reloading", detail
 ok, detail = L.execute("return G.SaveAndReload(0)")
 assert ok is False and f"map is {OPEN_MAP}" in detail and "not 3001" in detail, "the default still expects 3001"
+# 0.16.1: G.OpenStart writes only the story and the arrival, on a save that already had the skip
+L.execute("sd.Progress.Progress[1] = 1030; sd.Map.mapId = 3001; sd.Player.WinNum = 12")
+ok, report = L.execute("return G.OpenStart()")
+assert ok is True and list(report.values()) == [
+    f"ok   story counter -> {OPEN_STORY}", f"ok   arrival: map {OPEN_MAP} at -2830.0, -171140.0, 3000.0"], list(report.values())
+assert lua("G.StoryCounter()") == OPEN_STORY and lua("sd.Map.mapId") == OPEN_MAP
+assert lua("sd.Player.WinNum") == 12, "the rest of the save is left alone"
 
 # 0.7.0: an Archipelago item granted before the skip with a starter item's id is kept
 L.execute("bag = { [10699] = 1, [11301] = 1, [12029] = 1, [12000] = 1 }; sd.Progress.Progress[1] = 1005")

@@ -1739,6 +1739,25 @@ local function Put(target, field, want)
     return ok and now == want
 end
 
+-- The story counter, as FFRSLib's ffrs_story_set writes it. Returns ok and a report line.
+local function WriteStory(sd, n)
+    local ok = pcall(function() sd.Progress.Progress[1] = n end)
+    return ok and G.StoryCounter() == n, "story counter -> " .. n
+end
+
+-- The map and point a reload starts the player at, as FFRSLib's ffrs_travel writes them.
+-- Returns ok and a report line.
+local function WriteArrival(sd, a)
+    local ok = pcall(function()
+        sd.Map.mapId = a.map
+        sd.Map.unitLocation.X = a.x
+        sd.Map.unitLocation.Y = a.y
+        sd.Map.unitLocation.Z = a.z
+        sd.Map.unitDirection = a.direction
+    end)
+    return ok and G.MapId() == a.map, "arrival: map " .. a.map .. " at " .. a.x .. ", " .. a.y .. ", " .. a.z
+end
+
 -- Applies the skip to the loaded save. Saves nothing. Returns ok and a list of report lines,
 -- one per step ("ok ..." or "FAIL ..."). ok is false when any step failed.
 -- opts.inventory = false leaves the inventory alone. Its changes are relative, so that an
@@ -1758,9 +1777,7 @@ function G.SkipPrologue(opts)
     local sd = G.SaveData()
     if not sd then return false, { "FAIL no save loaded" } end
 
-    -- The story counter, as FFRSLib's ffrs_story_set writes it.
-    local okStory = pcall(function() sd.Progress.Progress[1] = storyTo end)
-    step(okStory and G.StoryCounter() == storyTo, "story counter -> " .. storyTo)
+    step(WriteStory(sd, storyTo))
 
     -- Event flags: eventFlag is 0-based in the snapshots, so flag i is Lua element i + 1.
     local flags = nil
@@ -1860,16 +1877,20 @@ function G.SkipPrologue(opts)
         .. (#mapBad > 0 and (" (failed: " .. table.concat(mapBad, ", ") .. ")") or ""))
 
     -- Where the reload puts the player: in front of the Earth Shrine, or at the Crystal Tower.
-    local okMap = pcall(function()
-        sd.Map.mapId = a.map
-        sd.Map.unitLocation.X = a.x
-        sd.Map.unitLocation.Y = a.y
-        sd.Map.unitLocation.Z = a.z
-        sd.Map.unitDirection = a.direction
-    end)
-    step(okMap and G.MapId() == a.map, "arrival: map " .. a.map .. " at " .. a.x .. ", " .. a.y .. ", " .. a.z)
+    step(WriteArrival(sd, a))
 
     return not failed, report
+end
+
+-- Writes the open world start (G.OPEN_START: story 7090 and the Crystal Tower arrival) into
+-- the loaded save, for a save that has already had the prologue skip (round 31 did these two
+-- steps by hand after the skip). Saves nothing. Returns ok and report lines, as SkipPrologue.
+function G.OpenStart()
+    local sd = G.SaveData()
+    if not sd then return false, { "FAIL no save loaded" } end
+    local okStory, story = WriteStory(sd, G.OPEN_START.story)
+    local okMap, arrival = WriteArrival(sd, G.OPEN_START)
+    return okStory and okMap, { (okStory and "ok   " or "FAIL ") .. story, (okMap and "ok   " or "FAIL ") .. arrival }
 end
 
 -- Writes the loaded save to a slot and starts the field from that slot, as FFRSLib's

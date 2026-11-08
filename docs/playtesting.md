@@ -185,24 +185,30 @@ World-map shinies verified as locations. Multiple crashes observed across differ
   - The user also tried `ffrap_story 8000` on a new Archipelago game (slot 0). The counter changed, but that alone is not the open world start: round 31 went to the Crystal Tower at 7090, and an event there set 8000.
 - **Added in 0.16.0: the open world start on an Archipelago new game.** `ffrap_openstart on` makes the prologue skip write story 7090 and an arrival in the Crystal Tower (map 3280) in place of story 1030 and the Earth Shrine. It is the same save, save to slot, reload as the skip. FFRSLib's `ffrs_story_set` and `ffrs_travel` do the same writes, so the mod does not need FFRSLib for it. The arrival is the tower's airship dock, near save point 139. Round 31's arrival point was not recorded, so this spot is a guess from the dump.
 
-## Round 35 test plan (mod 0.16.0, world 0.3.1)
+**Round 35, first run (mod 0.16.0, world 0.3.1, 2026-11-07, laptop): the open world start did not run, because the switch was off.**
+- New Game (Archipelago) skipped the prologue as before: `story counter -> 1030`, `arrival: map 3001`, saved to slot 0 and reloaded at the Earth Shrine.
+- The switch was off. `ap_state.txt` reads `openstart 0`, and the log has no line from `ffrap_openstart` at all: the command never reached the mod. The command always logs, so it was not run, or it was typed where the console does not pass it on.
+- Nothing on screen tells you either way at the title. This laptop has no ModSettings (`LogicMods` is empty), and the mod's title-screen messages go to ModSettings' Toast. On the field they go to the item feed.
+- Fixed in 0.16.1:
+  - `ffrap_openstart now` writes the open world start into the loaded save, saves it to its slot and reloads. This needs no new game and no title-screen step. It is what round 31 did by hand: the skip first, then story 7090 and the travel.
+  - Choosing New Game (Archipelago) now logs `title: open world start is on` (or `off`).
+
+## Round 35 test plan (mod 0.16.1, world 0.3.1)
 
 Three parts. Send the `[FFRAP]` lines of `UE4SS.log`, and screenshots where asked.
 
 **Install:**
-- Copy `FFRArchipelago/Scripts` over the installed mod. The log should say `version 0.16.0 loaded`. Keep FFRRandomizer off: there should be no `FFR Randomizer is on` line. `Assets` and the apworld did not change (world 0.3.1).
-- The seed for Part A must have the default goal (story 8050). The open world start reaches story 8000, so a test seed with a lower goal (such as 1130) completes at once.
+- Copy `FFRArchipelago/Scripts` over the installed mod. The log should say `version 0.16.1 loaded`. Keep FFRRandomizer off: there should be no `FFR Randomizer is on` line. `Assets` and the apworld did not change (world 0.3.1).
+- The seed must have the default goal (story 8050). The open world start reaches story 8000, so a test seed with a lower goal (such as 1130) completes at once.
 
-**Part A: the open world start (new game):**
-1. At the title screen, open the console and run `ffrap_openstart on`. The message says "Open world start is on: story 7090, map 3280 at -2830.0, -171140.0, 3000.0". The switch is kept in `ap_state.txt` until you turn it off.
-2. Connect the client to a fresh seed, then choose New Game (Archipelago). Play the opening until you can move. The automatic skip runs then. The log should have:
-   - `skip: ok   story counter -> 7090`
-   - `skip: ok   arrival: map 3280 at -2830.0, -171140.0, 3000.0`
-   - `skip (automatic): saved to slot 0 (map 3280, ...), reloading; open world start (story 7090, Crystal Tower)`
-3. Where do you land? Take a screenshot. Then run `ffrap_status`. Wait about 10 seconds: round 31 had `story 7090 -> 8000` about 8 seconds after arriving. Does a cutscene play?
-4. If the spot is bad (in a wall, falling, stuck): run `ffrap_openstart at 10590 12960 600` (next to the tower's other save point, near the tower's 8000 event), then start another New Game (Archipelago). `at` lasts until the game closes.
-5. Find the airship. The dock's exits fly back to the world map. Is the airship there? Fly out to the world map. What looks wrong: party (Rain and Lasswell at level 1), menus, a cutscene that repeats, missing features?
-6. Leave `ffrap_openstart on` for now if it worked. `ffrap_openstart off` gives the normal start again.
+**Part A: the open world start:**
+1. Connect the client. Load slot 0, the Archipelago game from the first run (story 1030, at the Earth Shrine). Once you can move, run `ffrap_openstart now`. The item feed says "Open world start: saved to slot 0 (map 3280, ...), reloading", and the log has:
+   - `openstart: ok   story counter -> 7090`
+   - `openstart: ok   arrival: map 3280 at -2830.0, -171140.0, 3000.0`
+2. Where do you land? Take a screenshot. Then run `ffrap_status`. Wait about 10 seconds: round 31 had `story 7090 -> 8000` about 8 seconds after arriving. Does a cutscene play?
+3. If the spot is bad (in a wall, falling, stuck): load slot 0 again if needed, then run `ffrap_openstart at 10590 12960 600` (next to the tower's other save point, near the tower's 8000 event) and `ffrap_openstart now` again. `at` lasts until the game closes. If the story is already past 7090 by then, that is fine: `now` writes 7090 again.
+4. Find the airship. The dock's exits fly back to the world map. Is the airship there? Fly out to the world map. What looks wrong: party (Rain and Lasswell at level 1), menus, a cutscene that repeats, missing features?
+5. Optional, the new game path: run `ffrap_openstart on`, then New Game (Archipelago). The log should say `title: open world start is on`, then `skip: ok   story counter -> 7090` and `skip (automatic): ... open world start (story 7090, Crystal Tower)`. At the title, check the log for the reply to `ffrap_openstart on`: nothing shows on screen there without ModSettings. `ffrap_openstart off` gives the normal start again.
 
 **Part B: the missing airship (quick, on the save from round 34):**
 7. Load that save on the world map. Run `ffrap_airship` (it logs the airship's spawn condition) and `ffrap_status`. Also say which save slot round 33's airship tests used, if you remember, and whether the desktop and laptop share saves through Steam Cloud.

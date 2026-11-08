@@ -175,6 +175,8 @@ function G.SaveAndReload(slot, map)
   G.reloads[#G.reloads + 1] = slot; G.reloadMap = map
   return true, "saved to slot " .. slot .. ", reloading"
 end
+G.openStarts = 0
+function G.OpenStart() G.openStarts = G.openStarts + 1; G.story = 7090; return true, { "ok   stub" } end
 G.TEST_KEY_ID, G.gate, G.injectedItems = 29901, nil, {}
 function G.HasActiveGate() return G.gate ~= nil end
 function G.PlayerPose()
@@ -1078,4 +1080,26 @@ L.execute('commands["ffrap_skip"]("ffrap_skip", {"0"})')
 assert G.skipOpen is True and G.reloadMap == OPEN_MAP, (G.skipOpen, G.reloadMap)
 L.execute('commands["ffrap_openstart"]("ffrap_openstart", {"off"})')
 assert "openstart\t0\n" in read("ap_state.txt")
+
+# 0.16.1 (round 35: the switch was off and the log did not say so): an Archipelago new game logs
+# whether it is on. `now` writes the open world start into the loaded save, saves it to its slot
+# and reloads at the Crystal Tower; with no save loaded it does nothing.
+L, G = boot(CAPTURE)
+G.titleOk = True
+L.execute("tickFn()")                             # the first tick adds the entry and hooks the choice
+L.execute("""param = { v = 5 }; function param:get() return self.v end; function param:set(x) self.v = x end""")
+L.execute('hooks["/Script/mucha.CPP_VM_Title:ExecuteEntry"](nil, param)')
+assert any("open world start is off" in s for s in L.globals().logged.values())
+G.ready = False
+L.execute('commands["ffrap_openstart"]("ffrap_openstart", {"now"})')
+assert G.openStarts == 0, "no save loaded"
+G.story = 1030
+G.slotOf = L.table_from({"800": 0})               # the skipped save, in slot 0
+load(G, "SD_OPEN3", "800")
+reloads = len(list(G.reloads.values()))
+L.execute('commands["ffrap_openstart"]("ffrap_openstart", {"now"})')
+assert G.openStarts == 1 and G.reloadMap == OPEN_MAP, (G.openStarts, G.reloadMap)
+assert list(G.reloads.values())[reloads:] == [0], list(G.reloads.values())
+L.execute('commands["ffrap_openstart"]("ffrap_openstart", {"now", "4"})')
+assert list(G.reloads.values())[-1] == 4, "an explicit slot"
 print("open world start: ok")

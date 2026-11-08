@@ -19,7 +19,7 @@
 --   ffrap_snapshot [name]        every field of the loaded save to snap_<name>.tsv (tools/snapdiff.py)
 --   ffrap_functions [class ...]  the functions of game classes to functions.txt (default: save-data classes)
 --   ffrap_skip [slot]            skip the prologue on a new game; with a slot, save there and reload
---   ffrap_openstart [on|off|at x y z]  test: the skip goes to the open world start (story 7090, Crystal Tower)
+--   ffrap_openstart [on|off|at x y z|now [slot]]  test: the open world start (story 7090, Crystal Tower)
 --   ffrap_inspect <class|path>   one object's fields and functions to inspect_<name>.tsv
 --   ffrap_title [list|add]       the Archipelago entry on the title menu (added at start-up)
 --   ffrap_notice [text]          experimental: show text with the game's quest-notice banner
@@ -46,7 +46,7 @@
 -- follows the save slots the linked game is saved to. While any other save is loaded, the mod
 -- grants nothing, reports nothing and leaves the chests vanilla.
 
-local VERSION = "0.16.0"
+local VERSION = "0.16.1"
 local PROTOCOL = 1        -- the bridge protocol; the apworld's MOD_PROTOCOL
 
 local MOD_DIR = (debug.getinfo(1, "S").source:gsub("^@", ""):gsub("\\", "/"):match("^(.*/)Scripts/[^/]+$"))
@@ -801,6 +801,8 @@ local function hookTitle()
                 pcall(function() inType:set(game.TITLE_NEW_GAME) end)
                 notify(state.seed and "Archipelago: starting a new game for the seed"
                     or "Archipelago: starting a new game (connect the client to link it to a seed)")
+                -- Round 35: the switch was off and the log did not say so.
+                log("title: open world start is " .. (openStart and "on" or "off") .. " (ffrap_openstart)")
             end
         end)
     end)
@@ -1186,12 +1188,34 @@ command("ffrap_feed", function(p)
     end
 end)
 
--- ffrap_openstart [on|off|at <x> <y> <z>]: whether the prologue skip goes to the open world
--- start (game.OPEN_START: story 7090 at the Crystal Tower) in place of the Earth Shrine. Off by
--- default; a test switch for now (round 35). `at` moves the arrival point for this run only.
+-- ffrap_openstart [on|off|at <x> <y> <z>|now [slot]]: whether the prologue skip goes to the
+-- open world start (game.OPEN_START: story 7090 at the Crystal Tower) in place of the Earth
+-- Shrine. Off by default; a test switch for now (round 35). `at` moves the arrival point for
+-- this run only. `now` writes the open world start into the loaded save (one that has had the
+-- skip), saves it to its slot (or `slot`) and reloads, with no new game.
 command("ffrap_openstart", function(p)
     local what = p and p[1]
-    if what == "on" or what == "off" then
+    if what == "now" then
+        local slot = tonumber(p[2]) or save.slot
+        if not game.InGame() or not slot then
+            notify("Load a save first (or give a slot: ffrap_openstart now <slot>)")
+            return
+        end
+        local ok, report = game.OpenStart()
+        for _, line in ipairs(report) do log("openstart: " .. line) end
+        if not ok then
+            notify("Open world start failed (see the log); nothing saved")
+            return
+        end
+        -- As in runSkip: the reload makes a new save object, so a linked session keeps the slot.
+        if state.seed and save.ok then
+            linkSlot(slot, state.applied)
+            saveState()
+        end
+        local _, detail = game.SaveAndReload(slot, game.OPEN_START.map)
+        notify("Open world start: " .. detail)
+        return
+    elseif what == "on" or what == "off" then
         openStart = what == "on"
         saveState()
     elseif what == "at" then
@@ -1203,7 +1227,7 @@ command("ffrap_openstart", function(p)
         game.OPEN_START.x, game.OPEN_START.y, game.OPEN_START.z = x, y, z
     end
     local a = game.OPEN_START
-    notify(string.format("Open world start is %s: story %d, map %d at %s, %s, %s (ffrap_openstart on|off|at x y z)",
+    notify(string.format("Open world start is %s: story %d, map %d at %s, %s, %s (ffrap_openstart on|off|at x y z|now)",
         openStart and "on" or "off", a.story, a.map, a.x, a.y, a.z))
 end)
 
