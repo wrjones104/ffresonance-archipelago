@@ -449,13 +449,13 @@ Still open: `ffrap_functions CPP_BFL_Battle CPP_UnitParameter CPP_ContFxAddRandS
 2. **Location list and save keys.** Chests and shinies are both in the save under `(GetSameMapId, m_UniqueId)`. The save answers at once and from anywhere (rounds 2 and 3). The chest table gives all 238 rows, but not their save keys. Shinies have no table at all. `seen.tsv` collects both as you play. The other options are ZArkadia's generated shiny list (197 spots across 52 maps, used with permission) or reading the level files.
 3. **Story chests and story-gated shinies.** Rowless chests with no reward look like story chests; what do they give, and through which event? Some shinies only appear under a story condition (map 3001 uid 80: `{progress:31}==20`), which the apworld's logic must respect.
 4. **Grant timing.** Is it safe to grant during battles, cutscenes and menus? So far the only guard is "save data and map manager exist" plus a 2-second settle.
-5. **Per-save item index. Done in mod 0.7.0** (see below). Before that, the applied count was one number per install. The real mod must store it per save: in the save itself, or in a sidecar file keyed by slot, the way FFRBestiary does. Then loading an older save re-grants exactly what that save lacks. Reported checks can stay per install, because in Archipelago a location checked once stays checked. Save linking (mod 0.5.0) makes this matter sooner: `/bind` on a different save in the middle of a seed keeps the count, so that save never gets the items applied before. The prologue skip makes a new save for each seed, so it needs this first.
-   - **How it works:** the mod keeps every item of the session in memory, and `ap_state.txt` keeps, for each linked slot, how many of them the save in that slot holds (`slotItems 1=3,2=4`).
-   - **When the game saves:** the mod notes the count at that moment against the slot. Items granted after that and never saved are granted again when that slot is loaded.
-   - **New saves:** a new game, and a save linked with `/bind` that the session did not own before, start at 0 and get every item.
-   - **Mod reload:** the state also names the live save the count is for (`live <object>|<timestamp>`), so reloading the mod while the same save is loaded grants nothing twice.
-   - **The skip:** `ffrap_skip <slot>` links its slot with the count the save holds when it saves. Its inventory changes are now relative and made once per save, so an Archipelago item with a starter item's id is kept.
-   - **Bridge fix, found on the way:** a new seed's `ap_in.txt` that was already longer than the old one was read from the old position, so its `seed` line was missed. The mod now also starts over when the file's first line changes.
+5. **Per-save item index (resolved in mod 0.7.0).** Previously the applied count was tracked once per install. The mod now tracks item counts per save slot so loading an older save re-grants missing items without duplication.
+   - The mod keeps every session item in memory, while `ap_state.txt` tracks received counts per linked slot (`slotItems 1=3,2=4`).
+   - When saving, the mod records the current count against that slot. Items granted afterward without saving are re-granted upon loading the slot.
+   - New games and saves newly bound via `/bind` start at count 0 and receive all items.
+   - The state file records the active save object and timestamp (`live <object>|<timestamp>`) so reloading the mod with the same save loaded does not duplicate grants.
+   - `ffrap_skip <slot>` links its slot with the item count at the moment of saving. Inventory adjustments are relative and applied once per save.
+   - The file reader restarts from offset 0 whenever the first line of `ap_in.txt` changes, ensuring new seeds with longer initial payloads are recognized immediately.
 6. **Vanilla rewards.**
    - Chests: blanking to 1 gil and restoring both work (round 5).
    - Shinies carry their reward on the actor, so the same trick should work on `m_ItemId` and `m_Money`. Not done yet: in round 29 each world-map shiny gave its own item as well as the Archipelago one.

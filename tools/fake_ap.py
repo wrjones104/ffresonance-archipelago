@@ -18,44 +18,45 @@ Commands:
 Standard library only.
 """
 
-import os
+from pathlib import Path
 import shlex
 import sys
 import threading
 import time
 
-DEFAULT_MOD_DIR = (r"C:\Program Files (x86)\Steam\steamapps\common\FINAL FANTASY RESONANCE"
-                   r"\FFRS\Binaries\Win64\ue4ss\Mods\FFRArchipelago")
+DEFAULT_MOD_DIR = Path(
+    r"C:\Program Files (x86)\Steam\steamapps\common\FINAL FANTASY RESONANCE"
+    r"\FFRS\Binaries\Win64\ue4ss\Mods\FFRArchipelago"
+)
 
 
-def next_index(in_path):
+def next_index(in_path: Path) -> int:
     """The next item index: one past the highest item already in ap_in.txt."""
     highest = -1
-    if os.path.exists(in_path):
+    if in_path.exists():
         with open(in_path, encoding="utf-8") as f:
             for line in f:
                 fields = line.rstrip("\r\n").split("\t")
-                if fields[0] == "item" and len(fields) > 1 and fields[1].isdigit():
+                if len(fields) > 1 and fields[0] == "item" and fields[1].isdigit():
                     highest = max(highest, int(fields[1]))
     return highest + 1
 
 
-def clean(text):
+def clean(text: object) -> str:
     return " ".join(str(text).split())
 
 
-def append(in_path, *fields):
+def append(in_path: Path, *fields: object) -> None:
     with open(in_path, "a", encoding="utf-8", newline="\n") as f:
         f.write("\t".join(clean(x) for x in fields) + "\n")
-        f.flush()
 
 
-def tail(out_path, stop):
+def tail(out_path: Path, stop: threading.Event) -> None:
     """Prints new ap_out.txt lines as the game writes them."""
-    offset = os.path.getsize(out_path) if os.path.exists(out_path) else 0
+    offset = out_path.stat().st_size if out_path.exists() else 0
     while not stop.is_set():
-        if os.path.exists(out_path):
-            size = os.path.getsize(out_path)
+        if out_path.exists():
+            size = out_path.stat().st_size
             if size < offset:
                 offset = 0
             if size > offset:
@@ -70,12 +71,12 @@ def tail(out_path, stop):
         time.sleep(0.25)
 
 
-def main():
-    mod_dir = sys.argv[1] if len(sys.argv) > 1 else DEFAULT_MOD_DIR
-    if not os.path.isdir(mod_dir):
+def main() -> None:
+    mod_dir = Path(sys.argv[1]) if len(sys.argv) > 1 else DEFAULT_MOD_DIR
+    if not mod_dir.is_dir():
         sys.exit(f"Mod folder not found: {mod_dir}")
-    in_path = os.path.join(mod_dir, "ap_in.txt")
-    out_path = os.path.join(mod_dir, "ap_out.txt")
+    in_path = mod_dir / "ap_in.txt"
+    out_path = mod_dir / "ap_out.txt"
     index = next_index(in_path)
     print(f"Bridge: {mod_dir}\nNext item index: {index}. Type 'help' for commands.")
 
@@ -97,9 +98,8 @@ def main():
                 elif cmd == "help":
                     print(__doc__)
                 elif cmd == "log":
-                    if os.path.exists(out_path):
-                        with open(out_path, encoding="utf-8") as f:
-                            print(f.read().replace("\t", "  "))
+                    if out_path.exists():
+                        print(out_path.read_text(encoding="utf-8").replace("\t", "  "))
                 elif cmd == "msg":
                     append(in_path, "msg", " ".join(args))
                 elif cmd == "item":

@@ -1,19 +1,18 @@
 """The client's world_version(), from the world folder and from the built .apworld in
 custom_worlds, inside a scratch Archipelago copy. Also: start_session writes a `client` line."""
-import sys
-from pathlib import Path
-
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-import paths  # noqa: E402
 
 import os
 import shutil
 import subprocess
 import sys
 import tempfile
+from pathlib import Path
 
-HERE = os.path.dirname(os.path.abspath(__file__))
-AP = str(paths.APTEST)                # the scratch Archipelago copy (tests/make_aptest.py)
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+import paths  # noqa: E402
+
+HERE = Path(__file__).resolve().parent
+AP = str(paths.APTEST)
 REPO = str(paths.REPO)
 PY = str(paths.AP_PYTHON)
 VERSION = paths.world_version()

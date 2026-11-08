@@ -8,34 +8,32 @@ Archipelago's own "Build APWorlds" component adds (worlds/Files.py, APWorldConta
 """
 
 import json
-import os
+from pathlib import Path
 import zipfile
 
 CONTAINER_FIELDS = {"compatible_version": 7, "version": 7}
 
-ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-SRC = os.path.join(ROOT, "apworld", "ff_resonance")
-DIST = os.path.join(ROOT, "dist")
-OUT = os.path.join(DIST, "ff_resonance.apworld")
+ROOT = Path(__file__).resolve().parents[1]
+SRC = ROOT / "apworld" / "ff_resonance"
+DIST = ROOT / "dist"
+OUT = DIST / "ff_resonance.apworld"
 
 
 def main() -> None:
-    os.makedirs(DIST, exist_ok=True)
+    DIST.mkdir(exist_ok=True)
     count = 0
     with zipfile.ZipFile(OUT, "w", zipfile.ZIP_DEFLATED) as z:
-        for folder, dirs, files in os.walk(SRC):
-            dirs[:] = [d for d in dirs if d != "__pycache__"]
-            for name in sorted(files):
-                if name.endswith((".pyc", ".pyo")) or (folder == SRC and name == "archipelago.json"):
-                    continue
-                full = os.path.join(folder, name)
-                z.write(full, os.path.join("ff_resonance", os.path.relpath(full, SRC)))
-                count += 1
-        with open(os.path.join(SRC, "archipelago.json"), encoding="utf-8") as f:
-            manifest = json.load(f)
+        for file in sorted(SRC.rglob("*")):
+            if file.is_dir() or file.suffix in (".pyc", ".pyo") or "__pycache__" in file.parts or file == SRC / "archipelago.json":
+                continue
+            z.write(file, Path("ff_resonance") / file.relative_to(SRC))
+            count += 1
+
+        manifest = json.loads((SRC / "archipelago.json").read_text(encoding="utf-8"))
         manifest.update(CONTAINER_FIELDS)
         z.writestr("ff_resonance/archipelago.json", json.dumps(manifest))
         count += 1
+
     print(f"{count} files -> {OUT}")
 
 

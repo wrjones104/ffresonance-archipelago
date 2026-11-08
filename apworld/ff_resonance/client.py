@@ -43,7 +43,7 @@ def world_version() -> str:
     try:
         data = pkgutil.get_data(__package__ or "ff_resonance", "archipelago.json")
         return str(json.loads(data.decode("utf-8")).get("world_version", "?")) if data else "?"
-    except Exception:  # a broken install should still start the client
+    except (OSError, json.JSONDecodeError, UnicodeDecodeError):
         return "?"
 
 
@@ -122,9 +122,16 @@ class FFResonanceContext(CommonContext):
             with open(self.in_path, encoding="utf-8") as f:
                 existing = f.read().splitlines()
         if existing and existing[0] == header:
-            self.items_written = sum(1 for line in existing if line.startswith("item\t"))
-            self.goal_announced = GOAL_MESSAGE_LINE in existing
-            self.scouts_written = any(line.startswith("scout\t") for line in existing)
+            self.items_written = 0
+            self.goal_announced = False
+            self.scouts_written = False
+            for line in existing:
+                if line.startswith("item\t"):
+                    self.items_written += 1
+                elif line.startswith("scout\t"):
+                    self.scouts_written = True
+                elif line == GOAL_MESSAGE_LINE:
+                    self.goal_announced = True
         else:
             if existing:
                 logger.info("ap_in.txt belonged to another seed or slot; starting it over.")
@@ -174,19 +181,21 @@ class FFResonanceContext(CommonContext):
         self.out_offset += end
         for raw in data[:end].decode("utf-8", "replace").splitlines():
             fields = raw.rstrip("\r").split("\t")
-            kind = fields[0]
-            if kind == "hello" and len(fields) > 1:
-                self.mod_version = fields[1]
-            elif kind == "seed" and len(fields) > 1:
-                self.out_scope = fields[1]
+            if len(fields) < 2:
+                continue
+            kind, val = fields[0], fields[1]
+            if kind == "hello":
+                self.mod_version = val
+            elif kind == "seed":
+                self.out_scope = val
             elif self.out_scope != self.session_key or self.session_key is None:
                 continue
-            elif kind == "check" and len(fields) > 1:
-                location = LOCATION_KEY_TO_ID.get(fields[1])
+            elif kind == "check":
+                location = LOCATION_KEY_TO_ID.get(val)
                 if location is not None:
                     checks.add(location)
-            elif kind == "story" and len(fields) > 1 and fields[1].lstrip("-").isdigit():
-                story = max(story or 0, int(fields[1]))
+            elif kind == "story" and val.lstrip("-").isdigit():
+                story = max(story or 0, int(val))
         return checks, story
 
     def write_scouts(self, items: list) -> int:
@@ -204,7 +213,7 @@ class FFResonanceContext(CommonContext):
                 continue
             name = self.item_names.lookup_in_slot(item.item, item.player)
             player = self.player_names.get(item.player, f"player {item.player}")
-            self.write_line("scout", key, name, player, item.flags, 1 if item.player == self.slot else 0)
+            self.write_line("scout", key, name, player, item.flags, int(item.player == self.slot))
             written += 1
         if written:
             self.scouts_written = True

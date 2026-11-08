@@ -6,6 +6,7 @@
   tests. Default: the venv of C:/Projects/archipelago.
 """
 
+import json
 import os
 import shutil
 from pathlib import Path
@@ -31,5 +32,4 @@ def install_world() -> Path:
 
 
 def world_version() -> str:
-    import json
     return json.loads((WORLD / "archipelago.json").read_text(encoding="utf-8"))["world_version"]

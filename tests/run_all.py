@@ -44,6 +44,13 @@ def run(python: Path, test: Path) -> bool:
     return result.returncode == 0
 
 
+def has_dotnet_sdk() -> bool:
+    if not shutil.which("dotnet"):
+        return False
+    check = subprocess.run(["dotnet", "--list-sdks"], capture_output=True, text=True, errors="replace")
+    return check.returncode == 0 and bool(check.stdout.strip())
+
+
 def main() -> int:
     failed, skipped = 0, []
     py = lua_python()
@@ -52,11 +59,12 @@ def main() -> int:
             failed += not run(py, test)
     else:
         skipped.append("mod tests: no Python with lupa (python -m venv .venv-tests, then pip install lupa)")
-    # The data tools: plain Python, no setup.
+
     for test in sorted((HERE / "tools").glob("test_*.py")):
         failed += not run(Path(sys.executable), test)
+
     # The game dump tool only has to build: running it needs the game installed.
-    if shutil.which("dotnet"):
+    if has_dotnet_sdk():
         build = subprocess.run(["dotnet", "build", "tools/dump_game", "-nologo", "-v", "q"], capture_output=True,
                                text=True, encoding="utf-8", errors="replace", cwd=str(paths.REPO))
         ok = build.returncode == 0
@@ -66,10 +74,10 @@ def main() -> int:
         failed += not ok
     else:
         skipped.append("tools/dump_game build: no dotnet SDK")
+
     if paths.AP_PYTHON.exists() and (paths.APTEST / "CommonClient.py").exists():
         for test in sorted((HERE / "client").glob("test_*.py")):
             failed += not run(paths.AP_PYTHON, test)
-        # The world's own generation tests, in Archipelago's test framework.
         paths.install_world()
         world = subprocess.run([str(paths.AP_PYTHON), "-m", "unittest", "worlds.ff_resonance.test"],
                                capture_output=True, text=True, encoding="utf-8", errors="replace",
@@ -81,6 +89,7 @@ def main() -> int:
         failed += not ok
     else:
         skipped.append(f"client tests: need {paths.AP_PYTHON} and {paths.APTEST} (python tests/make_aptest.py)")
+
     for s in skipped:
         print(f"skip {s}")
     print("failed:", failed, "skipped groups:", len(skipped))

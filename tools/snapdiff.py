@@ -12,17 +12,18 @@ thousands of entries reads as a few lines ("save.Progress.eventFlag: on 1, 7, 14
 
 from __future__ import annotations
 
+from collections import defaultdict
+from pathlib import Path
 import re
 import sys
-from collections import OrderedDict, defaultdict
 
 NOISY = re.compile(r"(^live\.|PlayTime|playTime|DateTime|Ticks|Date\b|Time$|Timer)", re.IGNORECASE)
 ELEMENT = re.compile(r"^(.*)\[(\d+)\]$")
 ADDRESS = re.compile(r"^UScriptStruct: [0-9A-F]+$")  # a struct the snapshot could not walk
 
 
-def load(path: str) -> "OrderedDict[str, str]":
-    values: OrderedDict[str, str] = OrderedDict()
+def load(path: str | Path) -> dict[str, str]:
+    values: dict[str, str] = {}
     with open(path, encoding="utf-8") as f:
         for line in f:
             key, _, value = line.rstrip("\n").partition("\t")
@@ -49,7 +50,7 @@ def main(argv: list[str]) -> int:
     flags_off: dict[str, list[int]] = defaultdict(list)
     groups: dict[str, list[str]] = defaultdict(list)
 
-    for key in list(a.keys()) + [k for k in b.keys() if k not in a]:
+    for key in (a | b):
         old, new = a.get(key), b.get(key)
         if old == new or (not show_all and NOISY.search(key)):
             continue

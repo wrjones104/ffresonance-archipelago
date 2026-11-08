@@ -1,15 +1,15 @@
 """Checks the client's session key with the 0.6.7 behaviour (seed_name never set from RoomInfo)."""
+
+import asyncio
+import os
 import sys
+import tempfile
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import paths  # noqa: E402
 
-import os
-import sys
-import tempfile
-
-AP = str(paths.APTEST)                # the scratch Archipelago copy (tests/make_aptest.py)
+AP = str(paths.APTEST)
 paths.install_world()
 sys.path.insert(0, AP)
 os.chdir(AP)
@@ -36,9 +36,6 @@ def connect(ctx, seed, slot=1):
     ctx.on_package("Connected", {"slot_data": {"goal_story_checkpoint": 1130}})
 
 
-import asyncio
-
-
 async def main():
     folder = tempfile.mkdtemp()
     ctx = FFResonanceContext(None, None, folder)
@@ -58,7 +55,9 @@ async def main():
     ctx.reset_server_state()
     check("reset clears room seed", ctx.room_seed_name is None)
 
-    ctx.keep_alive_task.cancel()
+    if ctx.keep_alive_task:
+        ctx.keep_alive_task.cancel()
+
 
 asyncio.run(main())
 print("failures:", failures)
