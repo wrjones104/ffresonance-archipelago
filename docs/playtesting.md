@@ -152,32 +152,42 @@ World-map shinies verified as locations. Multiple crashes observed across differ
   - The spawned box was at (152, 904), on Olderion.
 - **Scaling:** enemies in Pharm were level 45 and too strong. The screenshot shows a Metal Gigantuar at level 45. The data dump has it at level 52, and only one unit row has that name. The log explains most of it:
   - `ffrap_scale party follow` worked: party level 3, band 0 to 4, 357 rows changed.
-  - **The game writes enemy rows itself.** The first rescale of the run read Steel Bat (ID 2) as level 47, HP 4800, attack 422, EXP 1760. The dump has it at level 1, HP 68. IDs are unique in the dump. So by then the game had already put other values in that row (this save is at story 8000).
-  - **A save load undoes our rescale.** After each save load (20:33:05 and 20:33:46), the same `party follow` command had to change 214 rows again. Without a change in between, it would have changed none. `follow` did not notice, because the party level stayed 3.
-  - So the level 45 Metal Gigantuar was most likely the game's own value, fought after a load and before the next manual rescale. Our band (0 to 4) cannot give 45.
+  - **Something else writes enemy rows** (first read as the game; it was the FFR Randomizer mod, see "Off-line, before round 34" below). The first rescale of the run read Steel Bat (ID 2) as level 47, HP 4800, attack 422, EXP 1760. The dump has it at level 1, HP 68. IDs are unique in the dump. So by then the game had already put other values in that row (this save is at story 8000).
+  - **A save load undoes our rescale** (wrong too: the randomizer's 3-second rewrite undid it, not the load). After each save load (20:33:05 and 20:33:46), the same `party follow` command had to change 214 rows again. Without a change in between, it would have changed none. `follow` did not notice, because the party level stayed 3.
+  - So the level 45 Metal Gigantuar was not our value. Our band (0 to 4) cannot give 45.
   - Afterwards, on the level 52 save (slot 1), follow moved the band to 40 to 44, then `off` restored the rows.
 - **Fixed in 0.15.1:**
   - The table check (every 10 seconds on the field) writes our rows back after a load, and logs `scale: the table changed under us`.
-  - Our "original" for a row is now the game's latest values, not the first values we read. A row the game changed since our last write gives a new original, and the log says how many (`the game had changed N rows`). So `off` gives back the game's own rows.
-- **To find out off-line (the dump):** where the game gets Steel Bat's level 47 values (HP 4800, attack 422, EXP 1760). Look for another unit table, a second row for the same unit, or a table of enemy levels by story or area. This may be the game's own post-story enemy levels. If so, it matters for open world.
+  - Our "original" for a row is now the table's latest values, not the first values we read. A row that something else changed since our last write gives a new original, and the log says how many (`something else had changed N rows`, from 0.15.2). So `off` gives back what was there.
 
-## Round 34 test plan (mod 0.15.1, world 0.3.1)
+**Off-line, before round 34 (2026-11-07): the FFR Randomizer mod wrote the enemy rows, not the game.**
+- The dump tool could not run on the laptop (no .NET SDK, no `Mappings.usmap`). The answer came from the installed mods and the full `UE4SS.log` instead.
+- Round 33 was the first round on the user's laptop, and the randomizer was still on there: `Mods/FFRRandomizer/enabled.txt` exists, so UE4SS ran FFRRandomizer 1.0.1. Its settings had `enemies=on`, `bosses=on` and `gil_rate=0.25`. At 20:20:54 it logged `Enemies: 225 in random encounters, 222 swapped` and `Applied 6180 field changes`.
+- Its enemy shuffle gives a swapped-in enemy the replaced enemy's level, stats, EXP, gil, drops and steals. Its spoiler log for seed 21625644487 has:
+  - "Steel Bat (unit 2) fights in place of Nanochu (unit 254)". Nanochu is level 47 in the dump. That is Steel Bat's level 47.
+  - "Metal Gigantuar (unit 298) fights in place of Thunder Gigas (unit 186)". Thunder Gigas is level 45. That is the level 45 Metal Gigantuar.
+- It writes its whole plan again every 3 seconds. Our rescale at 20:32:26 changed 357 rows. At 20:32:28 it logged `Applied 2147 field changes`: most of our rescale was gone 1.5 seconds later. The 214 rows after each load were its rows, not a reload.
+- The chests too: from 20:21:42, one second after the save was linked to the seed, its count went 9, 693, 9, 693... every 3 seconds. That fits our chest blanks and its item shuffle writing the same chest rows in turn. Which value a chest held when it was opened is a matter of timing.
+- So there is no sign yet that the game itself changes `DT_UnitParameter`. Rounds 1 to 32 ran on the desktop without the randomizer, so their results stand, round 31 and 32's scaling included. Only round 33's scaling and chest results are affected.
+- Fixed in 0.15.2: the mod warns in the log at start, and once on screen when a save loads, if FFRRandomizer is enabled (`enabled.txt`, or `FFRRandomizer : 1` in `mods.txt`). The log text `the game had changed N rows` is now `something else had changed N rows`. IDEAS.md, idea 10 has the details.
+
+## Round 34 test plan (mod 0.15.2, world 0.3.1)
 
 Two parts, on a save not linked to a seed (such as the 7090 + Crystal Tower save). Send the `[FFRAP]` lines of `UE4SS.log`, `scale.txt` and `noland.txt`.
 
-**Install:** copy `FFRArchipelago/Scripts` over the installed mod. The log should say `version 0.15.1 loaded`. `Assets` and the apworld did not change (world 0.3.1).
-
-**Off-line, before the round (Claude, local session):** search the dump for where Steel Bat's level 47 row comes from (HP 4800, attack 422, EXP 1760), and for Metal Gigantuar at level 45. If a table is found, the plan below may change.
+**Install:**
+- **Turn FFRRandomizer off first:** delete (or rename) `ue4ss/Mods/FFRRandomizer/enabled.txt`. It was on in round 33 and it undid the rescale every 3 seconds. Leave its other files alone.
+- Copy `FFRArchipelago/Scripts` over the installed mod. The log should say `version 0.15.2 loaded`, and no `FFR Randomizer is on` line. There should be no `[FFRRandomizer]` lines at all. `Assets` and the apworld did not change (world 0.3.1).
 
 **Part A: scaling (do this first, in Pharm, with the low-level party):**
-1. Start the game fresh and load the low-level save. Before any rescale, run `ffrap_scale show steel bat` and `ffrap_scale show metal gigantuar`. This logs the game's own values for them in this save.
-2. Run `ffrap_scale party follow`. The on-screen message now names the band: "Enemies rescaled to party level N: levels A to B". Write down N, A and B.
+1. Start the game and load the low-level save. Before any rescale, run `ffrap_scale show steel bat` and `ffrap_scale show metal gigantuar`. Expect the dump's values: Steel Bat level 1, HP 68; Metal Gigantuar level 52.
+2. Run `ffrap_scale party follow`. The on-screen message names the band: "Enemies rescaled to party level N: levels A to B". Write down N, A and B.
 3. Run `ffrap_scale` with nothing after it. It says what is in force and checks the table ("table check: R rows, 0 differ").
-4. Save, then load that save from the menu. Stay on the field for 10 seconds. The log should say `scale: the table changed under us` and write the rows again. Then run `ffrap_scale show metal gigantuar`. The log lists the Metal Gigantuar row in every unit table the game has loaded, with its level now and the level we wanted.
-5. Fight two or three battles. Note each enemy's level on the battle screen. If any is outside A to B, take a screenshot, then run `ffrap_scale` and `ffrap_scale show <that enemy's name>` straight after the battle.
-6. Look in the log for more `scale: the table changed under us` lines, for example after battles or map changes. Each one says when the game writes the rows.
-7. Then `ffrap_scale party follow attack 70`, and `ffrap_scale party follow attack 50`. How do the fights feel?
-8. Load the level 52 save, run `ffrap_scale show steel bat`, and compare with step 1. Do the game's values depend on the save?
+4. Save, then load that save from the menu. Stay on the field for 20 seconds. Expect **no** `scale: the table changed under us` line: with the randomizer off, nothing should write the table. Then run `ffrap_scale show metal gigantuar`: its level should be the one we wanted. If the line does come, the game does write the rows after all; send the log.
+5. Fight two or three battles. Note each enemy's level on the battle screen. All should be within A to B. If any is outside, take a screenshot, then run `ffrap_scale` and `ffrap_scale show <that enemy's name>` straight after the battle.
+6. Look in the log for any `scale: the table changed under us` line, for example after battles or map changes. Expect none.
+7. How do the fights feel at the default (`at 80`)? Then `ffrap_scale party follow attack 70`, and `ffrap_scale party follow attack 50`. In round 33 the randomizer put its own values back, so this is the first test of the `attack` knob.
+8. Load the level 52 save and run `ffrap_scale show steel bat`. Expect level 1, as in step 1. The values should not depend on the save.
 
 **Part B: no-landing boxes (world map, in the airship):**
 9. Mysidia, without landing in between:

@@ -2524,11 +2524,11 @@ function G.SetStoryCounter(n)
     return G.StoryCounter()
 end
 
--- Round 33's log: the first rescale of a run read Steel Bat (shipped level 1, HP 68) as level
--- 47, HP 4800, and after each save load 214 rows no longer held what we wrote. So the game
--- writes enemy rows itself, at least when a save loads. "Original" is therefore the game's
--- latest values, not the shipped ones: a row that changed since our last write gives a new
--- original.
+-- Round 33's log: a rescale read Steel Bat (shipped level 1, HP 68) as level 47, HP 4800, and
+-- later 214 rows no longer held what we wrote. The FFR Randomizer mod did both: its enemy
+-- shuffle gives Steel Bat the stats of Nanochu (level 47), and it writes its rows again every
+-- 3 seconds. So "original" is the table's latest values, not the shipped ones: a row that
+-- changed since our last write gives a new original, and `off` gives back what is there.
 local scaleOriginals = {}   -- unit id -> { Level = n, MaxHitPoint = n, ... } as the game last had it
 local scaleWrote = {}       -- unit id -> the values we last wrote into that row
 local scaleWanted = nil     -- unit id -> the level the last rescale wrote (nil: none, or "off")
@@ -2550,9 +2550,9 @@ local function TableKeys(family)
 end
 
 -- Rescales every enemy row (and bosses too, if withBosses) by mode, a, b, as in ScaledLevel,
--- with the tuning knobs of ScaledStats. mode "off" restores the game's own rows. Returns how
--- many rows changed, one sample line (the first enemy that changed) for the log, a line per
--- changed row (for scale.txt), and how many rows the game had changed since our last write
+-- with the tuning knobs of ScaledStats. mode "off" restores the originals. Returns how many
+-- rows changed, one sample line (the first enemy that changed) for the log, a line per changed
+-- row (for scale.txt), and how many rows something else had changed since our last write
 -- (their values became the new originals).
 function G.ScaleEnemies(mode, a, b, withBosses, knobs)
     local family = TableFamily(Find(UNIT_TABLE))

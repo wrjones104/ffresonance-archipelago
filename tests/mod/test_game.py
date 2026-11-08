@@ -999,8 +999,8 @@ assert len(list(L.eval("G.UnitRows('9004')").values())) == 3, "by id; the copy h
 n, _, _ = L.execute("return G.ScaleEnemies('off', nil, nil, true)")[:3]
 assert n == 2 and L.eval("unitRows.bat.MaxHitPoint") == 68 and L.eval("unitRows.boss.Experience") == 100, n
 assert L.execute("return G.ScaleCheck()")[0] is None, "nothing in force after off"
-# round 33: the game writes its own values into a row (Steel Bat at level 47 in the open world
-# save). The next rescale takes them as the base, and off gives them back, not the shipped ones.
+# round 33: another mod (the FFR Randomizer) writes its own values into a row (Steel Bat at level
+# 47). The next rescale takes them as the base, and off gives them back, not the shipped ones.
 L.execute("G.ScaleEnemies('fixed', 10, nil, false)")
 L.execute("for k, v in pairs({ Level = 47, MaxHitPoint = 4800, Attack = 422, Experience = 1760 }) do unitRows.bat[k] = v end")
 n, sample, _, game_changed = L.execute("return G.ScaleEnemies('fixed', 10, nil, false)")

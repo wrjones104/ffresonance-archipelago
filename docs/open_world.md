@@ -162,12 +162,12 @@ MP does not correlate with level (r² 0.09) and remains unchanged.
 
 - In the shipped game, parties normally out-level enemies by 10 or more levels from mid-game onward. Late-game enemies placed at exact party levels hit much harder than expected.
 - Mod 0.14.0 introduced `at` (band center percentage), `hp`/`power` multipliers, and dynamic `follow` tracking. Mod 0.15.0 splits `attack` and `magic` controls and exports `scale.txt` after each rescale.
-- **Round 33: the game writes enemy rows itself.**
-  - A Metal Gigantuar in Pharm showed level 45 while our band was 0 to 4. The dump has it at 52.
-  - In the same run, the first rescale read Steel Bat (ID 2, level 1 and HP 68 in the dump) as level 47, HP 4800, attack 422, EXP 1760. The save was at story 8000.
-  - After each save load, 214 enemy rows no longer held what we wrote.
-  - So the game puts its own values into `DT_UnitParameter` rows, at least when a save loads. They may be the game's own post-story enemy levels. Where they come from is the next off-line question: another table, or more rows in the dump.
-  - Mod 0.15.1 checks the table every 10 seconds on the field and writes it again if it changed. It also takes the game's latest values as each row's original. The real feature needs both: a rescale must survive save loads, and it must start from the game's values for that save.
+- **Round 33: something else wrote enemy rows. It was the FFR Randomizer mod, not the game** (found off-line before round 34; IDEAS.md, idea 10).
+  - A Metal Gigantuar in Pharm showed level 45 while our band was 0 to 4. The dump has it at 52. A rescale also read Steel Bat (ID 2, level 1 and HP 68 in the dump) as level 47, HP 4800, attack 422, EXP 1760.
+  - FFRRandomizer was enabled. Its enemy shuffle gives a swapped-in enemy the stats of the enemy it replaces. In that seed, Steel Bat fought in place of Nanochu (level 47), and Metal Gigantuar in place of Thunder Gigas (level 45). Both match the levels seen.
+  - It writes its rows again every 3 seconds. It undid our rescale 1.5 seconds after we wrote it.
+  - So there is no sign yet that the game itself changes `DT_UnitParameter`. Round 34 checks this with the randomizer off: after a save load, the table check should find nothing to write again.
+  - Mod 0.15.1's table check (every 10 seconds on the field) and its "originals are the latest values" rule stay. They are cheap and make the rescale hold against anything else that writes the table. Mod 0.15.2 warns when FFRRandomizer is on.
 
 ## 6. Locations in the cleared world
 

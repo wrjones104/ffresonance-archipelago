@@ -45,7 +45,7 @@
 -- follows the save slots the linked game is saved to. While any other save is loaded, the mod
 -- grants nothing, reports nothing and leaves the chests vanilla.
 
-local VERSION = "0.15.1"
+local VERSION = "0.15.2"
 local PROTOCOL = 1        -- the bridge protocol; the apworld's MOD_PROTOCOL
 
 local MOD_DIR = (debug.getinfo(1, "S").source:gsub("^@", ""):gsub("\\", "/"):match("^(.*/)Scripts/[^/]+$"))
@@ -69,6 +69,24 @@ local STATUS_EVERY = 10       -- ticks between status file writes
 local function log(msg)
     print("[FFRAP] " .. tostring(msg) .. "\n")
 end
+
+-- Round 33: the FFR Randomizer mod was on next to this one. Every 3 seconds it writes its own
+-- values back into the chest, shop and enemy rows, so it undoes our chest blanks and enemy
+-- rescale. UE4SS starts a mod that has an enabled.txt, or a "name : 1" line in mods.txt.
+-- The warning is logged at start and shown once, when the first save loads.
+local function randomizerOn()
+    local modsDir = MOD_DIR:match("^(.*/)[^/]+/$")
+    if not modsDir then return false end
+    local f = io.open(modsDir .. "FFRRandomizer/enabled.txt")
+    if f then f:close() return true end
+    f = io.open(modsDir .. "mods.txt")
+    if not f then return false end
+    local text = "\n" .. f:read("a")
+    f:close()
+    return text:find("\n%s*FFRRandomizer%s*:%s*1") ~= nil
+end
+local randomizerWarning = randomizerOn() and ("FFR Randomizer is on: it undoes Archipelago's chests and enemy " ..
+    "levels. Turn it off: delete Mods/FFRRandomizer/enabled.txt") or nil
 
 -- On-screen messages go to the item feed on the field HUD (IDEAS.md, idea 14) when it is on and
 -- the HUD is there. Otherwise they wait in a short queue for the HUD (loading, a map change),
@@ -993,7 +1011,13 @@ local function tick()
         save.obj = nil
     else
         state.inGameTicks = state.inGameTicks + 1
-        if state.inGameTicks == 1 then log("save loaded, map " .. tostring(game.CurrentMap())) end
+        if state.inGameTicks == 1 then
+            log("save loaded, map " .. tostring(game.CurrentMap()))
+            if randomizerWarning then
+                notify(randomizerWarning)
+                randomizerWarning = nil
+            end
+        end
         if state.inGameTicks > SETTLE_TICKS then
             followSave()
             if state.bindPending then
@@ -1360,7 +1384,7 @@ local function applyScale(mode, a, b, withBosses, knobs)
     if n == nil then return nil, sample end
     log("scale: " .. n .. " rows changed" .. (sample and ("; " .. sample) or ""))
     if gameChanged and gameChanged > 0 then
-        log("scale: the game had changed " .. gameChanged .. " rows since our last write; their new values are the base now")
+        log("scale: something else had changed " .. gameChanged .. " rows since our last write; their new values are the base now")
     end
     if mode == "off" then scaleLast = nil
     else
@@ -1468,8 +1492,9 @@ local SCALE_CHECK_EVERY = 2   -- scale ticks (of STATUS_EVERY) between table che
 local scaleChecks = 0
 scaleTick = function()
     if not game.OnField() then return end
-    -- Round 33: a battle showed a level the last rescale did not give. If the table no longer
-    -- holds what we wrote (loaded again, or written by something else), say so and write it again.
+    -- Round 33: a battle showed a level the last rescale did not give (the FFR Randomizer mod had
+    -- written the row again). If the table no longer holds what we wrote (loaded again, or written
+    -- by something else), say so and write it again.
     scaleChecks = scaleChecks + 1
     if scaleLast and scaleChecks % SCALE_CHECK_EVERY == 0 then
         local checked, differ, sample, reloaded = game.ScaleCheck()
@@ -1667,6 +1692,7 @@ bridge.write("hello", VERSION, PROTOCOL)
 if state.seed then bridge.write("seed", state.seed) end
 readInbox(true)
 log("version " .. VERSION .. " loaded from " .. MOD_DIR .. ", " .. state.applied .. " items already applied")
+if randomizerWarning then log(randomizerWarning) end
 
 -- The fast check (IDEAS.md, idea 13): ten times a second, ask the chest pop-up's message widget
 -- (kept once found) whether a pop-up has just come up. When one has, scan this map's chests at

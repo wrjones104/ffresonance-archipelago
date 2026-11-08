@@ -16,7 +16,10 @@ import tempfile
 from lupa import lua54
 
 SRC = str(paths.MOD)                  # the repo's mod folder
-WORK = tempfile.mkdtemp(prefix="ffrap_main_")   # a scratch copy, so the repo is never written
+# A scratch copy, so the repo is never written. It sits in a Mods folder of its own, as installed,
+# so the tests can put other mods next to it.
+MODS = tempfile.mkdtemp(prefix="ffrap_main_")
+WORK = os.path.join(MODS, "FFRArchipelago")
 if os.path.exists(WORK):
     shutil.rmtree(WORK)
 shutil.copytree(SRC, WORK, ignore=shutil.ignore_patterns("ap_*.txt", "*.tsv", "ffrap_dump.txt"))
@@ -226,8 +229,9 @@ return G
 '''
 
 
-def boot():
+def boot(before=""):
     L = runtime()
+    L.execute(before)
     L.execute('''
       tickFn = nil; commands = {}
       -- the timers must run on the game thread (0.11.4): LoopAsync runs Lua on another thread
@@ -970,7 +974,7 @@ assert any("the table changed under us: 12 of 300 rows differ (Metal Gigantuar (
            for l in logs()), logs()
 L.execute("G.gameChanged = 12")
 L.execute('commands["ffrap_scale"]("ffrap_scale", {"party", "3", "at", "50", "follow"})')
-assert any("the game had changed 12 rows since our last write" in l for l in logs()), logs()
+assert any("something else had changed 12 rows since our last write" in l for l in logs()), logs()
 L.execute("G.gameChanged = nil")
 L.execute('G.check = { 300, 0, nil, false }')
 # a plain ffrap_scale turns follow off
@@ -1013,3 +1017,34 @@ for args in ('{"lock", "Pharm"}', '{"unlock", "mysidia"}', '{"here"}', '{"show",
 assert list(G.nl.values()) == ["lock pharm true", "lock mysidia false", "here", "show true 30", "show false nil",
                                "spawn 2000", "refresh", "off"], list(G.nl.values())
 print("noland commands: ok")
+
+# 17. 0.15.2 (round 33): the FFR Randomizer mod next to this one undoes our chest blanks and enemy
+# rescale every 3 seconds. Its enabled.txt, or a "FFRRandomizer : 1" line in mods.txt, turns it on.
+# The warning is logged at start and shown once, on the first save load.
+CAPTURE = "logged = {}; print = function(s) logged[#logged + 1] = tostring(s) end"
+WARNING = "FFR Randomizer is on"
+randomizer = os.path.join(MODS, "FFRRandomizer")
+os.makedirs(randomizer)
+
+
+def warnings_after_two_loads():
+    L, G = boot(CAPTURE)
+    at_start = sum(WARNING in s for s in L.globals().logged.values())
+    L.execute("tickFn()")
+    G.ready = False
+    L.execute("tickFn()")
+    G.ready = True
+    L.execute("tickFn()")
+    return at_start, sum(WARNING in s for s in L.globals().logged.values())
+
+
+assert warnings_after_two_loads() == (0, 0)
+open(os.path.join(randomizer, "enabled.txt"), "w").close()
+assert warnings_after_two_loads() == (1, 2)          # the start line, then one notice
+os.remove(os.path.join(randomizer, "enabled.txt"))
+open(os.path.join(MODS, "mods.txt"), "w").write("Keybinds : 1\nFFRRandomizer : 0\n")
+assert warnings_after_two_loads() == (0, 0)
+open(os.path.join(MODS, "mods.txt"), "w").write("Keybinds : 1\nFFRRandomizer : 1\n")
+assert warnings_after_two_loads() == (1, 2)
+os.remove(os.path.join(MODS, "mods.txt"))
+print("randomizer warning: ok")
