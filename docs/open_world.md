@@ -89,7 +89,7 @@ The story counter is `Progress[0]`. Every story gate is a condition such as `{pr
 
 World 0.4.0 puts the locks in real seeds: `starting_continent`, and one Unlock item per other continent. Ardra has no locations, so it has no item and stays locked.
 
-Still to decide: whether the Crystal Tower needs a lock (it is open in game, and logic treats it as the last area), whether fast travel (flag 34) stays off, and how to block the ships, caves and walking routes between continents, which can still cross a lock. Round 44: Grandshelt and Lanzelt are joined on foot, so a player walked across. The user suggests a gate, or removing the bridges. Not urgent.
+Still to decide: whether the Crystal Tower needs a lock (it is open in game, and logic treats it as the last area), whether fast travel (flag 34) stays off, and how to block the ships, caves and walking routes between continents, which can still cross a lock. Round 44: Grandshelt and Lanzelt are joined on foot, so a player walked across. The user suggests a gate, or removing the bridges. Not urgent. Round 48, a rough off-line pass over `transitions.tsv`: the maps that are not the world map join all nine continents into one network, so the routes need a real list before the logic can trust the locks.
 
 **Continent bounds (the first estimate, from landing points; superseded by `G.CONTINENTS`):**
 
@@ -194,6 +194,8 @@ Because a cleared save starts past the story ending, candidate goals include:
 - Espers: defeat and collect the nine Espers.
 - Superbosses: defeat Omega (level 99) or Shinryu (level 95) if accessible.
 - Multiworld artifacts: collect N custom items distributed across players to open the final area.
+
+Round 48: no seed has been finished yet. The only goal in the apworld is `goal_story_checkpoint` (8001 to 8050), and whether anything in an open world start moves the story past 8000 is not confirmed.
 
 ## 8. What the story used to give, now items
 
