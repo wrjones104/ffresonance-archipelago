@@ -398,7 +398,13 @@ World-map shinies verified as locations. Multiple crashes observed across differ
 
 **Before round 49 was played (2026-11-09):** the user moved enemy scaling out of the yaml, as it suits in-game sliders better (IDEAS.md, idea 18). The default for a seed is now party sync with follow, HP and power at 75%, bosses too.
 
-## Round 49 test plan (mod 0.35.0, world 0.8.0)
+**Round 49, first try (mod 0.35.0, world 0.8.0, 2026-11-09): the boss test ran the old revisit.**
+- **The seed's scaling started by itself:** `clamp -1 3, hp 75%, attack 75%, magic 75%, with bosses`, with `MRP changed in 598 battle groups`, and it followed the party to level 3.
+- **The shard counter works:** `Received Tablet Shard (1/50) from Rat`.
+- **The boss test armed without errors:** group 9013's own events were read (start -1, win `C01_037_01`), and 64 crystal rows, 2 fight rows, 2 win rows and the group were written. Two of each because the composite table and its parent table both hold the rows.
+- **But touching the crystal asked to revisit the vision.** The player was in map 10231, the Sanctum of Cecil: the inner room of a crystal already claimed (10211). A claimed crystal runs `Int_LegendEV_Retry_Start_04_01`, which the test did not change. Mod 0.35.1 changes its "yes" row too.
+
+## Round 49 test plan (mod 0.35.1, world 0.8.0)
 
 Seeds can now be finished, and a seed scales its enemies by itself. Send the `[FFRAP]` lines of `UE4SS.log`.
 
@@ -416,13 +422,13 @@ For a short test, add this to your yaml. The default is 50. Shards turn on by th
 4. The moogle: have a vision and no Magicite Shard (a Cryst alone is a good test). Open Vision Enhancement and press Cancel. **Does the screen close?** Then get a Shard and enhance a vision. Does the screen still work and close after?
 5. Send the `vision screen:` lines of the log. They show what the game's own check answered.
 
-**The boss fight test.** Can any boss be fought from anywhere, and can a win be seen? It changes nothing on disk, but a fight can go wrong, so save in a spare slot first. You need a sanctum crystal you have not claimed. Open the console and type these, one fight at a time:
+**The boss fight test.** Can any boss be fought from anywhere, and can a win be seen? It changes nothing on disk, but a fight can go wrong, so save in a spare slot first. Any sanctum crystal works now. A claimed one asks whether to revisit the vision: say yes, and the fight should start instead. Open the console and type these, one fight at a time:
 
 ```
 ffrap_bossfight 9013
 ```
 
-Then touch the crystal. It should start the fight. The crystal stays, so you can touch it again for the next one. Try these groups, in this order:
+Then touch the crystal. It should start the fight. The crystal stays, so you can touch it again for the next one. If you touch an unclaimed one, please also tell me whether it asked anything first. Try these groups, in this order:
 
 | Group | Boss | Why |
 |---|---|---|

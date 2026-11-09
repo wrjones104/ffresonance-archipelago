@@ -3904,6 +3904,8 @@ end
 -- So this borrows the first Twelve Arms fight and its Victory row, and points every sanctum
 -- crystal's opening row at the fight. The Victory row plays nothing and sets a flag nothing else
 -- uses. The crystal's own last row does not run, so the crystal stays and can be used again.
+-- Round 49: a claimed crystal stands in an inner room and asks to revisit the vision instead
+-- (Int_LegendEV_Retry_Start_NN_01, a yes/no). Its "yes" row, _02, is pointed at the fight too.
 -- Only tables in memory change. `off` undoes all of it but the Victory row's item, which comes
 -- back when the game restarts.
 G.BOSS_TEST_FLAG = 1440       -- no condition or talk row in the game uses flags 1430 to 1449
@@ -3986,6 +3988,7 @@ function G.BossTestArm(id, say)
         local base = string.format("Int_LegendEV_%02d", c.event)
         entry[base .. "_01"] = true
         entry[base .. "_01_Short"] = true
+        entry[string.format("Int_LegendEV_Retry_Start_%02d_02", c.event)] = true
     end
     local saved = { talk = {}, group = id, groupFields = fields }
     bossTestSaved = saved

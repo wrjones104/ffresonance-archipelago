@@ -361,6 +361,8 @@ L.execute("""
 local function cont(id) return { EventId = FName(id) } end
 talkRows = { Int_LegendEV_10_01 = { EventType = 1, ContinuousEventList = { cont("Int_LegendEV_10_07") } },
   Int_LegendEV_10_01_Short = { EventType = 1, ContinuousEventList = { cont("Int_LegendEV_10_07") } },
+  Int_LegendEV_Retry_Start_10_02 = { EventType = 0, ContinuousEventList = { cont("Int_LegendEV_10_01_MV") } },
+  Int_LegendEV_Retry_Start_10_01 = { EventType = 0 },
   ["12Arms_01Sword_1stAwake_Encount"] = { EventType = 0, encountGroupId = 9957 },
   ["12Arms_01Sword_1stAwake_Victory"] = { EventType = 0, ObtainItemList = arr({ { ID = 10199 } }), OnFlagList = arr({ 901, 1237 }) },
   Other = { EventType = 0, encountGroupId = 5 } }
@@ -379,7 +381,9 @@ ok, detail = L.execute("return G.BossTestArm(1, say)")
 assert ok is False and "no battle group 1" in detail, detail
 assert lua('talkRows.Int_LegendEV_10_01.ContinuousEventList[1].EventId:ToString()') == "Int_LegendEV_10_07", "no write without a group"
 ok, detail = L.execute("return G.BossTestArm(9013, say)")
-assert ok is True and "2 crystal rows" in detail, detail
+assert ok is True and "3 crystal rows" in detail, detail
+assert lua('talkRows.Int_LegendEV_Retry_Start_10_02.ContinuousEventList[1].EventId:ToString()') == "12Arms_01Sword_1stAwake_Encount", "a claimed crystal's yes"
+assert lua('talkRows.Int_LegendEV_Retry_Start_10_02.EventType') == 1 and lua('talkRows.Int_LegendEV_Retry_Start_10_01.EventType') == 0, "the question stays"
 assert lua('talkRows.Int_LegendEV_10_01.ContinuousEventList[1].EventId:ToString()') == "12Arms_01Sword_1stAwake_Encount"
 assert lua('talkRows.Int_LegendEV_10_01_Short.ContinuousEventList[1].EventId:ToString()') == "12Arms_01Sword_1stAwake_Encount"
 assert lua('talkRows["12Arms_01Sword_1stAwake_Encount"].encountGroupId') == 9013 and lua("talkRows.Other.encountGroupId") == 5
@@ -392,7 +396,9 @@ assert lua("sd.Progress.eventFlag[1441]") is False, "the win flag starts off"
 assert "start 77, win C01_037_01" in " ".join(L.eval("said").values()), "the group's own events are logged"
 ok, detail = L.execute("return G.BossTestArm(9013, say)")
 assert ok is True, "arming again starts from the originals"
-assert L.execute("return G.BossTestOff(say)") == 5, "2 crystal rows, the fight, the win and the group"
+assert L.execute("return G.BossTestOff(say)") == 6, "3 crystal rows, the fight, the win and the group"
+assert lua('talkRows.Int_LegendEV_Retry_Start_10_02.ContinuousEventList[1].EventId:ToString()') == "Int_LegendEV_10_01_MV"
+assert lua('talkRows.Int_LegendEV_Retry_Start_10_02.EventType') == 0
 assert lua('talkRows.Int_LegendEV_10_01.ContinuousEventList[1].EventId:ToString()') == "Int_LegendEV_10_07"
 assert lua('talkRows["12Arms_01Sword_1stAwake_Encount"].encountGroupId') == 9957
 assert lua(win + ".OnFlagList[1]") == 901 and lua(win + ".OnFlagList[2]") == 1237 and lua(win + ".EventType") == 0
