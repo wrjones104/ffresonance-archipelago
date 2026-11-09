@@ -357,15 +357,26 @@ World-map shinies verified as locations. Multiple crashes observed across differ
 - The Earth Shrine's inner part (3000) was opened in play, so world 0.4.1 takes it off the filler-only list.
 - Enemy scaling with `follow` still works in a seed.
 
-## Round 45 test plan (mod 0.27.0, world 0.4.1)
+**Round 45 (mod 0.27.0, world 0.4.1, 2026-11-09): new seeds; the fixes held, and more story state turned up.**
+- Rain and Fina, received from the pool, joined and levelled up with the party (the log shows `1002:6 1001:6`). The airship interior did not crash in three visits. Last Respite was not tried again.
+- **The moogle's Vision Enhancement screen has no way out with no vision owned** (the game was restarted). It opens from three talk events, all `BP_VisionUpgradeEntry`. Mod 0.28.0 makes those rows do nothing until the first vision arrives.
+- **Tutorials:** the user wants them all off. Every `Tutorial_` row turns on one "seen" flag, in 1160 to 1199 and 1217 to 1229, and tutorials in battles and on maps test that flag. Mod 0.28.0 turns them all on. A few are chained from story events with no test, but those events do not run on this start.
+- **Staggering did not work.** Flag 25 is set in `C01_008_02`, the Earth Shrine boss, where the story teaches it. The game's `Setup` start row has it on. Fixed in 0.28.0.
+- **Fina could not summon.** `C01_037_01_Choice_After`, after Siren, sets flags 28 and 90. Flag 28 is the summoning, set in 0.28.0. Flag 90 is Siren herself: the other espers have 91 to 98, set when you earn them. Her fight is a story event, so world 0.4.2 makes "Siren (Esper)" an item. A fight on the map is for later, with the other story bosses.
+- **Chests with Magicite were not locations.** 17 of the 21 kept chests hold it. World 0.4.2 shuffles those, and the mod blanks them. Resonance Stone and Adamantite stay.
+- Twice `chest pop-up ...: no chest pop-up on screen` was logged (chests 2020:0 and 2020:1), so those two kept the game's own text. Nothing else went wrong with them.
+
+**Next, as the user asked:** replace what shinies give, and make the vision crystals into checks that skip the summoning scene (IDEAS.md, idea 23).
+
+## Round 46 test plan (mod 0.28.0, world 0.4.2)
 
 Send the `[FFRAP]` lines of `UE4SS.log`.
 
-**Install:** copy `FFRArchipelago/Scripts` over the installed mod, and copy `dist/ff_resonance.apworld` into `custom_worlds`. **Generate a new seed:** the world changed. Connect the client first, then New Game (Archipelago). Saves from round 44 keep the old party problem.
+**Install:** copy `FFRArchipelago/Scripts` over the installed mod, and copy `dist/ff_resonance.apworld` into `custom_worlds`. **Generate a new seed.** Connect the client first, then New Game (Archipelago).
 
-1. The log should have `skip: ok   open world flags on: 21 24 13 34 1180 102`.
-2. Go into the Earth Shrine, then leave. **Can you get back out?**
-3. Fast travel: visit two places, then use it from the map. **Does it work, and only to places you have visited?** Does a tutorial pop up?
-4. Receive a party member from the pool. **Does the newcomer gain EXP? When you equip something on them, does it show as equipped on them for the others?** Can you unequip it?
-5. Save and look at the slot. **Does the level match your party's?**
-6. Enter the airship interior, normally. If it crashes, send the crash folder. If it does not, turn **FFRSLib off** in `mods.txt` and try Last Respite again: does it still crash?
+1. The log should have `skip: ok   open world flags on: 7 features, 53 tutorials`, then `vision shop closed (no vision yet)`.
+2. Talk to the moogle with no vision. The screen should not open, and you should not get stuck. Once you own a vision, the log says `vision shop open`: does it open now, and can you leave it?
+3. Play a while. **Does any tutorial still appear?** Tell me which.
+4. **Can you stagger enemies?**
+5. **Can Fina summon** when she has joined, and you hold an esper? Receive **Siren (Esper)** from the pool if it comes up: is she there to equip?
+6. Open a chest that used to hold Magicite (Siren's Tower has one). It should be a check, with the chest giving 1 gil.

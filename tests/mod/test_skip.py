@@ -166,10 +166,18 @@ assert lua("sd.chat.DataMap.rows.ATC11.IsAlreadyPlayed") is True and lua("sd.cha
 assert lua("G.ChatState()") == f"{CHATS} rows, {CHATS} released, {CHATS} played; notices [], latest None", lua("G.ChatState()")
 assert lua("sd.Progress.eventFlag[32]") is True, "flag 31 is what a chat row turns on"
 # Round 39: the Equip screen shows visions only with flag 24, and the story sets 21 with it
-assert "ok   open world flags on: 21 24 13 34 1180 102" in list(report.values())
+assert "ok   open world flags on: 7 features, 53 tutorials" in list(report.values())
 assert lua("sd.Progress.eventFlag[22]") is True and lua("sd.Progress.eventFlag[25]") is True, "flag i is element i + 1"
 # Round 44: fast travel (13, 34, 1180) and the Earth Shrine's exit (102)
 assert all(lua(f"sd.Progress.eventFlag[{i + 1}]") is True for i in (13, 34, 1180, 102))
+# Round 45: staggering (25), Fina's summoning (28), and every tutorial marked seen
+assert all(lua(f"sd.Progress.eventFlag[{i + 1}]") is True for i in (25, 28, 1160, 1199, 1217, 1229))
+_events = paths.REPO / "dump/tables/FFRS/Content/Datatable/Event/TalkEvent/CDT_TalkEventData_Prod.json"
+if _events.exists():
+    import json
+    _rows = json.loads(_events.read_text(encoding="utf8"))["Rows"]
+    _seen = {f for k, r in _rows.items() if k.startswith("Tutorial_") for f in r.get("OnFlagList") or [] if f >= 1000}
+    assert _seen <= set(L.eval("G.OPEN_WORLD_TUTORIALS").values()), _seen - set(L.eval("G.OPEN_WORLD_TUTORIALS").values())
 assert lua("sd.Map.IsAlreadySpawnAirship") is False, "the dock start leaves the airship alone"
 # the list of ids is the table's: every ATC row, and no Pinger or Nawatobi rows (dump/ is local)
 _chat_table = paths.REPO / "dump/tables/FFRS/Content/Datatable/Chat/Event/CDT_ChatEventData.json" if hasattr(paths, "REPO") else None
@@ -190,7 +198,7 @@ ok, report = L.execute("return G.OpenStart()")
 assert ok is True and list(report.values())[:2] == [
     f"ok   story counter -> {DOCK_STORY}", f"ok   arrival: map {TOWER_MAP} at -2704.8, -171166.7, 3002.2"], list(report.values())
 assert list(report.values())[2].startswith("ok   active time chats: 56 of 56"), list(report.values())
-assert list(report.values())[3] == "ok   open world flags on: 21 24 13 34 1180 102", list(report.values())
+assert list(report.values())[3] == "ok   open world flags on: 7 features, 53 tutorials", list(report.values())
 assert lua("G.StoryCounter()") == DOCK_STORY and lua("sd.Map.mapId") == TOWER_MAP
 assert lua("sd.Player.WinNum") == 12, "the rest of the save is left alone"
 # the "air" start: the world map, riding the airship beside the tower, with flag 31 on
@@ -244,6 +252,36 @@ assert lua("G.SyncSlotLevel()") is False, "already there"
 L.execute("joinOf[1001] = 0; G.PartyLevel = function() return 20, 'x' end")
 assert lua("G.SyncSlotLevel()") is False and lua("unitLevels[1001]") == 9, "once she has joined, her level is her own"
 L.execute("G.UnitJoinStatus = nil")
+# Round 45: the moogle's screen is closed while the save owns no vision, and opens with the first
+L.execute("""
+function nameOf(s) return { get = function() return { ToString = function() return s end } end } end
+shopRows = { VisionUpgrade = { EventType = 1 }, VisionUpgrade_Main = { EventType = 1 }, FEV_Town_10Cry_41_720_01 = { EventType = 1 },
+             Other = { EventType = 1 } }
+libs["/Game/Datatable/Event/TalkEvent/CDT_TalkEventData_Prod.CDT_TalkEventData_Prod"] = {
+  GetFullName = function() return "CDT" end, IsValid = function() return true end,
+  HasAnyInternalFlags = function() return false end, HasAnyFlags = function() return false end,
+  ForEachRow = function(_, fn) for k, r in pairs(shopRows) do fn(nameOf(k), r) end end }
+sd.visionList = arr({}, 0)""")
+blocked, rows = L.execute("return G.VisionShopGuard()")
+assert blocked is True and rows == 3 and lua("shopRows.VisionUpgrade.EventType") == 0 and lua("shopRows.Other.EventType") == 1
+assert lua("G.VisionShopGuard()") is None, "no writes while nothing changes"
+L.execute("sd.visionList = arr({ 13017 }, 0)")
+blocked, rows = L.execute("return G.VisionShopGuard()")
+assert blocked is False and rows == 3 and lua("shopRows.FEV_Town_10Cry_41_720_01.EventType") == 1
+L.execute("""sd.visionList = nil""")
+# Round 45: a chest holding Magicite is blanked like the others; a key item's stays
+L.execute("""
+chestRows = { { mapId = 3030, ID = 1, ItemId = 25000, ItemNum = 1, Money = -1 }, { mapId = 2031, ID = 20, ItemId = 20016, ItemNum = 1, Money = -1 },
+              { mapId = 2020, ID = 1, ItemId = 1, ItemNum = 2, Money = -1 } }
+libs["/Game/Datatable/Map/Gimmick/TreasureBox/CDT_MapGimmickTreasureBox.CDT_MapGimmickTreasureBox"] = {
+  GetFullName = function() return "chests" end, IsValid = function() return true end,
+  HasAnyInternalFlags = function() return false end, HasAnyFlags = function() return false end,
+  ForEachRow = function(_, fn) for _, r in ipairs(chestRows) do fn("r", r) end end }
+""")
+assert lua("G.BlankChests(true)") == 2
+assert lua("chestRows[1].ItemId") == -1 and lua("chestRows[1].Money") == 1, "Magicite is blanked"
+assert lua("chestRows[2].ItemId") == 20016, "a key item stays"
+assert lua("G.BlankChests(false)") == 2 and lua("chestRows[1].ItemId") == 25000, "and it comes back"
 # a member who joins later can be set to the party's level, above or below his own
 ok, detail = L.execute("return G.SetUnitLevel(1007, 12)")
 assert ok is True and detail == "level 12" and lua("unitLevels[1007]") == 12, detail

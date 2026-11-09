@@ -21,6 +21,7 @@ ITEM_NAME_TO_ID: dict[str, int] = {info["name"]: ap_id for ap_id, info in ITEMS.
 CLASSIFICATIONS = {
     "consumable": ItemClassification.filler,
     "equipment": ItemClassification.useful,
+    "magicite": ItemClassification.useful,
     "gil": ItemClassification.filler,
     "party": ItemClassification.progression,
     "vision": ItemClassification.progression,

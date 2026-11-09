@@ -143,8 +143,18 @@ class TestData(FFResonanceTestBase):
         # Key items reach the pool as extra items instead (world 0.3.0).
         for loc in CHESTS + SHINIES:
             info = ITEMS[loc["vanilla"]]
-            if info["kind"] == "item":
+            if info["kind"] == "item" and info["category"] != "magicite":
                 self.assertLess(info["game_id"], SHUFFLE_ID_LIMIT, loc)
+
+    def test_chests_with_magicite_are_locations(self) -> None:
+        keys = {c["key"]: ITEMS[c["vanilla"]] for c in CHESTS}
+        self.assertEqual(keys["chest:3030:1"]["name"], "Magicite Shard")
+        self.assertEqual(keys["chest:3010:0"]["category"], "magicite")
+        self.assertNotIn("chest:2031:20", keys, "Adamantite is a key item and stays where it is")
+
+    def test_siren_is_an_item(self) -> None:
+        siren = next(i for i in ITEMS.values() if i["name"] == "Siren (Esper)")
+        self.assertEqual((siren["kind"], siren["game_id"]), ("flag", 90))
 
     def test_rows_with_no_box_are_not_locations(self) -> None:
         # Map 10050 (Dng_02Lan_41) has no level and no map table row: the game does not ship it.

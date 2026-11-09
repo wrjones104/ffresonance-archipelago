@@ -121,6 +121,7 @@ function G.GrantItem() return "ok", "" end
 function G.UnlockVision() return "ok", "" end
 function G.HasVision(id) return (G.owned or {})[id] == true end
 function G.AddUnit() return "ok", G.unitDetail or "in the active party" end
+function G.VisionShopGuard() return nil end
 function G.SyncSlotLevel() G.slotSyncs = (G.slotSyncs or 0) + 1; return false end
 function G.SetUnitLevel(id, level) G.leveled = { id = id, level = level }; return true, "level " .. level end
 function G.PartyLevel() return G.partyLv or 7, "1001:7" end

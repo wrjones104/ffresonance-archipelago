@@ -775,3 +775,13 @@ The "Back" prompt that menus and the chest pop-up show at the bottom right also 
 - Which of the game's own windows can show our text. The game's notices and tutorial windows are the first things to look at (idea 8's notes on `CPP_WBP_ChatNotice` and the quest notice).
 - When to show it: after the reload on the world map, once per save, and not while the item feed is busy.
 - What to say: how to connect the client, what the airship and continents do, and where the checks are.
+
+## 23. Shinies and vision crystals as real checks
+
+**Asked for (round 45, 2026-11-09): the next priority once the broken things are fixed.**
+
+**Shinies:** a shiny is a check today, but it still gives its own item as well. The reward is on the actor (`m_ItemId`, `m_ItemNum`, `m_Money`), and `LiveFieldItems` already reads them. So the mod can blank those fields as chests are blanked, when the map loads. 105 shinies are kept vanilla and are not locations, because they hold key items or Magicite.
+
+**Vision crystals:** the user wants to skip the summoning scene and the questions. Click the crystal, get a reward, and it can be anything in the multiworld. To find out: which actors are the crystals, whether their event rows can be pointed at nothing (as the moogle's are), and what the mod can see to report the check.
+
+**Story bosses as map encounters:** Siren's fight is a story event, so she is an item for now. Story bosses could be fights on the map later.

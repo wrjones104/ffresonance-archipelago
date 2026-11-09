@@ -499,6 +499,7 @@ end
 -- Chests holding an item at or above SHUFFLE_ID_LIMIT (visions, key items, valuables) are not
 -- locations and keep their content. The apworld uses the same limit (tools/gen_apworld_data.py).
 local SHUFFLE_ID_LIMIT = 13000
+local MAGICITE_FIRST, MAGICITE_LAST = 25000, 25002   -- round 45: chests with Magicite are shuffled too
 --
 -- The originals are keyed by the row's own mapId and ID, never by where the copy lives. A chest
 -- that spawns while blanking is on copies the already-blank row, so a snapshot of the spawned
@@ -526,7 +527,8 @@ end
 -- Sets one row (a table row or a chest's copy) blank or back. Returns true when it changed.
 local function BlankRow(row, on)
     if row.IsTrap == true then return false end
-    if (Int(row.ItemId) or -1) >= SHUFFLE_ID_LIMIT then return false end
+    local itemId = Int(row.ItemId) or -1
+    if itemId >= SHUFFLE_ID_LIMIT and not (itemId >= MAGICITE_FIRST and itemId <= MAGICITE_LAST) then return false end
     if on then
         Remember(row)
         if IsBlank(row) then return false end
@@ -1923,10 +1925,51 @@ end
 --   21, 24   visions on the Equip screen (round 39: C01_014_04, at Mitra)
 --   13, 34, 1180   fast travel, as Tutorial_FastTravel sets them (round 44; 34 is the Map screen's own)
 --   102      the Earth Shrine's exit (round 44: its NoEntry event holds while 102 is off; C01_010_02)
-local OPEN_WORLD_FLAGS = { 21, 24, 13, 34, 1180, 102 }
+--   25       staggering enemies (round 45: C01_008_02, the Earth Shrine's boss)
+--   28       Fina's esper summoning (round 45: C01_037_01_Choice_After, after Siren)
+-- 1160-1199 and 1217-1229 are every tutorial's "seen" flag (round 45: the OnFlagList of every
+-- Tutorial_ row in the talk event table). Tutorials in battles and on maps test these.
+local OPEN_WORLD_FEATURES = { 21, 24, 13, 34, 102, 25, 28 }
+local OPEN_WORLD_TUTORIALS = {}
+for i = 1160, 1199 do OPEN_WORLD_TUTORIALS[#OPEN_WORLD_TUTORIALS + 1] = i end
+for i = 1217, 1229 do OPEN_WORLD_TUTORIALS[#OPEN_WORLD_TUTORIALS + 1] = i end
+G.OPEN_WORLD_TUTORIALS = OPEN_WORLD_TUTORIALS
 local function EnableOpenWorld(sd)
-    local found, bad = SetFlags(sd, OPEN_WORLD_FLAGS)
-    return found and #bad == 0, "open world flags on: " .. table.concat(OPEN_WORLD_FLAGS, " ")
+    local found, bad = SetFlags(sd, OPEN_WORLD_FEATURES)
+    local foundTutorials, badTutorials = SetFlags(sd, OPEN_WORLD_TUTORIALS)
+    for _, flag in ipairs(badTutorials) do bad[#bad + 1] = flag end
+    return found and foundTutorials and #bad == 0, string.format("open world flags on: %d features, %d tutorials%s",
+        #OPEN_WORLD_FEATURES, #OPEN_WORLD_TUTORIALS, #bad > 0 and (" (failed: " .. table.concat(bad, " ") .. ")") or "")
+end
+
+-- Round 45: the moogle's Vision Enhancement screen has no way out when the save owns no vision.
+-- The three talk events that open it are Blueprint rows. While the save owns none they are made
+-- Sequence rows, which with no sequence set do nothing (the table has such rows, as cushions).
+-- Writes only when the state changes; `force` after a save loads, as a reload can restore a table.
+local SHOP_TABLE = "/Game/Datatable/Event/TalkEvent/CDT_TalkEventData_Prod.CDT_TalkEventData_Prod"
+local SHOP_ROWS = { VisionUpgrade = true, VisionUpgrade_Main = true, FEV_Town_10Cry_41_720_01 = true }
+local EVENT_SEQUENCE, EVENT_BLUEPRINT = 0, 1
+local shopBlocked = nil
+function G.VisionShopGuard(force)
+    local sd = G.SaveData()
+    if not sd then return nil end
+    local owned
+    if not pcall(function() owned = #sd.visionList end) or not owned then return nil end
+    local block = owned == 0
+    if block == shopBlocked and not force then return nil end
+    local written = 0
+    for _, dt in ipairs(TableFamily(Find(SHOP_TABLE))) do
+        pcall(function()
+            dt:ForEachRow(function(name, row)
+                if SHOP_ROWS[ObjText(name)] then
+                    row.EventType = block and EVENT_SEQUENCE or EVENT_BLUEPRINT
+                    written = written + 1
+                end
+            end)
+        end)
+    end
+    shopBlocked = block
+    return block, written
 end
 
 -- The loaded save's airship fields as text, for the log.

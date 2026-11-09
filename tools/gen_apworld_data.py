@@ -39,6 +39,10 @@ DATA = os.path.join(ROOT, "data")
 OUT = os.path.join(ROOT, "apworld", "ff_resonance", "data.py")
 
 SHUFFLE_ID_LIMIT = 13000          # item ids at or above this never move (visions, key items)
+MAGICITE_IDS = (25000, 25002)     # except these, in chests (the mod blanks them too)
+# An esper with no way to earn her on the open world start is an item instead: her flag gives her.
+# Siren's fight is a story event; the flag comes from C01_037_01_Choice_After (round 45).
+ESPER_FLAGS = {"Siren": 90}
 CONSUMABLE_LIMIT = 1000
 
 CHEST_LOCATION_BASE = 1_000_000_000
@@ -68,9 +72,12 @@ def read_tsv(name):
 
 
 
-def item_kind(item_id: int, money: int) -> str | None:
+def item_kind(item_id: int, money: int, in_chest: bool = False) -> str | None:
     if item_id < 0:
         return "gil" if money > 0 else None
+    # Round 45: chests with Magicite are shuffled. Shinies wait until a shiny's reward can be replaced.
+    if in_chest and MAGICITE_IDS[0] <= item_id <= MAGICITE_IDS[1]:
+        return "magicite"
     if item_id < CONSUMABLE_LIMIT:
         return "consumable"
     if 10000 <= item_id < SHUFFLE_ID_LIMIT:
@@ -218,8 +225,8 @@ def main() -> None:
                 return next(iter(found))
         return region
 
-    def item_for(item_id: int, count: int, money: int) -> int | None:
-        kind = item_kind(item_id, money)
+    def item_for(item_id: int, count: int, money: int, in_chest: bool = False) -> int | None:
+        kind = item_kind(item_id, money, in_chest)
         if kind is None:
             return None
         if kind == "gil":
@@ -241,7 +248,7 @@ def main() -> None:
             no_box.append(f"chest:{map_id}:{chest_id}")
             continue
         item_id, count, money = int(r["ItemId"]), int(r["ItemNum"]), int(r["Money"])
-        ap_item = item_for(item_id, count, money)
+        ap_item = item_for(item_id, count, money, in_chest=True)
         entry = {"key": f"chest:{map_id}:{chest_id}", "place": chest_place(r["row"], map_id, maps),
                  "region": chest_region(r["row"]), "area": chest_area(map_id, r["row"]),
                  "open_world": map_id not in NO_OPEN_WORLD_ROUTE, "row": r["row"],
@@ -280,6 +287,10 @@ def main() -> None:
         items[ap_id] = {"name": units[unit_id]["name"], "kind": "unit", "game_id": unit_id, "count": 1,
                         "category": "party"}
         progression["party"].append(ap_id)
+    for name, flag in ESPER_FLAGS.items():
+        ap_id = CONTINENT_ITEM_BASE + flag
+        items[ap_id] = {"name": f"{name} (Esper)", "kind": "flag", "game_id": flag, "count": 1, "category": "key"}
+        progression["key"].append(ap_id)
     # A continent's unlock turns on its event flag; Ardra has no locations, so it has no unlock.
     used_areas = {e["area"] for e in chests + shinies}
     unlocks: dict[str, int] = {}

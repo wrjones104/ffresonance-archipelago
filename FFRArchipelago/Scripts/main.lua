@@ -50,7 +50,7 @@
 -- follows the save slots the linked game is saved to. While any other save is loaded, the mod
 -- grants nothing, reports nothing and leaves the chests vanilla.
 
-local VERSION = "0.27.0"
+local VERSION = "0.28.0"
 local PROTOCOL = 2        -- the bridge protocol; the apworld's MOD_PROTOCOL
 
 local MOD_DIR = (debug.getinfo(1, "S").source:gsub("^@", ""):gsub("\\", "/"):match("^(.*/)Scripts/[^/]+$"))
@@ -117,6 +117,7 @@ local function locksOn()
     return seedCfg.openworld or continentLocks == true
 end
 local locksFailed = nil      -- the last ContinentSync failure logged, so each one is logged once
+local shopSave = nil         -- the save the vision shop guard last ran on
 local feedQueue = {}
 local feedQueueSince = nil   -- when the oldest waiting message came
 local feedShown = false      -- the feed has shown a line in this run
@@ -1108,6 +1109,13 @@ local function tick()
             if state.ticks % STATUS_EVERY == 0 then pcall(scaleTick) end
             if state.ticks % LOCKS_EVERY == 0 then pcall(locksTick) end
             if state.ticks % STATUS_EVERY == 0 and seedCfg.openworld and game.OnField() then pcall(game.SyncSlotLevel) end
+            if seedCfg.openworld and state.ticks % LOCKS_EVERY == 0 then
+                local okShop, blocked, rows = pcall(game.VisionShopGuard, shopSave ~= save.obj)
+                shopSave = save.obj
+                if okShop and blocked ~= nil then
+                    log("vision shop " .. (blocked and "closed (no vision yet)" or "open") .. ": " .. tostring(rows) .. " rows")
+                end
+            end
             -- Chests and shinies are still recorded in seen.tsv for any save; scanLoot reports
             -- them only for the session's save (see opened).
             if state.ticks % CHEST_EVERY == 0 then scanLoot() end
