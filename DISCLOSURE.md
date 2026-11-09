@@ -1,7 +1,5 @@
 # AI disclosure
 
-> **Draft.** Keep this file up to date as the project changes. Before you share the project, finish the review table and remove this note. The Archipelago Discord requires a pinned disclosure on every implementation it hosts.
-
 ## Was AI used?
 
 Yes, a lot.
