@@ -328,19 +328,25 @@ World-map shinies verified as locations. Multiple crashes observed across differ
 - **Boxes placed twice on the way back from a town** (07:53:20 and 07:53:23): the first set went in while the world map was still arriving. Boxes now wait for three syncs (about 3 seconds) with one controller.
 - **Added in 0.23.0:** the null check, the wait, `locks: N boxes on the airship's shadow list (a -> b, k null)` in the log, and the list is taken again if its length changes.
 
-## Round 42 test plan (mod 0.23.0, world 0.3.1)
+**Round 42 (mod 0.23.0, 2026-11-09): no crashes; a save loaded in the air can land in the first seconds.**
+- Every crash path ran with no crash: boarding after a town, closing a continent on foot and boarding, and save and reload.
+- **The null entries are confirmed.** The first listing on a new airship often found an empty list (`0 -> 18`). A later one read `162 -> 162, 27 null` and `156 -> 156, 24 null`. So the game fills the list after the airship appears, and it holds nulls. Round 41's crash was one of those being asked for its name.
+- `opened pharm` and `boxes placed for pharm` each worked within a second.
+- **A gap on load:** after loading a save made in the air over a locked continent, the user could land in the first second or two. The boxes came about 2.5 seconds after the save was seen (08:14:02.6 to 08:14:05.2): the field HUD has to appear, then the sync waits to settle. A player could use this to cross any lock.
+- **Added in 0.24.0:** the boxes go in from the engine's `LoadMap` post hook. That runs before the first frame of the new map, so there is no moment without them. The one-second sync stays, to repair anything that differs and to fill the airship's shadow list.
 
-Short: the crash paths again. Send the `[FFRAP]` lines of `UE4SS.log`. No client or seed is needed.
+## Round 43 test plan (mod 0.24.0, world 0.3.1)
 
-**Install:** copy `FFRArchipelago/Scripts` over the installed mod. The log should say `version 0.23.0 loaded`. `Assets` and the apworld did not change.
+Short. Send the `[FFRAP]` lines of `UE4SS.log`. No client or seed is needed.
 
-1. Start New Game (Archipelago) and wait for the world map. Run `ffrap_lock on` if the log does not show boxes placed.
-2. About 3 seconds in, the log should say `locks: boxes placed for ...` once, and then `locks: 21 boxes on the airship's shadow list (... null)`.
-3. `ffrap_lock open pharm`. Land at Sian, go in, come out and **board the airship**. This crashed before. Expect `boxes placed` once for the other nine, and a shadow-list line when you board. Please send that line: the `null` count confirms the cause.
-4. `ffrap_lock close pharm` in the air. Is the shadow red and landing blocked within a second or two?
-5. `ffrap_lock open pharm`, land in open ground and get out. `ffrap_lock close pharm` on foot, then **board and take off**. This crashed before too.
-6. Save, return to the title, load the save, and board again.
-7. Fly over a locked continent. Red shadow, no landing?
-8. `ffrap_lock off`.
+**Install:** copy `FFRArchipelago/Scripts` over the installed mod. The log should say `version 0.24.0 loaded`. `Assets` and the apworld did not change.
 
-**If it crashes:** send the new `UECC-Windows-*` folder from `%LOCALAPPDATA%\FFRS\Saved\Crashes` and say what you were doing.
+1. Load a save with `ffrap_lock on`. The log should say `locks: boxes placed during the map load for ...`.
+2. Fly over a locked continent and save there, in the air.
+3. Return to the title and load that save. **Press the land button as fast as you can, over and over, from the moment the map appears.** **Tell me:** could you land at all? Do it two or three times.
+4. The shadow may be missing for the first moment and then turn red. **Tell me** if that bothers you.
+5. Land somewhere open, go into a town and come back. The log should say `boxes placed during the map load` on the way back, and the boxes should not be placed a second time.
+6. Get into a battle on the world map and win it. Are the locks still there afterwards?
+7. Start New Game (Archipelago) with the open world start. Are the locks there from the first moment?
+8. `ffrap_lock open pharm` and `ffrap_lock close pharm`: still within a second or two?
+9. `ffrap_lock off`, then load a save. No boxes, and you can land anywhere.

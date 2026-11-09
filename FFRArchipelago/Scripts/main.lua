@@ -50,7 +50,7 @@
 -- follows the save slots the linked game is saved to. While any other save is loaded, the mod
 -- grants nothing, reports nothing and leaves the chests vanilla.
 
-local VERSION = "0.23.0"
+local VERSION = "0.24.0"
 local PROTOCOL = 1        -- the bridge protocol; the apworld's MOD_PROTOCOL
 
 local MOD_DIR = (debug.getinfo(1, "S").source:gsub("^@", ""):gsub("\\", "/"):match("^(.*/)Scripts/[^/]+$"))
@@ -1825,6 +1825,23 @@ command("ffrap_chats", function(p)
     log("chats: " .. text)
     notify("Active Time Chats: " .. text)
 end)
+
+-- Round 42: the locks go in as the map loads, so a save loaded in the air has no moment to land.
+if RegisterLoadMapPostHook then
+    local okHook, errHook = pcall(RegisterLoadMapPostHook, function(_, world)
+        local okRun, placed, why = pcall(function() return game.ContinentMapLoaded(world:get(), continentLocks == true) end)
+        if not okRun then
+            log("locks: the map load hook failed: " .. tostring(placed))
+        elseif placed and #placed > 0 then
+            log("locks: boxes placed during the map load for " .. table.concat(placed, ", "))
+        elseif not placed and why ~= "locks off" and why ~= "not the world map" then
+            log("locks: " .. tostring(why))
+        end
+    end)
+    if not okHook then log("locks: could not hook map loads: " .. tostring(errHook)) end
+else
+    log("locks: this UE4SS has no RegisterLoadMapPostHook, so the locks go in a moment after each load")
+end
 
 -- ffrap_lock [on|off|open <continent|all>|close <continent|all>]: the continent locks, for testing
 -- until a seed decides them. `on` and `off` are the switch, kept in ap_state.txt. `open` and

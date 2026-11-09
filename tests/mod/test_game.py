@@ -1306,6 +1306,27 @@ assert line and line.endswith(", 1 null)"), line
 assert L.eval("nullNameAsked") is False, "a null entry was asked its name"
 placed, removed, line = sync()
 assert line is False, "the same list is not gone over again"
+# Round 42: the load hook places the boxes in the new world at once, with no settling, and the
+# sync that follows adopts them instead of placing a second set
+L.execute(r"""
+hookWorld = setmetatable({ IsValid = function() return true end, GetFName = function() return fname("Wld_PL") end },
+                         { __index = fakeWorld })
+function hookWorld:SpawnActor(cls, loc, rot) return fakeWorld.SpawnActor(fakeWorld, cls, loc, rot) end
+fakePCName = "PC_3"
+""")
+before = L.eval("spawnCount")
+placed, why = L.execute("return G.ContinentMapLoaded(hookWorld, true)")
+assert len(placed) == 9 and L.eval("spawnCount") == before + BOXES - 3, (len(placed), L.eval("spawnCount") - before)
+placed, removed, line = sync()
+assert len(placed) == 0 and L.eval("spawnCount") == before + BOXES - 3, "the sync adopts the hook's boxes"
+assert line and "18 boxes" in line, line
+# another map, or the switch off: the old boxes are forgotten and nothing is placed
+L.execute("hookWorld.GetFName = function() return fname('Town_02Lan') end")
+before = L.eval("spawnCount")
+assert L.eval("select(2, G.ContinentMapLoaded(hookWorld, true))") == "not the world map"
+assert L.eval("select(2, G.ContinentMapLoaded(hookWorld, false))") == "locks off"
+assert L.eval("spawnCount") == before and "0 boxes placed" in L.eval("G.ContinentStatus()")
+L.execute("hookWorld.GetFName = function() return fname('Wld_PL') end")
 # off the world map, nothing happens
 L.execute("G.CurrentMap = function() return 2070 end")
 assert L.eval("select(2, G.ContinentSync())") == "not on the world map"

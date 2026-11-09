@@ -3428,7 +3428,7 @@ G.CONTINENTS = {
 -- controller's name is new on every map load, and a pointer into an unloaded map must not be
 -- touched, so a new name means forgetting them all without asking them anything.
 local continentActors, continentWorld, continentListed = {}, nil, nil
-local continentListedLength, continentSeen = nil, 0
+local continentListedLength, continentSeen, continentFresh = nil, 0, false
 -- Syncs that must see one controller before boxes go in. Round 41: on the way back from a town
 -- the boxes were placed once while the world map was still arriving, and again 3 seconds later.
 G.CONTINENT_SETTLE = 3
@@ -3467,22 +3467,9 @@ local function PlaceContinent(world, cls, c)
     return list
 end
 
--- Makes the world match the save: a box set for every locked continent, none for an open one,
--- every box on the airship's shadow list. Safe to call often. Does nothing off the world map.
--- Returns the names placed and the names removed (either can be empty) and, when the boxes went
--- on the airship's shadow list, a line about that; or nil and why.
-function G.ContinentSync()
-    if G.CurrentMap() ~= G.WORLD_MAP then return nil, "not on the world map" end
-    local pose, whyPose = G.PlayerPose()
-    if not pose then return nil, whyPose end
-    local pc = PlayerController()
-    local world = pc and ObjText(pc)
-    if not world then return nil, "no PlayerController" end
-    if world ~= continentWorld then
-        continentWorld, continentActors, continentListed, continentListedLength, continentSeen = world, {}, nil, nil, 0
-    end
-    continentSeen = continentSeen + 1
-    if continentSeen < G.CONTINENT_SETTLE then return {}, {} end
+-- A box set for every locked continent, none for an open one, in `world`. Returns the names
+-- placed and the names removed, or nil and why.
+local function PlaceLocked(world)
     local placed, removed, cls = {}, {}, nil
     for _, c in ipairs(G.CONTINENTS) do
         local open = G.GetFlag(c.flag)
@@ -3498,13 +3485,53 @@ function G.ContinentSync()
                 DestroyContinent(c.name)
                 cls = cls or LoadBlueprintClass(NOLAND_PKG, NOLAND_NAME)
                 if not cls then return nil, "could not load " .. NOLAND_NAME .. "_C" end
-                local list, why = PlaceContinent(pose.world, cls, c)
+                local list, why = PlaceContinent(world, cls, c)
                 if not list then return nil, why end
                 continentActors[c.name] = list
                 placed[#placed + 1] = c.name
             end
         end
     end
+    return placed, removed
+end
+
+-- Round 42: after loading a save in the air, the player could land in the first seconds, before
+-- the first sync. This runs from the engine's LoadMap post hook, so the boxes are in before the
+-- first frame of the new map and the player never has a moment without them. A new map always
+-- means the old boxes are gone, so they are forgotten here whatever the map is. `place` is the
+-- switch: off only forgets. Returns as PlaceLocked, or nil and why.
+G.WORLD_LEVEL = "Wld_PL"
+function G.ContinentMapLoaded(world, place)
+    continentActors, continentListed, continentListedLength = {}, nil, nil
+    continentFresh, continentSeen = true, G.CONTINENT_SETTLE
+    if not place then return nil, "locks off" end
+    if ObjText(world) ~= G.WORLD_LEVEL then return nil, "not the world map" end
+    return PlaceLocked(world)
+end
+
+-- Makes the world match the save: a box set for every locked continent, none for an open one,
+-- every box on the airship's shadow list. Safe to call often. Does nothing off the world map.
+-- The load hook does the first placing; this repairs anything that differs afterwards.
+-- Returns the names placed and the names removed (either can be empty) and, when the boxes went
+-- on the airship's shadow list, a line about that; or nil and why.
+function G.ContinentSync()
+    if G.CurrentMap() ~= G.WORLD_MAP then return nil, "not on the world map" end
+    local pose, whyPose = G.PlayerPose()
+    if not pose then return nil, whyPose end
+    local pc = PlayerController()
+    local world = pc and ObjText(pc)
+    if not world then return nil, "no PlayerController" end
+    if world ~= continentWorld then
+        if continentFresh then
+            continentWorld, continentFresh = world, false   -- the boxes the hook placed belong to this one
+        else
+            continentWorld, continentActors, continentListed, continentListedLength, continentSeen = world, {}, nil, nil, 0
+        end
+    end
+    continentSeen = continentSeen + 1
+    if continentSeen < G.CONTINENT_SETTLE then return {}, {} end
+    local placed, removed = PlaceLocked(pose.world)
+    if not placed then return nil, removed end
     local all = {}
     for _, list in pairs(continentActors) do
         for _, a in ipairs(list) do all[#all + 1] = a end

@@ -144,6 +144,7 @@ G.lockSyncs, G.lockOpens = 0, {}
 function G.OnField() return true end
 function G.ContinentSync() G.lockSyncs = G.lockSyncs + 1; return {"pharm"}, {} end
 function G.ContinentClear() G.lockCleared = true end
+function G.ContinentMapLoaded(world, place) G.hookWorld, G.hookPlace = world, place; return place and {"pharm"} or nil, "locks off" end
 function G.ContinentStatus() return "open []" end
 function G.SetContinentOpen(name, open) if name == "narnia" then return nil, "no continent" end G.lockOpens[name] = open; return 1 end
 function G.AirshipState() return "placed true" end
@@ -270,6 +271,7 @@ def boot(before=""):
       function RegisterConsoleCommandGlobalHandler(n, fn) commands[n] = fn end
       hooks = {}
       function RegisterHook(name, fn) hooks[name] = fn end
+      function RegisterLoadMapPostHook(fn) loadMapHook = fn end
     ''')
     G = L.execute(STUB)
     L.globals().package.loaded["game"] = G
@@ -1157,6 +1159,14 @@ L.execute('commands["ffrap_lock"]("ffrap_lock", {"close", "narnia"})')
 assert G.lockOpens.narnia is None, "a bad name changes nothing"
 L.execute('commands["ffrap_lock"]("ffrap_lock", {"off"})')
 assert G.lockCleared is True and "continentlocks\t0\n" in read("ap_state.txt"), read("ap_state.txt")
+# Round 42: each map load goes to the game file with the switch's state
+L.execute("""worldParam = { get = function() return "the world" end }""")
+L.execute('loadMapHook(nil, worldParam)')
+assert G.hookWorld == "the world" and G.hookPlace is False, (G.hookWorld, G.hookPlace)
+L.execute('commands["ffrap_lock"]("ffrap_lock", {"on"})')
+L.execute('loadMapHook(nil, worldParam)')
+assert G.hookPlace is True
+L.execute('commands["ffrap_lock"]("ffrap_lock", {"off"})')
 # Round 39: `state` reads the airship's save fields and writes no spawn condition
 L.execute('commands["ffrap_airship"]("ffrap_airship", {"state"})')
 assert G.airshipWrote is None, G.airshipWrote
