@@ -67,7 +67,8 @@ An Archipelago implementation for Final Fantasy Resonance (UE 5.6, game module `
 - The story counter is `Progress.Progress[1]` in Lua (element 0).
 - `eventFlag` is 0-based in snapshots and 1-based in Lua (flag i is element i + 1).
 - Features are switched on by event flags in `EnableFlagIdData` fields of the UI's data assets: 14 Equipment, 16 World Map, 18 Recovery, 19 Party, 24 Visions, 26 main menu, 34 fast travel. A new start that skips the story must set them (round 39).
-- More story flags an open start needs: 25 staggering, 28 Fina's summoning, 90 to 98 the espers, 1160-1199 and 1217-1229 each tutorial's "seen" (round 45).
+- More story flags an open start needs: 25 staggering, 28 Fina's summoning, 1160-1199 and 1217-1229 each tutorial's "seen" (round 45).
+- An esper in the summon menu is an ability on both Finas, added by the event row's `AbilitySettings`; its flag (90 to 98) alone does nothing (round 46).
 - A story `NoEntry` zone holds until its event's flag is on (the Earth Shrine's exit needs flag 102, round 44). `gimmicks.tsv` has the conditions.
 - `CPP_VM_Party:AddUnit` does not set `JoinStatus`: a unit added only that way gains no EXP and gear on it does not count (round 44).
 - The prologue skip must run after story 1005 and the game's first autosave, or the opening movie's input lock survives the reload (round 9).

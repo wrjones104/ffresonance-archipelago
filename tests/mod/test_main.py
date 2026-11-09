@@ -122,6 +122,9 @@ function G.UnlockVision() return "ok", "" end
 function G.HasVision(id) return (G.owned or {})[id] == true end
 function G.AddUnit() return "ok", G.unitDetail or "in the active party" end
 function G.VisionShopGuard() return nil end
+G.CRYSTALS = { { event = 10, map = 10200, flag = 1000 } }
+function G.CrystalsPatch() G.crystalPatches = (G.crystalPatches or 0) + 1; return 3 end
+function G.BlankFieldItem(s) G.blanked = (G.blanked or 0) + 1; return true end
 function G.SyncSlotLevel() G.slotSyncs = (G.slotSyncs or 0) + 1; return false end
 function G.SetUnitLevel(id, level) G.leveled = { id = id, level = level }; return true, "level " .. level end
 function G.PartyLevel() return G.partyLv or 7, "1001:7" end
@@ -1186,6 +1189,24 @@ open(path("ap_in.txt"), "w", encoding="utf-8", newline="\n").close()
 L, G = boot()
 L.execute("worldParam = { get = function() return 'the world' end }")
 L.execute('commands["ffrap_lock"]("ffrap_lock", {"off"})')
+# Round 46: with the seed's cfg, crystals are patched once per save and report by their flag, and
+# shinies are blanked
+open(path("ap_in.txt"), "w", encoding="utf-8", newline="\n").write("seed\tS:0:1\ncfg\topenworld\t1\ncfg\tshinies\t1\ncfg\tcrystals\t1\n")
+L, G = boot()
+L.execute("tickFn()")
+G.story = 8000
+load(G, "SD_CRYSTAL", "0")
+L.execute('commands["ffrap_bind"]("ffrap_bind", {})')
+L.globals().G = G
+L.execute("G.shinies = { { uid = 1, itemId = 5, money = -1, open = false } }")
+L.execute("for i = 1, 6 do tickFn() end")
+assert G.crystalPatches == 1, G.crystalPatches
+assert "check\tcrystal:10200" not in read("ap_out.txt")
+assert G.blanked >= 1, "a shiny is blanked"
+L.execute("local old = G.GetFlag; G.GetFlag = function(i) if i == 1000 then return true end return old and old(i) end")
+L.execute("for i = 1, 4 do tickFn() end")
+assert read("ap_out.txt").count("check\tcrystal:10200\n") == 1, read("ap_out.txt")
+open(path("ap_in.txt"), "w", encoding="utf-8", newline="\n").close()
 # Round 44: in a seed, a member received in the open world joins at the party's level; one
 # received before the skip, or already in the party, is left alone
 open(path("ap_in.txt"), "w", encoding="utf-8", newline="\n").write("seed\tS:0:1\ncfg\topenworld\t1\n")

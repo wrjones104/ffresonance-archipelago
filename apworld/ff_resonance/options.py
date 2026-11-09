@@ -2,7 +2,7 @@ from dataclasses import dataclass
 
 from Options import Choice, DefaultOnToggle, OptionGroup, OptionSet, PerGameCommonOptions, Range, Toggle
 
-from .data import CHESTS, SHINIES
+from .data import CHESTS, CRYSTALS, SHINIES
 
 
 class GoalStoryCheckpoint(Range):
@@ -90,11 +90,19 @@ class StartingCharacter4(StartingCharacter):
 class IncludeShinies(Toggle):
     """
     EXPERIMENTAL. Adds the shining spots ("shinies") that hold consumables, equipment or gil as
-    locations: 92, all on the world map, read from the game's own files. Shinies elsewhere hold
-    Tablet Shards or key items, so they are not locations. Shinies still give their vanilla item
-    as well, because the mod cannot replace a shiny's reward yet.
+    locations: 92, all on the world map, read from the game's own files. A shiny that is a
+    location gives 1 gil, and the check is the real reward. Shinies elsewhere hold Tablet Shards
+    or key items, so they are not locations.
     """
     display_name = "Include Shinies"
+
+
+class IncludeCrystals(Toggle):
+    """
+    EXPERIMENTAL. Makes the 16 crystals in the Sanctums of Light locations. Touching one skips the
+    summoning scene and the questions, and gives its check, which can be anything in the multiworld.
+    """
+    display_name = "Include Crystals"
 
 
 class ExcludedRegions(OptionSet):
@@ -103,7 +111,7 @@ class ExcludedRegions(OptionSet):
     another player needs. Use this for areas you cannot go back to, or do not want to play.
     """
     display_name = "Excluded Regions"
-    valid_keys = sorted({loc["region"] for loc in CHESTS + SHINIES})
+    valid_keys = sorted({loc["region"] for loc in CHESTS + SHINIES + CRYSTALS})
 
 
 class ShufflePartyMembers(DefaultOnToggle):
@@ -142,6 +150,7 @@ class FFResonanceOptions(PerGameCommonOptions):
     starting_character_3: StartingCharacter3
     starting_character_4: StartingCharacter4
     include_shinies: IncludeShinies
+    include_crystals: IncludeCrystals
     excluded_regions: ExcludedRegions
     shuffle_party_members: ShufflePartyMembers
     shuffle_visions: ShuffleVisions
@@ -152,6 +161,6 @@ option_groups = [
     OptionGroup("Goal", [GoalStoryCheckpoint]),
     OptionGroup("Start", [StartingContinent, StartingRoster, StartingCharacter1, StartingCharacter2,
                           StartingCharacter3, StartingCharacter4]),
-    OptionGroup("Locations", [IncludeShinies, ExcludedRegions]),
+    OptionGroup("Locations", [IncludeShinies, IncludeCrystals, ExcludedRegions]),
     OptionGroup("Items", [ShufflePartyMembers, ShuffleVisions, ShuffleKeyItems]),
 ]

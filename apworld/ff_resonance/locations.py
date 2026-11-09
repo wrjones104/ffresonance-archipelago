@@ -4,13 +4,13 @@ from typing import TYPE_CHECKING
 
 from BaseClasses import ItemClassification, Location, LocationProgressType, Region
 
-from .data import CHESTS, CONTINENT_UNLOCKS, FINAL_AREA, ITEMS, OPEN_AREA, SHINIES
+from .data import CHESTS, CONTINENT_UNLOCKS, CRYSTALS, FINAL_AREA, ITEMS, OPEN_AREA, SHINIES
 from .items import GAME, FFResonanceItem
 
 if TYPE_CHECKING:
     from .world import FFResonanceWorld
 
-ALL_LOCATIONS = CHESTS + SHINIES
+ALL_LOCATIONS = CHESTS + SHINIES + CRYSTALS
 LOCATION_NAME_TO_ID: dict[str, int] = {loc["name"]: loc["id"] for loc in ALL_LOCATIONS}
 LOCATION_KEY_TO_ID: dict[str, int] = {loc["key"]: loc["id"] for loc in ALL_LOCATIONS}
 
@@ -19,6 +19,7 @@ for _loc in ALL_LOCATIONS:
     location_name_groups.setdefault(_loc["region"], set()).add(_loc["name"])
 location_name_groups["Chests"] = {loc["name"] for loc in CHESTS}
 location_name_groups["Shinies"] = {loc["name"] for loc in SHINIES}
+location_name_groups["Crystals"] = {loc["name"] for loc in CRYSTALS}
 
 GOAL_EVENT = "Story Goal"
 VICTORY = "Victory"
@@ -56,6 +57,8 @@ def create_regions_and_locations(world: FFResonanceWorld) -> None:
     chosen = list(CHESTS)
     if world.options.include_shinies:
         chosen += SHINIES
+    if world.options.include_crystals:
+        chosen += CRYSTALS
     excluded = world.options.excluded_regions.value
 
     for loc in chosen:
@@ -65,7 +68,8 @@ def create_regions_and_locations(world: FFResonanceWorld) -> None:
         if loc["region"] in excluded or not loc["open_world"]:
             location.progress_type = LocationProgressType.EXCLUDED
         region.locations.append(location)
-        world.vanilla_items.append(loc["vanilla"])
+        if loc["vanilla"] is not None:
+            world.vanilla_items.append(loc["vanilla"])
 
     goal_region = regions[FINAL_AREA]
     goal = FFResonanceLocation(player, GOAL_EVENT, None, goal_region)

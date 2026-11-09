@@ -94,7 +94,7 @@ class FFResonanceWorld(World):
 
     def fill_slot_data(self) -> Mapping[str, Any]:
         return {
-            **self.options.as_dict("goal_story_checkpoint", "include_shinies"),
+            **self.options.as_dict("goal_story_checkpoint", "include_shinies", "include_crystals"),
             "mod_protocol": MOD_PROTOCOL,
             "open_world": True,
             "starting_party": self.starting_party,

@@ -11,6 +11,8 @@
 --     cfg blank <0|1>                             chest blanking
 --     cfg openworld <0|1>                         the open world start and continent locks (0.25.0)
 --     cfg party <unit,unit,...>                   the starting party, leader first (0.25.0)
+--     cfg shinies <0|1>                           shinies are locations: blank their rewards (0.29.0)
+--     cfg crystals <0|1>                          sanctum crystals are locations (0.29.0)
 --     scout <location key> <item> <player> <flags> <own>   what a location holds (0.11.0)
 --
 --   ap_out.txt  game -> client

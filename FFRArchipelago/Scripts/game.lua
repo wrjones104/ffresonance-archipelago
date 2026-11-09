@@ -1410,6 +1410,19 @@ function G.OnField()
     return FeedHost() ~= nil
 end
 
+-- Round 46: a shiny that is a location gives 1 gil, as a blanked chest does, and the check is the
+-- real reward. The reward is on the actor. Same rule as the apworld's: items below the shuffle
+-- limit and gil. Returns true when it wrote.
+function G.BlankFieldItem(e)
+    if e.open or not e.actor then return false end
+    local id, money = e.itemId or -1, e.money or -1
+    if id == BLANK.ItemId and money == BLANK.Money then return false end
+    if not ((id >= 0 and id < SHUFFLE_ID_LIMIT) or (id < 0 and money > 0)) then return false end
+    return (pcall(function()
+        e.actor.m_ItemId, e.actor.m_ItemNum, e.actor.m_Money = BLANK.ItemId, BLANK.ItemNum, BLANK.Money
+    end))
+end
+
 local function FeedName()
     feed.made = feed.made + 1
     return FName(FEED_PREFIX .. "_" .. feed.made)
@@ -1860,19 +1873,13 @@ local function ObjText(v)
     return tostring(v)
 end
 
--- What a join needs besides the party list: JoinStatus 0, usable, and the unit's own gear in the
--- bag, since equipped gear is counted there (see STARTER_GEAR). Returns how the status was set.
+-- What a join needs besides the party list: JoinStatus 0 and usable. Nothing is put in the bag:
+-- round 46 saw a spare copy of the unit's gear. Returns how the status was set.
 function G.FinishJoin(id)
     local how = G.SetJoinStatus(id, 0)
     local sd = G.SaveData()
     local entry = sd and UnitEntry(sd, id)
     if entry then Put(entry, "IsUsable", true) end
-    local inv = Lib("CPP_BFL_SaveDataInventory")
-    if inv and inv.AddInventory then
-        for _, gear in ipairs(STARTER_GEAR[id] or {}) do
-            pcall(function() inv:AddInventory(gear, 1) end)
-        end
-    end
     return how
 end
 
@@ -1927,9 +1934,10 @@ end
 --   102      the Earth Shrine's exit (round 44: its NoEntry event holds while 102 is off; C01_010_02)
 --   25       staggering enemies (round 45: C01_008_02, the Earth Shrine's boss)
 --   28       Fina's esper summoning (round 45: C01_037_01_Choice_After, after Siren)
+--   90       Siren earned (round 45); her summon itself is an ability, see GrantSiren
 -- 1160-1199 and 1217-1229 are every tutorial's "seen" flag (round 45: the OnFlagList of every
 -- Tutorial_ row in the talk event table). Tutorials in battles and on maps test these.
-local OPEN_WORLD_FEATURES = { 21, 24, 13, 34, 102, 25, 28 }
+local OPEN_WORLD_FEATURES = { 21, 24, 13, 34, 102, 25, 28, 90 }
 local OPEN_WORLD_TUTORIALS = {}
 for i = 1160, 1199 do OPEN_WORLD_TUTORIALS[#OPEN_WORLD_TUTORIALS + 1] = i end
 for i = 1217, 1229 do OPEN_WORLD_TUTORIALS[#OPEN_WORLD_TUTORIALS + 1] = i end
@@ -1942,13 +1950,82 @@ local function EnableOpenWorld(sd)
         #OPEN_WORLD_FEATURES, #OPEN_WORLD_TUTORIALS, #bad > 0 and (" (failed: " .. table.concat(bad, " ") .. ")") or "")
 end
 
+-- The talk event table, and the two kinds of row in it (ETalkEventType).
+local SHOP_TABLE = "/Game/Datatable/Event/TalkEvent/CDT_TalkEventData_Prod.CDT_TalkEventData_Prod"
+local EVENT_SEQUENCE, EVENT_BLUEPRINT = 0, 1
+
+-- The 16 sanctum crystals (round 46; data/crystals.tsv). Walking up to one starts event
+-- Int_LegendEV_NN_01, or _01_Short after your first; a long scene and three questions end in
+-- Int_LegendEV_NN_07, which sets the crystal's flag and gives the vision. So: the opening rows
+-- jump straight to row 07, row 07 keeps its flags and gives nothing, and no scene plays (a
+-- Blueprint row with no Blueprint is a no-op: the table has such rows, which the story runs).
+G.CRYSTALS = {
+    { event = 10, map = 10200, flag = 1000 }, { event = 6, map = 10201, flag = 1001 }, { event = 15, map = 10202, flag = 1002 },
+    { event = 1, map = 10203, flag = 1003 }, { event = 2, map = 10205, flag = 1007 }, { event = 9, map = 10206, flag = 1009 },
+    { event = 3, map = 10207, flag = 1008 }, { event = 7, map = 10208, flag = 1005 }, { event = 8, map = 10209, flag = 1006 },
+    { event = 11, map = 10210, flag = 1010 }, { event = 4, map = 10211, flag = 1011 }, { event = 14, map = 10212, flag = 1012 },
+    { event = 5, map = 10213, flag = 1013 }, { event = 13, map = 10214, flag = 1014 }, { event = 12, map = 10215, flag = 1015 },
+    { event = 16, map = 10216, flag = 1016 },
+}
+
+function G.CrystalsPatch()
+    local jump, ends = {}, {}
+    for _, c in ipairs(G.CRYSTALS) do
+        local base = string.format("Int_LegendEV_%02d", c.event)
+        jump[base .. "_01"] = base .. "_07"
+        jump[base .. "_01_Short"] = base .. "_07"
+        ends[base .. "_07"] = true
+    end
+    local written = 0
+    for _, dt in ipairs(TableFamily(Find(SHOP_TABLE))) do
+        pcall(function()
+            dt:ForEachRow(function(name, row)
+                local key = ObjText(name)
+                if jump[key] then
+                    row.EventType = EVENT_BLUEPRINT
+                    row.ContinuousEventList[1].EventId = FName(jump[key])
+                    written = written + 1
+                elseif ends[key] then
+                    row.EventType = EVENT_BLUEPRINT
+                    row.ObtainItemList:Empty()
+                    written = written + 1
+                end
+            end)
+        end)
+    end
+    return written
+end
+
+-- Round 46: flag 90 alone did not put Siren in the summon menu. An esper is an ability on both
+-- Finas: the event after her fight has AddAbilities [6, 430980] and AddCommandAbilities [6] for
+-- units 1003 and 1006. 6 is the summon command, 430980 is Siren. Her fight is a story event, so
+-- both Finas simply start with her. Safe to run again.
+local SIREN_UNITS, SIREN_ABILITIES, SIREN_COMMANDS = { 1003, 1006 }, { 6, 430980 }, { 6 }
+local function AppendOnce(list, value)
+    for i = 1, #list do
+        if Int(list[i]) == value then return end
+    end
+    local n = #list
+    local _ = list[n + 1]    -- reading one past the end grows a UE4SS TArray
+    list[n + 1] = value
+end
+local function GrantSiren(sd)
+    local ok = true
+    for _, unit in ipairs(SIREN_UNITS) do
+        local entry = UnitEntry(sd, unit)
+        ok = ok and entry ~= nil and pcall(function()
+            for _, id in ipairs(SIREN_ABILITIES) do AppendOnce(entry.activeSkillIdList, id) end
+            for _, id in ipairs(SIREN_COMMANDS) do AppendOnce(entry.commandSkillIdList, id) end
+        end)
+    end
+    return ok, "Siren: summon abilities on both Finas"
+end
+
 -- Round 45: the moogle's Vision Enhancement screen has no way out when the save owns no vision.
 -- The three talk events that open it are Blueprint rows. While the save owns none they are made
 -- Sequence rows, which with no sequence set do nothing (the table has such rows, as cushions).
 -- Writes only when the state changes; `force` after a save loads, as a reload can restore a table.
-local SHOP_TABLE = "/Game/Datatable/Event/TalkEvent/CDT_TalkEventData_Prod.CDT_TalkEventData_Prod"
 local SHOP_ROWS = { VisionUpgrade = true, VisionUpgrade_Main = true, FEV_Town_10Cry_41_720_01 = true }
-local EVENT_SEQUENCE, EVENT_BLUEPRINT = 0, 1
 local shopBlocked = nil
 function G.VisionShopGuard(force)
     local sd = G.SaveData()
@@ -2147,6 +2224,7 @@ function G.SkipPrologue(opts)
     if opts and opts.openStart then
         step(G.MarkChatsPlayed(sd))
         step(EnableOpenWorld(sd))
+        step(GrantSiren(sd))
         -- Round 44: Jake came in at his story level, 27. Everyone starts at 1, and a member who
         -- joins later comes in at the party's level (main.lua).
         local bad = {}

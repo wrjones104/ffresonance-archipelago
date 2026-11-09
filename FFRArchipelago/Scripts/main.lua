@@ -50,7 +50,7 @@
 -- follows the save slots the linked game is saved to. While any other save is loaded, the mod
 -- grants nothing, reports nothing and leaves the chests vanilla.
 
-local VERSION = "0.28.0"
+local VERSION = "0.29.0"
 local PROTOCOL = 2        -- the bridge protocol; the apworld's MOD_PROTOCOL
 
 local MOD_DIR = (debug.getinfo(1, "S").source:gsub("^@", ""):gsub("\\", "/"):match("^(.*/)Scripts/[^/]+$"))
@@ -107,7 +107,7 @@ local openArrival = nil      -- ffrap_openstart dock|air|event, kept once the us
 local continentLocks = nil   -- ffrap_lock on|off, kept once the user picks one; the seed's until then
 -- What the seed says about the start (the client's cfg lines). Not saved: ap_in.txt is read again
 -- at every start, and the seed that wrote it is the only thing that decides these.
-local seedCfg = { openworld = false, party = nil }
+local seedCfg = { openworld = false, party = nil, shinies = false, crystals = false }
 local function openStartOn() return openStart or seedCfg.openworld end
 -- An `ffrap_lock on|off` from this run wins. Then a seed that asks for locks: a saved "off" from
 -- an old test must not quietly leave a real seed unlocked. Then the saved switch.
@@ -373,6 +373,10 @@ local function readInbox(initial)
             end
         elseif f[1] == "cfg" and f[2] == "openworld" then
             seedCfg.openworld = f[3] == "1"
+        elseif f[1] == "cfg" and f[2] == "shinies" then
+            seedCfg.shinies = f[3] == "1"
+        elseif f[1] == "cfg" and f[2] == "crystals" then
+            seedCfg.crystals = f[3] == "1"
         elseif f[1] == "cfg" and f[2] == "party" then
             local party = {}
             for id in (f[3] or ""):gmatch("%d+") do party[#party + 1] = tonumber(id) end
@@ -689,6 +693,10 @@ local function scanLoot()
         if state.blank and sessionSave() then
             log("chest blanking: " .. game.BlankChests(true) .. " rows set to 1 gil")
         end
+    end
+    -- Round 46: shinies are blanked before the map settles, so one cannot be picked up in time.
+    if seedCfg.shinies and sessionSave() then
+        for _, s in ipairs(game.LiveFieldItems()) do game.BlankFieldItem(s) end
     end
     visit.scans = visit.scans + 1
     if visit.scans <= MAP_SETTLE_SCANS then return end
@@ -1110,8 +1118,13 @@ local function tick()
             if state.ticks % LOCKS_EVERY == 0 then pcall(locksTick) end
             if state.ticks % STATUS_EVERY == 0 and seedCfg.openworld and game.OnField() then pcall(game.SyncSlotLevel) end
             if seedCfg.openworld and state.ticks % LOCKS_EVERY == 0 then
-                local okShop, blocked, rows = pcall(game.VisionShopGuard, shopSave ~= save.obj)
+                local newSave = shopSave ~= save.obj
+                local okShop, blocked, rows = pcall(game.VisionShopGuard, newSave)
                 shopSave = save.obj
+                if newSave and seedCfg.crystals then
+                    local okCrystals, written = pcall(game.CrystalsPatch)
+                    log("crystals: " .. tostring(written) .. " event rows set to skip the scene" .. (okCrystals and "" or " (failed)"))
+                end
                 if okShop and blocked ~= nil then
                     log("vision shop " .. (blocked and "closed (no vision yet)" or "open") .. ": " .. tostring(rows) .. " rows")
                 end
@@ -1119,6 +1132,14 @@ local function tick()
             -- Chests and shinies are still recorded in seen.tsv for any save; scanLoot reports
             -- them only for the session's save (see opened).
             if state.ticks % CHEST_EVERY == 0 then scanLoot() end
+            -- Round 46: a crystal's check is its flag, which its event sets as it ends.
+            if seedCfg.crystals and sessionSave() and state.ticks % CHEST_EVERY == 0 then
+                for _, c in ipairs(game.CRYSTALS) do
+                    if game.GetFlag(c.flag) == true and report("check", "crystal:" .. c.map) then
+                        log("check crystal:" .. c.map)
+                    end
+                end
+            end
             if sessionSave() then
                 applyItems()
                 watchStory()

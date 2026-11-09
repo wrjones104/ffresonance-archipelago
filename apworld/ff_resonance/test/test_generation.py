@@ -1,6 +1,6 @@
 from BaseClasses import LocationProgressType
 
-from ..data import CHESTS, CONTINENT_UNLOCKS, ITEMS, NO_BOX, PROGRESSION, SHINIES, SHUFFLE_ID_LIMIT, UNIT_ITEM_BASE
+from ..data import CHESTS, CONTINENT_UNLOCKS, CRYSTALS, ITEMS, NO_BOX, PROGRESSION, SHINIES, SHUFFLE_ID_LIMIT, UNIT_ITEM_BASE
 from ..items import CLASSIFICATIONS, FILLER_CATEGORIES
 from ..locations import GOAL_EVENT, LOCATION_KEY_TO_ID
 from . import FFResonanceTestBase
@@ -74,6 +74,18 @@ class TestShinies(FFResonanceTestBase):
     def test_shinies_are_locations(self) -> None:
         names = {loc.name for loc in self.multiworld.get_locations(self.player) if loc.address is not None}
         self.assertEqual(names, {loc["name"] for loc in CHESTS + SHINIES})
+
+
+class TestCrystals(FFResonanceTestBase):
+    options = {"include_crystals": True}
+
+    def test_crystals_are_locations(self) -> None:
+        names = {loc.name for loc in self.multiworld.get_locations(self.player) if loc.address is not None}
+        self.assertEqual(names, {loc["name"] for loc in CHESTS + CRYSTALS})
+
+    def test_there_is_an_item_for_each(self) -> None:
+        pool = [item for item in self.multiworld.itempool if item.player == self.player]
+        self.assertEqual(len(pool), len(CHESTS) + len(CRYSTALS))
 
 
 class TestExcludedRegions(FFResonanceTestBase):
@@ -152,9 +164,16 @@ class TestData(FFResonanceTestBase):
         self.assertEqual(keys["chest:3010:0"]["category"], "magicite")
         self.assertNotIn("chest:2031:20", keys, "Adamantite is a key item and stays where it is")
 
-    def test_siren_is_an_item(self) -> None:
-        siren = next(i for i in ITEMS.values() if i["name"] == "Siren (Esper)")
-        self.assertEqual((siren["kind"], siren["game_id"]), ("flag", 90))
+    def test_siren_is_not_an_item(self) -> None:
+        # Round 46: she is an ability both Finas start with.
+        self.assertNotIn("Siren (Esper)", {i["name"] for i in ITEMS.values()})
+
+    def test_crystals(self) -> None:
+        self.assertEqual(len(CRYSTALS), 16)
+        areas = {c["key"]: c["area"] for c in CRYSTALS}
+        self.assertEqual(areas["crystal:10200"], "Grandshelt")
+        self.assertEqual(areas["crystal:10214"], "Mysidia")
+        self.assertTrue(set(areas.values()) <= set(CONTINENT_UNLOCKS), set(areas.values()))
 
     def test_rows_with_no_box_are_not_locations(self) -> None:
         # Map 10050 (Dng_02Lan_41) has no level and no map table row: the game does not ship it.
@@ -172,7 +191,7 @@ class TestData(FFResonanceTestBase):
 
     def test_mod_keys_map_to_ids(self) -> None:
         self.assertEqual(LOCATION_KEY_TO_ID["chest:3020:1"], 1_000_000_000 + 3020 * 1000 + 1)
-        self.assertEqual(len(LOCATION_KEY_TO_ID), len(CHESTS) + len(SHINIES))
+        self.assertEqual(len(LOCATION_KEY_TO_ID), len(CHESTS) + len(SHINIES) + len(CRYSTALS))
 
 
 class TestNoProgression(FFResonanceTestBase):

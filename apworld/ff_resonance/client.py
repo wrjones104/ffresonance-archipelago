@@ -152,6 +152,8 @@ class FFResonanceContext(CommonContext):
         if self.session_key is None or not os.path.isdir(self.mod_folder):
             return
         wanted = [("cfg", "openworld", int(bool(slot_data.get("open_world"))))]
+        wanted.append(("cfg", "shinies", int(bool(slot_data.get("include_shinies")))))
+        wanted.append(("cfg", "crystals", int(bool(slot_data.get("include_crystals")))))
         party = slot_data.get("starting_party") or []
         if party:
             wanted.append(("cfg", "party", ",".join(str(unit) for unit in party)))

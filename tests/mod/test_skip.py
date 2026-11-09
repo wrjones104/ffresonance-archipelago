@@ -50,10 +50,11 @@ sd = obj({
   unitParameterList = arr({
     { UnitId = 1001, JoinStatus = 1, baseParameterList = arr(zeros) },
     { UnitId = 1002, JoinStatus = 1, baseParameterList = arr({ table.unpack(zeros) }) },
-    { UnitId = 1006, JoinStatus = 0, Experience = 1650154, HitPoint = 5199, MagicPoint = 521, EquipWeaponId = 10699,
+    { UnitId = 1006, JoinStatus = 0, commandSkillIdList = arr({}), Experience = 1650154, HitPoint = 5199, MagicPoint = 521, EquipWeaponId = 10699,
       EquipArmorId = 11301, EquipAccessoryIdList = arr({ 12029 }),
       activeSkillIdList = arr({ 408010, 220070, 220030, 408050, 431120, 408030, 220110 }),
       baseParameterList = arr({ table.unpack(zeros) }) },
+    { UnitId = 1003, JoinStatus = 1, activeSkillIdList = arr({ 403010 }), commandSkillIdList = arr({}), baseParameterList = arr({}) },
   }),
   unitGuest = { HitPoint = 0, MagicPoint = 0 },
   Player = { WinNum = 0 },
@@ -166,7 +167,13 @@ assert lua("sd.chat.DataMap.rows.ATC11.IsAlreadyPlayed") is True and lua("sd.cha
 assert lua("G.ChatState()") == f"{CHATS} rows, {CHATS} released, {CHATS} played; notices [], latest None", lua("G.ChatState()")
 assert lua("sd.Progress.eventFlag[32]") is True, "flag 31 is what a chat row turns on"
 # Round 39: the Equip screen shows visions only with flag 24, and the story sets 21 with it
-assert "ok   open world flags on: 7 features, 53 tutorials" in list(report.values())
+assert "ok   open world flags on: 8 features, 53 tutorials" in list(report.values())
+# Round 46: Siren is an ability on both Finas, and asking again adds nothing
+assert "ok   Siren: summon abilities on both Finas" in list(report.values())
+fina_skills = lambda u: [v for v in L.eval(f"rawget(unitAt({u}).activeSkillIdList, 'items')").values()]
+L.execute("unitAt = function(id) for i = 1, #sd.unitParameterList do if sd.unitParameterList[i].UnitId == id then return sd.unitParameterList[i] end end end")
+assert fina_skills(1003) == [403010, 6, 430980], fina_skills(1003)
+assert lua("#unitAt(1006).commandSkillIdList") == 1 and lua("unitAt(1003).commandSkillIdList[1]") == 6
 assert lua("sd.Progress.eventFlag[22]") is True and lua("sd.Progress.eventFlag[25]") is True, "flag i is element i + 1"
 # Round 44: fast travel (13, 34, 1180) and the Earth Shrine's exit (102)
 assert all(lua(f"sd.Progress.eventFlag[{i + 1}]") is True for i in (13, 34, 1180, 102))
@@ -198,7 +205,7 @@ ok, report = L.execute("return G.OpenStart()")
 assert ok is True and list(report.values())[:2] == [
     f"ok   story counter -> {DOCK_STORY}", f"ok   arrival: map {TOWER_MAP} at -2704.8, -171166.7, 3002.2"], list(report.values())
 assert list(report.values())[2].startswith("ok   active time chats: 56 of 56"), list(report.values())
-assert list(report.values())[3] == "ok   open world flags on: 7 features, 53 tutorials", list(report.values())
+assert list(report.values())[3] == "ok   open world flags on: 8 features, 53 tutorials", list(report.values())
 assert lua("G.StoryCounter()") == DOCK_STORY and lua("sd.Map.mapId") == TOWER_MAP
 assert lua("sd.Player.WinNum") == 12, "the rest of the save is left alone"
 # the "air" start: the world map, riding the airship beside the tower, with flag 31 on
@@ -237,12 +244,12 @@ assert lua("bag[10100]") is None and lua("bag[10699]") == 0, "Rain's gear stays 
 # Round 44: everyone starts at level 1 with HP and MP filled, Jake's 27 included
 assert "ok   party levels: all 8 at level 1" in lines, lines
 assert lua("unitLevels[1007]") == 1 and lua("levelCalls[#levelCalls].full") is True
-# Round 44: a join ends with JoinStatus 0, usable, and the unit's own gear in the bag
+# Round 44: a join ends with JoinStatus 0 and usable. Round 46: and no spare copy of the gear
 L.execute("""unitAt(1002).JoinStatus = 1; unitAt(1002).IsUsable = false
 libs["/Script/mucha.Default__CPP_BFL_SaveDataInventory"].AddInventory = function(_, id, n) bag[id] = (bag[id] or 0) + n end
 bag[10200] = nil""")
 L.execute("G.FinishJoin(1002)")
-assert lua("unitAt(1002).JoinStatus") == 0 and lua("unitAt(1002).IsUsable") is True and lua("bag[10200]") == 1
+assert lua("unitAt(1002).JoinStatus") == 0 and lua("unitAt(1002).IsUsable") is True and lua("bag[10200]") is None
 # Round 44: the save slot's level is Rain's, so while she is away it follows the party
 L.execute("""G.PartyLevel = function() return 9, "1007:9" end
 G.UnitJoinStatus = function(id) return joinOf[id] end
@@ -269,6 +276,33 @@ L.execute("sd.visionList = arr({ 13017 }, 0)")
 blocked, rows = L.execute("return G.VisionShopGuard()")
 assert blocked is False and rows == 3 and lua("shopRows.FEV_Town_10Cry_41_720_01.EventType") == 1
 L.execute("""sd.visionList = nil""")
+# Round 46: the crystals skip to their last row, which keeps its flags and gives nothing
+L.execute("""
+local function cont(id) return { EventId = FName(id) } end
+crystalRows = { Int_LegendEV_10_01 = { EventType = 0, ContinuousEventList = { cont("Int_LegendEV_10_01_MV") } },
+  Int_LegendEV_10_01_Short = { EventType = 0, ContinuousEventList = { cont("Int_LegendEV_10_01_MV") } },
+  Int_LegendEV_10_07 = { EventType = 0, ObtainItemList = arr({ { ID = 13120 } }), OnFlagList = arr({ 1000, 1017 }) },
+  Int_LegendEV_10_02_MV = { EventType = 0 } }
+shopRows = crystalRows""")
+assert lua("G.CrystalsPatch()") == 3
+assert lua("crystalRows.Int_LegendEV_10_01.ContinuousEventList[1].EventId:ToString()") == "Int_LegendEV_10_07"
+assert lua("crystalRows.Int_LegendEV_10_01_Short.ContinuousEventList[1].EventId:ToString()") == "Int_LegendEV_10_07"
+assert lua("crystalRows.Int_LegendEV_10_01.EventType") == 1 and lua("crystalRows.Int_LegendEV_10_02_MV.EventType") == 0
+assert lua("#crystalRows.Int_LegendEV_10_07.ObtainItemList") == 0 and lua("#crystalRows.Int_LegendEV_10_07.OnFlagList") == 2
+_crystals = [r.split("\t") for r in (paths.REPO / "data/crystals.tsv").read_text(encoding="utf8").splitlines()[1:]]
+_lua = [(c["event"], c["map"], c["flag"]) for c in L.eval("G.CRYSTALS").values()]
+assert sorted(_lua) == sorted((int(a), int(b), int(c)) for a, b, c, _ in _crystals), "data/crystals.tsv and G.CRYSTALS differ"
+# Round 46: a shiny that is a location is blanked; a key item, a story spot and an open one are not
+L.execute("""
+function shiny(id, money, open) local a = { m_ItemId = id, m_ItemNum = 2, m_Money = money }
+  return { actor = a, itemId = id, money = money, open = open } end
+s1, s2, s3, s4, s5 = shiny(10302, -1), shiny(25004, -1), shiny(-1, -1), shiny(10302, -1, true), shiny(-1, 500)""")
+assert lua("G.BlankFieldItem(s1)") is True and lua("s1.actor.m_ItemId") == -1 and lua("s1.actor.m_Money") == 1
+assert lua("G.BlankFieldItem(s5)") is True and lua("s5.actor.m_Money") == 1, "gil too"
+assert lua("G.BlankFieldItem(s2)") is False and lua("s2.actor.m_ItemId") == 25004, "a Tablet Shard stays"
+assert lua("G.BlankFieldItem(s3)") is False and lua("G.BlankFieldItem(s4)") is False
+L.execute("s1.itemId, s1.money = -1, 1")
+assert lua("G.BlankFieldItem(s1)") is False, "already blank"
 # Round 45: a chest holding Magicite is blanked like the others; a key item's stays
 L.execute("""
 chestRows = { { mapId = 3030, ID = 1, ItemId = 25000, ItemNum = 1, Money = -1 }, { mapId = 2031, ID = 20, ItemId = 20016, ItemNum = 1, Money = -1 },

@@ -368,15 +368,36 @@ World-map shinies verified as locations. Multiple crashes observed across differ
 
 **Next, as the user asked:** replace what shinies give, and make the vision crystals into checks that skip the summoning scene (IDEAS.md, idea 23).
 
-## Round 46 test plan (mod 0.28.0, world 0.4.2)
+**Round 46 (mod 0.28.0, world 0.4.2, 2026-11-09): tutorials, staggering, the moogle and Magicite chests work; Siren did not appear.**
+- **Worked:** no tutorials except the opening's, before the first autosave. Staggering works. The moogle's menu stays shut with no vision and opens with one. The Siren's Tower Magicite chest worked as a check.
+- **Spare gear on join:** a member who joins keeps their gear on and also got a copy in the bag. The bag copy came from 0.27.0's `FinishJoin`; the earlier equip problem was `JoinStatus`. Removed in 0.29.0.
+- **Siren:** received as an item, flag 90 on, and not in the summon menu; Ifrit, earned in play, was. Found off-line: an esper is an ability. The event rows' `AbilitySettings` add it to both Finas (`AddAbilities [6, 430980]`, `AddCommandAbilities [6]` for units 1003 and 1006, in `C01_037_01`). 6 is the summon command and 430980 is Siren. As the user suggested, 0.29.0 gives her to both Finas on an open world start, and the item is gone (world 0.5.0).
+- **Added in 0.29.0, world 0.5.0, not yet played:**
+  - **Shinies:** a shiny that is a location now gives 1 gil, like a blanked chest. Its `m_ItemId`, `m_ItemNum` and `m_Money` are rewritten on the actor, before the map settles. Only with `include_shinies` (cfg `shinies`).
+  - **Crystals:** the 16 sanctum crystals are locations with `include_crystals` (cfg `crystals`). Each opening row (`Int_LegendEV_NN_01`, `_01_Short`) jumps to `_07`, and `_07` keeps its flags and gives nothing. All three are set to Blueprint rows with no Blueprint, which should play nothing. The flag is the check. Not proven: that an empty Blueprint row still applies its `OnFlagList`.
+  - The other 10 visions come from sidequests and one boss (`Str_LegendEV_07_Boss`), and still hand out their own.
+
+## Round 47 test plan (mod 0.29.0, world 0.5.0)
 
 Send the `[FFRAP]` lines of `UE4SS.log`.
 
-**Install:** copy `FFRArchipelago/Scripts` over the installed mod, and copy `dist/ff_resonance.apworld` into `custom_worlds`. **Generate a new seed.** Connect the client first, then New Game (Archipelago).
+**Install:** copy `FFRArchipelago/Scripts` over the installed mod, and copy `dist/ff_resonance.apworld` into `custom_worlds`. Add these two lines to your yaml, then **generate a new seed**. Connect the client first, then New Game (Archipelago).
 
-1. The log should have `skip: ok   open world flags on: 7 features, 53 tutorials`, then `vision shop closed (no vision yet)`.
-2. Talk to the moogle with no vision. The screen should not open, and you should not get stuck. Once you own a vision, the log says `vision shop open`: does it open now, and can you leave it?
-3. Play a while. **Does any tutorial still appear?** Tell me which.
-4. **Can you stagger enemies?**
-5. **Can Fina summon** when she has joined, and you hold an esper? Receive **Siren (Esper)** from the pool if it comes up: is she there to equip?
-6. Open a chest that used to hold Magicite (Siren's Tower has one). It should be a check, with the chest giving 1 gil.
+```yaml
+  include_shinies: true
+  include_crystals: true
+```
+
+**Part A: Siren and joins:**
+1. The log should have `skip: ok   Siren: summon abilities on both Finas`. With Fina or Archwitch Fina in the party, **is Siren in the summon menu, and does she work?**
+2. When someone joins from the pool, **is there no spare copy of their gear in the bag?**
+
+**Part B: shinies (please save first):**
+3. Pick up a world-map shiny. **Does it say 1 gil?** You should get the Archipelago item as usual.
+4. Pick up one in a town or dungeon (these are not locations yet). It should still give its own item.
+
+**Part C: a crystal (please save first, this one is the risky one):**
+5. The log should have `crystals: 96 event rows set to skip the scene` or similar.
+6. Go to any Sanctum of Light you can reach and walk up to the crystal. **Does the scene skip? Do you get control back? Is there any message?** The log should say `check crystal:<map>`, and an item should arrive.
+7. If you get stuck or it crashes, send the crash folder and tell me what was on screen.
+8. Leave the sanctum and come back. The crystal should be gone.

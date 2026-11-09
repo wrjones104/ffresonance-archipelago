@@ -780,8 +780,8 @@ The "Back" prompt that menus and the chest pop-up show at the bottom right also 
 
 **Asked for (round 45, 2026-11-09): the next priority once the broken things are fixed.**
 
-**Shinies:** a shiny is a check today, but it still gives its own item as well. The reward is on the actor (`m_ItemId`, `m_ItemNum`, `m_Money`), and `LiveFieldItems` already reads them. So the mod can blank those fields as chests are blanked, when the map loads. 105 shinies are kept vanilla and are not locations, because they hold key items or Magicite.
+**Shinies:** mod 0.29.0 blanks the reward on the actor (`m_ItemId`, `m_ItemNum`, `m_Money`), as chests are blanked. 105 shinies are kept vanilla and are not locations: 99 Tablet Shards, 2 Magicite Shards and 4 key items. Whether the Tablet Shards should be shuffled is an open question for the user, since they may become a goal (idea 1).
 
-**Vision crystals:** the user wants to skip the summoning scene and the questions. Click the crystal, get a reward, and it can be anything in the multiworld. To find out: which actors are the crystals, whether their event rows can be pointed at nothing (as the moogle's are), and what the mod can see to report the check.
+**Vision crystals:** the user wants to skip the summoning scene and the questions. Mod 0.29.0 does this for the 16 sanctum crystals (`include_crystals`). Round 47 tests it. The other 10 visions come from sidequests and one boss.
 
 **Story bosses as map encounters:** Siren's fight is a story event, so she is an item for now. Story bosses could be fights on the map later.

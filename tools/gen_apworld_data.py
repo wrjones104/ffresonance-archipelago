@@ -40,9 +40,7 @@ OUT = os.path.join(ROOT, "apworld", "ff_resonance", "data.py")
 
 SHUFFLE_ID_LIMIT = 13000          # item ids at or above this never move (visions, key items)
 MAGICITE_IDS = (25000, 25002)     # except these, in chests (the mod blanks them too)
-# An esper with no way to earn her on the open world start is an item instead: her flag gives her.
-# Siren's fight is a story event; the flag comes from C01_037_01_Choice_After (round 45).
-ESPER_FLAGS = {"Siren": 90}
+CRYSTAL_LOCATION_BASE = 3_000_000_000    # + the sanctum's map id
 CONSUMABLE_LIMIT = 1000
 
 CHEST_LOCATION_BASE = 1_000_000_000
@@ -287,12 +285,24 @@ def main() -> None:
         items[ap_id] = {"name": units[unit_id]["name"], "kind": "unit", "game_id": unit_id, "count": 1,
                         "category": "party"}
         progression["party"].append(ap_id)
-    for name, flag in ESPER_FLAGS.items():
-        ap_id = CONTINENT_ITEM_BASE + flag
-        items[ap_id] = {"name": f"{name} (Esper)", "kind": "flag", "game_id": flag, "count": 1, "category": "key"}
-        progression["key"].append(ap_id)
+    # The sanctum crystals (data/crystals.tsv): a location each, with no vanilla item of their own
+    # to add, since their visions are already in the pool. Position decides the continent.
+    landing = {r["id"]: r for r in read_tsv("game/gimmicks.tsv") if r["class"] == "BP_MapAirShipLandingPoint_C"}
+    island_names = {"MagiNationMysidia": "Mysidia"}
+    crystals = []
+    for r in read_tsv("crystals.tsv"):
+        map_id = int(r["map"])
+        point = landing.get(r["map"])
+        area = continent_at(continents, float(point["x"]), float(point["y"])) if point else None
+        if area is None:
+            island = maps[map_id]["island"]
+            area = island_names.get(island, island)
+        crystals.append({"key": f"crystal:{map_id}", "name": f"Sanctum of Light ({names[int(r['vision'])]})",
+                         "region": "Sanctums", "area": area, "open_world": True,
+                         "id": CRYSTAL_LOCATION_BASE + map_id, "vanilla": None})
+    crystals.sort(key=lambda e: e["id"])
     # A continent's unlock turns on its event flag; Ardra has no locations, so it has no unlock.
-    used_areas = {e["area"] for e in chests + shinies}
+    used_areas = {e["area"] for e in chests + shinies + crystals}
     unlocks: dict[str, int] = {}
     for name, continent in continents.items():
         if name in used_areas:
@@ -328,7 +338,7 @@ def main() -> None:
 
     chests.sort(key=lambda e: e["id"])
     shinies.sort(key=lambda e: e["id"])
-    location_names = [e["name"] for e in chests + shinies]
+    location_names = [e["name"] for e in chests + shinies + crystals]
     assert len(location_names) == len(set(location_names)), "duplicate location names"
 
     with open(OUT, "w", encoding="utf-8", newline="\n") as f:
@@ -341,6 +351,8 @@ def main() -> None:
         f.write("# Shiny locations (data/game/field_items.tsv); condition is the spot's VisibleCondition,\n"
                 "# seen is whether it was seen in game (data/shinies.tsv)\n")
         f.write("SHINIES = " + pprint.pformat(shinies, width=110, sort_dicts=True) + "\n\n")
+        f.write("# The sanctum crystals; vanilla is None, as their visions are in the pool already\n")
+        f.write("CRYSTALS = " + pprint.pformat(crystals, width=110, sort_dicts=True) + "\n\n")
         f.write("# Chests and shinies that keep vanilla key items or valuables: not locations\n")
         f.write("KEPT_VANILLA = " + pprint.pformat(sorted(e["key"] for e in kept_chests + kept_shinies), width=110) + "\n\n")
         f.write("# Chest table rows with no box placed on any map: not locations\n")
