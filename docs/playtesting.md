@@ -335,18 +335,4 @@ World-map shinies verified as locations. Multiple crashes observed across differ
 - **A gap on load:** after loading a save made in the air over a locked continent, the user could land in the first second or two. The boxes came about 2.5 seconds after the save was seen (08:14:02.6 to 08:14:05.2): the field HUD has to appear, then the sync waits to settle. A player could use this to cross any lock.
 - **Added in 0.24.0:** the boxes go in from the engine's `LoadMap` post hook. That runs before the first frame of the new map, so there is no moment without them. The one-second sync stays, to repair anything that differs and to fill the airship's shadow list.
 
-## Round 43 test plan (mod 0.24.0, world 0.3.1)
-
-Short. Send the `[FFRAP]` lines of `UE4SS.log`. No client or seed is needed.
-
-**Install:** copy `FFRArchipelago/Scripts` over the installed mod. The log should say `version 0.24.0 loaded`. `Assets` and the apworld did not change.
-
-1. Load a save with `ffrap_lock on`. The log should say `locks: boxes placed during the map load for ...`.
-2. Fly over a locked continent and save there, in the air.
-3. Return to the title and load that save. **Press the land button as fast as you can, over and over, from the moment the map appears.** **Tell me:** could you land at all? Do it two or three times.
-4. The shadow may be missing for the first moment and then turn red. **Tell me** if that bothers you.
-5. Land somewhere open, go into a town and come back. The log should say `boxes placed during the map load` on the way back, and the boxes should not be placed a second time.
-6. Get into a battle on the world map and win it. Are the locks still there afterwards?
-7. Start New Game (Archipelago) with the open world start. Are the locks there from the first moment?
-8. `ffrap_lock open pharm` and `ffrap_lock close pharm`: still within a second or two?
-9. `ffrap_lock off`, then load a save. No boxes, and you can land anywhere.
+**Round 43 (mod 0.24.0, 2026-11-09): the continent locks are done on the mod side.** The user reports no issues at all with the plan's steps, including landing straight after loading a save in the air. The locks go in during the map load, from the `LoadMap` post hook.
