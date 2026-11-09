@@ -1725,6 +1725,7 @@ local STARTER_GEAR = {
 local UNIT_NAMES = { [1001] = "Rain", [1002] = "Lasswell", [1003] = "Fina", [1004] = "Lid", [1005] = "Nichol",
                      [1006] = "Archwitch Fina", [1007] = "Jake", [1008] = "Sakura" }
 local ARCHWITCH_FINA, ARCHWITCH_FIRST_SKILL = 1006, 408010
+local ALL_PARTY_MEMBERS = { 1001, 1002, 1003, 1004, 1005, 1006, 1007, 1008 }
 local SKIP_MAPS = { 5010, 2013, 20000, 3001 }   -- known and visited
 G.SKIP_ARRIVAL = { map = 3001, x = -5775.0, y = 0.0, z = -197.85, direction = 2 }
 -- The open world start (round 31, found with FFRSLib's story and travel tools): story 7090,
@@ -2077,6 +2078,15 @@ function G.SkipPrologue(opts)
     if opts and opts.openStart then
         step(G.MarkChatsPlayed(sd))
         step(EnableVisions(sd))
+        -- Round 44: Jake came in at his story level, 27. Everyone starts at 1, and a member who
+        -- joins later comes in at the party's level (main.lua).
+        local bad = {}
+        for _, id in ipairs(ALL_PARTY_MEMBERS) do
+            local okLevel, why = G.SetUnitLevel(id, 1)
+            if not okLevel then bad[#bad + 1] = why end
+        end
+        step(#bad == 0, "party levels: all " .. #ALL_PARTY_MEMBERS .. " at level 1"
+            .. (#bad > 0 and (" (failed: " .. table.concat(bad, "; ") .. ")") or ""))
     end
 
     return not failed, report
@@ -2803,6 +2813,26 @@ function G.UnitLevel(unitId)
     lv = ok and Int(lv) or nil
     if lv and lv > 0 then return lv end
     return nil
+end
+
+-- Sets a party member's level, as the XP the game says it takes (FFRSLib's ffrs_unit_level), and
+-- fills HP and MP for it (isMaxStatusSet: without it a unit brought down from level 27 keeps
+-- level 27's HP). Round 44. Returns ok and a detail.
+function G.SetUnitLevel(unitId, level)
+    local lib = Lib("CPP_BFL_Unit")
+    if not (lib and lib.GetExpForReachLevel and lib.SetPlayableUnitExperience) then return false, "no unit library" end
+    local max
+    pcall(function() max = Int(lib:GetMaxLevel()) end)
+    if max and max > 0 and level > max then level = max end
+    local exp
+    pcall(function() exp = Int(lib:GetExpForReachLevel(unitId, level)) end)
+    if exp == nil or (level > 1 and exp <= 0) then return false, "no level table for unit " .. unitId end
+    if not pcall(function() lib:SetPlayableUnitExperience(unitId, exp, true) end) then
+        return false, "SetPlayableUnitExperience raised for unit " .. unitId
+    end
+    local now = G.UnitLevel(unitId)
+    if now ~= level then return false, "unit " .. unitId .. " reads level " .. tostring(now) .. " after setting " .. level end
+    return true, "level " .. level
 end
 
 -- The active party's average level, rounded, and the members' levels as text ("1001:5 1002:4").

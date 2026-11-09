@@ -77,6 +77,16 @@ libs = {
   ["/Script/mucha.Default__CPP_BFL_SaveData"] = obj({ SaveGameData = function(_, slot) saved[#saved + 1] = slot end }),
 }
 function StaticFindObject(p) return libs[p] end
+unitLevels, levelCalls = {}, {}
+libs["/Script/mucha.Default__CPP_BFL_Unit"] = obj({
+  GetMaxLevel = function() return 99 end,
+  GetExpForReachLevel = function(_, id, level) return level == 1 and 0 or level * 100 end,
+  SetPlayableUnitExperience = function(_, id, exp, full)
+    levelCalls[#levelCalls + 1] = { id = id, full = full }
+    unitLevels[id] = exp == 0 and 1 or exp / 100
+  end,
+  GetPlayableUnitLevel = function(_, id) return unitLevels[id] or 27 end,
+})
 mgr = obj({ m_pGameSaveData = sd })
 mapMgr = obj({ MapTestStartByChoiceSlotLoadSaveData = function(_, slot) reloaded[#reloaded + 1] = slot end })
 function FindFirstOf(c)
@@ -214,6 +224,16 @@ assert lua("unitAt(1007).JoinStatus") == 0 and lua("unitAt(1006).JoinStatus") ==
 assert lua("unitAt(1006).activeSkillIdList[1]") == 408010 and lua("unitAt(1006).EquipWeaponId") == 10600
 assert lua("bag[10700]") == 1 and lua("bag[12022]") == 1 and lua("bag[10600]") == 1, "Jake's and her gear"
 assert lua("bag[10100]") is None and lua("bag[10699]") == 0, "Rain's gear stays out, the prologue gear goes"
+# Round 44: everyone starts at level 1 with HP and MP filled, Jake's 27 included
+assert "ok   party levels: all 8 at level 1" in lines, lines
+assert lua("unitLevels[1007]") == 1 and lua("levelCalls[#levelCalls].full") is True
+# a member who joins later can be set to the party's level, above or below his own
+ok, detail = L.execute("return G.SetUnitLevel(1007, 12)")
+assert ok is True and detail == "level 12" and lua("unitLevels[1007]") == 12, detail
+L.execute("""libs["/Script/mucha.Default__CPP_BFL_Unit"].GetMaxLevel = function() return 15 end""")
+ok, detail = L.execute("return G.SetUnitLevel(1007, 40)")
+assert ok is True and detail == "level 15", "held to the game's cap"
+L.execute("""libs["/Script/mucha.Default__CPP_BFL_Unit"].GetMaxLevel = function() return 99 end""")
 L.execute("sd.Party.partyList = arr({ 1006 }); G.OPEN_START = G.OPEN_STARTS.dock")
 
 # the plain prologue skip leaves the chats alone, and a save with no chat data fails the step only

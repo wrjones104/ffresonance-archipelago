@@ -120,7 +120,10 @@ function G.LiveFieldItems() return G.shinies end
 function G.GrantItem() return "ok", "" end
 function G.UnlockVision() return "ok", "" end
 function G.HasVision(id) return (G.owned or {})[id] == true end
-function G.AddUnit() return "ok", "" end
+function G.AddUnit() return "ok", G.unitDetail or "in the active party" end
+function G.SetUnitLevel(id, level) G.leveled = { id = id, level = level }; return true, "level " .. level end
+function G.PartyLevel() return G.partyLv or 7, "1001:7" end
+function G.StoryCounter() return G.story end
 function G.SetFlag() return "ok", "" end
 G.blankCalls = {}
 function G.BlankChests(on) G.blankCalls[#G.blankCalls + 1] = on return 0 end
@@ -1177,6 +1180,27 @@ L.execute("loadMapHook(nil, worldParam)")
 assert G.hookPlace is False, "an explicit off wins"
 L.execute('commands["ffrap_lock"]("ffrap_lock", {"on"})')
 assert "continentlocks\t1\n" in read("ap_state.txt")
+open(path("ap_in.txt"), "w", encoding="utf-8", newline="\n").close()
+L, G = boot()
+L.execute("worldParam = { get = function() return 'the world' end }")
+L.execute('commands["ffrap_lock"]("ffrap_lock", {"off"})')
+# Round 44: in a seed, a member received in the open world joins at the party's level; one
+# received before the skip, or already in the party, is left alone
+open(path("ap_in.txt"), "w", encoding="utf-8", newline="\n").write("seed\tS:0:1\ncfg\topenworld\t1\n")
+L, G = boot()
+L.execute("tickFn()")
+G.story = 8000
+load(G, "SD_LEVEL", "0")
+L.execute('commands["ffrap_grant"]("ffrap_grant", {"unit", "1007"})')
+assert G.leveled.id == 1007 and G.leveled.level == 7, G.leveled
+G.leveled = None
+G.story = 1005
+L.execute('commands["ffrap_grant"]("ffrap_grant", {"unit", "1008"})')
+assert G.leveled is None, "before the skip the party is the prologue's Fina"
+G.story = 8000
+G.unitDetail = "already joined"
+L.execute('commands["ffrap_grant"]("ffrap_grant", {"unit", "1008"})')
+assert G.leveled is None, "someone already in the party keeps their level"
 open(path("ap_in.txt"), "w", encoding="utf-8", newline="\n").close()
 L, G = boot()
 L.execute("worldParam = { get = function() return 'the world' end }")

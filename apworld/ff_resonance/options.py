@@ -37,7 +37,7 @@ class StartingContinent(Choice):
 
 class StartingRoster(Range):
     """
-    How many party members you start with, from 1 to 4. The rest are in the item pool when
+    How many party members you start with, from 1 to 4, all at level 1. The rest are in the item pool when
     shuffle_party_members is on. Weigh the values for a random size, for example {1: 0, 2: 50}.
     """
     display_name = "Starting Roster"
@@ -108,8 +108,9 @@ class ExcludedRegions(OptionSet):
 
 class ShufflePartyMembers(DefaultOnToggle):
     """
-    Adds every party member you do not start with to the item pool. One received joins the active
-    party when there is room, and the roster otherwise. With this off, they never join.
+    Adds every party member you do not start with to the item pool. One received joins at your
+    party's average level, in the active party when there is room and the roster otherwise.
+    With this off, they never join.
     """
     display_name = "Shuffle Party Members"
 

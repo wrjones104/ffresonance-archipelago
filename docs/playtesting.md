@@ -341,14 +341,15 @@ World-map shinies verified as locations. Multiple crashes observed across differ
 - **Continent logic.** A seed starts with one continent's Unlock item. The others are in the pool and open their continents. The logic has one region per continent. Which continent a chest is on comes from position where the map exits say so (Dragon's Maw opens on Pharm, not Grandshelt), and otherwise from its table. The Crystal Tower and the goal need every unlock.
 - **Places with no open world route hold filler only:** the Earth Shrine's inner part (3000), the burning castle (3020), the Imperial Residences (2113) and Fina's Psyche (3211, 3212). Found from the exits and the talk event table, not from play.
 - **A starting party from the yaml.** `starting_roster`, then `starting_character_1` to `_4`, each a weighted choice. A repeat becomes someone not chosen. Everyone else is in the pool, Rain and Lasswell included.
-- **What makes a non-standard start safe, from the data:** the party, join status and starter gear are all set by the skip. Rain and Lasswell are named by story events only (`OverwriteBattleParty`, chats), which this start skips. Starters come at their own levels from `DT_InitGameSaveData`: Rain and Lasswell 1, Fina 6, Lid 11, Nichol 19, Jake 27, Sakura 33. Archwitch Fina is reset by the skip and gets her first ability back when she is a starter.
+- **What makes a non-standard start safe, from the data:** the party, join status and starter gear are all set by the skip. Rain and Lasswell are named by story events only (`OverwriteBattleParty`, chats), which this start skips. Archwitch Fina is reset by the skip and gets her first ability back when she is a starter.
+- **Round 44, first look (mod 0.26.0):** the custom party started fine, but Jake was level 27. Everyone now starts at level 1 with HP and MP filled, through the game's own `SetPlayableUnitExperience`, and a member received later joins at the party's average level.
 - **The seed now decides the start.** The client writes `cfg openworld 1` and `cfg party ...`. So no console commands are needed, but the client must be connected before New Game (Archipelago). `ffrap_lock off` in the same run still wins over the seed, for testing; an `off` saved from an earlier run does not.
 
-## Round 44 test plan (mod 0.25.0, world 0.4.0)
+## Round 44 test plan (mod 0.26.0, world 0.4.0)
 
 The first real seed with continent logic and a custom party. Send the `[FFRAP]` lines of `UE4SS.log` and the spoiler log if you make one.
 
-**Install:** copy `FFRArchipelago/Scripts` over the installed mod, and copy `dist/ff_resonance.apworld` into Archipelago's `custom_worlds`. The log should say `version 0.25.0 loaded` and `client: world version 0.4.0` once the client connects. `Assets` did not change.
+**Install:** copy `FFRArchipelago/Scripts` over the installed mod, and copy `dist/ff_resonance.apworld` into Archipelago's `custom_worlds`. The log should say `version 0.26.0 loaded` and `client: world version 0.4.0` once the client connects. `Assets` did not change.
 
 **The yaml:**
 
@@ -372,14 +373,14 @@ Final Fantasy Resonance:
 
 **Part A: the start:**
 1. Generate, host the seed, and **connect the client before you start the game's New Game (Archipelago).**
-2. Start New Game (Archipelago). The log should have `open world start is on`, `party -> [1007, 1006]` and `join status: Jake, Archwitch Fina 0`, then `received`/applied `Grandshelt Unlock`.
+2. Start New Game (Archipelago). The log should have `open world start is on`, `party -> [1007, 1006]`, `join status: Jake, Archwitch Fina 0` and `party levels: all 8 at level 1`, then `received`/applied `Grandshelt Unlock`.
 3. On the world map, the log should say `boxes placed during the map load` for every continent but Grandshelt. Check Grandshelt lets you land and another continent does not.
 4. **The non-standard party: tell me anything odd.** Who shows on the field and in battle? Open Party, Equipment, Status: does everything open? Can you fight, win and level up? Is Rain missing from anything that looks broken?
 5. Save, return to the title, load. Is the party the same?
 
 **Part B: the logic:**
 6. Open chests on Grandshelt until an Unlock arrives. Does the continent open at once, with a message?
-7. Receive a party member from the pool, for example Rain. Does she join and work?
+7. Receive a party member from the pool. Does the log's `item ... unit` line say `level N` at about your party's level? Do they join and work, with sensible HP?
 8. Open a second continent, land, and open a chest there.
 9. If you can, try one of the chests the logic calls filler-only (Earth Shrine interior, Grandshelt Castle, Fina's Psyche). **Tell me** if any of those can actually be reached.
 

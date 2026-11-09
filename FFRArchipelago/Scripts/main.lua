@@ -50,7 +50,7 @@
 -- follows the save slots the linked game is saved to. While any other save is loaded, the mod
 -- grants nothing, reports nothing and leaves the chests vanilla.
 
-local VERSION = "0.25.0"
+local VERSION = "0.26.0"
 local PROTOCOL = 2        -- the bridge protocol; the apworld's MOD_PROTOCOL
 
 local MOD_DIR = (debug.getinfo(1, "S").source:gsub("^@", ""):gsub("\\", "/"):match("^(.*/)Scripts/[^/]+$"))
@@ -317,7 +317,18 @@ end
 local GRANTS = {
     item = function(it) return game.GrantItem(it.id, math.max(it.count, 1)) end,
     vision = function(it) return game.UnlockVision(it.id) end,
-    unit = function(it) return game.AddUnit(it.id) end,
+    unit = function(it)
+        -- Round 44: in a seed, a new member comes in at the party's average level. Before the
+        -- skip the party is the prologue's Fina at level 55, so that waits for the open world.
+        local level = nil
+        if seedCfg.openworld and (game.StoryCounter() or 0) >= game.OPEN_START.story then level = game.PartyLevel() end
+        local code, detail = game.AddUnit(it.id)
+        if level and code == "ok" and detail ~= "already joined" then
+            local _, how = game.SetUnitLevel(it.id, level)
+            detail = tostring(detail) .. "; " .. tostring(how)
+        end
+        return code, detail
+    end,
     flag = function(it) return game.SetFlag(it.id, it.count ~= 0) end,
     gil = function(it) return game.GrantGil(math.max(it.count, 1)) end,
 }
