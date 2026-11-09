@@ -1,6 +1,6 @@
 from BaseClasses import LocationProgressType
 
-from ..data import CHESTS, ITEMS, NO_BOX, PROGRESSION, SHINIES, SHUFFLE_ID_LIMIT, UNIT_ITEM_BASE
+from ..data import CHESTS, CONTINENT_UNLOCKS, ITEMS, NO_BOX, PROGRESSION, SHINIES, SHUFFLE_ID_LIMIT, UNIT_ITEM_BASE
 from ..items import CLASSIFICATIONS, FILLER_CATEGORIES
 from ..locations import GOAL_EVENT, LOCATION_KEY_TO_ID
 from . import FFResonanceTestBase
@@ -13,7 +13,9 @@ class TestDefault(FFResonanceTestBase):
 
     def test_pool_is_the_vanilla_contents_with_progression_in_place_of_filler(self) -> None:
         pool = [item.code for item in self.multiworld.itempool if item.player == self.player]
-        extra = PROGRESSION["party"] + PROGRESSION["vision"] + PROGRESSION["key"]
+        starters = {UNIT_ITEM_BASE + 1001, UNIT_ITEM_BASE + 1002}
+        unlocks = [ap_id for name, ap_id in CONTINENT_UNLOCKS.items() if name != "Grandshelt"]
+        extra = [i for i in PROGRESSION["party"] if i not in starters] + PROGRESSION["vision"] + PROGRESSION["key"] + unlocks
         self.assertEqual(len(pool), len(CHESTS))
         for ap_id in extra:
             self.assertEqual(pool.count(ap_id), 1, ITEMS[ap_id]["name"])
@@ -28,17 +30,39 @@ class TestDefault(FFResonanceTestBase):
 
     def test_progression_items_are_progression(self) -> None:
         for item in self.multiworld.itempool:
-            if item.player == self.player and ITEMS[item.code]["category"] in ("party", "vision", "key"):
+            if item.player == self.player and ITEMS[item.code]["category"] in ("party", "vision", "key", "continent"):
                 self.assertTrue(item.advancement, item.name)
 
     def test_goal_is_reachable(self) -> None:
+        self.assertBeatable(False)
+        self.collect_all_but(())
         self.assertBeatable(True)
-        self.assertTrue(self.multiworld.get_location(GOAL_EVENT, self.player).can_reach(self.multiworld.state))
+
+    def test_the_start_is_one_continent(self) -> None:
+        state = self.multiworld.state
+        self.assertTrue(state.has("Grandshelt Unlock", self.player), "precollected")
+        self.assertTrue(state.can_reach_region("Grandshelt", self.player))
+        self.assertFalse(state.can_reach_region("Pharm", self.player))
+        self.assertFalse(self.multiworld.get_location(GOAL_EVENT, self.player).can_reach(state))
+        self.assertNotIn("Grandshelt Unlock", [i.name for i in self.multiworld.itempool if i.player == self.player])
+
+    def test_each_unlock_opens_its_continent(self) -> None:
+        self.collect_by_name(["Pharm Unlock"])
+        self.assertTrue(self.multiworld.state.can_reach_region("Pharm", self.player))
+        self.assertTrue(self.multiworld.get_location("Dragon's Maw Chest 1", self.player).can_reach(self.multiworld.state))
+        self.assertFalse(self.multiworld.state.can_reach_region("Gronoa", self.player))
+
+    def test_places_with_no_route_hold_only_filler(self) -> None:
+        for name in ("Earth Shrine Chest 1", "Grandshelt Castle Chest 8", "Fina's Psyche Chest 1"):
+            self.assertEqual(self.multiworld.get_location(name, self.player).progress_type, LocationProgressType.EXCLUDED)
 
     def test_slot_data(self) -> None:
         slot_data = self.world.fill_slot_data()
         self.assertEqual(slot_data["goal_story_checkpoint"], 8050)
-        self.assertEqual(slot_data["mod_protocol"], 1)
+        self.assertEqual(slot_data["mod_protocol"], 2)
+        self.assertEqual(slot_data["starting_party"], [1001, 1002])
+        self.assertEqual(slot_data["starting_continent"], "Grandshelt")
+        self.assertIs(slot_data["open_world"], True)
 
 
 class TestShinies(FFResonanceTestBase):
@@ -61,10 +85,51 @@ class TestExcludedRegions(FFResonanceTestBase):
 
 
 class TestGoalOption(FFResonanceTestBase):
-    options = {"goal_story_checkpoint": 1130}
+    options = {"goal_story_checkpoint": 8020}
 
     def test_goal_in_slot_data(self) -> None:
-        self.assertEqual(self.world.fill_slot_data()["goal_story_checkpoint"], 1130)
+        self.assertEqual(self.world.fill_slot_data()["goal_story_checkpoint"], 8020)
+
+
+class TestCustomParty(FFResonanceTestBase):
+    """A two-member start with neither of the usual two: they go in the pool, the starters do not."""
+    options = {"starting_roster": 2, "starting_character_1": "Jake", "starting_character_2": "Archwitch Fina",
+               "starting_continent": "kolobos"}
+
+    def test_party_and_pool(self) -> None:
+        self.assertEqual(self.world.fill_slot_data()["starting_party"], [1007, 1006])
+        names = [i.name for i in self.multiworld.itempool if i.player == self.player]
+        for name in ("Rain", "Lasswell", "Fina", "Lid", "Nichol", "Sakura"):
+            self.assertEqual(names.count(name), 1, name)
+        self.assertNotIn("Jake", names)
+        self.assertNotIn("Archwitch Fina", names)
+        self.assertNotIn("Kolobos Unlock", names)
+        self.assertIn("Grandshelt Unlock", names)
+
+
+class TestRosterSize(FFResonanceTestBase):
+    options = {"starting_roster": 1, "starting_character_1": "Sakura"}
+
+    def test_only_the_first_slots_count(self) -> None:
+        self.assertEqual(self.world.fill_slot_data()["starting_party"], [1008])
+        self.assertIn("Rain", [i.name for i in self.multiworld.itempool if i.player == self.player])
+
+
+class TestRepeatedCharacter(FFResonanceTestBase):
+    options = {"starting_roster": 3, "starting_character_1": "Rain", "starting_character_2": "Rain",
+               "starting_character_3": "Rain"}
+
+    def test_a_repeat_becomes_someone_else(self) -> None:
+        party = self.world.fill_slot_data()["starting_party"]
+        self.assertEqual(len(party), 3)
+        self.assertEqual(len(set(party)), 3, party)
+        self.assertEqual(party[0], 1001)
+
+
+class TestSmallestStart(FFResonanceTestBase):
+    """The continent with the fewest chests still generates and can be finished."""
+    options = {"starting_continent": "kolobos", "shuffle_party_members": True, "shuffle_visions": True,
+               "shuffle_key_items": True}
 
 
 class TestData(FFResonanceTestBase):
@@ -100,9 +165,14 @@ class TestData(FFResonanceTestBase):
 class TestNoProgression(FFResonanceTestBase):
     options = {"shuffle_party_members": False, "shuffle_visions": False, "shuffle_key_items": False}
 
-    def test_pool_is_the_vanilla_contents(self) -> None:
-        pool = sorted(item.code for item in self.multiworld.itempool if item.player == self.player)
-        self.assertEqual(pool, sorted(c["vanilla"] for c in CHESTS))
+    def test_pool_is_the_vanilla_contents_and_the_unlocks(self) -> None:
+        pool = [item.code for item in self.multiworld.itempool if item.player == self.player]
+        self.assertEqual(len(pool), len(CHESTS))
+        rest = [ap_id for ap_id in pool if ITEMS[ap_id]["category"] != "continent"]
+        vanilla = [c["vanilla"] for c in CHESTS]
+        for ap_id in rest:
+            vanilla.remove(ap_id)
+        self.assertEqual(len(pool) - len(rest), len(CONTINENT_UNLOCKS) - 1)
 
 
 class TestNames(FFResonanceTestBase):
@@ -120,7 +190,7 @@ class TestNames(FFResonanceTestBase):
 
     def test_progression_items(self) -> None:
         party = [ITEMS[i]["name"] for i in PROGRESSION["party"]]
-        self.assertEqual(party, ["Fina", "Lid", "Nichol", "Archwitch Fina", "Jake", "Sakura"])
+        self.assertEqual(party, ["Rain", "Lasswell", "Fina", "Lid", "Nichol", "Archwitch Fina", "Jake", "Sakura"])
         self.assertEqual(ITEMS[UNIT_ITEM_BASE + 1004]["kind"], "unit")
         self.assertEqual(len(PROGRESSION["vision"]), 26)
         self.assertTrue(all(ITEMS[i]["kind"] == "vision" for i in PROGRESSION["vision"]))

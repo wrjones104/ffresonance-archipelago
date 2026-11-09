@@ -1361,6 +1361,13 @@ for _px, _py, _name in ((12460, 20700, "grandshelt"), (12470, 14980, "lanzelt"),
                         (-3920, -17480, "pharm")):
     assert _in(_px, _py) == [_name], (_px, _py, _in(_px, _py))
 assert not _in(-5935, -8305), "the air start is over the sea, in no continent"
+# the rectangles are one table in two places: the apworld's data and the mod's
+_tsv = {}
+for r in _rows("../continents.tsv"):
+    _tsv.setdefault(r["name"], []).append((int(r["x0"]), int(r["y0"]), int(r["x1"]), int(r["y1"])))
+assert _tsv == _conts, "data/continents.tsv and G.CONTINENTS differ"
+_flags = {c["name"]: c["flag"] for c in L.eval("G.CONTINENTS").values()}
+assert {r["name"]: int(r["flag"]) for r in _rows("../continents.tsv")} == _flags
 print("continent locks: ok")
 
 L.execute("fakePawn.m_ShadowDecalSphareTraceActorsToIgnore = nil; G.NoLandOff()")

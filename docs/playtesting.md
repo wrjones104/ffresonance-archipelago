@@ -336,3 +336,53 @@ World-map shinies verified as locations. Multiple crashes observed across differ
 - **Added in 0.24.0:** the boxes go in from the engine's `LoadMap` post hook. That runs before the first frame of the new map, so there is no moment without them. The one-second sync stays, to repair anything that differs and to fill the airship's shadow list.
 
 **Round 43 (mod 0.24.0, 2026-11-09): the continent locks are done on the mod side.** The user reports no issues at all with the plan's steps, including landing straight after loading a save in the air. The locks go in during the map load, from the `LoadMap` post hook.
+
+**Added for round 44 (mod 0.25.0, world 0.4.0): a real seed.** Written off-line, and tested by the suite and ten real generations (each starting continent, shinies on and off).
+- **Continent logic.** A seed starts with one continent's Unlock item. The others are in the pool and open their continents. The logic has one region per continent. Which continent a chest is on comes from position where the map exits say so (Dragon's Maw opens on Pharm, not Grandshelt), and otherwise from its table. The Crystal Tower and the goal need every unlock.
+- **Places with no open world route hold filler only:** the Earth Shrine's inner part (3000), the burning castle (3020), the Imperial Residences (2113) and Fina's Psyche (3211, 3212). Found from the exits and the talk event table, not from play.
+- **A starting party from the yaml.** `starting_roster`, then `starting_character_1` to `_4`, each a weighted choice. A repeat becomes someone not chosen. Everyone else is in the pool, Rain and Lasswell included.
+- **What makes a non-standard start safe, from the data:** the party, join status and starter gear are all set by the skip. Rain and Lasswell are named by story events only (`OverwriteBattleParty`, chats), which this start skips. Starters come at their own levels from `DT_InitGameSaveData`: Rain and Lasswell 1, Fina 6, Lid 11, Nichol 19, Jake 27, Sakura 33. Archwitch Fina is reset by the skip and gets her first ability back when she is a starter.
+- **The seed now decides the start.** The client writes `cfg openworld 1` and `cfg party ...`. So no console commands are needed, but the client must be connected before New Game (Archipelago). `ffrap_lock off` still wins over the seed, for testing.
+
+## Round 44 test plan (mod 0.25.0, world 0.4.0)
+
+The first real seed with continent logic and a custom party. Send the `[FFRAP]` lines of `UE4SS.log` and the spoiler log if you make one.
+
+**Install:** copy `FFRArchipelago/Scripts` over the installed mod, and copy `dist/ff_resonance.apworld` into Archipelago's `custom_worlds`. The log should say `version 0.25.0 loaded` and `client: world version 0.4.0` once the client connects. `Assets` did not change.
+
+**The yaml:**
+
+```yaml
+name: Tester
+game: Final Fantasy Resonance
+Final Fantasy Resonance:
+  starting_continent: grandshelt
+  starting_roster:
+    1: 0
+    2: 50
+    3: 0
+    4: 0
+  starting_character_1:
+    Jake: 50
+    Rain: 0
+  starting_character_2:
+    Archwitch Fina: 50
+    Lasswell: 0
+```
+
+**Part A: the start:**
+1. Generate, host the seed, and **connect the client before you start the game's New Game (Archipelago).**
+2. Start New Game (Archipelago). The log should have `open world start is on`, `party -> [1007, 1006]` and `join status: Jake, Archwitch Fina 0`, then `received`/applied `Grandshelt Unlock`.
+3. On the world map, the log should say `boxes placed during the map load` for every continent but Grandshelt. Check Grandshelt lets you land and another continent does not.
+4. **The non-standard party: tell me anything odd.** Who shows on the field and in battle? Open Party, Equipment, Status: does everything open? Can you fight, win and level up? Is Rain missing from anything that looks broken?
+5. Save, return to the title, load. Is the party the same?
+
+**Part B: the logic:**
+6. Open chests on Grandshelt until an Unlock arrives. Does the continent open at once, with a message?
+7. Receive a party member from the pool, for example Rain. Does she join and work?
+8. Open a second continent, land, and open a chest there.
+9. If you can, try one of the chests the logic calls filler-only (Earth Shrine interior, Grandshelt Castle, Fina's Psyche). **Tell me** if any of those can actually be reached.
+
+**Enemies are still at their own levels in this seed.** Run `ffrap_scale` with `follow` as before if you want them to match the party.
+
+**If it crashes:** send the new `UECC-Windows-*` folder and say what you were doing.

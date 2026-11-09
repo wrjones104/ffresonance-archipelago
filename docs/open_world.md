@@ -87,7 +87,9 @@ The story counter is `Progress[0]`. Every story gate is a condition such as `{pr
 
 **Continent locks (mod 0.22.0):** `G.CONTINENTS` in `game.lua` is 21 rectangles for ten continents, drawn over the landscape tiles, landing points and exits. A test keeps every landing point and exit in one continent at most. Only the Crystal Tower's exit is in none, and the air start is over open sea. A lock is one event flag in the save, 1420 to 1429, on means open, so an Archipelago item can open a continent with the `flag` item kind. The boxes go with each map change, so a check every second puts them back on the world map. Round 41: over land the shadow is red everywhere and no landing worked, on every continent tried, and walking and battles are normal inside a lock. Boarding after a map change crashed the game until mod 0.23.0. Round 42: a save loaded in the air could land before the boxes arrived, so mod 0.24.0 places them from the `LoadMap` post hook, before the first frame.
 
-Still to decide: which continent or continents a seed starts with, whether the Crystal Tower needs a lock, whether fast travel (flag 34) stays off, and how to block the ships, caves and walking routes between continents.
+World 0.4.0 puts the locks in real seeds: `starting_continent`, and one Unlock item per other continent. Ardra has no locations, so it has no item and stays locked.
+
+Still to decide: whether the Crystal Tower needs a lock (it is open in game, and logic treats it as the last area), whether fast travel (flag 34) stays off, and how to block the ships, caves and walking routes between continents, which can still cross a lock.
 
 **Continent bounds (the first estimate, from landing points; superseded by `G.CONTINENTS`):**
 

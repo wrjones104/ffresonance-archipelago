@@ -10,7 +10,9 @@ from . import options as ffr_options
 
 # The bridge protocol between the client and the in-game mod. The client refuses a mod that
 # reports an older one.
-MOD_PROTOCOL = 1
+MOD_PROTOCOL = 2
+
+ALL_PARTY_MEMBERS = [1001, 1002, 1003, 1004, 1005, 1006, 1007, 1008]
 
 
 class FFResonanceSettings(settings.Group):
@@ -44,9 +46,9 @@ class FFResonanceWebWorld(WebWorld):
 class FFResonanceWorld(World):
     """
     Final Fantasy Resonance, played with a UE4SS mod that grants received items in game and
-    reports opened chests and picked-up shinies. Chests that hold consumables, equipment or gil
-    are shuffled. Party members, visions and key items can be added to the pool as well; the
-    story still hands out its own copies.
+    reports opened chests and picked-up shinies. A seed starts in the open world with one
+    continent to land on; Unlock items open the others. Chests that hold consumables, equipment
+    or gil are shuffled, and party members, visions and key items can be added to the pool.
     """
 
     game = items.GAME
@@ -64,6 +66,19 @@ class FFResonanceWorld(World):
     def __init__(self, multiworld, player):
         super().__init__(multiworld, player)
         self.vanilla_items: list[int] = []
+        self.starting_party: list[int] = []
+        self.starting_continent = ""
+
+    def generate_early(self) -> None:
+        self.starting_continent = self.options.starting_continent.current_key.capitalize()
+        picks = [self.options.starting_character_1, self.options.starting_character_2,
+                 self.options.starting_character_3, self.options.starting_character_4]
+        for pick in picks[:self.options.starting_roster.value]:
+            unit = pick.value
+            if unit in self.starting_party:      # a repeat becomes someone not chosen yet
+                unit = self.random.choice([u for u in ALL_PARTY_MEMBERS if u not in self.starting_party and
+                                           u not in [p.value for p in picks[:self.options.starting_roster.value]]])
+            self.starting_party.append(unit)
 
     def create_regions(self) -> None:
         locations.create_regions_and_locations(self)
@@ -81,4 +96,7 @@ class FFResonanceWorld(World):
         return {
             **self.options.as_dict("goal_story_checkpoint", "include_shinies"),
             "mod_protocol": MOD_PROTOCOL,
+            "open_world": True,
+            "starting_party": self.starting_party,
+            "starting_continent": self.starting_continent,
         }

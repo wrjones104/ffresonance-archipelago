@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 from BaseClasses import Item, ItemClassification
 from Options import OptionError
 
-from .data import ITEMS, PROGRESSION
+from .data import CONTINENT_UNLOCKS, ITEMS, PROGRESSION, UNIT_ITEM_BASE
 
 if TYPE_CHECKING:
     from .world import FFResonanceWorld
@@ -14,10 +14,9 @@ GAME = "Final Fantasy Resonance"
 
 ITEM_NAME_TO_ID: dict[str, int] = {info["name"]: ap_id for ap_id, info in ITEMS.items()}
 
-# Party members, visions and key items are progression (world 0.3.0), though no logic reads
-# them yet: every location is reachable from the start. They are marked now so the logic can
-# use them later without a change of item ids or classes. The story still hands out its own
-# copies, so in story mode an item from Archipelago is an early copy.
+# Continent unlocks are what the logic reads (world 0.4.0). Party members, visions and key items
+# are progression too (world 0.3.0), though no logic reads them yet: they are marked so the logic
+# can use them later without a change of item ids or classes.
 # Equipment is useful, so hints and fill treat it as worth something.
 CLASSIFICATIONS = {
     "consumable": ItemClassification.filler,
@@ -26,6 +25,7 @@ CLASSIFICATIONS = {
     "party": ItemClassification.progression,
     "vision": ItemClassification.progression,
     "key": ItemClassification.progression,
+    "continent": ItemClassification.progression,
 }
 
 item_name_groups: dict[str, set[str]] = {
@@ -35,6 +35,7 @@ item_name_groups: dict[str, set[str]] = {
     "Party Members": {i["name"] for i in ITEMS.values() if i["category"] == "party"},
     "Visions": {i["name"] for i in ITEMS.values() if i["category"] == "vision"},
     "Key Items": {i["name"] for i in ITEMS.values() if i["category"] == "key"},
+    "Continent Unlocks": {i["name"] for i in ITEMS.values() if i["category"] == "continent"},
 }
 
 FILLER_NAMES = sorted(item_name_groups["Consumables"])
@@ -51,10 +52,15 @@ def create_item(world: FFResonanceWorld, name: str) -> FFResonanceItem:
 
 
 def progression_ids(world: FFResonanceWorld) -> list[int]:
-    """The progression items the options put in the pool, one of each."""
-    chosen: list[int] = []
+    """
+    The progression items the options put in the pool, one of each: every continent's unlock but
+    the starting continent's, and every party member but those the player starts with.
+    """
+    start = world.starting_continent
+    chosen = [ap_id for name, ap_id in CONTINENT_UNLOCKS.items() if name != start]
     if world.options.shuffle_party_members:
-        chosen += PROGRESSION["party"]
+        starters = {UNIT_ITEM_BASE + unit for unit in world.starting_party}
+        chosen += [ap_id for ap_id in PROGRESSION["party"] if ap_id not in starters]
     if world.options.shuffle_visions:
         chosen += PROGRESSION["vision"]
     if world.options.shuffle_key_items:
@@ -79,6 +85,8 @@ def create_all_items(world: FFResonanceWorld) -> None:
     unfilled = len(world.multiworld.get_unfilled_locations(world.player))
     pool += [world.create_filler() for _ in range(unfilled - len(pool))]
     world.multiworld.itempool += pool
+    # The starting continent's unlock is handed over at the start, through the normal item path.
+    world.multiworld.push_precollected(create_item(world, ITEMS[CONTINENT_UNLOCKS[world.starting_continent]]["name"]))
 
 
 def get_filler_item_name(world: FFResonanceWorld) -> str:

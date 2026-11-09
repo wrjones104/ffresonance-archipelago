@@ -184,6 +184,7 @@ end
 function G.TitleLogo(path, line) G.logos[#G.logos + 1] = path; return "added", "20x21" end
 function G.DescribeWidget(w) G.describes = G.describes + 1; return "widget TextBlock" end
 function G.SkipPrologue(opts)
+  G.skipParty = opts.party
   G.skipRuns = G.skipRuns + 1; G.skipOpen = opts.openStart; G.story = opts.openStart and 7090 or 1030
   return true, { "ok   stub" }
 end
@@ -361,7 +362,7 @@ G.chests = L.table()
 G.shinies = L.table()
 tick = lambda n: [L.execute("tickFn()") for _ in range(n)]
 out = read("ap_out.txt")
-assert out.startswith(f"hello\t{VERSION}\t1\nseed\tS1:1\n") and "chest:2001:0" not in out, out
+assert out.startswith(f"hello\t{VERSION}\t2\nseed\tS1:1\n") and "chest:2001:0" not in out, out
 state = read("ap_state.txt")
 assert "seed\tS1:1" in state and "blank\t1" in state, state
 tick(6)
@@ -392,7 +393,7 @@ assert "check\tshiny:1000:30\n" in read("ap_out.txt")
 open(path("ap_in.txt"), "w", encoding="utf-8", newline="\n").write("seed\tS2:3\nitem\t0\titem\t1\t3\tPotion x3\n")
 tick(4)
 out = read("ap_out.txt")
-assert out.startswith(f"hello\t{VERSION}\t1\nseed\tS2:3\n") and "shiny:1000:30" in out and "chest:3020:1" not in out, out
+assert out.startswith(f"hello\t{VERSION}\t2\nseed\tS2:3\n") and "shiny:1000:30" in out and "chest:3020:1" not in out, out
 assert list(G.log.values())[-1] == "item1x3"
 print("sessions: ok")
 
@@ -1159,6 +1160,26 @@ L.execute('commands["ffrap_lock"]("ffrap_lock", {"close", "narnia"})')
 assert G.lockOpens.narnia is None, "a bad name changes nothing"
 L.execute('commands["ffrap_lock"]("ffrap_lock", {"off"})')
 assert G.lockCleared is True and "continentlocks\t0\n" in read("ap_state.txt"), read("ap_state.txt")
+# Round 44: the seed decides the start: open world, locks and party, until a command says otherwise
+open(path("ap_in.txt"), "w", encoding="utf-8", newline="\n").write("seed\tS:0:1\ncfg\topenworld\t1\ncfg\tparty\t1007,1006\n")
+L, G = boot()
+L.execute("tickFn()")
+G.story = 1005
+load(G, "SD_SEED", "0")
+L.execute('commands["ffrap_skip"]("ffrap_skip", {"0"})')
+assert G.skipOpen is True and list(G.skipParty.values()) == [1007, 1006], (G.skipOpen, G.skipParty)
+L.execute("worldParam = { get = function() return 'the world' end }")
+L.execute("G.hookPlace = nil; loadMapHook(nil, worldParam)")
+assert G.hookPlace is True, "the seed turns the locks on"
+L.execute('commands["ffrap_lock"]("ffrap_lock", {"off"})')
+L.execute("loadMapHook(nil, worldParam)")
+assert G.hookPlace is False, "an explicit off wins"
+L.execute('commands["ffrap_lock"]("ffrap_lock", {"on"})')
+assert "continentlocks\t1\n" in read("ap_state.txt")
+open(path("ap_in.txt"), "w", encoding="utf-8", newline="\n").close()
+L, G = boot()
+L.execute("worldParam = { get = function() return 'the world' end }")
+L.execute('commands["ffrap_lock"]("ffrap_lock", {"off"})')
 # Round 42: each map load goes to the game file with the switch's state
 L.execute("""worldParam = { get = function() return "the world" end }""")
 L.execute('loadMapHook(nil, worldParam)')

@@ -1714,9 +1714,17 @@ local SKIP_FLAGS_ON = { 14, 15, 16, 18, 19, 22, 23, 26, 27, 30, 32, 33, 105, 106
                         1164, 1225, 1226 }
 local SKIP_FLAGS_OFF = { 1, 8 }     -- on between story 1000 and 1005, off again by 1030
 local SKIP_PARTY = { 1001, 1002 }   -- Rain, Lasswell
-local SKIP_INVENTORY = {            -- item id, change. Fina's prologue gear goes; the others' comes
-    { 10100, 1 }, { 10200, 1 }, { 11000, 2 }, { 12000, 2 }, { 10699, -1 }, { 11301, -1 }, { 12029, -1 },
+local SKIP_GEAR_OUT = { 10699, 11301, 12029 }   -- Archwitch Fina's prologue gear goes
+-- Equipped gear is counted in the bag, so each starter's gear comes in: what DT_InitGameSaveData
+-- (NewGame) equips them with. Archwitch Fina's own is the weapon the skip gives her.
+local STARTER_GEAR = {
+    [1001] = { 10100, 11000, 12000 }, [1002] = { 10200, 11000, 12000 }, [1003] = { 10300, 11500 },
+    [1004] = { 10400, 11007 }, [1005] = { 10500, 11509 }, [1006] = { 10600 },
+    [1007] = { 10700, 11010, 12022 }, [1008] = { 10800, 11502 },
 }
+local UNIT_NAMES = { [1001] = "Rain", [1002] = "Lasswell", [1003] = "Fina", [1004] = "Lid", [1005] = "Nichol",
+                     [1006] = "Archwitch Fina", [1007] = "Jake", [1008] = "Sakura" }
+local ARCHWITCH_FINA, ARCHWITCH_FIRST_SKILL = 1006, 408010
 local SKIP_MAPS = { 5010, 2013, 20000, 3001 }   -- known and visited
 G.SKIP_ARRIVAL = { map = 3001, x = -5775.0, y = 0.0, z = -197.85, direction = 2 }
 -- The open world start (round 31, found with FFRSLib's story and travel tools): story 7090,
@@ -1941,6 +1949,11 @@ function G.SkipPrologue(opts)
     local doInventory = not (opts and opts.inventory == false)
     local storyTo = (opts and opts.openStart) and G.OPEN_START.story or G.SKIP_STORY
     local a = (opts and opts.openStart) and G.OPEN_START or G.SKIP_ARRIVAL
+    -- The starting party: Rain and Lasswell, or what the seed says (round 44). Nothing in the save
+    -- needs either of them: the game's hard-coded uses are story events, which this start skips.
+    local party = (opts and opts.party) or SKIP_PARTY
+    local isStarter = {}
+    for _, id in ipairs(party) do isStarter[id] = true end
     local report, failed = {}, false
     local function step(ok, what)
         report[#report + 1] = (ok and "ok   " or "FAIL ") .. what
@@ -1959,10 +1972,11 @@ function G.SkipPrologue(opts)
     report[#report + 1] = "     the game reads flag " .. SKIP_FLAGS_ON[1] .. " as " .. tostring(libSays)
         .. " (should be true if its numbering matches the array's)"
 
-    -- The party: Rain and Lasswell. Reading one past the end grows the array (see UnlockVision).
+    -- The party. Reading one past the end grows the array (see UnlockVision).
     local okParty = pcall(function()
         local list = sd.Party.partyList
-        for i, id in ipairs(SKIP_PARTY) do
+        list:Empty()
+        for i, id in ipairs(party) do
             if #list < i then local _ = list[i] end
             list[i] = id
         end
@@ -1972,12 +1986,22 @@ function G.SkipPrologue(opts)
         local list = sd.Party.partyList
         for i = 1, #list do partyNow[#partyNow + 1] = tostring(Int(list[i])) end
     end)
-    step(okParty and table.concat(partyNow, ",") == "1001,1002", "party -> [" .. table.concat(partyNow, ", ") .. "]")
+    step(okParty and table.concat(partyNow, ",") == table.concat(party, ","), "party -> [" .. table.concat(partyNow, ", ") .. "]")
 
-    -- Join status: Rain and Lasswell in (0), Archwitch Fina (1006, the prologue's Fina) out (2).
-    local rain, lasswell, fina = UnitEntry(sd, 1001), UnitEntry(sd, 1002), UnitEntry(sd, 1006)
-    step(rain and lasswell and fina and Put(rain, "JoinStatus", 0) and Put(lasswell, "JoinStatus", 0)
-        and Put(fina, "JoinStatus", 2), "join status: Rain, Lasswell 0; Archwitch Fina 2")
+    -- Join status: the starters in (0); Archwitch Fina (the prologue's Fina) out (2) unless she is one.
+    local rain, fina = UnitEntry(sd, 1001), UnitEntry(sd, ARCHWITCH_FINA)
+    local okJoin, joined = rain ~= nil and fina ~= nil, {}
+    for _, id in ipairs(party) do
+        local entry = UnitEntry(sd, id)
+        okJoin = entry ~= nil and Put(entry, "JoinStatus", 0) and Put(entry, "IsUsable", true) and okJoin
+        joined[#joined + 1] = UNIT_NAMES[id] or tostring(id)
+    end
+    local joinLine = "join status: " .. table.concat(joined, ", ") .. " 0"
+    if not isStarter[ARCHWITCH_FINA] then
+        okJoin = fina ~= nil and Put(fina, "JoinStatus", 2) and okJoin
+        joinLine = joinLine .. "; Archwitch Fina 2"
+    end
+    step(okJoin, joinLine)
 
     -- Rain's baseParameterList[5] (0-based) goes 0 -> 3 in the prologue. Its meaning is unknown.
     local okBase = false
@@ -1997,6 +2021,13 @@ function G.SkipPrologue(opts)
             pcall(function() n = #fina[field] end)
             okFina = (n == 0) and okFina
         end
+        -- As a starter she needs her own first ability, as the others start with theirs.
+        if isStarter[ARCHWITCH_FINA] then
+            okFina = pcall(function()
+                local _ = fina.activeSkillIdList[1]
+                fina.activeSkillIdList[1] = ARCHWITCH_FIRST_SKILL
+            end) and okFina
+        end
     end
     step(okFina, "Archwitch Fina reset: Experience 0, HP 200, MP 70, weapon 10600, no armor, accessories or skills")
 
@@ -2004,7 +2035,12 @@ function G.SkipPrologue(opts)
     if doInventory then
         local inv = Lib("CPP_BFL_SaveDataInventory")
         local invBad = {}
-        for _, e in ipairs(SKIP_INVENTORY) do
+        local changes = {}
+        for _, id in ipairs(party) do
+            for _, gear in ipairs(STARTER_GEAR[id] or {}) do changes[#changes + 1] = { gear, 1 } end
+        end
+        for _, gear in ipairs(SKIP_GEAR_OUT) do changes[#changes + 1] = { gear, -1 } end
+        for _, e in ipairs(changes) do
             local before = inv and Held(inv, e[1])
             local want = math.max(0, (before or 0) + e[2])
             local okSet = before ~= nil and pcall(function() inv:SetInventoryItem(e[1], want) end)

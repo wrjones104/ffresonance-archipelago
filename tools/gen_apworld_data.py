@@ -28,9 +28,11 @@ Ids are derived from the game's own keys, so they never change between data refr
     gil             900_000_000 + amount
 """
 
+import collections
 import csv
 import os
 import pprint
+import re
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA = os.path.join(ROOT, "data")
@@ -108,17 +110,81 @@ def chest_place(row: str, map_id: int, maps: dict[int, dict]) -> str:
 
 GENERIC_PLACE_NAMES = {"Dungeon", "Shipyard", "Slums"}
 
-# Progression items (world 0.3.0). There is no logic for them yet: they go in the pool in place
-# of filler, and the story still hands out its own copies.
+# Progression items (world 0.3.0).
 UNIT_ITEM_BASE = 800_000_000       # AP id of a party member: base + unit id
+CONTINENT_ITEM_BASE = 700_000_000  # AP id of a continent's unlock: base + its event flag
+# Maps with no route on the open world start, so their chests may only hold filler (world 0.4.0).
+# Each is entered only from a story event, or lies behind a map that is: the Earth Shrine's inner
+# part (3000), the burning Grandshelt Castle (3020), the Imperial Residences (2113) and Fina's
+# Psyche (3211, 3212). From data/game/transitions.tsv and the talk event table, not from play.
+NO_OPEN_WORLD_ROUTE = {3000, 3020, 2113, 3211, 3212}
+# The story counter on the open world start. A shiny whose condition is false there is not out.
+OPEN_START_STORY = 8000
+FINAL_AREA = "Crystal Tower"
+OPEN_AREA = "Open"
 # The party members (data/game/units.tsv, category Playable). Archwitch Fina (1006) is a member
 # of her own: the game can have both Finas at once, though the story swaps them in and out
 # (round 30). The guests (1013, 1014, 1016) never stay.
 PARTY_MEMBER_IDS = [1001, 1002, 1003, 1004, 1005, 1006, 1007, 1008]
-STARTING_PARTY = [1001, 1002]      # the prologue skip gives Rain and Lasswell
 # Valuables and artifacts that are not key items of the US game, or not one-off items:
 # DLC items (29500-29520), and the counted ones (Magicite 25000-25002, Tablet Shards 25004).
 NOT_KEY_ITEMS = {25000, 25001, 25002, 25004, 29500, 29510, 29520}
+
+
+def holds_at_open_start(condition: str) -> bool:
+    """A map condition on the open world start: story 8000, every other counter 0, no flags."""
+    if not condition:
+        return True
+    text = condition.replace("{progress:0}", str(OPEN_START_STORY))
+    text = re.sub(r"\{progress:\d+\}", "0", text)
+    text = re.sub(r"\{flag:\d+\}", "False", text)
+    text = re.sub(r"\{item:\d+\}", "0", text)
+    text = re.sub(r"!(?!=)", " not ", text).replace("&", " and ").replace("|", " or ")
+    try:
+        return bool(eval(text, {"__builtins__": {}}))     # the text is the game's own data
+    except Exception:
+        return True
+
+
+def read_continents() -> dict[str, dict]:
+    """The hand-drawn continent rectangles (data/continents.tsv), which the mod holds as well."""
+    out: dict[str, dict] = {}
+    for r in read_tsv("continents.tsv"):
+        c = out.setdefault(r["name"].capitalize(), {"flag": int(r["flag"]), "boxes": []})
+        c["boxes"].append((int(r["x0"]), int(r["y0"]), int(r["x1"]), int(r["y1"])))
+    return out
+
+
+def continent_at(continents: dict[str, dict], x: float, y: float) -> str | None:
+    for name, c in continents.items():
+        if any(b[0] <= x <= b[2] and b[1] <= y <= b[3] for b in c["boxes"]):
+            return name
+    return None
+
+
+def map_continents(continents: dict[str, dict]) -> dict[int, set[str]]:
+    """The continents each map is entered from: world-map exits by position, then the exit graph."""
+    reach: dict[int, set[str]] = collections.defaultdict(set)
+    edges: dict[int, set[int]] = collections.defaultdict(set)
+    frontier: list[int] = []
+    for r in read_tsv("game/transitions.tsv"):
+        if not r["toMap"]:
+            continue
+        source, target = int(r["map"]), int(r["toMap"])
+        if source == WORLD_MAP and target != WORLD_MAP and r["x"]:
+            place = continent_at(continents, float(r["x"]), float(r["y"]))
+            if place:
+                reach[target].add(place)
+                frontier.append(target)
+        elif source != WORLD_MAP and target != WORLD_MAP:
+            edges[source].add(target)
+    while frontier:
+        source = frontier.pop()
+        for target in edges[source]:
+            if not reach[source] <= reach[target]:
+                reach[target] |= reach[source]
+                frontier.append(target)
+    return reach
 
 
 def is_japanese(name: str) -> bool:
@@ -132,6 +198,24 @@ def main() -> None:
     units = {int(r["id"]): r for r in read_tsv("game/units.tsv")}
     seen_shinies = {(r["map"], r["uid"]) for r in read_tsv("shinies.tsv")}
     items: dict[int, dict] = {}      # AP item id -> item info
+    continents = read_continents()
+    reach = map_continents(continents)
+
+    def chest_area(map_id: int, row: str) -> str:
+        """
+        The continent a chest is on. Position decides where the exits say so: Dragon's Maw is in
+        the Grandshelt table but opens on Pharm. A row's map id can be an alias with no exits
+        (2001 for the capital), so the map named by the row counts too. Otherwise, its table.
+        """
+        region = chest_region(row)
+        if region == FINAL_AREA:
+            return region
+        key = "_".join(row.rsplit("_", 1)[0].split("_")[1:3])
+        for candidate in [map_id] + [i for i, m in maps.items() if m["key"] == key]:
+            found = reach.get(candidate, set())
+            if len(found) == 1:
+                return next(iter(found))
+        return region
 
     def item_for(item_id: int, count: int, money: int) -> int | None:
         kind = item_kind(item_id, money)
@@ -158,7 +242,8 @@ def main() -> None:
         item_id, count, money = int(r["ItemId"]), int(r["ItemNum"]), int(r["Money"])
         ap_item = item_for(item_id, count, money)
         entry = {"key": f"chest:{map_id}:{chest_id}", "place": chest_place(r["row"], map_id, maps),
-                 "region": chest_region(r["row"]), "row": r["row"],
+                 "region": chest_region(r["row"]), "area": chest_area(map_id, r["row"]),
+                 "open_world": map_id not in NO_OPEN_WORLD_ROUTE, "row": r["row"],
                  "id": CHEST_LOCATION_BASE + map_id * 1000 + chest_id, "vanilla": ap_item}
         (chests if ap_item is not None else kept_chests).append(entry)
 
@@ -178,7 +263,11 @@ def main() -> None:
         map_id, uid = int(r["map"]), int(r["uid"])
         ap_item = item_for(int(r["item"]), int(r["count"]), int(r["money"]))
         place = "World Map" if map_id == WORLD_MAP else f"Map {map_id}"
-        entry = {"key": f"shiny:{map_id}:{uid}", "name": f"{place} Shiny {uid}", "region": place,
+        area = OPEN_AREA
+        if map_id == WORLD_MAP and r["x"]:
+            area = continent_at(continents, float(r["x"]), float(r["y"])) or OPEN_AREA
+        entry = {"key": f"shiny:{map_id}:{uid}", "name": f"{place} Shiny {uid}", "region": place, "area": area,
+                 "open_world": holds_at_open_start(r.get("visible") or ""),
                  "id": SHINY_LOCATION_BASE + map_id * 1000 + uid, "vanilla": ap_item,
                  "condition": r.get("visible") or "", "seen": (r["map"], r["uid"]) in seen_shinies}
         (shinies if ap_item is not None else kept_shinies).append(entry)
@@ -189,8 +278,16 @@ def main() -> None:
         ap_id = UNIT_ITEM_BASE + unit_id
         items[ap_id] = {"name": units[unit_id]["name"], "kind": "unit", "game_id": unit_id, "count": 1,
                         "category": "party"}
-        if unit_id not in STARTING_PARTY:
-            progression["party"].append(ap_id)
+        progression["party"].append(ap_id)
+    # A continent's unlock turns on its event flag; Ardra has no locations, so it has no unlock.
+    used_areas = {e["area"] for e in chests + shinies}
+    unlocks: dict[str, int] = {}
+    for name, continent in continents.items():
+        if name in used_areas:
+            ap_id = CONTINENT_ITEM_BASE + continent["flag"]
+            items[ap_id] = {"name": f"{name} Unlock", "kind": "flag", "game_id": continent["flag"], "count": 1,
+                            "category": "continent"}
+            unlocks[name] = ap_id
     for r in item_rows:
         item_id, name = int(r["id"]), names[int(r["id"])]
         if r["table"] == "vision":
@@ -236,11 +333,14 @@ def main() -> None:
         f.write("KEPT_VANILLA = " + pprint.pformat(sorted(e["key"] for e in kept_chests + kept_shinies), width=110) + "\n\n")
         f.write("# Chest table rows with no box placed on any map: not locations\n")
         f.write("NO_BOX = " + pprint.pformat(sorted(no_box), width=110) + "\n\n")
-        f.write("# Progression items by group (AP ids): party members not in the starting party, visions,\n"
-                "# key items. One of each goes in the pool when its option is on.\n")
-        f.write("PROGRESSION = " + pprint.pformat(progression, width=110, sort_dicts=True) + "\n")
-        f.write(f"STARTING_PARTY = {STARTING_PARTY!r}\n")
+        f.write("# Progression items by group (AP ids): party members, visions, key items. One of each goes\n"
+                "# in the pool when its option is on, except the party members a player starts with.\n")
+        f.write("PROGRESSION = " + pprint.pformat(progression, width=110, sort_dicts=True) + "\n\n")
+        f.write("# Continent name -> the AP id of its unlock item\n")
+        f.write("CONTINENT_UNLOCKS = " + pprint.pformat(unlocks, width=110, sort_dicts=False) + "\n\n")
         f.write(f"UNIT_ITEM_BASE = {UNIT_ITEM_BASE}\n")
+        f.write(f"FINAL_AREA = {FINAL_AREA!r}\n")
+        f.write(f"OPEN_AREA = {OPEN_AREA!r}\n")
     print(f"{len(chests)} chest locations ({len(kept_chests)} kept vanilla, {len(no_box)} with no box), "
           f"{len(shinies)} shiny locations ({len(kept_shinies)} kept vanilla), {len(items)} items "
           f"({len(progression['party'])} party members, {len(progression['vision'])} visions, "

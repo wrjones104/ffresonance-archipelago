@@ -198,6 +198,24 @@ ok, report = L.execute("return G.OpenStart()")
 assert ok is True and lua("G.StoryCounter()") == EVENT_STORY and lua("sd.Map.mapId") == TOWER_MAP
 L.execute("G.OPEN_START = G.OPEN_STARTS.dock; sd.Map.IsRidingAirShip = false")
 
+# Round 44: a seed's own starting party, here Jake leading Archwitch Fina. They join, Rain and
+# Lasswell do not, Fina stays usable with her first ability, and the bag holds the starters' gear.
+L.execute("""sd.Progress.Progress[1] = 1005; bag = { [10699] = 1, [11301] = 1, [12029] = 1 }
+  sd.Party.partyList = arr({ 1006 })
+  G.OPEN_START = G.OPEN_STARTS.air
+  unitAt = function(id) for i = 1, #sd.unitParameterList do if sd.unitParameterList[i].UnitId == id then return sd.unitParameterList[i] end end end
+  table.insert(rawget(sd.unitParameterList, "items"), { UnitId = 1007, JoinStatus = 1, baseParameterList = arr({}) })
+  unitAt(1001).JoinStatus = 1; unitAt(1002).JoinStatus = 1""")
+ok, report = L.execute("return G.SkipPrologue({ openStart = true, party = { 1007, 1006 } })")
+lines = list(report.values())
+assert ok is True, lines
+assert "ok   party -> [1007, 1006]" in lines and "ok   join status: Jake, Archwitch Fina 0" in lines, lines
+assert lua("unitAt(1007).JoinStatus") == 0 and lua("unitAt(1006).JoinStatus") == 0 and lua("unitAt(1001).JoinStatus") == 1
+assert lua("unitAt(1006).activeSkillIdList[1]") == 408010 and lua("unitAt(1006).EquipWeaponId") == 10600
+assert lua("bag[10700]") == 1 and lua("bag[12022]") == 1 and lua("bag[10600]") == 1, "Jake's and her gear"
+assert lua("bag[10100]") is None and lua("bag[10699]") == 0, "Rain's gear stays out, the prologue gear goes"
+L.execute("sd.Party.partyList = arr({ 1006 }); G.OPEN_START = G.OPEN_STARTS.dock")
+
 # the plain prologue skip leaves the chats alone, and a save with no chat data fails the step only
 L.execute("sd.chat.DataMap.rows = {}")
 ok, report = L.execute("return G.SkipPrologue({ inventory = false })")

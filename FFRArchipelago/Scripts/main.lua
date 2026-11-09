@@ -50,8 +50,8 @@
 -- follows the save slots the linked game is saved to. While any other save is loaded, the mod
 -- grants nothing, reports nothing and leaves the chests vanilla.
 
-local VERSION = "0.24.0"
-local PROTOCOL = 1        -- the bridge protocol; the apworld's MOD_PROTOCOL
+local VERSION = "0.25.0"
+local PROTOCOL = 2        -- the bridge protocol; the apworld's MOD_PROTOCOL
 
 local MOD_DIR = (debug.getinfo(1, "S").source:gsub("^@", ""):gsub("\\", "/"):match("^(.*/)Scripts/[^/]+$"))
     or "ue4ss/Mods/FFRArchipelago/"
@@ -104,7 +104,15 @@ local FEED_WAIT_MAX = 10     -- seconds messages wait for the feed before they g
 local feedOn = true          -- ffrap_feed on|off; kept in ap_state.txt
 local openStart = false      -- ffrap_openstart on|off: the skip goes to the open world; kept in ap_state.txt
 local openArrival = nil      -- ffrap_openstart dock|air|event, kept once the user picks one
-local continentLocks = nil   -- ffrap_lock on|off, kept once the user picks one; off until then
+local continentLocks = nil   -- ffrap_lock on|off, kept once the user picks one; the seed's until then
+-- What the seed says about the start (the client's cfg lines). Not saved: ap_in.txt is read again
+-- at every start, and the seed that wrote it is the only thing that decides these.
+local seedCfg = { openworld = false, party = nil }
+local function openStartOn() return openStart or seedCfg.openworld end
+local function locksOn()
+    if continentLocks ~= nil then return continentLocks end
+    return seedCfg.openworld
+end
 local locksFailed = nil      -- the last ContinentSync failure logged, so each one is logged once
 local feedQueue = {}
 local feedQueueSince = nil   -- when the oldest waiting message came
@@ -347,6 +355,16 @@ local function readInbox(initial)
                 saveState()
                 if game.InGame() then game.BlankChests(want and sessionSave()) end
                 log("chest blanking " .. (want and "on" or "off") .. " (client)")
+            end
+        elseif f[1] == "cfg" and f[2] == "openworld" then
+            seedCfg.openworld = f[3] == "1"
+        elseif f[1] == "cfg" and f[2] == "party" then
+            local party = {}
+            for id in (f[3] or ""):gmatch("%d+") do party[#party + 1] = tonumber(id) end
+            if #party >= 1 and #party <= 4 then
+                seedCfg.party = party
+            else
+                log("cfg party ignored: " .. tostring(f[3]))
             end
         elseif f[1] == "sync" then
             if not initial then state.syncPending = true end
@@ -817,7 +835,7 @@ local function hookTitle()
                 notify(state.seed and "Archipelago: starting a new game for the seed"
                     or "Archipelago: starting a new game (connect the client to link it to a seed)")
                 -- Round 35: the switch was off and the log did not say so.
-                log("title: open world start is " .. (openStart and "on" or "off") .. " (ffrap_openstart)")
+                log("title: open world start is " .. (openStartOn() and "on" or "off") .. " (ffrap_openstart or the seed)")
             end
         end)
     end)
@@ -892,7 +910,7 @@ local function runSkip(slot, why, force)
         return false
     end
     local again = skipped == obj
-    local okRun, ok, report = pcall(game.SkipPrologue, { inventory = not again, openStart = openStart })
+    local okRun, ok, report = pcall(game.SkipPrologue, { inventory = not again, openStart = openStartOn(), party = seedCfg.party })
     if not okRun then
         notify("Prologue skip raised an error: " .. tostring(ok))
         return false
@@ -912,8 +930,8 @@ local function runSkip(slot, why, force)
         saveState()
         log("skip: slot " .. slot .. " linked before the reload: session slots [" .. slotsText(true) .. "]")
     end
-    local saved, detail = game.SaveAndReload(slot, (openStart and game.OPEN_START or game.SKIP_ARRIVAL).map)
-    if openStart then detail = detail .. "; open world start (" .. game.OPEN_START.name .. ", story " .. game.OPEN_START.story .. ")" end
+    local saved, detail = game.SaveAndReload(slot, (openStartOn() and game.OPEN_START or game.SKIP_ARRIVAL).map)
+    if openStartOn() then detail = detail .. "; open world start (" .. game.OPEN_START.name .. ", story " .. game.OPEN_START.story .. ")" end
     log("skip (" .. why .. "): " .. detail)
     -- The automatic skip is part of starting an Archipelago game, so it is only logged when it
     -- works (round 24); a failure, or a skip by command, is shown.
@@ -1025,7 +1043,7 @@ local scaleTick   -- set with the ffrap_scale command, below
 -- boxes in step with the save's flags. Round 40: the boxes go with each map change, so this puts
 -- them back. Only on the field: a battle is no time to spawn actors.
 local function locksTick()
-    if not continentLocks or not game.OnField() then return end
+    if not locksOn() or not game.OnField() then return end
     local placed, removed, listed = game.ContinentSync()
     if not placed then
         -- `removed` holds why. Not being on the world map is the normal case.
@@ -1829,7 +1847,7 @@ end)
 -- Round 42: the locks go in as the map loads, so a save loaded in the air has no moment to land.
 if RegisterLoadMapPostHook then
     local okHook, errHook = pcall(RegisterLoadMapPostHook, function(_, world)
-        local okRun, placed, why = pcall(function() return game.ContinentMapLoaded(world:get(), continentLocks == true) end)
+        local okRun, placed, why = pcall(function() return game.ContinentMapLoaded(world:get(), locksOn()) end)
         if not okRun then
             log("locks: the map load hook failed: " .. tostring(placed))
         elseif placed and #placed > 0 then
@@ -1862,7 +1880,7 @@ command("ffrap_lock", function(p)
         notify("Usage: ffrap_lock [on|off|open <continent|all>|close <continent|all>]")
         return
     end
-    local text = (continentLocks and "on" or "off") .. "; " .. game.ContinentStatus()
+    local text = (locksOn() and "on" or "off") .. "; " .. game.ContinentStatus()
     log("locks: " .. text)
     notify("Continent locks: " .. text)
 end)

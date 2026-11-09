@@ -147,6 +147,20 @@ class FFResonanceContext(CommonContext):
         self.out_offset = 0
         self.out_scope = None
 
+    def write_config(self, slot_data: dict) -> None:
+        """The seed's start settings, for the mod's next Archipelago new game. Written once."""
+        if self.session_key is None or not os.path.isdir(self.mod_folder):
+            return
+        wanted = [("cfg", "openworld", int(bool(slot_data.get("open_world"))))]
+        party = slot_data.get("starting_party") or []
+        if party:
+            wanted.append(("cfg", "party", ",".join(str(unit) for unit in party)))
+        with open(self.in_path, encoding="utf-8") as f:
+            existing = set(f.read().splitlines())
+        for fields in wanted:
+            if "\t".join(clean(x) for x in fields) not in existing:
+                self.write_line(*fields)
+
     def write_new_items(self) -> None:
         if self.session_key is None or not os.path.isdir(self.mod_folder):
             return
@@ -254,6 +268,7 @@ class FFResonanceContext(CommonContext):
             self.session_key = f"{seed}:{self.team}:{self.slot}"
             self.max_story = 0
             self.start_session()
+            self.write_config(slot_data)
             self.scout_locations()
             logger.info(f"Goal: story checkpoint {self.goal}. Mod folder: {self.mod_folder}")
         elif cmd == "LocationInfo":
