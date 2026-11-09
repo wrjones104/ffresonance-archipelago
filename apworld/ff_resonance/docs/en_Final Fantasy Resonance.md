@@ -10,7 +10,9 @@ Also experimental, and on by default: party members (Fina, Lid, Nichol, Archwitc
 
 ## What is the goal?
 
-Reaching the story checkpoint set by the **Goal Story Checkpoint** option. The game counts story progress from 1020 to 8050, and the thousands digit is the chapter.
+By default, receiving the number of Tablet Shards set by the **Tablet Shards Required** option. The shards are shuffled, and the item feed counts them up. Only shards that come from Archipelago count.
+
+The **Goal** option can ask for a story checkpoint instead, set by **Goal Story Checkpoint**. The game counts story progress from 1020 to 8050, and the thousands digit is the chapter. This goal is experimental: no seed has reached one yet.
 
 ## What does another world's item look like in Final Fantasy Resonance?
 

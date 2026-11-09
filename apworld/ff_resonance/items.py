@@ -84,6 +84,12 @@ def create_all_items(world: FFResonanceWorld) -> None:
     for i in sorted(world.random.sample(filler_at, len(extra)), reverse=True):
         pool_ids.pop(i)
     pool = [create_item(world, ITEMS[ap_id]["name"]) for ap_id in pool_ids + extra]
+    # The logic counts only progression items, so just the shards the goal asks for are marked.
+    # The player can still finish with any shards: the client counts them all.
+    if world.options.goal.value == world.options.goal.option_tablet_shards:
+        shards = [item for item in pool if item.name == "Tablet Shard"]
+        for item in shards[:world.options.tablet_shards_required.value]:
+            item.classification = ItemClassification.progression_skip_balancing
     unfilled = len(world.multiworld.get_unfilled_locations(world.player))
     pool += [world.create_filler() for _ in range(unfilled - len(pool))]
     world.multiworld.itempool += pool

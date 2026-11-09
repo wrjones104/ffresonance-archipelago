@@ -23,6 +23,7 @@ location_name_groups["Crystals"] = {loc["name"] for loc in CRYSTALS}
 location_name_groups["Tablet Shard Shinies"] = {loc["name"] for loc in TABLET_SHINIES}
 
 GOAL_EVENT = "Story Goal"
+SHARD_GOAL_EVENT = "Tablet Shard Goal"
 VICTORY = "Victory"
 
 UNLOCK_NAMES = {continent: ITEMS[ap_id]["name"] for continent, ap_id in CONTINENT_UNLOCKS.items()}
@@ -74,8 +75,14 @@ def create_regions_and_locations(world: FFResonanceWorld) -> None:
         if loc["vanilla"] is not None:
             world.vanilla_items.append(loc["vanilla"])
 
-    goal_region = regions[FINAL_AREA]
-    goal = FFResonanceLocation(player, GOAL_EVENT, None, goal_region)
+    if world.options.goal.value == world.options.goal.option_tablet_shards:
+        goal_region = menu
+        needed = world.options.tablet_shards_required.value
+        goal = FFResonanceLocation(player, SHARD_GOAL_EVENT, None, goal_region)
+        goal.access_rule = lambda state: state.has("Tablet Shard", player, needed)
+    else:
+        goal_region = regions[FINAL_AREA]
+        goal = FFResonanceLocation(player, GOAL_EVENT, None, goal_region)
     goal.place_locked_item(FFResonanceItem(VICTORY, ItemClassification.progression, None, player))
     goal_region.locations.append(goal)
     world.multiworld.completion_condition[player] = lambda state: state.has(VICTORY, player)

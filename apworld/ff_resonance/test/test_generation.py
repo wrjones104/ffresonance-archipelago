@@ -3,6 +3,7 @@ from BaseClasses import LocationProgressType
 from ..data import CHESTS, CONTINENT_UNLOCKS, CRYSTALS, ITEMS, NO_BOX, TABLET_SHINIES, PROGRESSION, SHINIES, SHUFFLE_ID_LIMIT, UNIT_ITEM_BASE
 from ..items import CLASSIFICATIONS, FILLER_CATEGORIES
 from ..locations import GOAL_EVENT, LOCATION_KEY_TO_ID
+from ..options import Goal, TabletShardsRequired
 from . import FFResonanceTestBase
 
 
@@ -115,6 +116,43 @@ class TestGoalOption(FFResonanceTestBase):
 
     def test_goal_in_slot_data(self) -> None:
         self.assertEqual(self.world.fill_slot_data()["goal_story_checkpoint"], 8020)
+        self.assertEqual(self.world.fill_slot_data()["goal"], "story_checkpoint")
+
+
+class TestTabletShardGoal(FFResonanceTestBase):
+    options = {"goal": "tablet_shards", "tablet_shards_required": 10}
+
+    def test_the_goal_brings_in_the_shards(self) -> None:
+        names = {loc.name for loc in self.multiworld.get_locations(self.player) if loc.address is not None}
+        self.assertEqual(names, {loc["name"] for loc in CHESTS + TABLET_SHINIES})
+        self.assertEqual(self.world.fill_slot_data()["include_tablet_shards"], 1)
+
+    def test_only_the_shards_needed_are_progression(self) -> None:
+        shards = [i for i in self.multiworld.itempool if i.player == self.player and i.name == "Tablet Shard"]
+        self.assertEqual(len(shards), 99)
+        self.assertEqual(sum(i.advancement for i in shards), 10)
+
+    def test_the_goal_needs_the_shards(self) -> None:
+        shards = [i for i in self.multiworld.itempool if i.player == self.player and i.name == "Tablet Shard" and i.advancement]
+        self.collect(shards[:9])
+        self.assertBeatable(False)
+        self.collect(shards[9:])
+        self.assertBeatable(True)
+
+    def test_slot_data(self) -> None:
+        slot_data = self.world.fill_slot_data()
+        self.assertEqual(slot_data["goal"], "tablet_shards")
+        self.assertEqual(slot_data["tablet_shards_required"], 10)
+
+
+class TestDefaultOptions(FFResonanceTestBase):
+    def test_the_default_goal_and_scaling(self) -> None:
+        self.assertEqual(Goal.default, Goal.option_tablet_shards)
+        self.assertEqual(TabletShardsRequired.default, 50)
+        slot_data = self.world.fill_slot_data()
+        self.assertEqual([slot_data[k] for k in ("enemy_scaling", "enemy_level_range", "enemy_level_percent", "enemy_hp_percent",
+                                                 "enemy_attack_percent", "enemy_magic_percent", "enemy_scale_bosses")],
+                         [1, 2, 80, 100, 75, 75, 0])
 
 
 class TestCustomParty(FFResonanceTestBase):

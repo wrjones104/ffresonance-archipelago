@@ -17,6 +17,8 @@ The chapter-by-chapter progression (party, vehicles, gates, Visions, Espers) is 
 - They are found mostly in towns and dungeons, not on the world map. The progression overview says there are 99, across almost every town, dungeon and overworld segment.
 - There is a place in the game where you turn shards in for incremental rewards.
 
+**Round 49:** the MacGuffin goal is in, as "receive N shards" (world 0.7.0). Turning shards in at the game's own NPC is still an idea.
+
 **From the game data dump (2026-11-06):** all 99 Tablet Shards were located in `data/game/field_items.tsv` (`BP_MapGimmick_FieldItem_Medal_C`, item 25004), confirming the exact locations and counts.
 
 **To find out:**

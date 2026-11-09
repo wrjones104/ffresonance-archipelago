@@ -7,9 +7,11 @@ The mod and this client talk through two text files in the mod folder (see the r
     rewards;
   * scouts the slot's locations once per session (no hints are made) and writes a `scout` line
     for each, so the mod can say in the chest pop-up what a chest holds and for whom;
-  * reads ap_out.txt and sends each `check` the mod reports as a LocationCheck, and the goal once
-    a `story` report reaches the goal checkpoint. Only lines after the mod's own `seed` line for
-    this seed and slot count, so checks from another seed or from before connecting are ignored.
+  * reads ap_out.txt and sends each `check` the mod reports as a LocationCheck. Only lines after
+    the mod's own `seed` line for this seed and slot count, so checks from another seed or from
+    before connecting are ignored;
+  * sends the goal once enough Tablet Shards have been received, or once a `story` report reaches
+    the goal checkpoint, whichever the seed asks for.
 """
 
 from __future__ import annotations
@@ -35,6 +37,8 @@ GAME = "Final Fantasy Resonance"
 POLL_SECONDS = 0.5
 GOAL_MESSAGE = "Goal complete!"
 GOAL_MESSAGE_LINE = f"msg\t{GOAL_MESSAGE}"
+SHARD_GOAL = "tablet_shards"
+SHARD_ITEM = next(ap_id for ap_id, info in ITEMS.items() if info["name"] == "Tablet Shard")
 
 
 def world_version() -> str:
@@ -92,6 +96,8 @@ class FFResonanceContext(CommonContext):
         self.session_key: str | None = None   # "<seed name>:<team>:<slot>" once connected
         self.room_seed_name: str | None = None  # RoomInfo's seed name, kept here because 0.6.7 does not store it
         self.goal = 8050
+        self.goal_kind = "story_checkpoint"
+        self.shards_needed = 99
         self.items_written = 0                # item lines already in ap_in.txt for this session
         self.out_offset = 0
         self.out_scope: str | None = None     # the seed key the ap_out.txt lines being read belong to
@@ -155,6 +161,12 @@ class FFResonanceContext(CommonContext):
         wanted.append(("cfg", "shinies", int(bool(slot_data.get("include_shinies")))))
         wanted.append(("cfg", "crystals", int(bool(slot_data.get("include_crystals")))))
         wanted.append(("cfg", "shards", int(bool(slot_data.get("include_tablet_shards")))))
+        if slot_data.get("enemy_scaling"):
+            wanted.append(("cfg", "scale", 1, slot_data["enemy_level_range"], slot_data["enemy_level_percent"],
+                           slot_data["enemy_hp_percent"], slot_data["enemy_attack_percent"],
+                           slot_data["enemy_magic_percent"], int(bool(slot_data.get("enemy_scale_bosses")))))
+        else:
+            wanted.append(("cfg", "scale", 0))
         party = slot_data.get("starting_party") or []
         if party:
             wanted.append(("cfg", "party", ",".join(str(unit) for unit in party)))
@@ -171,6 +183,7 @@ class FFResonanceContext(CommonContext):
         if len(self.items_received) <= self.items_written:
             return
         new = self.items_received[self.items_written:]
+        shards = sum(1 for item in self.items_received[:self.items_written] if item.item == SHARD_ITEM)
         for index, item in enumerate(new, start=self.items_written):
             info = ITEMS.get(item.item)
             if info is None:
@@ -178,9 +191,26 @@ class FFResonanceContext(CommonContext):
                 self.write_line("msg", f"Unknown Archipelago item {item.item}")
                 continue
             sender = self.player_names.get(item.player, f"player {item.player}")
-            label = info["name"] if item.player == self.slot else f"{info['name']} from {sender}"
+            name = info["name"]
+            if item.item == SHARD_ITEM and self.goal_kind == SHARD_GOAL:
+                shards += 1
+                name = f"{name} ({shards}/{self.shards_needed})"
+            label = name if item.player == self.slot else f"{name} from {sender}"
             self.write_line("item", index, info["kind"], info["game_id"], info["count"], label)
         self.items_written = len(self.items_received)
+
+    def shards_received(self) -> int:
+        return sum(1 for item in self.items_received if item.item == SHARD_ITEM)
+
+    def goal_reached(self) -> bool:
+        if self.goal_kind == SHARD_GOAL:
+            return self.shards_received() >= self.shards_needed
+        return self.max_story >= self.goal
+
+    def goal_text(self) -> str:
+        if self.goal_kind == SHARD_GOAL:
+            return f"{self.shards_needed} Tablet Shards ({self.shards_received()} so far)"
+        return f"story checkpoint {self.goal}"
 
     def read_new_output(self) -> tuple[set[int], int | None]:
         """New checks and the highest story counter in ap_out.txt for this session."""
@@ -259,6 +289,8 @@ class FFResonanceContext(CommonContext):
         elif cmd == "Connected":
             slot_data = args.get("slot_data") or {}
             self.goal = int(slot_data.get("goal_story_checkpoint", 8050))
+            self.goal_kind = str(slot_data.get("goal", "story_checkpoint"))    # a seed before world 0.7.0 has no "goal"
+            self.shards_needed = int(slot_data.get("tablet_shards_required", 99))
             # The 0.6.7 release never stores RoomInfo's seed name (seed_name stays None), so it is
             # captured above; later versions also keep it in server_seed_name.
             seed = getattr(self, "server_seed_name", None) or self.room_seed_name or self.seed_name
@@ -273,7 +305,7 @@ class FFResonanceContext(CommonContext):
             self.start_session()
             self.write_config(slot_data)
             self.scout_locations()
-            logger.info(f"Goal: story checkpoint {self.goal}. Mod folder: {self.mod_folder}")
+            logger.info(f"Goal: {self.goal_text()}. Mod folder: {self.mod_folder}")
         elif cmd == "LocationInfo":
             written = self.write_scouts(args.get("locations") or [])
             if written:
@@ -307,10 +339,10 @@ async def game_loop(ctx: FFResonanceContext) -> None:
                         logger.info(f"Sent {len(sent)} check(s)")
                 if story is not None and story > ctx.max_story:
                     ctx.max_story = story
-                if not ctx.finished_game and ctx.max_story >= ctx.goal:
+                if not ctx.finished_game and ctx.goal_reached():
                     await ctx.send_msgs([{"cmd": "StatusUpdate", "status": ClientStatus.CLIENT_GOAL}])
                     ctx.finished_game = True
-                    logger.info(f"Story checkpoint {ctx.max_story} reached: goal complete!")
+                    logger.info(f"Goal complete: {ctx.goal_text()}")
                     if not ctx.goal_announced:
                         ctx.write_line("msg", GOAL_MESSAGE)
                         ctx.goal_announced = True

@@ -1303,3 +1303,67 @@ L, G = boot()
 tick(1)
 assert L.execute(f"return {VISION_EXIT}(nil, {NO})") is None, "a vanilla game is left alone"
 print("vision screen exit: ok")
+
+# Round 49: the seed turns scaling on by itself, once the open world start is reached, and follows
+# the party. The console wins for the rest of the run. A save that is not the seed's goes back.
+SCALE_STUB = """
+G.scaleCalls, G.partyLv, G.onField = {}, 10, true
+function G.PartyLevel() return G.partyLv, "1001:" .. G.partyLv end
+function G.LevelBand(lv, range, at)
+  local c = math.max(1, math.floor(lv * (at or 100) / 100 + 0.5))
+  return c - range, c + range, c
+end
+function G.OnField() return G.onField end
+function G.ScaleCheck() return 0, 0, nil, false end
+function G.ScaleEnemies(mode, a, b, boss, knobs)
+  G.scaleCalls[#G.scaleCalls + 1] = string.format("%s %s %s %s hp%d atk%d mag%d", mode, tostring(a), tostring(b),
+    tostring(boss), knobs.hp, knobs.attack, knobs.magic)
+  return 3, "sample", {}, 0
+end
+"""
+inbox("seed\tS49:0:1\ncfg\topenworld\t1\ncfg\tscale\t1\t2\t80\t100\t75\t75\t0\n", "w")
+L, G = boot5("SD_SCALE", "0", {"600": 3})
+L.globals().G = G
+L.execute(SCALE_STUB)
+tick = lambda k: [L.execute("tickFn()") for _ in range(k)]
+calls = lambda: list(G.scaleCalls.values())
+G.story = 1000
+G.chests = L.table()
+tick(30)
+assert calls() == [], "not before the open world start"
+G.story = 8000
+tick(10)
+assert calls() == ["clamp 6 10 false hp100 atk75 mag75"], calls()
+tick(10)
+assert len(calls()) == 1, "once"
+G.partyLv = 20
+tick(10)
+assert calls()[-1] == "clamp 14 18 false hp100 atk75 mag75", calls()
+G.saveObj, G.saveTicks = "SD_OTHER", "600"     # a save in a slot the seed does not hold
+tick(30)
+assert calls()[-1].startswith("off "), calls()
+
+inbox("seed\tS49b:0:1\ncfg\topenworld\t1\ncfg\tscale\t1\t3\t100\t90\t60\t70\t1\n", "w")
+L, G = boot5("SD_SCALE2", "0", {})
+L.globals().G = G
+L.execute(SCALE_STUB)
+G.story = 1000
+G.chests = L.table()
+tick(12)
+G.story = 8000
+tick(10)
+assert calls() == ["clamp 7 13 true hp90 atk60 mag70"], calls()
+L.execute('commands["ffrap_scale"]("ffrap_scale", {"off"})')
+G.partyLv = 30
+tick(30)
+assert len(calls()) == 2 and calls()[-1].startswith("off "), calls()
+
+inbox("seed\tS49c:0:1\ncfg\topenworld\t1\ncfg\tscale\t0\n", "w")
+L, G = boot5("SD_SCALE3", "0", {})
+L.globals().G = G
+L.execute(SCALE_STUB)
+G.story = 8000
+G.chests = L.table()
+tick(30)
+assert calls() == [], "cfg scale 0 is off"
+print("seed scaling: ok")

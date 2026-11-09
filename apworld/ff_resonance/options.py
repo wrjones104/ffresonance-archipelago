@@ -5,11 +5,34 @@ from Options import Choice, DefaultOnToggle, OptionGroup, OptionSet, PerGameComm
 from .data import CHESTS, CRYSTALS, SHINIES, TABLET_SHINIES
 
 
+class Goal(Choice):
+    """
+    What completes your seed.
+    tablet_shards: receive the number of Tablet Shards set by tablet_shards_required. This turns
+    on include_tablet_shards. Shards you only hold in game do not count: they must come from
+    Archipelago.
+    story_checkpoint: reach goal_story_checkpoint. EXPERIMENTAL: no seed has reached one yet.
+    """
+    display_name = "Goal"
+    option_tablet_shards = 0
+    option_story_checkpoint = 1
+    default = 0
+
+
+class TabletShardsRequired(Range):
+    """How many of the 99 Tablet Shards you must receive, when the goal is tablet_shards."""
+    display_name = "Tablet Shards Required"
+    range_start = 1
+    range_end = 99
+    default = 50
+
+
 class GoalStoryCheckpoint(Range):
     """
-    The story checkpoint that completes your goal. A seed starts in the open world at story 8000,
-    so the goal must be past that. 8050 is the last checkpoint the game's story conditions test.
-    Whether the ending reaches it has not been confirmed yet.
+    The story checkpoint that completes your goal, when the goal is story_checkpoint. A seed
+    starts in the open world at story 8000, so the goal must be past that. 8050 is the last
+    checkpoint the game's story conditions test. Whether the ending reaches it has not been
+    confirmed yet.
     """
     display_name = "Goal Story Checkpoint"
     range_start = 8001
@@ -100,7 +123,8 @@ class IncludeShinies(Toggle):
 class IncludeTabletShards(Toggle):
     """
     EXPERIMENTAL. Makes the 99 shinies that hold a Tablet Shard locations, and puts the 99 Tablet
-    Shards in the item pool. Such a shiny gives 1 gil, and the check is the real reward.
+    Shards in the item pool. Such a shiny gives 1 gil, and the check is the real reward. The
+    tablet_shards goal turns this on.
     """
     display_name = "Include Tablet Shards"
 
@@ -111,6 +135,60 @@ class IncludeCrystals(Toggle):
     summoning scene and the questions, and gives its check, which can be anything in the multiworld.
     """
     display_name = "Include Crystals"
+
+
+class EnemyScaling(DefaultOnToggle):
+    """
+    Moves enemy levels and stats, and the EXP, gil and MRP they give, to follow your party's
+    level. Any continent then suits any party. With this off, enemies keep their usual levels,
+    which run from 1 to 70 by continent.
+    """
+    display_name = "Enemy Scaling"
+
+
+class EnemyLevelPercent(Range):
+    """Scaled enemies centre on this percent of your party's average level."""
+    display_name = "Enemy Level Percent"
+    range_start = 25
+    range_end = 150
+    default = 80
+
+
+class EnemyLevelRange(Range):
+    """Scaled enemies stay within this many levels of the centre."""
+    display_name = "Enemy Level Range"
+    range_start = 0
+    range_end = 20
+    default = 2
+
+
+class EnemyHPPercent(Range):
+    """Scaled enemies' HP, as a percent of what their new level gives."""
+    display_name = "Enemy HP Percent"
+    range_start = 25
+    range_end = 300
+    default = 100
+
+
+class EnemyAttackPercent(Range):
+    """Scaled enemies' physical damage, as a percent of what their new level gives."""
+    display_name = "Enemy Attack Percent"
+    range_start = 25
+    range_end = 300
+    default = 75
+
+
+class EnemyMagicPercent(Range):
+    """Scaled enemies' magic damage, as a percent of what their new level gives."""
+    display_name = "Enemy Magic Percent"
+    range_start = 25
+    range_end = 300
+    default = 75
+
+
+class EnemyScaleBosses(Toggle):
+    """Scales bosses too. With this off, bosses keep their usual levels and stats."""
+    display_name = "Enemy Scale Bosses"
 
 
 class ExcludedRegions(OptionSet):
@@ -150,6 +228,8 @@ class ShuffleKeyItems(DefaultOnToggle):
 
 @dataclass
 class FFResonanceOptions(PerGameCommonOptions):
+    goal: Goal
+    tablet_shards_required: TabletShardsRequired
     goal_story_checkpoint: GoalStoryCheckpoint
     starting_continent: StartingContinent
     starting_roster: StartingRoster
@@ -161,15 +241,24 @@ class FFResonanceOptions(PerGameCommonOptions):
     include_crystals: IncludeCrystals
     include_tablet_shards: IncludeTabletShards
     excluded_regions: ExcludedRegions
+    enemy_scaling: EnemyScaling
+    enemy_level_percent: EnemyLevelPercent
+    enemy_level_range: EnemyLevelRange
+    enemy_hp_percent: EnemyHPPercent
+    enemy_attack_percent: EnemyAttackPercent
+    enemy_magic_percent: EnemyMagicPercent
+    enemy_scale_bosses: EnemyScaleBosses
     shuffle_party_members: ShufflePartyMembers
     shuffle_visions: ShuffleVisions
     shuffle_key_items: ShuffleKeyItems
 
 
 option_groups = [
-    OptionGroup("Goal", [GoalStoryCheckpoint]),
+    OptionGroup("Goal", [Goal, TabletShardsRequired, GoalStoryCheckpoint]),
     OptionGroup("Start", [StartingContinent, StartingRoster, StartingCharacter1, StartingCharacter2,
                           StartingCharacter3, StartingCharacter4]),
     OptionGroup("Locations", [IncludeShinies, IncludeTabletShards, IncludeCrystals, ExcludedRegions]),
     OptionGroup("Items", [ShufflePartyMembers, ShuffleVisions, ShuffleKeyItems]),
+    OptionGroup("Enemies", [EnemyScaling, EnemyLevelPercent, EnemyLevelRange, EnemyHPPercent, EnemyAttackPercent,
+                            EnemyMagicPercent, EnemyScaleBosses]),
 ]

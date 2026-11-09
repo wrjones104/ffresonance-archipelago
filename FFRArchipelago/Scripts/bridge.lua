@@ -14,6 +14,9 @@
 --     cfg shinies <0|1>                           shinies are locations: blank their rewards (0.29.0)
 --     cfg crystals <0|1>                          sanctum crystals are locations (0.29.0)
 --     cfg shards <0|1>                            Tablet Shard shinies are locations (0.30.0)
+--     cfg scale 0                                 the seed does not scale enemies (0.33.0)
+--     cfg scale 1 <range> <at> <hp> <attack> <magic> <bosses 0|1>
+--                                                 enemies follow the party's level (0.33.0)
 --     scout <location key> <item> <player> <flags> <own>   what a location holds (0.11.0)
 --
 --   ap_out.txt  game -> client

@@ -50,7 +50,7 @@
 -- follows the save slots the linked game is saved to. While any other save is loaded, the mod
 -- grants nothing, reports nothing and leaves the chests vanilla.
 
-local VERSION = "0.32.0"
+local VERSION = "0.33.0"
 local PROTOCOL = 2        -- the bridge protocol; the apworld's MOD_PROTOCOL
 
 local MOD_DIR = (debug.getinfo(1, "S").source:gsub("^@", ""):gsub("\\", "/"):match("^(.*/)Scripts/[^/]+$"))
@@ -107,7 +107,7 @@ local openArrival = nil      -- ffrap_openstart dock|air|event, kept once the us
 local continentLocks = nil   -- ffrap_lock on|off, kept once the user picks one; the seed's until then
 -- What the seed says about the start (the client's cfg lines). Not saved: ap_in.txt is read again
 -- at every start, and the seed that wrote it is the only thing that decides these.
-local seedCfg = { openworld = false, party = nil, shinies = false, crystals = false, shards = false }
+local seedCfg = { openworld = false, party = nil, shinies = false, crystals = false, shards = false, scale = nil }
 local function openStartOn() return openStart or seedCfg.openworld end
 -- An `ffrap_lock on|off` from this run wins. Then a seed that asks for locks: a saved "off" from
 -- an old test must not quietly leave a real seed unlocked. Then the saved switch.
@@ -379,6 +379,15 @@ local function readInbox(initial)
             seedCfg.shards = f[3] == "1"
         elseif f[1] == "cfg" and f[2] == "crystals" then
             seedCfg.crystals = f[3] == "1"
+        elseif f[1] == "cfg" and f[2] == "scale" then
+            local range, at, hp, attack, magic = tonumber(f[4]), tonumber(f[5]), tonumber(f[6]), tonumber(f[7]), tonumber(f[8])
+            if f[3] ~= "1" then
+                seedCfg.scale = nil
+            elseif range and at and hp and attack and magic then
+                seedCfg.scale = { range = range, at = at, withBosses = f[9] == "1", knobs = { hp = hp, attack = attack, magic = magic } }
+            else
+                log("cfg scale ignored: " .. table.concat(f, " "))
+            end
         elseif f[1] == "cfg" and f[2] == "party" then
             local party = {}
             for id in (f[3] or ""):gmatch("%d+") do party[#party + 1] = tonumber(id) end
@@ -1567,6 +1576,9 @@ end)
 --   follow     party mode: do it again whenever the party's level changes (on the field only)
 local scaleFollow = nil   -- { range, at, knobs, withBosses, last } while "follow" is on
 local scaleLast = nil     -- { mode, a, b, withBosses, knobs, text } of the rescale in force
+local scaleByHand = false -- ffrap_scale was used in this run: it wins over the seed, for testing
+local seedScaleOn = false -- the rescale in force came from the seed
+local seedScaleFailed = false   -- so a failure is logged once
 
 -- Every rescale writes the changed rows to scale.txt (one enemy a line), so a hit seen in
 -- battle can be matched with the stats behind it.
@@ -1649,6 +1661,7 @@ command("ffrap_scale", function(p)
         return
     end
     scaleFollow = nil
+    scaleByHand, seedScaleOn = true, false
     if first == "party" then
         local range = tonumber(args[2]) or 2
         local n, err, lv, lo, hi = scaleToParty(range, at, withBosses, knobs)
@@ -1683,8 +1696,35 @@ end)
 -- is on screen, so never in a battle.
 local SCALE_CHECK_EVERY = 2   -- scale ticks (of STATUS_EVERY) between table checks
 local scaleChecks = 0
+
+-- Round 49: the seed's scaling (cfg scale), in place of typing ffrap_scale each time. It waits for
+-- the open world start, as the prologue's party is not the seed's. A save that is not the seed's
+-- gets the game's own enemies back.
+local function seedScaleTick()
+    local s = seedCfg.scale
+    if not s or scaleByHand then return end
+    if not sessionSave() then
+        if seedScaleOn then
+            seedScaleOn, scaleFollow = false, nil
+            applyScale("off", nil, nil, false, s.knobs)
+        end
+        return
+    end
+    if scaleFollow or (game.StoryCounter() or 0) < game.OPEN_START.story then return end
+    local n, err, lv = scaleToParty(s.range, s.at, s.withBosses, s.knobs)
+    if n == nil then
+        if not seedScaleFailed then log("scale: the seed's scaling failed: " .. tostring(err)) end
+        seedScaleFailed = true
+        return
+    end
+    seedScaleOn = true
+    scaleFollow = { range = s.range, at = s.at, knobs = s.knobs, withBosses = s.withBosses, last = lv }
+    log("scale: the seed's scaling is on, following the party's level")
+end
+
 scaleTick = function()
     if not game.OnField() then return end
+    seedScaleTick()
     -- Round 33: a battle showed a level the last rescale did not give (the FFR Randomizer mod had
     -- written the row again). If the table no longer holds what we wrote (loaded again, or written
     -- by something else), say so and write it again.

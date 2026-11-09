@@ -151,6 +151,7 @@ MP does not correlate with level (r² 0.09) and remains unchanged.
 - Bosses: separate toggle to avoid trivializing or over-buffing boss encounters.
 - Updates: rows rewrite on the field whenever the party's average level changes, never during battle.
 - MRP is scaled too, from mod 0.31.0: `ap` in `DT_BattleGroup`, by the battle's enemies' average level (round 47).
+- In the yaml from world 0.7.0 (round 49): `enemy_scaling` (on by default), `enemy_level_percent` (80), `enemy_level_range` (2), `enemy_hp_percent` (100), `enemy_attack_percent` (75), `enemy_magic_percent` (75) and `enemy_scale_bosses` (off). The defaults are what the user played by hand in round 48. `ffrap_scale` in the same run still wins over the seed, for testing.
 
 **Round 31 & 32 findings:**
 - The simple exponential growth rate produced excessive attack at low levels. Real enemies follow `log(stat) = a + b log(level) + c level` (r² 0.88 for attack, 0.70 for HP). Using relative level ratios eliminates constant `a`.
@@ -195,7 +196,9 @@ Because a cleared save starts past the story ending, candidate goals include:
 - Superbosses: defeat Omega (level 99) or Shinryu (level 95) if accessible.
 - Multiworld artifacts: collect N custom items distributed across players to open the final area.
 
-Round 48: no seed has been finished yet. The only goal in the apworld is `goal_story_checkpoint` (8001 to 8050), and whether anything in an open world start moves the story past 8000 is not confirmed.
+Round 48: no seed has been finished yet. The only goal in the apworld was `goal_story_checkpoint` (8001 to 8050), and whether anything in an open world start moves the story past 8000 is not confirmed.
+
+Round 49 (world 0.7.0): the default goal is `tablet_shards`, with `tablet_shards_required` (default 50 of 99). It is a stopgap that needs nothing from the story. It turns on `include_tablet_shards`. The client counts the shards it received, so spending or losing one in game does not matter. Only the shards the goal needs are progression items. Bosses can replace this goal later.
 
 ## 8. What the story used to give, now items
 

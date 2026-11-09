@@ -70,6 +70,8 @@ class FFResonanceWorld(World):
         self.starting_continent = ""
 
     def generate_early(self) -> None:
+        if self.options.goal.value == ffr_options.Goal.option_tablet_shards:
+            self.options.include_tablet_shards.value = 1      # the goal's items must be in the pool
         self.starting_continent = self.options.starting_continent.current_key.capitalize()
         picks = [self.options.starting_character_1, self.options.starting_character_2,
                  self.options.starting_character_3, self.options.starting_character_4]
@@ -94,7 +96,10 @@ class FFResonanceWorld(World):
 
     def fill_slot_data(self) -> Mapping[str, Any]:
         return {
-            **self.options.as_dict("goal_story_checkpoint", "include_shinies", "include_crystals", "include_tablet_shards"),
+            **self.options.as_dict("goal_story_checkpoint", "tablet_shards_required", "include_shinies", "include_crystals",
+                                   "include_tablet_shards", "enemy_scaling", "enemy_level_percent", "enemy_level_range",
+                                   "enemy_hp_percent", "enemy_attack_percent", "enemy_magic_percent", "enemy_scale_bosses"),
+            "goal": self.options.goal.current_key,
             "mod_protocol": MOD_PROTOCOL,
             "open_world": True,
             "starting_party": self.starting_party,
