@@ -1368,3 +1368,44 @@ G.chests = L.table()
 tick(30)
 assert calls() == [], "not an open world seed"
 print("seed scaling: ok")
+
+# Round 49: ffrap_bossfight arms, logs a win once, can be turned off, and arms again on a new save
+inbox("seed\tS50:0:1\ncfg\topenworld\t1\n", "w")
+L, G = boot5("SD_BOSS", "0", {})
+L.globals().G = G
+L.execute("""
+G.bossArm, G.bossOff, G.bossWon = {}, 0, false
+G.BOSS_TEST_FLAG = 1440
+function G.BossTestArm(id, say) G.bossArm[#G.bossArm + 1] = id; return id ~= 1, "detail" end
+function G.BossTestOff(say) G.bossOff = G.bossOff + 1; return 3 end
+local old = G.GetFlag
+function G.GetFlag(i) if i == 1440 then return G.bossWon end return old and old(i) end
+local oldSet = G.SetFlag
+function G.SetFlag(i, on) if i == 1440 then G.bossWon = on; return "ok", "" end return oldSet(i, on) end
+logged = {}
+print = function(s) logged[#logged + 1] = tostring(s) end
+""")
+wins = lambda: [x for x in L.eval("logged").values() if "WIN seen" in x]
+tick = lambda k: [L.execute("tickFn()") for _ in range(k)]
+G.story = 1000
+G.chests = L.table()
+tick(12)
+L.execute('commands["ffrap_bossfight"]("ffrap_bossfight", {"9013"})')
+assert list(G.bossArm.values()) == [9013], list(G.bossArm.values())
+tick(3)
+assert wins() == [], "no win yet"
+G.bossWon = True
+tick(3)
+assert len(wins()) == 1 and G.bossWon is False, wins()
+L.execute('commands["ffrap_bossfight"]("ffrap_bossfight", {"off"})')
+assert G.bossOff == 1
+G.bossWon = True
+tick(3)
+assert len(wins()) == 1, "off stops the watch"
+G.bossWon = False
+L.execute('commands["ffrap_bossfight"]("ffrap_bossfight", {"1"})')
+assert list(G.bossArm.values()) == [9013, 1], "a failed arm"
+G.bossWon = True
+tick(3)
+assert len(wins()) == 1, "a failed arm does not watch"
+print("boss fight test: ok")

@@ -50,7 +50,7 @@
 -- follows the save slots the linked game is saved to. While any other save is loaded, the mod
 -- grants nothing, reports nothing and leaves the chests vanilla.
 
-local VERSION = "0.34.0"
+local VERSION = "0.35.0"
 local PROTOCOL = 2        -- the bridge protocol; the apworld's MOD_PROTOCOL
 
 local MOD_DIR = (debug.getinfo(1, "S").source:gsub("^@", ""):gsub("\\", "/"):match("^(.*/)Scripts/[^/]+$"))
@@ -1095,6 +1095,7 @@ local function gateTick()
 end
 
 local scaleTick   -- set with the ffrap_scale command, below
+local bossTest = { group = nil }   -- ffrap_bossfight, below: the group armed, and its tick
 
 -- Continent locks (game.ContinentSync): while the switch is on, the world map keeps its lock
 -- boxes in step with the save's flags. Round 40: the boxes go with each map change, so this puts
@@ -1148,6 +1149,7 @@ local function tick()
             autoSkip()
             pcall(popupTick)
             pcall(gateTick)
+            if bossTest.group then pcall(bossTest.tick) end
             if state.ticks % STATUS_EVERY == 0 then pcall(scaleTick) end
             if state.ticks % LOCKS_EVERY == 0 then pcall(locksTick) end
             if state.ticks % STATUS_EVERY == 0 and seedCfg.openworld and game.OnField() then pcall(game.SyncSlotLevel) end
@@ -1159,6 +1161,7 @@ local function tick()
                     local okCrystals, written = pcall(game.CrystalsPatch)
                     log("crystals: " .. tostring(written) .. " event rows set to skip the scene" .. (okCrystals and "" or " (failed)"))
                 end
+                if newSave and bossTest.group then pcall(bossTest.arm, bossTest.group) end
                 if okShop and blocked ~= nil then
                     log("vision shop " .. (blocked and "closed (no vision yet)" or "open") .. ": " .. tostring(rows) .. " rows")
                 end
@@ -1740,6 +1743,41 @@ scaleTick = function()
     f.last = lv
     scaleToParty(f.range, f.at, f.withBosses, f.knobs)
 end
+
+-- ffrap_bossfight <battle group>: touching any sanctum crystal you have not claimed starts that
+-- fight, and a win is logged (round 49; IDEAS.md, idea 25). ffrap_bossfight off: undoes it.
+bossTest.arm = function(id)
+    local ok, detail = game.BossTestArm(id, log)
+    log("boss test: " .. (ok and "ready, " or "failed, ") .. tostring(detail))
+    bossTest.group = ok and id or nil
+    return ok, detail
+end
+bossTest.tick = function()
+    if game.GetFlag(game.BOSS_TEST_FLAG) ~= true then return end
+    game.SetFlag(game.BOSS_TEST_FLAG, false)
+    log("boss test: WIN seen for battle group " .. tostring(bossTest.group))
+    notify("Boss test: win seen")
+end
+command("ffrap_bossfight", function(p)
+    local first = tostring(p[1] or ""):lower()
+    if first == "off" then
+        bossTest.group = nil
+        log("boss test: off, " .. tostring(game.BossTestOff(log)) .. " rows put back")
+        notify("Boss test off")
+        return
+    end
+    local id = tonumber(first)
+    if not id then
+        notify("Usage: ffrap_bossfight <battle group> | off")
+        return
+    end
+    if not game.InGame() then
+        notify("Boss test: load a save first")
+        return
+    end
+    local ok, detail = bossTest.arm(math.floor(id))
+    notify(ok and ("Boss test ready: touch a sanctum crystal. " .. detail) or ("Boss test failed: " .. tostring(detail)))
+end)
 
 -- ffrap_noland list: every no-landing box on this map, to noland.txt.
 -- ffrap_noland here: the boxes under you (seen from above).

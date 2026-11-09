@@ -3895,4 +3895,138 @@ function G.NoLandOff()
     return n
 end
 
+-- -------------------------------------------------------------------------------------------
+-- The boss fight test (ffrap_bossfight, round 49; IDEAS.md, idea 25)
+-- -------------------------------------------------------------------------------------------
+-- Can a talk event start any boss, and can a win be seen? A talk row that starts a battle plays
+-- a shared sequence and names a battle group by number (encountGroupId). A battle group names the
+-- talk row to run after a win (battleFinishEventId), which is how strong enemies give rewards.
+-- So this borrows the first Twelve Arms fight and its Victory row, and points every sanctum
+-- crystal's opening row at the fight. The Victory row plays nothing and sets a flag nothing else
+-- uses. The crystal's own last row does not run, so the crystal stays and can be used again.
+-- Only tables in memory change. `off` undoes all of it but the Victory row's item, which comes
+-- back when the game restarts.
+G.BOSS_TEST_FLAG = 1440       -- no condition or talk row in the game uses flags 1430 to 1449
+local BOSS_TEST_FIGHT, BOSS_TEST_WIN = "12Arms_01Sword_1stAwake_Encount", "12Arms_01Sword_1stAwake_Victory"
+local bossTestSaved = nil     -- { talk = { row name = what it held }, group = id, groupFields = {} }
+
+local function EachTalkRow(fn)
+    for _, dt in ipairs(TableFamily(Find(SHOP_TABLE))) do
+        pcall(function()
+            dt:ForEachRow(function(name, row) pcall(fn, ObjText(name), row) end)
+        end)
+    end
+end
+
+local function EachGroupRow(id, fn)
+    for _, dt in ipairs(TableFamily(Find(BATTLE_GROUP_TABLE))) do
+        pcall(function()
+            dt:ForEachRow(function(_, row)
+                pcall(function() if Int(row.ID) == id then fn(row) end end)
+            end)
+        end)
+    end
+end
+
+-- The story's scenes must not run from here: no scene in the battle, none after it, and a loss
+-- or an escape runs nothing.
+local function BossTestWriteGroup(row)
+    row.battleEventId = -1
+    row.battleFinishEventId = FName(BOSS_TEST_WIN)
+    row.battleFinishLoseEventId = FName("None")
+    row.battleFinishEscapeEventId = FName("None")
+    row.isResultSkipOnWin = false
+    row.isResultSkipOnLose = false
+end
+
+function G.BossTestOff(say)
+    local saved = bossTestSaved
+    if not saved then return 0 end
+    say("boss test: putting the tables back")
+    local restored = 0
+    EachTalkRow(function(key, row)
+        local o = saved.talk[key]
+        if not o then return end
+        if o.eventType ~= nil then row.EventType = o.eventType end
+        if o.eventId then row.ContinuousEventList[1].EventId = FName(o.eventId) end
+        if o.group then row.encountGroupId = o.group end
+        if o.flags then for i, flag in ipairs(o.flags) do row.OnFlagList[i] = flag end end
+        restored = restored + 1
+    end)
+    local f = saved.groupFields
+    EachGroupRow(saved.group, function(row)
+        row.battleEventId = f.start
+        row.battleFinishEventId = FName(f.finish)
+        row.battleFinishLoseEventId = FName(f.lose)
+        row.battleFinishEscapeEventId = FName(f.escape)
+        row.isResultSkipOnWin = f.skipWin
+        row.isResultSkipOnLose = f.skipLose
+        restored = restored + 1
+    end)
+    bossTestSaved = nil
+    return restored
+end
+
+-- Returns true and what was written, or false and why. `say` logs each step before it runs.
+function G.BossTestArm(id, say)
+    G.BossTestOff(say)
+    say("boss test: reading battle group " .. tostring(id))
+    local fields, names = nil, ""
+    EachGroupRow(id, function(row)
+        if not fields then
+            fields = { start = Int(row.battleEventId), finish = ObjText(row.battleFinishEventId), lose = ObjText(row.battleFinishLoseEventId),
+                       escape = ObjText(row.battleFinishEscapeEventId), skipWin = row.isResultSkipOnWin, skipLose = row.isResultSkipOnLose }
+        end
+    end)
+    if not fields then return false, "no battle group " .. tostring(id) end
+    say(string.format("boss test: the group's own events: start %s, win %s, lose %s, escape %s", tostring(fields.start), fields.finish, fields.lose, fields.escape))
+
+    local entry = {}
+    for _, c in ipairs(G.CRYSTALS) do
+        local base = string.format("Int_LegendEV_%02d", c.event)
+        entry[base .. "_01"] = true
+        entry[base .. "_01_Short"] = true
+    end
+    local saved = { talk = {}, group = id, groupFields = fields }
+    bossTestSaved = saved
+    local crystals, fight, win, group = 0, 0, 0, 0
+
+    say("boss test: writing the fight row, the win row and the crystal rows")
+    EachTalkRow(function(key, row)
+        if key == BOSS_TEST_FIGHT then
+            saved.talk[key] = saved.talk[key] or { group = Int(row.encountGroupId) }
+            row.encountGroupId = id
+            fight = fight + 1
+        elseif key == BOSS_TEST_WIN then
+            if not saved.talk[key] then
+                local flags = {}
+                for i = 1, #row.OnFlagList do flags[i] = Int(row.OnFlagList[i]) end
+                saved.talk[key] = { eventType = Int(row.EventType), flags = flags }
+            end
+            row.EventType = EVENT_BLUEPRINT      -- a Blueprint row with no Blueprint plays nothing
+            row.ObtainItemList:Empty()
+            for i = 1, #row.OnFlagList do row.OnFlagList[i] = G.BOSS_TEST_FLAG end
+            win = win + 1
+        elseif entry[key] then
+            saved.talk[key] = saved.talk[key] or { eventType = Int(row.EventType), eventId = ObjText(row.ContinuousEventList[1].EventId) }
+            row.EventType = EVENT_BLUEPRINT
+            row.ContinuousEventList[1].EventId = FName(BOSS_TEST_FIGHT)
+            crystals = crystals + 1
+        end
+    end)
+
+    say("boss test: writing the battle group")
+    EachGroupRow(id, function(row)
+        BossTestWriteGroup(row)
+        group = group + 1
+    end)
+    G.SetFlag(G.BOSS_TEST_FLAG, false)
+    local detail = string.format("group %d: %d crystal rows, %d fight rows, %d win rows, %d group rows", id, crystals, fight, win, group)
+    if crystals == 0 or fight == 0 or win == 0 or group == 0 then
+        G.BossTestOff(say)
+        return false, detail .. " (something is missing, so nothing is left changed)"
+    end
+    return true, detail
+end
+
 return G

@@ -355,4 +355,47 @@ assert sum(1 for l in lines if l.startswith("FAIL")) == 1, lines
 L.execute("mapMgr.IsValid = function() return false end")
 ok, detail = L.execute("return G.SaveAndReload(2)")
 assert ok is False and "load the slot by hand" in detail, detail
+# Round 49: the boss fight test points the crystals at a borrowed fight, with the story's scenes
+# taken off the group, and puts it all back
+L.execute("""
+local function cont(id) return { EventId = FName(id) } end
+talkRows = { Int_LegendEV_10_01 = { EventType = 1, ContinuousEventList = { cont("Int_LegendEV_10_07") } },
+  Int_LegendEV_10_01_Short = { EventType = 1, ContinuousEventList = { cont("Int_LegendEV_10_07") } },
+  ["12Arms_01Sword_1stAwake_Encount"] = { EventType = 0, encountGroupId = 9957 },
+  ["12Arms_01Sword_1stAwake_Victory"] = { EventType = 0, ObtainItemList = arr({ { ID = 10199 } }), OnFlagList = arr({ 901, 1237 }) },
+  Other = { EventType = 0, encountGroupId = 5 } }
+shopRows = talkRows
+siren = { ID = 9013, battleEventId = 77, battleFinishEventId = FName("C01_037_01"), battleFinishLoseEventId = FName("None"),
+          battleFinishEscapeEventId = FName("None"), isResultSkipOnWin = true, isResultSkipOnLose = false }
+libs["/Game/Datatable/Encount/DT_BattleGroup.DT_BattleGroup"] = {
+  GetFullName = function() return "DT" end, IsValid = function() return true end,
+  HasAnyInternalFlags = function() return false end, HasAnyFlags = function() return false end,
+  ForEachRow = function(_, fn) fn(nameOf("Siren"), siren) end }
+libs["/Script/mucha.Default__CPP_BFL_SaveDataProgress"].SetFlag = function(_, i, on) sd.Progress.eventFlag[i + 1] = on end
+sd.Progress.eventFlag[1441] = true
+said = {}
+function say(s) said[#said + 1] = s end""")
+ok, detail = L.execute("return G.BossTestArm(1, say)")
+assert ok is False and "no battle group 1" in detail, detail
+assert lua('talkRows.Int_LegendEV_10_01.ContinuousEventList[1].EventId:ToString()') == "Int_LegendEV_10_07", "no write without a group"
+ok, detail = L.execute("return G.BossTestArm(9013, say)")
+assert ok is True and "2 crystal rows" in detail, detail
+assert lua('talkRows.Int_LegendEV_10_01.ContinuousEventList[1].EventId:ToString()') == "12Arms_01Sword_1stAwake_Encount"
+assert lua('talkRows.Int_LegendEV_10_01_Short.ContinuousEventList[1].EventId:ToString()') == "12Arms_01Sword_1stAwake_Encount"
+assert lua('talkRows["12Arms_01Sword_1stAwake_Encount"].encountGroupId') == 9013 and lua("talkRows.Other.encountGroupId") == 5
+win = 'talkRows["12Arms_01Sword_1stAwake_Victory"]'
+assert lua(win + ".EventType") == 1 and lua("#" + win + ".ObtainItemList") == 0
+assert lua(win + ".OnFlagList[1]") == 1440 and lua(win + ".OnFlagList[2]") == 1440
+assert lua("siren.battleEventId") == -1 and lua("siren.battleFinishEventId:ToString()") == "12Arms_01Sword_1stAwake_Victory"
+assert lua("siren.isResultSkipOnWin") is False
+assert lua("sd.Progress.eventFlag[1441]") is False, "the win flag starts off"
+assert "start 77, win C01_037_01" in " ".join(L.eval("said").values()), "the group's own events are logged"
+ok, detail = L.execute("return G.BossTestArm(9013, say)")
+assert ok is True, "arming again starts from the originals"
+assert L.execute("return G.BossTestOff(say)") == 5, "2 crystal rows, the fight, the win and the group"
+assert lua('talkRows.Int_LegendEV_10_01.ContinuousEventList[1].EventId:ToString()') == "Int_LegendEV_10_07"
+assert lua('talkRows["12Arms_01Sword_1stAwake_Encount"].encountGroupId') == 9957
+assert lua(win + ".OnFlagList[1]") == 901 and lua(win + ".OnFlagList[2]") == 1237 and lua(win + ".EventType") == 0
+assert lua("siren.battleEventId") == 77 and lua("siren.battleFinishEventId:ToString()") == "C01_037_01" and lua("siren.isResultSkipOnWin") is True
+assert L.execute("return G.BossTestOff(say)") == 0, "nothing to undo"
 print("skip: ok")

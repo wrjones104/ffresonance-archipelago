@@ -398,11 +398,11 @@ World-map shinies verified as locations. Multiple crashes observed across differ
 
 **Before round 49 was played (2026-11-09):** the user moved enemy scaling out of the yaml, as it suits in-game sliders better (IDEAS.md, idea 18). The default for a seed is now party sync with follow, HP and power at 75%, bosses too.
 
-## Round 49 test plan (mod 0.34.0, world 0.8.0)
+## Round 49 test plan (mod 0.35.0, world 0.8.0)
 
 Seeds can now be finished, and a seed scales its enemies by itself. Send the `[FFRAP]` lines of `UE4SS.log`.
 
-**Install:** copy `FFRArchipelago/Scripts` over the installed mod, copy `dist/ff_resonance.apworld` into `custom_worlds`, and **generate a new seed**. Connect the client first, then New Game (Archipelago). Do not type `ffrap_scale`.
+**Install:** copy `FFRArchipelago/Scripts` over the installed mod. If you have not installed world 0.8.0 yet, copy `dist/ff_resonance.apworld` into `custom_worlds` and **generate a new seed**. Connect the client first, then New Game (Archipelago). Do not type `ffrap_scale`.
 
 For a short test, add this to your yaml. The default is 50. Shards turn on by themselves with this goal, so `include_tablet_shards` is no longer needed.
 
@@ -415,3 +415,25 @@ For a short test, add this to your yaml. The default is 50. Shards turn on by th
 3. Receive the last one you need. **Does the game say `Goal complete!`, and does the server show your slot as finished?**
 4. The moogle: have a vision and no Magicite Shard (a Cryst alone is a good test). Open Vision Enhancement and press Cancel. **Does the screen close?** Then get a Shard and enhance a vision. Does the screen still work and close after?
 5. Send the `vision screen:` lines of the log. They show what the game's own check answered.
+
+**The boss fight test.** Can any boss be fought from anywhere, and can a win be seen? It changes nothing on disk, but a fight can go wrong, so save in a spare slot first. You need a sanctum crystal you have not claimed. Open the console and type these, one fight at a time:
+
+```
+ffrap_bossfight 9013
+```
+
+Then touch the crystal. It should start the fight. The crystal stays, so you can touch it again for the next one. Try these groups, in this order:
+
+| Group | Boss | Why |
+|---|---|---|
+| 9013 | Siren | A story boss with a story scene after the win |
+| 9079 | Ogre | A strong enemy, as a control |
+| 9021 | Leviathan | Has a scripted event inside the battle, which the test turns off |
+| 9054 | Chaotic Darkness, first form | A multi-part final boss |
+
+For each one, please tell me:
+- **Did the fight start, with the right boss?** Any odd music, stage or missing text?
+- **After a win, were you back on the field with the normal results screen?** The log should say `boss test: WIN seen`, and the game should say `Boss test: win seen`.
+- **Lose one fight on purpose, once.** Is it a normal game over, or does it hang?
+
+Send the `boss test:` lines of the log. Type `ffrap_bossfight off` when done. A crash folder is useful if one crashes.
