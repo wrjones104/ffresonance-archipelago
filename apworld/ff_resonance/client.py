@@ -154,6 +154,7 @@ class FFResonanceContext(CommonContext):
         wanted = [("cfg", "openworld", int(bool(slot_data.get("open_world"))))]
         wanted.append(("cfg", "shinies", int(bool(slot_data.get("include_shinies")))))
         wanted.append(("cfg", "crystals", int(bool(slot_data.get("include_crystals")))))
+        wanted.append(("cfg", "shards", int(bool(slot_data.get("include_tablet_shards")))))
         party = slot_data.get("starting_party") or []
         if party:
             wanted.append(("cfg", "party", ",".join(str(unit) for unit in party)))

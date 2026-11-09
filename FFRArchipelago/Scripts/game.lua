@@ -1412,12 +1412,15 @@ end
 
 -- Round 46: a shiny that is a location gives 1 gil, as a blanked chest does, and the check is the
 -- real reward. The reward is on the actor. Same rule as the apworld's: items below the shuffle
--- limit and gil. Returns true when it wrote.
-function G.BlankFieldItem(e)
+-- limit and gil (`shinies`), and Tablet Shards (`shards`, round 47). Returns true when it wrote.
+local TABLET_SHARD = 25004
+function G.BlankFieldItem(e, shinies, shards)
     if e.open or not e.actor then return false end
     local id, money = e.itemId or -1, e.money or -1
     if id == BLANK.ItemId and money == BLANK.Money then return false end
-    if not ((id >= 0 and id < SHUFFLE_ID_LIMIT) or (id < 0 and money > 0)) then return false end
+    local isShard = id == TABLET_SHARD
+    local isLocation = (id >= 0 and id < SHUFFLE_ID_LIMIT) or (id < 0 and money > 0)
+    if not ((shards and isShard) or (shinies and isLocation)) then return false end
     return (pcall(function()
         e.actor.m_ItemId, e.actor.m_ItemNum, e.actor.m_Money = BLANK.ItemId, BLANK.ItemNum, BLANK.Money
     end))

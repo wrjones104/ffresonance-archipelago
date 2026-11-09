@@ -50,7 +50,7 @@
 -- follows the save slots the linked game is saved to. While any other save is loaded, the mod
 -- grants nothing, reports nothing and leaves the chests vanilla.
 
-local VERSION = "0.29.0"
+local VERSION = "0.30.0"
 local PROTOCOL = 2        -- the bridge protocol; the apworld's MOD_PROTOCOL
 
 local MOD_DIR = (debug.getinfo(1, "S").source:gsub("^@", ""):gsub("\\", "/"):match("^(.*/)Scripts/[^/]+$"))
@@ -107,7 +107,7 @@ local openArrival = nil      -- ffrap_openstart dock|air|event, kept once the us
 local continentLocks = nil   -- ffrap_lock on|off, kept once the user picks one; the seed's until then
 -- What the seed says about the start (the client's cfg lines). Not saved: ap_in.txt is read again
 -- at every start, and the seed that wrote it is the only thing that decides these.
-local seedCfg = { openworld = false, party = nil, shinies = false, crystals = false }
+local seedCfg = { openworld = false, party = nil, shinies = false, crystals = false, shards = false }
 local function openStartOn() return openStart or seedCfg.openworld end
 -- An `ffrap_lock on|off` from this run wins. Then a seed that asks for locks: a saved "off" from
 -- an old test must not quietly leave a real seed unlocked. Then the saved switch.
@@ -375,6 +375,8 @@ local function readInbox(initial)
             seedCfg.openworld = f[3] == "1"
         elseif f[1] == "cfg" and f[2] == "shinies" then
             seedCfg.shinies = f[3] == "1"
+        elseif f[1] == "cfg" and f[2] == "shards" then
+            seedCfg.shards = f[3] == "1"
         elseif f[1] == "cfg" and f[2] == "crystals" then
             seedCfg.crystals = f[3] == "1"
         elseif f[1] == "cfg" and f[2] == "party" then
@@ -695,8 +697,8 @@ local function scanLoot()
         end
     end
     -- Round 46: shinies are blanked before the map settles, so one cannot be picked up in time.
-    if seedCfg.shinies and sessionSave() then
-        for _, s in ipairs(game.LiveFieldItems()) do game.BlankFieldItem(s) end
+    if (seedCfg.shinies or seedCfg.shards) and sessionSave() then
+        for _, s in ipairs(game.LiveFieldItems()) do game.BlankFieldItem(s, seedCfg.shinies, seedCfg.shards) end
     end
     visit.scans = visit.scans + 1
     if visit.scans <= MAP_SETTLE_SCANS then return end

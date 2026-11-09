@@ -41,6 +41,7 @@ OUT = os.path.join(ROOT, "apworld", "ff_resonance", "data.py")
 SHUFFLE_ID_LIMIT = 13000          # item ids at or above this never move (visions, key items)
 MAGICITE_IDS = (25000, 25002)     # except these, in chests (the mod blanks them too)
 CRYSTAL_LOCATION_BASE = 3_000_000_000    # + the sanctum's map id
+TABLET_SHARD = 25004              # a shiny holding one is a location of its own kind (round 47)
 CONSUMABLE_LIMIT = 1000
 
 CHEST_LOCATION_BASE = 1_000_000_000
@@ -76,6 +77,8 @@ def item_kind(item_id: int, money: int, in_chest: bool = False) -> str | None:
     # Round 45: chests with Magicite are shuffled. Shinies wait until a shiny's reward can be replaced.
     if in_chest and MAGICITE_IDS[0] <= item_id <= MAGICITE_IDS[1]:
         return "magicite"
+    if item_id == TABLET_SHARD:
+        return "shard"
     if item_id < CONSUMABLE_LIMIT:
         return "consumable"
     if 10000 <= item_id < SHUFFLE_ID_LIMIT:
@@ -262,7 +265,16 @@ def main() -> None:
     for entry in chests + kept_chests:
         entry.pop("place")
 
-    shinies, kept_shinies = [], []
+    def map_area(map_id: int) -> str:
+        """The continent a map is on: by its exits where they say so, else by its code (01Gra_02)."""
+        found = reach.get(map_id, set())
+        if len(found) == 1:
+            return next(iter(found))
+        key = (maps.get(map_id) or {}).get("key") or ""
+        code = key.split("_")[0][2:]
+        return REGION_NAMES.get(code, OPEN_AREA)
+
+    shinies, kept_shinies, tablet_shinies = [], [], []
     for r in read_tsv("game/field_items.tsv"):
         if r["kind"] != "shiny" or not r["map"]:
             continue
@@ -276,6 +288,12 @@ def main() -> None:
                  "open_world": holds_at_open_start(r.get("visible") or ""),
                  "id": SHINY_LOCATION_BASE + map_id * 1000 + uid, "vanilla": ap_item,
                  "condition": r.get("visible") or "", "seen": (r["map"], r["uid"]) in seen_shinies}
+        if ap_item is not None and int(r["item"]) == TABLET_SHARD:
+            place = ascii_name((maps.get(map_id) or {}).get("name") or f"Map {map_id}")
+            entry.update({"name": f"{place} Shard {uid}", "region": "Tablet Shards", "area": map_area(map_id),
+                          "open_world": map_id not in NO_OPEN_WORLD_ROUTE and holds_at_open_start(r.get("visible") or "")})
+            tablet_shinies.append(entry)
+            continue
         (shinies if ap_item is not None else kept_shinies).append(entry)
 
     # Progression items: party members, visions and key items, one of each.
@@ -302,7 +320,13 @@ def main() -> None:
                          "id": CRYSTAL_LOCATION_BASE + map_id, "vanilla": None})
     crystals.sort(key=lambda e: e["id"])
     # A continent's unlock turns on its event flag; Ardra has no locations, so it has no unlock.
-    used_areas = {e["area"] for e in chests + shinies + crystals}
+    # One name can cover two maps (the Earth Shrine), so a repeat gets its map id.
+    counts = collections.Counter(e["name"] for e in tablet_shinies)
+    for entry in tablet_shinies:
+        if counts[entry["name"]] > 1:
+            entry["name"] = f"{entry['name']} (Map {entry['key'].split(':')[1]})"
+    tablet_shinies.sort(key=lambda e: e["id"])
+    used_areas = {e["area"] for e in chests + shinies + crystals + tablet_shinies}
     unlocks: dict[str, int] = {}
     for name, continent in continents.items():
         if name in used_areas:
@@ -338,7 +362,7 @@ def main() -> None:
 
     chests.sort(key=lambda e: e["id"])
     shinies.sort(key=lambda e: e["id"])
-    location_names = [e["name"] for e in chests + shinies + crystals]
+    location_names = [e["name"] for e in chests + shinies + crystals + tablet_shinies]
     assert len(location_names) == len(set(location_names)), "duplicate location names"
 
     with open(OUT, "w", encoding="utf-8", newline="\n") as f:
@@ -351,6 +375,8 @@ def main() -> None:
         f.write("# Shiny locations (data/game/field_items.tsv); condition is the spot's VisibleCondition,\n"
                 "# seen is whether it was seen in game (data/shinies.tsv)\n")
         f.write("SHINIES = " + pprint.pformat(shinies, width=110, sort_dicts=True) + "\n\n")
+        f.write("# Shinies holding a Tablet Shard (round 47)\n")
+        f.write("TABLET_SHINIES = " + pprint.pformat(tablet_shinies, width=110, sort_dicts=True) + "\n\n")
         f.write("# The sanctum crystals; vanilla is None, as their visions are in the pool already\n")
         f.write("CRYSTALS = " + pprint.pformat(crystals, width=110, sort_dicts=True) + "\n\n")
         f.write("# Chests and shinies that keep vanilla key items or valuables: not locations\n")

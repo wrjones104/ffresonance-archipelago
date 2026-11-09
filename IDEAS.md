@@ -780,7 +780,7 @@ The "Back" prompt that menus and the chest pop-up show at the bottom right also 
 
 **Asked for (round 45, 2026-11-09): the next priority once the broken things are fixed.**
 
-**Shinies:** mod 0.29.0 blanks the reward on the actor (`m_ItemId`, `m_ItemNum`, `m_Money`), as chests are blanked. 105 shinies are kept vanilla and are not locations: 99 Tablet Shards, 2 Magicite Shards and 4 key items. Whether the Tablet Shards should be shuffled is an open question for the user, since they may become a goal (idea 1).
+**Shinies:** mod 0.29.0 blanks the reward on the actor (`m_ItemId`, `m_ItemNum`, `m_Money`), as chests are blanked. The 99 Tablet Shards became locations in world 0.6.0, at the user's request (`include_tablet_shards`). 6 shinies stay vanilla: 2 Magicite Shards and 4 key items.
 
 **Vision crystals:** the user wants to skip the summoning scene and the questions. Mod 0.29.0 does this for the 16 sanctum crystals (`include_crystals`). Round 47 tests it. The other 10 visions come from sidequests and one boss.
 

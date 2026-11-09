@@ -35,16 +35,16 @@ async def main():
     ctx.start_session()   # a reconnect: the same file, one more client line
     print("INBOX2", open(os.path.join(folder, "ap_in.txt")).read().replace("\t", "|").replace("\n", "/"))
     # The seed's start settings: written once, however often the client reconnects.
-    slot = {"open_world": True, "starting_party": [1007, 1006]}
+    slot = {"open_world": True, "starting_party": [1007, 1006], "include_tablet_shards": True}
     ctx.write_config(slot)
     ctx.write_config(slot)
     text = open(os.path.join(folder, "ap_in.txt")).read()
-    print("CONFIG", text.count("cfg\topenworld\t1\n"), text.count("cfg\tparty\t1007,1006\n"))
+    print("CONFIG", text.count("cfg\topenworld\t1\n"), text.count("cfg\tparty\t1007,1006\n"), text.count("cfg\tshards\t1\n"))
     if ctx.keep_alive_task: ctx.keep_alive_task.cancel()
 asyncio.run(main())
 '''
 out = subprocess.run([PY, "-c", code], cwd=AP, capture_output=True, text=True)
-assert "CONFIG 1 1" in out.stdout, out.stdout + out.stderr
+assert "CONFIG 1 1 1" in out.stdout, out.stdout + out.stderr
 print(out.stdout[-600:], out.stderr[-1500:] if out.returncode else "")
 assert f"VERSION {VERSION}" in out.stdout
 assert f"INBOX seed|S:0:1/cfg|blank|1/client|{VERSION}/" in out.stdout

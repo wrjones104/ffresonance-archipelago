@@ -22,6 +22,7 @@ CLASSIFICATIONS = {
     "consumable": ItemClassification.filler,
     "equipment": ItemClassification.useful,
     "magicite": ItemClassification.useful,
+    "shard": ItemClassification.useful,
     "gil": ItemClassification.filler,
     "party": ItemClassification.progression,
     "vision": ItemClassification.progression,

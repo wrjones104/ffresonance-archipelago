@@ -376,8 +376,9 @@ World-map shinies verified as locations. Multiple crashes observed across differ
   - **Shinies:** a shiny that is a location now gives 1 gil, like a blanked chest. Its `m_ItemId`, `m_ItemNum` and `m_Money` are rewritten on the actor, before the map settles. Only with `include_shinies` (cfg `shinies`).
   - **Crystals:** the 16 sanctum crystals are locations with `include_crystals` (cfg `crystals`). Each opening row (`Int_LegendEV_NN_01`, `_01_Short`) jumps to `_07`, and `_07` keeps its flags and gives nothing. All three are set to Blueprint rows with no Blueprint, which should play nothing. The flag is the check. Not proven: that an empty Blueprint row still applies its `OnFlagList`.
   - The other 10 visions come from sidequests and one boss (`Str_LegendEV_07_Boss`), and still hand out their own.
+- **Added in 0.30.0, world 0.6.0, not yet played:** the 99 shinies holding a Tablet Shard are locations with `include_tablet_shards` (cfg `shards`), and the shards are in the pool. Their continent comes from the map's exits, else from its code (`01Gra_02`). Airship and common maps count as open from the start.
 
-## Round 47 test plan (mod 0.29.0, world 0.5.0)
+## Round 47 test plan (mod 0.30.0, world 0.6.0)
 
 Send the `[FFRAP]` lines of `UE4SS.log`.
 
@@ -386,15 +387,16 @@ Send the `[FFRAP]` lines of `UE4SS.log`.
 ```yaml
   include_shinies: true
   include_crystals: true
+  include_tablet_shards: true
 ```
 
 **Part A: Siren and joins:**
 1. The log should have `skip: ok   Siren: summon abilities on both Finas`. With Fina or Archwitch Fina in the party, **is Siren in the summon menu, and does she work?**
 2. When someone joins from the pool, **is there no spare copy of their gear in the bag?**
 
-**Part B: shinies (please save first):**
+**Part B: shinies:**
 3. Pick up a world-map shiny. **Does it say 1 gil?** You should get the Archipelago item as usual.
-4. Pick up one in a town or dungeon (these are not locations yet). It should still give its own item.
+4. Pick up one in a town or dungeon (most hold Tablet Shards, which are locations from world 0.6.0). It should say 1 gil, and the log should say `check shiny:<map>:<uid>` with an item arriving. A few hold key items or Magicite Shards: those still give their own.
 
 **Part C: a crystal (please save first, this one is the risky one):**
 5. The log should have `crystals: 96 event rows set to skip the scene` or similar.

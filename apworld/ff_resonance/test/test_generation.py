@@ -1,6 +1,6 @@
 from BaseClasses import LocationProgressType
 
-from ..data import CHESTS, CONTINENT_UNLOCKS, CRYSTALS, ITEMS, NO_BOX, PROGRESSION, SHINIES, SHUFFLE_ID_LIMIT, UNIT_ITEM_BASE
+from ..data import CHESTS, CONTINENT_UNLOCKS, CRYSTALS, ITEMS, NO_BOX, TABLET_SHINIES, PROGRESSION, SHINIES, SHUFFLE_ID_LIMIT, UNIT_ITEM_BASE
 from ..items import CLASSIFICATIONS, FILLER_CATEGORIES
 from ..locations import GOAL_EVENT, LOCATION_KEY_TO_ID
 from . import FFResonanceTestBase
@@ -74,6 +74,17 @@ class TestShinies(FFResonanceTestBase):
     def test_shinies_are_locations(self) -> None:
         names = {loc.name for loc in self.multiworld.get_locations(self.player) if loc.address is not None}
         self.assertEqual(names, {loc["name"] for loc in CHESTS + SHINIES})
+
+
+class TestTabletShards(FFResonanceTestBase):
+    options = {"include_tablet_shards": True}
+
+    def test_shards_are_locations_and_items(self) -> None:
+        self.assertEqual(len(TABLET_SHINIES), 99)
+        names = {loc.name for loc in self.multiworld.get_locations(self.player) if loc.address is not None}
+        self.assertEqual(names, {loc["name"] for loc in CHESTS + TABLET_SHINIES})
+        shards = [i for i in self.multiworld.itempool if i.player == self.player and i.name == "Tablet Shard"]
+        self.assertEqual(len(shards), len(TABLET_SHINIES))
 
 
 class TestCrystals(FFResonanceTestBase):
@@ -168,6 +179,11 @@ class TestData(FFResonanceTestBase):
         # Round 46: she is an ability both Finas start with.
         self.assertNotIn("Siren (Esper)", {i["name"] for i in ITEMS.values()})
 
+    def test_tablet_shards_have_an_area(self) -> None:
+        self.assertTrue(all(ITEMS[s["vanilla"]]["name"] == "Tablet Shard" for s in TABLET_SHINIES))
+        allowed = set(CONTINENT_UNLOCKS) | {"Crystal Tower", "Open"}
+        self.assertTrue({s["area"] for s in TABLET_SHINIES} <= allowed, {s["area"] for s in TABLET_SHINIES})
+
     def test_crystals(self) -> None:
         self.assertEqual(len(CRYSTALS), 16)
         areas = {c["key"]: c["area"] for c in CRYSTALS}
@@ -191,7 +207,7 @@ class TestData(FFResonanceTestBase):
 
     def test_mod_keys_map_to_ids(self) -> None:
         self.assertEqual(LOCATION_KEY_TO_ID["chest:3020:1"], 1_000_000_000 + 3020 * 1000 + 1)
-        self.assertEqual(len(LOCATION_KEY_TO_ID), len(CHESTS) + len(SHINIES) + len(CRYSTALS))
+        self.assertEqual(len(LOCATION_KEY_TO_ID), len(CHESTS) + len(SHINIES) + len(CRYSTALS) + len(TABLET_SHINIES))
 
 
 class TestNoProgression(FFResonanceTestBase):

@@ -2,7 +2,7 @@ from dataclasses import dataclass
 
 from Options import Choice, DefaultOnToggle, OptionGroup, OptionSet, PerGameCommonOptions, Range, Toggle
 
-from .data import CHESTS, CRYSTALS, SHINIES
+from .data import CHESTS, CRYSTALS, SHINIES, TABLET_SHINIES
 
 
 class GoalStoryCheckpoint(Range):
@@ -97,6 +97,14 @@ class IncludeShinies(Toggle):
     display_name = "Include Shinies"
 
 
+class IncludeTabletShards(Toggle):
+    """
+    EXPERIMENTAL. Makes the 99 shinies that hold a Tablet Shard locations, and puts the 99 Tablet
+    Shards in the item pool. Such a shiny gives 1 gil, and the check is the real reward.
+    """
+    display_name = "Include Tablet Shards"
+
+
 class IncludeCrystals(Toggle):
     """
     EXPERIMENTAL. Makes the 16 crystals in the Sanctums of Light locations. Touching one skips the
@@ -111,7 +119,7 @@ class ExcludedRegions(OptionSet):
     another player needs. Use this for areas you cannot go back to, or do not want to play.
     """
     display_name = "Excluded Regions"
-    valid_keys = sorted({loc["region"] for loc in CHESTS + SHINIES + CRYSTALS})
+    valid_keys = sorted({loc["region"] for loc in CHESTS + SHINIES + CRYSTALS + TABLET_SHINIES})
 
 
 class ShufflePartyMembers(DefaultOnToggle):
@@ -151,6 +159,7 @@ class FFResonanceOptions(PerGameCommonOptions):
     starting_character_4: StartingCharacter4
     include_shinies: IncludeShinies
     include_crystals: IncludeCrystals
+    include_tablet_shards: IncludeTabletShards
     excluded_regions: ExcludedRegions
     shuffle_party_members: ShufflePartyMembers
     shuffle_visions: ShuffleVisions
@@ -161,6 +170,6 @@ option_groups = [
     OptionGroup("Goal", [GoalStoryCheckpoint]),
     OptionGroup("Start", [StartingContinent, StartingRoster, StartingCharacter1, StartingCharacter2,
                           StartingCharacter3, StartingCharacter4]),
-    OptionGroup("Locations", [IncludeShinies, IncludeCrystals, ExcludedRegions]),
+    OptionGroup("Locations", [IncludeShinies, IncludeTabletShards, IncludeCrystals, ExcludedRegions]),
     OptionGroup("Items", [ShufflePartyMembers, ShuffleVisions, ShuffleKeyItems]),
 ]

@@ -297,12 +297,17 @@ L.execute("""
 function shiny(id, money, open) local a = { m_ItemId = id, m_ItemNum = 2, m_Money = money }
   return { actor = a, itemId = id, money = money, open = open } end
 s1, s2, s3, s4, s5 = shiny(10302, -1), shiny(25004, -1), shiny(-1, -1), shiny(10302, -1, true), shiny(-1, 500)""")
-assert lua("G.BlankFieldItem(s1)") is True and lua("s1.actor.m_ItemId") == -1 and lua("s1.actor.m_Money") == 1
-assert lua("G.BlankFieldItem(s5)") is True and lua("s5.actor.m_Money") == 1, "gil too"
-assert lua("G.BlankFieldItem(s2)") is False and lua("s2.actor.m_ItemId") == 25004, "a Tablet Shard stays"
-assert lua("G.BlankFieldItem(s3)") is False and lua("G.BlankFieldItem(s4)") is False
+assert lua("G.BlankFieldItem(s1, false, true)") is False, "shards only: a normal shiny stays"
+assert lua("G.BlankFieldItem(s1, true, false)") is True and lua("s1.actor.m_ItemId") == -1 and lua("s1.actor.m_Money") == 1
+assert lua("G.BlankFieldItem(s5, true, false)") is True and lua("s5.actor.m_Money") == 1, "gil too"
+assert lua("G.BlankFieldItem(s2, true, false)") is False and lua("s2.actor.m_ItemId") == 25004, "without the option a Tablet Shard stays"
+assert lua("G.BlankFieldItem(s3, true, true)") is False and lua("G.BlankFieldItem(s4, true, true)") is False
 L.execute("s1.itemId, s1.money = -1, 1")
-assert lua("G.BlankFieldItem(s1)") is False, "already blank"
+assert lua("G.BlankFieldItem(s1, true, true)") is False, "already blank"
+# Round 47: with the option a Tablet Shard shiny is blanked too; another key item never is
+assert lua("G.BlankFieldItem(s2, false, true)") is True and lua("s2.actor.m_ItemId") == -1
+L.execute("s6 = shiny(20009, -1)")
+assert lua("G.BlankFieldItem(s6, true, true)") is False, "a key card stays"
 # Round 45: a chest holding Magicite is blanked like the others; a key item's stays
 L.execute("""
 chestRows = { { mapId = 3030, ID = 1, ItemId = 25000, ItemNum = 1, Money = -1 }, { mapId = 2031, ID = 20, ItemId = 20016, ItemNum = 1, Money = -1 },

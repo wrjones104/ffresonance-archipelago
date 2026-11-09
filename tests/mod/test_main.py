@@ -1191,7 +1191,7 @@ L.execute("worldParam = { get = function() return 'the world' end }")
 L.execute('commands["ffrap_lock"]("ffrap_lock", {"off"})')
 # Round 46: with the seed's cfg, crystals are patched once per save and report by their flag, and
 # shinies are blanked
-open(path("ap_in.txt"), "w", encoding="utf-8", newline="\n").write("seed\tS:0:1\ncfg\topenworld\t1\ncfg\tshinies\t1\ncfg\tcrystals\t1\n")
+open(path("ap_in.txt"), "w", encoding="utf-8", newline="\n").write("seed\tS:0:1\ncfg\topenworld\t1\ncfg\tshards\t1\ncfg\tcrystals\t1\n")
 L, G = boot()
 L.execute("tickFn()")
 G.story = 8000

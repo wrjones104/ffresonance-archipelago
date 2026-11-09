@@ -4,13 +4,13 @@ from typing import TYPE_CHECKING
 
 from BaseClasses import ItemClassification, Location, LocationProgressType, Region
 
-from .data import CHESTS, CONTINENT_UNLOCKS, CRYSTALS, FINAL_AREA, ITEMS, OPEN_AREA, SHINIES
+from .data import CHESTS, CONTINENT_UNLOCKS, CRYSTALS, FINAL_AREA, ITEMS, OPEN_AREA, SHINIES, TABLET_SHINIES
 from .items import GAME, FFResonanceItem
 
 if TYPE_CHECKING:
     from .world import FFResonanceWorld
 
-ALL_LOCATIONS = CHESTS + SHINIES + CRYSTALS
+ALL_LOCATIONS = CHESTS + SHINIES + CRYSTALS + TABLET_SHINIES
 LOCATION_NAME_TO_ID: dict[str, int] = {loc["name"]: loc["id"] for loc in ALL_LOCATIONS}
 LOCATION_KEY_TO_ID: dict[str, int] = {loc["key"]: loc["id"] for loc in ALL_LOCATIONS}
 
@@ -20,6 +20,7 @@ for _loc in ALL_LOCATIONS:
 location_name_groups["Chests"] = {loc["name"] for loc in CHESTS}
 location_name_groups["Shinies"] = {loc["name"] for loc in SHINIES}
 location_name_groups["Crystals"] = {loc["name"] for loc in CRYSTALS}
+location_name_groups["Tablet Shard Shinies"] = {loc["name"] for loc in TABLET_SHINIES}
 
 GOAL_EVENT = "Story Goal"
 VICTORY = "Victory"
@@ -59,6 +60,8 @@ def create_regions_and_locations(world: FFResonanceWorld) -> None:
         chosen += SHINIES
     if world.options.include_crystals:
         chosen += CRYSTALS
+    if world.options.include_tablet_shards:
+        chosen += TABLET_SHINIES
     excluded = world.options.excluded_regions.value
 
     for loc in chosen:
