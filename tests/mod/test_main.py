@@ -1169,8 +1169,9 @@ load(G, "SD_SEED", "0")
 L.execute('commands["ffrap_skip"]("ffrap_skip", {"0"})')
 assert G.skipOpen is True and list(G.skipParty.values()) == [1007, 1006], (G.skipOpen, G.skipParty)
 L.execute("worldParam = { get = function() return 'the world' end }")
-L.execute("G.hookPlace = nil; loadMapHook(nil, worldParam)")
-assert G.hookPlace is True, "the seed turns the locks on"
+G.hookPlace = None
+L.execute("loadMapHook(nil, worldParam)")
+assert G.hookPlace is True, "the seed turns the locks on, even over an old saved off"
 L.execute('commands["ffrap_lock"]("ffrap_lock", {"off"})')
 L.execute("loadMapHook(nil, worldParam)")
 assert G.hookPlace is False, "an explicit off wins"

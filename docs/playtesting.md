@@ -342,7 +342,7 @@ World-map shinies verified as locations. Multiple crashes observed across differ
 - **Places with no open world route hold filler only:** the Earth Shrine's inner part (3000), the burning castle (3020), the Imperial Residences (2113) and Fina's Psyche (3211, 3212). Found from the exits and the talk event table, not from play.
 - **A starting party from the yaml.** `starting_roster`, then `starting_character_1` to `_4`, each a weighted choice. A repeat becomes someone not chosen. Everyone else is in the pool, Rain and Lasswell included.
 - **What makes a non-standard start safe, from the data:** the party, join status and starter gear are all set by the skip. Rain and Lasswell are named by story events only (`OverwriteBattleParty`, chats), which this start skips. Starters come at their own levels from `DT_InitGameSaveData`: Rain and Lasswell 1, Fina 6, Lid 11, Nichol 19, Jake 27, Sakura 33. Archwitch Fina is reset by the skip and gets her first ability back when she is a starter.
-- **The seed now decides the start.** The client writes `cfg openworld 1` and `cfg party ...`. So no console commands are needed, but the client must be connected before New Game (Archipelago). `ffrap_lock off` still wins over the seed, for testing.
+- **The seed now decides the start.** The client writes `cfg openworld 1` and `cfg party ...`. So no console commands are needed, but the client must be connected before New Game (Archipelago). `ffrap_lock off` in the same run still wins over the seed, for testing; an `off` saved from an earlier run does not.
 
 ## Round 44 test plan (mod 0.25.0, world 0.4.0)
 

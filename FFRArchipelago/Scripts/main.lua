@@ -109,9 +109,12 @@ local continentLocks = nil   -- ffrap_lock on|off, kept once the user picks one;
 -- at every start, and the seed that wrote it is the only thing that decides these.
 local seedCfg = { openworld = false, party = nil }
 local function openStartOn() return openStart or seedCfg.openworld end
+-- An `ffrap_lock on|off` from this run wins. Then a seed that asks for locks: a saved "off" from
+-- an old test must not quietly leave a real seed unlocked. Then the saved switch.
+local lockChoice = nil
 local function locksOn()
-    if continentLocks ~= nil then return continentLocks end
-    return seedCfg.openworld
+    if lockChoice ~= nil then return lockChoice end
+    return seedCfg.openworld or continentLocks == true
 end
 local locksFailed = nil      -- the last ContinentSync failure logged, so each one is logged once
 local feedQueue = {}
@@ -1868,8 +1871,9 @@ command("ffrap_lock", function(p)
     local what, name = p and p[1], p and p[2]
     if what == "on" or what == "off" then
         continentLocks = what == "on"
+        lockChoice = continentLocks
         saveState()
-        if not continentLocks then game.ContinentClear() end
+        if not lockChoice then game.ContinentClear() end
     elseif what == "open" or what == "close" then
         local n, why = game.SetContinentOpen(name, what == "open")
         if not n then
