@@ -1260,25 +1260,52 @@ fakePC.GetFName = function() return fname(fakePCName or "PC_1") end
 """)
 BOXES = sum(len(c["boxes"]) for c in L.eval("G.CONTINENTS").values())
 assert BOXES == 21 and len(L.eval("G.CONTINENTS")) == 10
-placed, removed = L.execute("return G.ContinentSync()")
+# Round 41: boxes wait for the controller to settle (a world still arriving lost its first set)
+SETTLE = L.eval("G.CONTINENT_SETTLE")
+def sync():
+    """ContinentSync as always three values: placed, removed and the listing line (False if none)."""
+    return L.execute("local a, b, c = G.ContinentSync(); return a, b, c or false")
+def settle():
+    for _ in range(SETTLE - 1):
+        early, gone, _ = sync()
+        assert len(early) == 0 and len(gone) == 0, "nothing goes in before the world settles"
+settle()
+assert L.eval("spawnCount") == 0
+placed, removed, line = sync()
 assert len(placed) == 10 and len(removed) == 0, (placed, removed)
 assert L.eval("spawnCount") == BOXES
+assert line.startswith(f"{BOXES} boxes on the airship's shadow list") and line.endswith(", 0 null)"), line
 listed = L.eval("#fakePawn.m_ShadowDecalSphareTraceActorsToIgnore")
 assert listed >= BOXES, listed
-placed, removed = L.execute("return G.ContinentSync()")
+placed, removed, line = sync()
 assert len(placed) == 0 and len(removed) == 0 and L.eval("spawnCount") == BOXES, "nothing to do the second time"
 L.execute("continentFlags[1428] = true")   # Pharm opens
-placed, removed = L.execute("return G.ContinentSync()")
+placed, removed, line = sync()
 assert list(removed.values()) == ["pharm"] and len(placed) == 0, list(removed.values())
 assert "open [pharm]; locked [grandshelt," in L.eval("G.ContinentStatus()"), L.eval("G.ContinentStatus()")
 # a box lost to a map change comes back; the open continent does not
 L.execute("""for _, a in ipairs(nolandActors) do if a.nm:find("lock", 1, true) then a.IsValid = function() error("stale pointer touched") end end end
 fakePCName = "PC_2" """)
 before = L.eval("spawnCount")
-placed, removed = L.execute("return G.ContinentSync()")
+settle()
+placed, removed, line = sync()
 assert len(placed) == 9 and "pharm" not in list(placed.values()), list(placed.values())
 assert L.eval("spawnCount") == before + BOXES - 3, "the 3 Pharm boxes stay out"
 assert L.eval("select(2, G.SetContinentOpen('narnia', true))") == "no continent named narnia"
+# Round 41: the crash on boarding. A null entry in the list must never be asked its name, and a
+# list the game filled again (a different length) takes the boxes again.
+L.execute(r"""
+nullNameAsked = false
+local nullObject = { IsValid = function() return false end,
+                     GetFName = function() nullNameAsked = true; error("access violation") end }
+local shadow = fakePawn.m_ShadowDecalSphareTraceActorsToIgnore
+shadow[#shadow + 1] = nullObject
+""")
+placed, removed, line = sync()
+assert line and line.endswith(", 1 null)"), line
+assert L.eval("nullNameAsked") is False, "a null entry was asked its name"
+placed, removed, line = sync()
+assert line is False, "the same list is not gone over again"
 # off the world map, nothing happens
 L.execute("G.CurrentMap = function() return 2070 end")
 assert L.eval("select(2, G.ContinentSync())") == "not on the world map"

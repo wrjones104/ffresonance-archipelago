@@ -46,7 +46,8 @@ An Archipelago implementation for Final Fantasy Resonance (UE 5.6, game module `
 
 **Threads:**
 - **Never use `LoopAsync` or `ExecuteAsync`**: their callbacks run Lua on UE4SS's async thread while the game thread runs Lua in the same state. The game crashed at random, in a new place each time. Use `LoopInGameThreadWithDelay` and `ExecuteInGameThreadWithDelay` (round 29).
-- **Crash reports:** `%LOCALAPPDATA%\FFRS\Saved\Crashes\*\CrashContext.runtime-xml` holds the stack as module offsets. `UE4SS.pdb` (next to `UE4SS.dll`) names the UE4SS frames, through `dbghelp`.
+- **Crash reports:** `%LOCALAPPDATA%\FFRS\Saved\Crashes\*\CrashContext.runtime-xml` holds the stack as module offsets. `python tools/crashstack.py <folder>` names the UE4SS frames with `UE4SS.pdb`.
+- **`pcall` does not catch an access violation.** A null object from an array crashes the game when asked for its name. Ask `IsValid` first (round 41).
 
 **Hooks and probes:**
 - **Native functions called from Blueprints can be hooked** with `RegisterHook`, and a pre-hook can change their arguments (the title menu's `ExecuteEntry`).

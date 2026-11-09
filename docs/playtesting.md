@@ -318,29 +318,29 @@ World-map shinies verified as locations. Multiple crashes observed across differ
   - Event flags 1414 to 1449 are used nowhere in the game's data.
 - **Added in 0.22.0: the continent locks.** `ffrap_lock on` keeps a set of boxes on the world map for every locked continent, placed again after each map change, and listed on the airship for the red shadow. A continent's lock is an event flag in the save (1420 to 1429, on means open), so an unlock stays with its save. `ffrap_lock open|close <continent|all>` writes the flag.
 
-## Round 41 test plan (mod 0.22.0, world 0.3.1)
+**Round 41 (mod 0.22.0, 2026-11-09): the locks hold everywhere; boarding after a map change crashed the game.**
+- **Part A, all locked:** the shadow was red everywhere and no landing worked. `show` drew 132 boxes (111 of the game's and our 21), and the screenshots show them where they should be. No problem was reported over high mountains.
+- **Part B, opening one:** `open pharm` worked within a second. Sian, the boxes coming back for the other nine and the rest worked. Then, boarding the airship to run step 9, the game crashed.
+- **Part C, on foot in a lock:** closing Pharm on foot worked, and walking and battles were normal. Boarding the airship crashed the game, with the boxes visible.
+- **Part D:** `ffrap_lock off` removed the locks at once.
+- **The two boarding crashes are one bug** (`tools/crashstack.py`). Both read address `0x18` in a UE4SS `UObject` member call, under three Lua `pcall`s from our tick. `0x18` is an object's name field, so a null object was asked for its name. The only objects `ContinentSync` names that are not already checked are the entries of the airship's shadow list. So that list held a null entry the first time we read it on a newly boarded airship. An access violation goes straight through `pcall`. Fixed in 0.23.0: `ObjText` asks `IsValid` first. Each listing now logs how many entries are null, to confirm this.
+- **The third crash, on load (07:59:03), is not from the locks.** The stack is `RemoteUnrealParam::construct` in UE4SS's `InitGameState` hook. Our mod has no such hook; among the enabled mods only FFRSLib registers one, and FFRSLib also runs `LoopAsync` timers. Round 29 showed that this kind of thread race crashes at random. It did not come back on the next start. It is not proof, but nothing from the crash on boarding could carry over: the mod keeps its boxes only in memory.
+- **Boxes placed twice on the way back from a town** (07:53:20 and 07:53:23): the first set went in while the world map was still arriving. Boxes now wait for three syncs (about 3 seconds) with one controller.
+- **Added in 0.23.0:** the null check, the wait, `locks: N boxes on the airship's shadow list (a -> b, k null)` in the log, and the list is taken again if its length changes.
 
-Four parts. Send the `[FFRAP]` lines of `UE4SS.log`, and tell me what you saw where a step asks. No client or seed is needed. The continents are `grandshelt`, `lanzelt`, `kolobos`, `dirnado`, `olderion`, `zoldaad`, `mysidia`, `gronoa`, `pharm` and `ardra`.
+## Round 42 test plan (mod 0.23.0, world 0.3.1)
 
-**Install:** copy `FFRArchipelago/Scripts` over the installed mod. The log should say `version 0.22.0 loaded`. `Assets` and the apworld did not change.
+Short: the crash paths again. Send the `[FFRAP]` lines of `UE4SS.log`. No client or seed is needed.
 
-**Part A: all locked:**
-1. Start New Game (Archipelago) with `ffrap_openstart` on, and wait for the world map.
-2. Run `ffrap_lock on`. Within a second the log should say `locks: boxes placed for grandshelt, lanzelt, ...` with all ten.
-3. Run `ffrap_noland show` to draw the boxes. Take a screenshot or two from the air. `ffrap_noland hide` turns them off.
-4. Fly over each continent you have time for, and try to land near its towns and at its edges. **Tell me:** is the shadow red everywhere over land? Is there any spot on a locked continent where you can land? If so, run `ffrap_noland here` there and send that line.
-5. Over high mountains (Zoldaad or Dirnado): does the airship rise, jolt or do anything strange?
+**Install:** copy `FFRArchipelago/Scripts` over the installed mod. The log should say `version 0.23.0 loaded`. `Assets` and the apworld did not change.
 
-**Part B: opening one:**
-6. Run `ffrap_lock open pharm`. The log should say `locks: opened pharm` within a second. Over Pharm the shadow should turn black, and you should be able to land.
-7. Land at a town in Pharm (Sian is a good one), go in and come out. The log should say boxes were placed again for the nine others, not Pharm. Take off: are they all still locked?
-8. Save, return to the title and load that save. Is Pharm still open and the rest locked?
-9. `ffrap_lock close pharm` while in the air over Pharm. Shadow red and no landing within a second?
+1. Start New Game (Archipelago) and wait for the world map. Run `ffrap_lock on` if the log does not show boxes placed.
+2. About 3 seconds in, the log should say `locks: boxes placed for ...` once, and then `locks: 21 boxes on the airship's shadow list (... null)`.
+3. `ffrap_lock open pharm`. Land at Sian, go in, come out and **board the airship**. This crashed before. Expect `boxes placed` once for the other nine, and a shadow-list line when you board. Please send that line: the `null` count confirms the cause.
+4. `ffrap_lock close pharm` in the air. Is the shadow red and landing blocked within a second or two?
+5. `ffrap_lock open pharm`, land in open ground and get out. `ffrap_lock close pharm` on foot, then **board and take off**. This crashed before too.
+6. Save, return to the title, load the save, and board again.
+7. Fly over a locked continent. Red shadow, no landing?
+8. `ffrap_lock off`.
 
-**Part C: on foot inside a lock:**
-10. `ffrap_lock open pharm`, land at open ground in Pharm and get out.
-11. On foot, run `ffrap_lock close pharm`. Walk around. **Tell me:** does anything stop you or look wrong? If you have a chocobo, does it move normally?
-12. Board the airship and take off. Does that work from inside a locked continent?
-
-**Part D: turning it off:**
-13. `ffrap_lock off`. Landing should work everywhere again at once.
+**If it crashes:** send the new `UECC-Windows-*` folder from `%LOCALAPPDATA%\FFRS\Saved\Crashes` and say what you were doing.

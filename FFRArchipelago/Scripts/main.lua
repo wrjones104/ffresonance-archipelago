@@ -50,7 +50,7 @@
 -- follows the save slots the linked game is saved to. While any other save is loaded, the mod
 -- grants nothing, reports nothing and leaves the chests vanilla.
 
-local VERSION = "0.22.0"
+local VERSION = "0.23.0"
 local PROTOCOL = 1        -- the bridge protocol; the apworld's MOD_PROTOCOL
 
 local MOD_DIR = (debug.getinfo(1, "S").source:gsub("^@", ""):gsub("\\", "/"):match("^(.*/)Scripts/[^/]+$"))
@@ -1026,7 +1026,7 @@ local scaleTick   -- set with the ffrap_scale command, below
 -- them back. Only on the field: a battle is no time to spawn actors.
 local function locksTick()
     if not continentLocks or not game.OnField() then return end
-    local placed, removed = game.ContinentSync()
+    local placed, removed, listed = game.ContinentSync()
     if not placed then
         -- `removed` holds why. Not being on the world map is the normal case.
         if removed ~= "not on the world map" and removed ~= locksFailed then
@@ -1038,6 +1038,7 @@ local function locksTick()
     locksFailed = nil
     if #placed > 0 then log("locks: boxes placed for " .. table.concat(placed, ", ")) end
     if #removed > 0 then log("locks: opened " .. table.concat(removed, ", ")) end
+    if listed then log("locks: " .. listed) end
 end
 
 local function tick()

@@ -1823,11 +1823,16 @@ end
 -- A game value as text: a name, a string or an object's name. Array elements can come back in a
 -- UE4SS wrapper that needs :get() first (round 37: the mapping contexts logged as
 -- "LocalUnrealParam: 00000000713B9288").
+-- Round 41: an array of objects can hold a null one, and asking a null object for its name is an
+-- access violation that no pcall catches: the game crashed. IsValid is safe to ask.
+local NULL_OBJECT = "(null)"
 local function ObjText(v)
     if type(v) == "string" then return v end
     local okGet, inner = pcall(function() return v:get() end)
     if okGet and inner ~= nil then v = inner end
     if type(v) == "string" then return v end
+    local okValid, valid = pcall(function() return v:IsValid() end)
+    if okValid and valid == false then return NULL_OBJECT end
     local ok, s = pcall(function() return v:ToString() end)
     if ok and type(s) == "string" then return s end
     local okName, n = pcall(function() return v:GetFName():ToString() end)
@@ -2998,6 +3003,17 @@ G.STORY_BOXES = { mysidia = "{progress:0}<5020", gronoa = "{progress:0}<6000", p
 G.COND_ALWAYS, G.COND_NEVER = "{progress:0}>=0", "{progress:0}<0"
 local nolandSpawned = {}     -- actors spawned by the probe
 local ShadowIgnoreAdd
+
+-- The airship's list of actors its shadow ignores, or nil for any other pawn. The class is
+-- checked first: the field does not exist on a pawn on foot.
+local function ShadowList(pawn)
+    local className = ""
+    pcall(function() className = pawn:GetClass():GetFName():ToString() end)
+    if not className:find("AirShip", 1, true) then return nil end
+    local list
+    pcall(function() list = pawn.m_ShadowDecalSphareTraceActorsToIgnore end)
+    return list
+end
 local nolandMoved = nil      -- { actor, x, y, z, ex, ey, ez, cond } of the game's box we moved
 local nolandCollision = {}   -- { actor, enabled } of boxes whose collision NoLandRefresh changed, as found
 local nolandLocks = {}       -- which -> { on = bool, boxes = { { actor, cond }, ... } }: story boxes we wrote
@@ -3164,15 +3180,11 @@ end
 -- no-landing boxes for that trace to ignore (round 38: 111 boxes, the airship itself,
 -- CPP_MuchaWorldSetting and StaticMeshActor_2). A listed box gives the red shadow over it, and
 -- landing stays blocked. Returns the list's size before and after, and the names in it that are
--- not the game's own boxes; nil when `pawn` is not the airship. `actors` defaults to the probe's
--- spawned boxes. The class is checked first: the field does not exist on a pawn on foot.
+-- not the game's own boxes, and how many entries are null (round 41); nil when `pawn` is not the
+-- airship. `actors` defaults to the probe's spawned boxes.
 ShadowIgnoreAdd = function(pawn, actors)
     actors = actors or nolandSpawned
-    local className = ""
-    pcall(function() className = pawn:GetClass():GetFName():ToString() end)
-    if not className:find("AirShip", 1, true) then return nil end
-    local list
-    pcall(function() list = pawn.m_ShadowDecalSphareTraceActorsToIgnore end)
+    local list = ShadowList(pawn)
     if not list then return nil end
     local before = #list
     local listed, ours = {}, {}
@@ -3191,12 +3203,16 @@ ShadowIgnoreAdd = function(pawn, actors)
             end
         end
     end
-    local names = {}
+    local names, nulls = {}, 0
     for i = 1, #list do
         local name = ObjText(list[i])
-        if ours[name] or not name:find("^BP_MapNonLandingArea_C_") then names[#names + 1] = name end
+        if name == NULL_OBJECT then
+            nulls = nulls + 1
+        elseif ours[name] or not name:find("^BP_MapNonLandingArea_C_") then
+            names[#names + 1] = name
+        end
     end
-    return before, #list, names
+    return before, #list, names, nulls
 end
 
 -- Spawns a new no-landing box under the player: `half` across each way (default 2000), 1400
@@ -3412,6 +3428,10 @@ G.CONTINENTS = {
 -- controller's name is new on every map load, and a pointer into an unloaded map must not be
 -- touched, so a new name means forgetting them all without asking them anything.
 local continentActors, continentWorld, continentListed = {}, nil, nil
+local continentListedLength, continentSeen = nil, 0
+-- Syncs that must see one controller before boxes go in. Round 41: on the way back from a town
+-- the boxes were placed once while the world map was still arriving, and again 3 seconds later.
+G.CONTINENT_SETTLE = 3
 
 local function ContinentNamed(name)
     for _, c in ipairs(G.CONTINENTS) do
@@ -3449,7 +3469,8 @@ end
 
 -- Makes the world match the save: a box set for every locked continent, none for an open one,
 -- every box on the airship's shadow list. Safe to call often. Does nothing off the world map.
--- Returns the names placed and the names removed (either can be empty), or nil and why.
+-- Returns the names placed and the names removed (either can be empty) and, when the boxes went
+-- on the airship's shadow list, a line about that; or nil and why.
 function G.ContinentSync()
     if G.CurrentMap() ~= G.WORLD_MAP then return nil, "not on the world map" end
     local pose, whyPose = G.PlayerPose()
@@ -3458,8 +3479,10 @@ function G.ContinentSync()
     local world = pc and ObjText(pc)
     if not world then return nil, "no PlayerController" end
     if world ~= continentWorld then
-        continentWorld, continentActors, continentListed = world, {}, nil
+        continentWorld, continentActors, continentListed, continentListedLength, continentSeen = world, {}, nil, nil, 0
     end
+    continentSeen = continentSeen + 1
+    if continentSeen < G.CONTINENT_SETTLE then return {}, {} end
     local placed, removed, cls = {}, {}, nil
     for _, c in ipairs(G.CONTINENTS) do
         local open = G.GetFlag(c.flag)
@@ -3486,9 +3509,18 @@ function G.ContinentSync()
     for _, list in pairs(continentActors) do
         for _, a in ipairs(list) do all[#all + 1] = a end
     end
-    local key = ObjText(pose.pawn) .. ":" .. #all
-    if #all > 0 and key ~= continentListed and ShadowIgnoreAdd(pose.pawn, all) then continentListed = key end
-    return placed, removed
+    -- A pawn's list is read each time: boarding can make a new airship, or the game can fill it
+    -- again, and only its length is cheap to compare.
+    local key, line = ObjText(pose.pawn) .. ":" .. #all, nil
+    local list = ShadowList(pose.pawn)
+    if #all > 0 and list and (key ~= continentListed or #list ~= continentListedLength) then
+        local before, after, _, nulls = ShadowIgnoreAdd(pose.pawn, all)
+        if before then
+            continentListed, continentListedLength = key, after
+            line = string.format("%d boxes on the airship's shadow list (%d -> %d, %d null)", #all, before, after, nulls)
+        end
+    end
+    return placed, removed, line
 end
 
 -- Removes every lock box from the world, for `ffrap_lock off`. The saves' flags are left alone.
