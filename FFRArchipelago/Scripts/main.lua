@@ -881,9 +881,9 @@ end
 local orderLogged = nil   -- the last order result logged, so each new one is logged once
 -- Round 48: the moogle's Vision Enhancement screen would not close with nothing to enhance. Its
 -- IsClosable functions return false unless the native CPP_BFL_VisionUpgrade:IsVisionUpgrade says
--- true, and that says false when the player cannot enhance. The screen is a lock meant for the
--- story's tutorial, which an open world start never plays. So a seed answers true. A post hook's
--- return value replaces the function's. The game's own answer is logged each time it changes.
+-- true. What it tests is not known (play suggests "can the player enhance a vision"). A seed
+-- answers true: a post hook's return value replaces the function's. The game's own answer is
+-- logged each time it changes, to find out what it tests.
 local visionExitHooked = false
 local visionExitLast = "unset"
 local function hookVisionExit()
