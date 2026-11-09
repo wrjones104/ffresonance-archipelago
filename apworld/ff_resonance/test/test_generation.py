@@ -53,8 +53,11 @@ class TestDefault(FFResonanceTestBase):
         self.assertFalse(self.multiworld.state.can_reach_region("Gronoa", self.player))
 
     def test_places_with_no_route_hold_only_filler(self) -> None:
-        for name in ("Earth Shrine Chest 1", "Grandshelt Castle Chest 8", "Fina's Psyche Chest 1"):
+        for name in ("Grandshelt Castle Chest 8", "Fina's Psyche Chest 1"):
             self.assertEqual(self.multiworld.get_location(name, self.player).progress_type, LocationProgressType.EXCLUDED)
+        # Round 44 walked into the Earth Shrine's inner part and opened its chests.
+        self.assertNotEqual(self.multiworld.get_location("Earth Shrine Chest 1", self.player).progress_type,
+                            LocationProgressType.EXCLUDED)
 
     def test_slot_data(self) -> None:
         slot_data = self.world.fill_slot_data()

@@ -309,15 +309,24 @@ local function Joined(vm, id)
     return ok and r == true
 end
 
+-- Round 44: AddUnit puts a unit in the party but leaves its JoinStatus at NotJoin. Rain then got
+-- no EXP, and gear on her did not count as equipped. So every join goes through G.FinishJoin.
 function G.AddUnit(id)
     local vm = PartyVM()
     if not (vm and vm.AddUnit) then return "retry", "party view model not loaded" end
-    if Joined(vm, id) or G.UnitJoinStatus(id) == 0 then return "ok", "already joined" end
+    if G.UnitJoinStatus(id) == 0 then return "ok", "already joined" end
+    if Joined(vm, id) then
+        G.FinishJoin(id)
+        return "ok", "already joined"
+    end
     local ok, r = pcall(function() return vm:AddUnit(id) end)
     if not ok then return "fail", "AddUnit raised: " .. tostring(r) end
-    if Joined(vm, id) then return "ok", "in the active party (AddUnit returned " .. tostring(r) .. ")" end
+    if Joined(vm, id) then
+        G.FinishJoin(id)
+        return "ok", "in the active party (AddUnit returned " .. tostring(r) .. ")"
+    end
     -- The party is full: the roster only.
-    local how = G.SetJoinStatus(id, 0)
+    local how = G.FinishJoin(id)
     if G.UnitJoinStatus(id) == 0 then
         return "ok", "joined the roster through " .. tostring(how) .. " (AddUnit returned " .. tostring(r) .. ")"
     end
@@ -1849,6 +1858,22 @@ local function ObjText(v)
     return tostring(v)
 end
 
+-- What a join needs besides the party list: JoinStatus 0, usable, and the unit's own gear in the
+-- bag, since equipped gear is counted there (see STARTER_GEAR). Returns how the status was set.
+function G.FinishJoin(id)
+    local how = G.SetJoinStatus(id, 0)
+    local sd = G.SaveData()
+    local entry = sd and UnitEntry(sd, id)
+    if entry then Put(entry, "IsUsable", true) end
+    local inv = Lib("CPP_BFL_SaveDataInventory")
+    if inv and inv.AddInventory then
+        for _, gear in ipairs(STARTER_GEAR[id] or {}) do
+            pcall(function() inv:AddInventory(gear, 1) end)
+        end
+    end
+    return how
+end
+
 -- Active Time Chats (round 37: the user wants them all done). The 56 chats of DT_ChatEventData
 -- (the rows named ATCnn; the table's Pinger and Nawatobi rows are mini-game lines, not chats).
 -- The save keeps one row per chat in chat.DataMap (IsReleased, IsAlreadyPlayed), and the chats
@@ -1894,13 +1919,14 @@ function G.MarkChatsPlayed(sd)
         marked, #G.CHAT_IDS, added, okQueue and "" or " FAILED")
 end
 
--- Round 39: granted visions could not be equipped and had no place in the menus. The Equip
--- screen shows visions only with event flag 24 on (DA_ActionEquipment.VisionEnableFlagIdData).
--- The story turns on 21 and 24 together at Mitra (C01_014_04), which the open world start skips.
-local VISION_FLAGS = { 21, 24 }
-local function EnableVisions(sd)
-    local found, bad = SetFlags(sd, VISION_FLAGS)
-    return found and #bad == 0, "visions enabled: flags " .. table.concat(VISION_FLAGS, " ") .. " on"
+-- What the story turns on that an open world start still needs:
+--   21, 24   visions on the Equip screen (round 39: C01_014_04, at Mitra)
+--   13, 34, 1180   fast travel, as Tutorial_FastTravel sets them (round 44; 34 is the Map screen's own)
+--   102      the Earth Shrine's exit (round 44: its NoEntry event holds while 102 is off; C01_010_02)
+local OPEN_WORLD_FLAGS = { 21, 24, 13, 34, 1180, 102 }
+local function EnableOpenWorld(sd)
+    local found, bad = SetFlags(sd, OPEN_WORLD_FLAGS)
+    return found and #bad == 0, "open world flags on: " .. table.concat(OPEN_WORLD_FLAGS, " ")
 end
 
 -- The loaded save's airship fields as text, for the log.
@@ -2077,7 +2103,7 @@ function G.SkipPrologue(opts)
 
     if opts and opts.openStart then
         step(G.MarkChatsPlayed(sd))
-        step(EnableVisions(sd))
+        step(EnableOpenWorld(sd))
         -- Round 44: Jake came in at his story level, 27. Everyone starts at 1, and a member who
         -- joins later comes in at the party's level (main.lua).
         local bad = {}
@@ -2101,10 +2127,10 @@ function G.OpenStart()
     local okStory, story = WriteStory(sd, G.OPEN_START.story)
     local okMap, arrival = WriteArrival(sd, G.OPEN_START)
     local okChats, chats = G.MarkChatsPlayed(sd)
-    local okVisions, visions = EnableVisions(sd)
-    return okStory and okMap and okChats and okVisions, { (okStory and "ok   " or "FAIL ") .. story,
+    local okFlags, flags = EnableOpenWorld(sd)
+    return okStory and okMap and okChats and okFlags, { (okStory and "ok   " or "FAIL ") .. story,
         (okMap and "ok   " or "FAIL ") .. arrival, (okChats and "ok   " or "FAIL ") .. chats,
-        (okVisions and "ok   " or "FAIL ") .. visions }
+        (okFlags and "ok   " or "FAIL ") .. flags }
 end
 
 -- Round 9: a reload during the opening movie came up with no menus and no movement, and what
@@ -2833,6 +2859,17 @@ function G.SetUnitLevel(unitId, level)
     local now = G.UnitLevel(unitId)
     if now ~= level then return false, "unit " .. unitId .. " reads level " .. tostring(now) .. " after setting " .. level end
     return true, "level " .. level
+end
+
+-- Round 44: the save slot's level stayed at 1 in a party without Rain, so the game takes it from
+-- her. While she has not joined her level is ours to set: it follows the party. She joins at the
+-- party's level anyway. Returns true when it wrote a level.
+local RAIN = 1001
+function G.SyncSlotLevel()
+    if G.UnitJoinStatus(RAIN) == 0 then return false end
+    local level = G.PartyLevel()
+    if not level or G.UnitLevel(RAIN) == level then return false end
+    return (G.SetUnitLevel(RAIN, level))
 end
 
 -- The active party's average level, rounded, and the members' levels as text ("1001:5 1002:4").

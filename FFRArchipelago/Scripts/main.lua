@@ -50,7 +50,7 @@
 -- follows the save slots the linked game is saved to. While any other save is loaded, the mod
 -- grants nothing, reports nothing and leaves the chests vanilla.
 
-local VERSION = "0.26.0"
+local VERSION = "0.27.0"
 local PROTOCOL = 2        -- the bridge protocol; the apworld's MOD_PROTOCOL
 
 local MOD_DIR = (debug.getinfo(1, "S").source:gsub("^@", ""):gsub("\\", "/"):match("^(.*/)Scripts/[^/]+$"))
@@ -1107,6 +1107,7 @@ local function tick()
             pcall(gateTick)
             if state.ticks % STATUS_EVERY == 0 then pcall(scaleTick) end
             if state.ticks % LOCKS_EVERY == 0 then pcall(locksTick) end
+            if state.ticks % STATUS_EVERY == 0 and seedCfg.openworld and game.OnField() then pcall(game.SyncSlotLevel) end
             -- Chests and shinies are still recorded in seen.tsv for any save; scanLoot reports
             -- them only for the session's save (see opened).
             if state.ticks % CHEST_EVERY == 0 then scanLoot() end

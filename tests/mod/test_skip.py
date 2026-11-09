@@ -166,8 +166,10 @@ assert lua("sd.chat.DataMap.rows.ATC11.IsAlreadyPlayed") is True and lua("sd.cha
 assert lua("G.ChatState()") == f"{CHATS} rows, {CHATS} released, {CHATS} played; notices [], latest None", lua("G.ChatState()")
 assert lua("sd.Progress.eventFlag[32]") is True, "flag 31 is what a chat row turns on"
 # Round 39: the Equip screen shows visions only with flag 24, and the story sets 21 with it
-assert "ok   visions enabled: flags 21 24 on" in list(report.values())
+assert "ok   open world flags on: 21 24 13 34 1180 102" in list(report.values())
 assert lua("sd.Progress.eventFlag[22]") is True and lua("sd.Progress.eventFlag[25]") is True, "flag i is element i + 1"
+# Round 44: fast travel (13, 34, 1180) and the Earth Shrine's exit (102)
+assert all(lua(f"sd.Progress.eventFlag[{i + 1}]") is True for i in (13, 34, 1180, 102))
 assert lua("sd.Map.IsAlreadySpawnAirship") is False, "the dock start leaves the airship alone"
 # the list of ids is the table's: every ATC row, and no Pinger or Nawatobi rows (dump/ is local)
 _chat_table = paths.REPO / "dump/tables/FFRS/Content/Datatable/Chat/Event/CDT_ChatEventData.json" if hasattr(paths, "REPO") else None
@@ -188,7 +190,7 @@ ok, report = L.execute("return G.OpenStart()")
 assert ok is True and list(report.values())[:2] == [
     f"ok   story counter -> {DOCK_STORY}", f"ok   arrival: map {TOWER_MAP} at -2704.8, -171166.7, 3002.2"], list(report.values())
 assert list(report.values())[2].startswith("ok   active time chats: 56 of 56"), list(report.values())
-assert list(report.values())[3] == "ok   visions enabled: flags 21 24 on", list(report.values())
+assert list(report.values())[3] == "ok   open world flags on: 21 24 13 34 1180 102", list(report.values())
 assert lua("G.StoryCounter()") == DOCK_STORY and lua("sd.Map.mapId") == TOWER_MAP
 assert lua("sd.Player.WinNum") == 12, "the rest of the save is left alone"
 # the "air" start: the world map, riding the airship beside the tower, with flag 31 on
@@ -227,6 +229,21 @@ assert lua("bag[10100]") is None and lua("bag[10699]") == 0, "Rain's gear stays 
 # Round 44: everyone starts at level 1 with HP and MP filled, Jake's 27 included
 assert "ok   party levels: all 8 at level 1" in lines, lines
 assert lua("unitLevels[1007]") == 1 and lua("levelCalls[#levelCalls].full") is True
+# Round 44: a join ends with JoinStatus 0, usable, and the unit's own gear in the bag
+L.execute("""unitAt(1002).JoinStatus = 1; unitAt(1002).IsUsable = false
+libs["/Script/mucha.Default__CPP_BFL_SaveDataInventory"].AddInventory = function(_, id, n) bag[id] = (bag[id] or 0) + n end
+bag[10200] = nil""")
+L.execute("G.FinishJoin(1002)")
+assert lua("unitAt(1002).JoinStatus") == 0 and lua("unitAt(1002).IsUsable") is True and lua("bag[10200]") == 1
+# Round 44: the save slot's level is Rain's, so while she is away it follows the party
+L.execute("""G.PartyLevel = function() return 9, "1007:9" end
+G.UnitJoinStatus = function(id) return joinOf[id] end
+joinOf = { [1001] = 1 }""")
+assert lua("G.SyncSlotLevel()") is True and lua("unitLevels[1001]") == 9
+assert lua("G.SyncSlotLevel()") is False, "already there"
+L.execute("joinOf[1001] = 0; G.PartyLevel = function() return 20, 'x' end")
+assert lua("G.SyncSlotLevel()") is False and lua("unitLevels[1001]") == 9, "once she has joined, her level is her own"
+L.execute("G.UnitJoinStatus = nil")
 # a member who joins later can be set to the party's level, above or below his own
 ok, detail = L.execute("return G.SetUnitLevel(1007, 12)")
 assert ok is True and detail == "level 12" and lua("unitLevels[1007]") == 12, detail

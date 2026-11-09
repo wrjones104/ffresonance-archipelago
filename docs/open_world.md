@@ -89,7 +89,7 @@ The story counter is `Progress[0]`. Every story gate is a condition such as `{pr
 
 World 0.4.0 puts the locks in real seeds: `starting_continent`, and one Unlock item per other continent. Ardra has no locations, so it has no item and stays locked.
 
-Still to decide: whether the Crystal Tower needs a lock (it is open in game, and logic treats it as the last area), whether fast travel (flag 34) stays off, and how to block the ships, caves and walking routes between continents, which can still cross a lock.
+Still to decide: whether the Crystal Tower needs a lock (it is open in game, and logic treats it as the last area), whether fast travel (flag 34) stays off, and how to block the ships, caves and walking routes between continents, which can still cross a lock. Round 44: Grandshelt and Lanzelt are joined on foot, so a player walked across. The user suggests a gate, or removing the bridges. Not urgent.
 
 **Continent bounds (the first estimate, from landing points; superseded by `G.CONTINENTS`):**
 

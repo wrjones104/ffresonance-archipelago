@@ -345,45 +345,27 @@ World-map shinies verified as locations. Multiple crashes observed across differ
 - **Round 44, first look (mod 0.26.0):** the custom party started fine, but Jake was level 27. Everyone now starts at level 1 with HP and MP filled, through the game's own `SetPlayableUnitExperience`, and a member received later joins at the party's average level.
 - **The seed now decides the start.** The client writes `cfg openworld 1` and `cfg party ...`. So no console commands are needed, but the client must be connected before New Game (Archipelago). `ffrap_lock off` in the same run still wins over the seed, for testing; an `off` saved from an earlier run does not.
 
-## Round 44 test plan (mod 0.26.0, world 0.4.0)
+**Round 44 (mods 0.25.0 and 0.26.0, world 0.4.0, 2026-11-09): the first real seed. Continent logic, the custom party and level 1 starts work; story state still gets in the way.**
+- **Worked:** Jake and Archwitch Fina as the party, level 1 starts with sensible HP, Grandshelt open and the rest locked, an Unlock opening Gronoa, visions, chests, and `follow` scaling.
+- **The Earth Shrine would not let the party leave.** `C01_Dng01Gra43_NoEntry_01` holds while flag 102 is off. Flag 102 comes from the event `C01_010_02`. Fixed in 0.27.0.
+- **Other story no-entry zones that are active on this start (from `gimmicks.tsv`, not yet seen in play):** Nameless Ruins (3180, flag 520, a barrier sidequest), Sanctissimus Shrine (3250, flags 617 to 620), Olderion city (2070, story 3130 and up). Round 45 can look at them if the player reaches them.
+- **Fast travel did not work.** `Tutorial_FastTravel` sets flags 1180, 13 and 34, and 34 is what the Map screen checks. Fixed in 0.27.0.
+- **Crash entering the airship interior** (map 20001, during the sidequest Last Respite). The stack is one `pcall` deep under UE4SS's `process_simple_actions`, reading a stale object. Our mod uses timers from `LoopInGameThreadWithDelay`, not `ExecuteInGameThread`, so this is another mod's callback. FFRSLib's `RegisterLoadMapPostHook` is the best fit: it keeps the world and uses it 1.5 seconds later, under one `pcall`, and the crash came about 2 seconds after the map change. A quest that changes map twice would leave it a dead world. Not proven: round 45 tries the same thing with FFRSLib off.
+- **Rain, received from the pool, got no EXP, and gear on her did not count as equipped.** `AddUnit` adds a unit to the party list and leaves `JoinStatus` at NotJoin. The starters go through the skip, which sets it. Fixed in 0.27.0: every join sets `JoinStatus` 0, `IsUsable`, and puts the unit's own gear in the bag. Saves from this round keep the problem.
+- **The save slot showed level 1.** The slot's `PlayLevel` appears to be Rain's level (the user's reading; party was level 10). While she has not joined, 0.27.0 keeps her level at the party's.
+- **Walking between continents crosses a lock:** Grandshelt to Lanzelt on foot. Not urgent. The user suggests a gate, or removing the bridges if that is possible.
+- The Earth Shrine's inner part (3000) was opened in play, so world 0.4.1 takes it off the filler-only list.
+- Enemy scaling with `follow` still works in a seed.
 
-The first real seed with continent logic and a custom party. Send the `[FFRAP]` lines of `UE4SS.log` and the spoiler log if you make one.
+## Round 45 test plan (mod 0.27.0, world 0.4.1)
 
-**Install:** copy `FFRArchipelago/Scripts` over the installed mod, and copy `dist/ff_resonance.apworld` into Archipelago's `custom_worlds`. The log should say `version 0.26.0 loaded` and `client: world version 0.4.0` once the client connects. `Assets` did not change.
+Send the `[FFRAP]` lines of `UE4SS.log`.
 
-**The yaml:**
+**Install:** copy `FFRArchipelago/Scripts` over the installed mod, and copy `dist/ff_resonance.apworld` into `custom_worlds`. **Generate a new seed:** the world changed. Connect the client first, then New Game (Archipelago). Saves from round 44 keep the old party problem.
 
-```yaml
-name: Tester
-game: Final Fantasy Resonance
-Final Fantasy Resonance:
-  starting_continent: grandshelt
-  starting_roster:
-    1: 0
-    2: 50
-    3: 0
-    4: 0
-  starting_character_1:
-    Jake: 50
-    Rain: 0
-  starting_character_2:
-    Archwitch Fina: 50
-    Lasswell: 0
-```
-
-**Part A: the start:**
-1. Generate, host the seed, and **connect the client before you start the game's New Game (Archipelago).**
-2. Start New Game (Archipelago). The log should have `open world start is on`, `party -> [1007, 1006]`, `join status: Jake, Archwitch Fina 0` and `party levels: all 8 at level 1`, then `received`/applied `Grandshelt Unlock`.
-3. On the world map, the log should say `boxes placed during the map load` for every continent but Grandshelt. Check Grandshelt lets you land and another continent does not.
-4. **The non-standard party: tell me anything odd.** Who shows on the field and in battle? Open Party, Equipment, Status: does everything open? Can you fight, win and level up? Is Rain missing from anything that looks broken?
-5. Save, return to the title, load. Is the party the same?
-
-**Part B: the logic:**
-6. Open chests on Grandshelt until an Unlock arrives. Does the continent open at once, with a message?
-7. Receive a party member from the pool. Does the log's `item ... unit` line say `level N` at about your party's level? Do they join and work, with sensible HP?
-8. Open a second continent, land, and open a chest there.
-9. If you can, try one of the chests the logic calls filler-only (Earth Shrine interior, Grandshelt Castle, Fina's Psyche). **Tell me** if any of those can actually be reached.
-
-**Enemies are still at their own levels in this seed.** Run `ffrap_scale` with `follow` as before if you want them to match the party.
-
-**If it crashes:** send the new `UECC-Windows-*` folder and say what you were doing.
+1. The log should have `skip: ok   open world flags on: 21 24 13 34 1180 102`.
+2. Go into the Earth Shrine, then leave. **Can you get back out?**
+3. Fast travel: visit two places, then use it from the map. **Does it work, and only to places you have visited?** Does a tutorial pop up?
+4. Receive a party member from the pool. **Does the newcomer gain EXP? When you equip something on them, does it show as equipped on them for the others?** Can you unequip it?
+5. Save and look at the slot. **Does the level match your party's?**
+6. Enter the airship interior, normally. If it crashes, send the crash folder. If it does not, turn **FFRSLib off** in `mods.txt` and try Last Respite again: does it still crash?

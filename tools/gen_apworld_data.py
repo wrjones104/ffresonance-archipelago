@@ -114,10 +114,11 @@ GENERIC_PLACE_NAMES = {"Dungeon", "Shipyard", "Slums"}
 UNIT_ITEM_BASE = 800_000_000       # AP id of a party member: base + unit id
 CONTINENT_ITEM_BASE = 700_000_000  # AP id of a continent's unlock: base + its event flag
 # Maps with no route on the open world start, so their chests may only hold filler (world 0.4.0).
-# Each is entered only from a story event, or lies behind a map that is: the Earth Shrine's inner
-# part (3000), the burning Grandshelt Castle (3020), the Imperial Residences (2113) and Fina's
-# Psyche (3211, 3212). From data/game/transitions.tsv and the talk event table, not from play.
-NO_OPEN_WORLD_ROUTE = {3000, 3020, 2113, 3211, 3212}
+# Each is entered only from a story event, or lies behind a map that is: the burning Grandshelt
+# Castle (3020), the Imperial Residences (2113) and Fina's Psyche (3211, 3212). From
+# data/game/transitions.tsv and the talk event table, not from play. The Earth Shrine's inner part
+# (3000) was on this list until round 44 walked into it and opened its chests.
+NO_OPEN_WORLD_ROUTE = {3020, 2113, 3211, 3212}
 # The story counter on the open world start. A shiny whose condition is false there is not out.
 OPEN_START_STORY = 8000
 FINAL_AREA = "Crystal Tower"
