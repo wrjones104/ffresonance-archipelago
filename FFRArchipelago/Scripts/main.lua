@@ -50,7 +50,7 @@
 -- follows the save slots the linked game is saved to. While any other save is loaded, the mod
 -- grants nothing, reports nothing and leaves the chests vanilla.
 
-local VERSION = "0.30.0"
+local VERSION = "0.31.0"
 local PROTOCOL = 2        -- the bridge protocol; the apworld's MOD_PROTOCOL
 
 local MOD_DIR = (debug.getinfo(1, "S").source:gsub("^@", ""):gsub("\\", "/"):match("^(.*/)Scripts/[^/]+$"))
@@ -607,7 +607,8 @@ local function opened(key, fresh)
     if new then log("check " .. key) end
     if new or fresh then
         local s = state.scouts[key]
-        if s and key:find("^chest:") then popup = { text = popupText(s), key = key, tries = POPUP_TRIES } end
+        -- Round 47: a shiny says what it held too, through the same dialog box.
+        if s and (key:find("^chest:") or key:find("^shiny:")) then popup = { text = popupText(s), key = key, tries = POPUP_TRIES } end
     end
 end
 
@@ -659,8 +660,13 @@ local function scanShinies(mapId)
                 visit.recorded["s" .. s.uid] = true
                 recordSeen(hasReward and "shiny" or "spot", mapId, s.uid, s.class, s.itemId, s.itemNum, s.money, s.visible)
             end
+            local id = "s" .. s.uid
             if hasReward and (s.open or game.IsChestOpenInSave(mapId, s.uid)) then
-                opened("shiny:" .. mapId .. ":" .. s.uid)
+                local fresh = visit.closed[id] == true
+                visit.closed[id] = nil
+                opened("shiny:" .. mapId .. ":" .. s.uid, fresh)
+            elseif hasReward then
+                visit.closed[id] = true   -- seen closed: picking it up later is "in front of the player"
             end
         end
     end
@@ -1970,7 +1976,10 @@ local function fastTick()
     if not game.InGame() or state.inGameTicks <= SETTLE_TICKS or not sessionSave() then return end
     if not game.PopupJustOpened() then return end
     local mapId = game.CurrentMap()
-    if mapId and mapId == visit.mapId and visit.scans > MAP_SETTLE_SCANS then pcall(scanChests, mapId) end
+    if mapId and mapId == visit.mapId and visit.scans > MAP_SETTLE_SCANS then
+        pcall(scanChests, mapId)
+        pcall(scanShinies, mapId)
+    end
     pcall(popupTick)
 end
 

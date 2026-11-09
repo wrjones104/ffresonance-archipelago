@@ -973,6 +973,30 @@ n, _, lines = L.execute("return G.ScaleEnemies('clamp', 5, 15, true, { hp = 50 }
 assert n == 2 and L.eval("unitRows.bat.MaxHitPoint") == scaled(68, "MaxHitPoint", 1, 5, 50), n
 # a line per changed row, for scale.txt
 assert len(lines) == 2 and any(("level 1 -> 5\tHP %d\t" % scaled(68, "MaxHitPoint", 1, 5, 50)) in l for l in lines.values()), list(lines.values())
+# Round 47: a battle's MRP follows its enemies' average level; a battle with no scaled enemy, and
+# one worth nothing, are left alone
+L.execute("""
+groupRows = { a = { ID = 1, ap = 100, UnitIdList = { 2, 2 } }, b = { ID = 2, ap = 50, UnitIdList = { 9004 } },
+              c = { ID = 3, ap = 0, UnitIdList = { 2 } }, d = { ID = 4, ap = 7, UnitIdList = { 1001 } } }
+groupDT = {}
+function groupDT:IsValid() return true end
+function groupDT:GetFullName() return "DataTable /Game/Datatable/Encount/DT_BattleGroup" end
+function groupDT:ForEachRow(fn) for k, r in pairs(groupRows) do fn(fname(k), r) end end
+local prevSFOg = StaticFindObject
+function StaticFindObject(p)
+  if p == "/Game/Datatable/Encount/DT_BattleGroup.DT_BattleGroup" then return groupDT end
+  return prevSFOg(p)
+end
+""")
+_, sample, _ = L.execute("return G.ScaleEnemies('clamp', 20, 20, true, { hp = 50 })")[:3]
+assert "MRP changed in 2 battle groups" in sample, sample
+expect = max(1, int(100 * L.eval("G.CurveRatio('BattleMRP', 1, 20)") + 0.5))
+assert L.eval("groupRows.a.ap") == expect, (L.eval("groupRows.a.ap"), expect)
+assert L.eval("groupRows.b.ap") == max(1, int(50 * L.eval("G.CurveRatio('BattleMRP', 4, 20)") + 0.5))
+assert L.eval("groupRows.c.ap") == 0 and L.eval("groupRows.d.ap") == 7
+L.execute("G.ScaleEnemies('clamp', 1, 99, true, { hp = 50 })")      # every enemy back at its own level
+assert L.eval("groupRows.a.ap") == 100 and L.eval("groupRows.b.ap") == 50, "worked out from the shipped value"
+L.execute("G.ScaleEnemies('clamp', 5, 15, true, { hp = 50 })")
 # 0.15.1: the check sees what the last rescale wrote; a row written over, or a table loaded
 # again, shows up
 checked, differ, sample, reloaded = L.execute("return G.ScaleCheck()")

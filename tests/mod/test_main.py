@@ -838,6 +838,19 @@ assert list(G.popups.values())[n + 1:] == ["You found the following for Rat2:\nL
 # still open on later scans: no more pop-ups
 tick(6)
 assert len(list(G.popups.values())) == n + 2
+# Round 47: a shiny's pop-up says what it held, as a chest's does, once it is seen picked up
+inbox(f"scout\tshiny:{G.map}:77\tLongshot\tRat2\t1\t0\n")
+tick(1)
+G.chests = L.table()
+G.shinies = L.table_from({1: L.table_from({"uid": 77, "open": False, "itemId": -1, "itemNum": 1, "money": 1})})
+tick(4)
+n = len(list(G.popups.values()))
+G.shinies = L.table_from({1: L.table_from({"uid": 77, "open": True, "itemId": -1, "itemNum": 1, "money": 1})})
+G.popupOpen = True
+L.execute("fastFn()")
+assert f"check\tshiny:{G.map}:77" in read("ap_out.txt"), "reported by the fast check"
+assert list(G.popups.values())[n:] == ["You found the following for Rat2:\nLongshot"], list(G.popups.values())[n:]
+G.shinies = L.table()
 print("chest pop-up: ok")
 
 # 13. experimental gate and custom key-item probe (0.11.3): works standalone even on unlinked saves

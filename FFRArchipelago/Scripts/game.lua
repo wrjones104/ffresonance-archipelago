@@ -2899,6 +2899,9 @@ G.ENEMY_CURVE = {
     Attack = { 0.3207, 0.02946 }, Defence = { 0.7752, 0.00867 },
     Intelligence = { 0.5644, 0.03269 }, Mind = { 0.7289, 0.01236 },
     Agility = { 0.7853, 0.00899 }, Experience = { -0.0647, 0.12967 }, Money = { 0.0934, 0.09910 },
+    -- Not a unit's stat: the MRP a battle gives, `ap` in DT_BattleGroup, against its enemies'
+    -- average level. Round 47: 564 groups without a boss, r2 0.70.
+    BattleMRP = { 0.0689, 0.06162 },
 }
 G.CURVE_TOP = 70
 local GROWTH_ORDER = { "MaxHitPoint", "MaxBreakPoint", "Attack", "Defence", "Intelligence", "Mind",
@@ -3027,6 +3030,43 @@ end
 -- 3 seconds. So "original" is the table's latest values, not the shipped ones: a row that
 -- changed since our last write gives a new original, and `off` gives back what is there.
 local scaleOriginals = {}   -- unit id -> { Level = n, MaxHitPoint = n, ... } as the game last had it
+-- Round 47: MRP is on the battle group, not the enemy, so a rescale left it alone, and a seed that
+-- started on a late continent got far more of it. A group's MRP follows its enemies' average level.
+local BATTLE_GROUP_TABLE = "/Game/Datatable/Encount/DT_BattleGroup.DT_BattleGroup"
+local groupOriginals, groupWrote = {}, {}   -- battle group id -> MRP as shipped, and as last written
+local function ScaleBattleGroups(mode, wanted)
+    local changed = 0
+    for _, dt in ipairs(TableFamily(Find(BATTLE_GROUP_TABLE))) do
+        pcall(function()
+            dt:ForEachRow(function(_, row)
+                pcall(function()
+                    local id, now = Int(row.ID), Int(row.ap) or 0
+                    if groupWrote[id] == nil or groupWrote[id] ~= now then groupOriginals[id] = now end
+                    local orig, want = groupOriginals[id], groupOriginals[id]
+                    if mode ~= "off" and orig > 0 then
+                        local from, to, n = 0, 0, 0
+                        local units = row.UnitIdList
+                        for i = 1, #units do
+                            local unit = Int(units[i])
+                            if wanted[unit] and scaleOriginals[unit] then
+                                from, to, n = from + scaleOriginals[unit].Level, to + wanted[unit], n + 1
+                            end
+                        end
+                        if n > 0 then
+                            want = math.max(1, math.floor(orig * G.CurveRatio("BattleMRP", from / n, to / n) + 0.5))
+                        end
+                    end
+                    if now ~= want then
+                        row.ap = want
+                        changed = changed + 1
+                    end
+                    groupWrote[id] = want
+                end)
+            end)
+        end)
+    end
+    return changed
+end
 local scaleWrote = {}       -- unit id -> the values we last wrote into that row
 local scaleWanted = nil     -- unit id -> the level the last rescale wrote (nil: none, or "off")
 local scaleTables = nil     -- the tables the last rescale wrote, as "name@address" text
@@ -3109,6 +3149,8 @@ function G.ScaleEnemies(mode, a, b, withBosses, knobs)
             end)
         end)
     end
+    local groups = ScaleBattleGroups(mode, wanted)
+    if groups > 0 then sample = (sample and (sample .. "; ") or "") .. "MRP changed in " .. groups .. " battle groups" end
     if mode == "off" then scaleWanted, scaleTables = nil, nil
     else scaleWanted, scaleTables = wanted, TableKeys(family) end
     return changed, sample, lines, gameChanged

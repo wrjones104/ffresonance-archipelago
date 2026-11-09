@@ -150,6 +150,7 @@ MP does not correlate with level (r² 0.09) and remains unchanged.
 - Off: original shipped levels.
 - Bosses: separate toggle to avoid trivializing or over-buffing boss encounters.
 - Updates: rows rewrite on the field whenever the party's average level changes, never during battle.
+- MRP is scaled too, from mod 0.31.0: `ap` in `DT_BattleGroup`, by the battle's enemies' average level (round 47).
 
 **Round 31 & 32 findings:**
 - The simple exponential growth rate produced excessive attack at low levels. Real enemies follow `log(stat) = a + b log(level) + c level` (r² 0.88 for attack, 0.70 for HP). Using relative level ratios eliminates constant `a`.

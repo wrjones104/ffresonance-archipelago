@@ -782,6 +782,6 @@ The "Back" prompt that menus and the chest pop-up show at the bottom right also 
 
 **Shinies:** mod 0.29.0 blanks the reward on the actor (`m_ItemId`, `m_ItemNum`, `m_Money`), as chests are blanked. The 99 Tablet Shards became locations in world 0.6.0, at the user's request (`include_tablet_shards`). 6 shinies stay vanilla: 2 Magicite Shards and 4 key items.
 
-**Vision crystals:** the user wants to skip the summoning scene and the questions. Mod 0.29.0 does this for the 16 sanctum crystals (`include_crystals`). Round 47 tests it. The other 10 visions come from sidequests and one boss.
+**Vision crystals:** the user wants to skip the summoning scene and the questions. Mod 0.29.0 does this for the 16 sanctum crystals (`include_crystals`), and round 47 confirmed it works. The other 10 visions come from sidequests and one boss.
 
 **Story bosses as map encounters:** Siren's fight is a story event, so she is an item for now. Story bosses could be fights on the map later.

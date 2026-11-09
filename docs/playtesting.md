@@ -378,11 +378,17 @@ World-map shinies verified as locations. Multiple crashes observed across differ
   - The other 10 visions come from sidequests and one boss (`Str_LegendEV_07_Boss`), and still hand out their own.
 - **Added in 0.30.0, world 0.6.0, not yet played:** the 99 shinies holding a Tablet Shard are locations with `include_tablet_shards` (cfg `shards`), and the shards are in the pool. Their continent comes from the map's exits, else from its code (`01Gra_02`). Airship and common maps count as open from the start.
 
-## Round 47 test plan (mod 0.30.0, world 0.6.0)
+**Round 47 (mod 0.29.0, world 0.5.0, 2026-11-09): crystals, shinies, Siren and joins all worked.**
+- **Crystals worked as designed:** the scene was skipped, the flag set, and the check went out (`check crystal:10202`). So a Blueprint row with no Blueprint is a no-op that still applies its `OnFlagList`.
+- **Shinies** gave 1 gil. **Siren** was in the menu for both Finas. **New members** kept their gear with no copy.
+- **Asked for:** shinies should show the Archipelago item in the pop-up, as chests do. Added in 0.31.0: a shiny is scanned when a pop-up opens, and rewrites it the same way.
+- **MRP was not scaled.** A later continent gave far more. It is not on the enemy: it is `ap` in `DT_BattleGroup`, one value per battle. Mod 0.31.0 scales it from the battle's enemies' average level, on a curve fitted to the shipped groups (564 groups without a boss, r2 0.70). A level 45 battle at party level 3 gives about 6% of its usual MRP.
 
-Send the `[FFRAP]` lines of `UE4SS.log`.
+## Round 48 test plan (mod 0.31.0, world 0.6.0)
 
-**Install:** copy `FFRArchipelago/Scripts` over the installed mod, and copy `dist/ff_resonance.apworld` into `custom_worlds`. Add these two lines to your yaml, then **generate a new seed**. Connect the client first, then New Game (Archipelago).
+The big test. Send the `[FFRAP]` lines of `UE4SS.log`.
+
+**Install:** copy `FFRArchipelago/Scripts` over the installed mod, and copy `dist/ff_resonance.apworld` into `custom_worlds`. Add these to your yaml, then **generate a new seed**. Connect the client first, then New Game (Archipelago).
 
 ```yaml
   include_shinies: true
@@ -390,16 +396,7 @@ Send the `[FFRAP]` lines of `UE4SS.log`.
   include_tablet_shards: true
 ```
 
-**Part A: Siren and joins:**
-1. The log should have `skip: ok   Siren: summon abilities on both Finas`. With Fina or Archwitch Fina in the party, **is Siren in the summon menu, and does she work?**
-2. When someone joins from the pool, **is there no spare copy of their gear in the bag?**
-
-**Part B: shinies:**
-3. Pick up a world-map shiny. **Does it say 1 gil?** You should get the Archipelago item as usual.
-4. Pick up one in a town or dungeon (most hold Tablet Shards, which are locations from world 0.6.0). It should say 1 gil, and the log should say `check shiny:<map>:<uid>` with an item arriving. A few hold key items or Magicite Shards: those still give their own.
-
-**Part C: a crystal (please save first, this one is the risky one):**
-5. The log should have `crystals: 96 event rows set to skip the scene` or similar.
-6. Go to any Sanctum of Light you can reach and walk up to the crystal. **Does the scene skip? Do you get control back? Is there any message?** The log should say `check crystal:<map>`, and an item should arrive.
-7. If you get stuck or it crashes, send the crash folder and tell me what was on screen.
-8. Leave the sanctum and come back. The crystal should be gone.
+1. Pick up a world-map shiny. **Does the pop-up say what it held**, as a chest's does (`You obtained the following:` or `You found the following for ...`)?
+2. Pick up a Tablet Shard shiny in a town or dungeon. Same pop-up, and the log says `check shiny:<map>:<uid>`.
+3. With `ffrap_scale ... follow` on, the log should say `MRP changed in N battle groups`. **Is MRP sensible now**, on a late continent at a low level?
+4. Play as long as you like. Tell me anything odd, and send any crash folder.
