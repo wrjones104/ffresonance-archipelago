@@ -161,12 +161,6 @@ class FFResonanceContext(CommonContext):
         wanted.append(("cfg", "shinies", int(bool(slot_data.get("include_shinies")))))
         wanted.append(("cfg", "crystals", int(bool(slot_data.get("include_crystals")))))
         wanted.append(("cfg", "shards", int(bool(slot_data.get("include_tablet_shards")))))
-        if slot_data.get("enemy_scaling"):
-            wanted.append(("cfg", "scale", 1, slot_data["enemy_level_range"], slot_data["enemy_level_percent"],
-                           slot_data["enemy_hp_percent"], slot_data["enemy_attack_percent"],
-                           slot_data["enemy_magic_percent"], int(bool(slot_data.get("enemy_scale_bosses")))))
-        else:
-            wanted.append(("cfg", "scale", 0))
         party = slot_data.get("starting_party") or []
         if party:
             wanted.append(("cfg", "party", ",".join(str(unit) for unit in party)))

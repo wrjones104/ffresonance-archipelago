@@ -396,9 +396,11 @@ World-map shinies verified as locations. Multiple crashes observed across differ
 - **Noted, not a problem yet:** the airship's shadow list grows while the player picks up world-map shinies (`130 -> 154 -> 178 ...`), and the new entries are null. A map change resets it. The mod's list code asks `IsValid` first, so nulls are safe for it.
 - **Tool added:** `DUMP_BYTECODE=1 dotnet run --project tools/dump_game -- assets <path>` also writes each Blueprint function's code, which is how `IsClosable` was read.
 
-## Round 49 test plan (mod 0.33.0, world 0.7.0)
+**Before round 49 was played (2026-11-09):** the user moved enemy scaling out of the yaml, as it suits in-game sliders better (IDEAS.md, idea 18). The default for a seed is now party sync with follow, HP and power at 75%, bosses too.
 
-Seeds can now be finished, and scaling comes from the yaml. Send the `[FFRAP]` lines of `UE4SS.log`.
+## Round 49 test plan (mod 0.34.0, world 0.8.0)
+
+Seeds can now be finished, and a seed scales its enemies by itself. Send the `[FFRAP]` lines of `UE4SS.log`.
 
 **Install:** copy `FFRArchipelago/Scripts` over the installed mod, copy `dist/ff_resonance.apworld` into `custom_worlds`, and **generate a new seed**. Connect the client first, then New Game (Archipelago). Do not type `ffrap_scale`.
 
@@ -408,7 +410,7 @@ For a short test, add this to your yaml. The default is 50. Shards turn on by th
   tablet_shards_required: 10
 ```
 
-1. After the start, the log should say `scale: the seed's scaling is on`, with `attack 75%, magic 75%`. **Do enemies feel the same as your hand-typed setting did?**
+1. After the start, the log should say `scale: the seed's scaling is on`, with `hp 75%, attack 75%, magic 75%, with bosses`. **Is that a fair baseline?** Note how it feels early, and again later if you can.
 2. Receive a Tablet Shard. **Does the item feed say `Tablet Shard (1/10)`?**
 3. Receive the last one you need. **Does the game say `Goal complete!`, and does the server show your slot as finished?**
 4. The moogle: have a vision and no Magicite Shard (a Cryst alone is a good test). Open Vision Enhancement and press Cancel. **Does the screen close?** Then get a Shard and enhance a vision. Does the screen still work and close after?

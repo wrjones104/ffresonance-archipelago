@@ -146,13 +146,12 @@ class TestTabletShardGoal(FFResonanceTestBase):
 
 
 class TestDefaultOptions(FFResonanceTestBase):
-    def test_the_default_goal_and_scaling(self) -> None:
+    def test_the_default_goal(self) -> None:
         self.assertEqual(Goal.default, Goal.option_tablet_shards)
         self.assertEqual(TabletShardsRequired.default, 50)
-        slot_data = self.world.fill_slot_data()
-        self.assertEqual([slot_data[k] for k in ("enemy_scaling", "enemy_level_range", "enemy_level_percent", "enemy_hp_percent",
-                                                 "enemy_attack_percent", "enemy_magic_percent", "enemy_scale_bosses")],
-                         [1, 2, 80, 100, 75, 75, 0])
+
+    def test_enemy_scaling_is_not_a_yaml_option(self) -> None:
+        self.assertFalse([k for k in self.world.fill_slot_data() if k.startswith("enemy_")])
 
 
 class TestCustomParty(FFResonanceTestBase):

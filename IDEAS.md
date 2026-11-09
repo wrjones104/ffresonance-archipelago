@@ -680,6 +680,12 @@ The "Back" prompt that menus and the chest pop-up show at the bottom right also 
 - Where battle rewards (EXP, Gil, MRP/AP) are tallied and awarded at battle end, and whether a multiplier hook can safely scale rewards without breaking progression caps or desyncing saves.
 - Where the field encounter step counter or rate calculation lives (e.g. in `CPP_MapManager` or player pawn state) and how to cleanly scale or suppress encounters on the fly.
 
+**Round 49: this is where enemy scaling goes.** The user moved it out of the yaml. The menu should have sliders for the scaling (level percent, range, HP, attack, magic, bosses), the EXP, gil and MRP rates, and the encounter rate. The default until then is in `SEED_SCALE` in `main.lua`. 75% is a baseline only: low-level enemies need it, but it may be too easy later. A slider lets a player change it as the game goes on.
+
+**Found off-line (round 49):**
+- `DT_GameDifficultyParam` has one row per difficulty, with `ExpRate`, `MoneyRate` and `MRPointRate`, and also `EnemyHpRate`, `EnemyBreakRate`, `EnemyAgilityRate`, `DamageTakenRate` and `DamageGivenRate`. Writing the row in use may give EXP, gil and MRP sliders with no hook on the rewards. To find out: whether the game reads the row at each battle, and whether a rate over 1.5 works.
+- Encounter gear already exists: 12102 prevents encounters, 12066 halves them, 12067 raises them, 12001 doubles EXP and 12059 doubles MRP. A player can already turn encounters off, if they find the item.
+
 ## 19. A random starting party
 
 **Idea:** a yaml option for the starting party: 1 to 4 members, picked at random from the party members (Rain, Lasswell, Fina, Lid, Nichol, Jake, Sakura). It must not break story mode. The members not in the starting party become Archipelago items.
@@ -789,3 +795,30 @@ The "Back" prompt that menus and the chest pop-up show at the bottom right also 
 **Vision crystals:** the user wants to skip the summoning scene and the questions. Mod 0.29.0 does this for the 16 sanctum crystals (`include_crystals`), and round 47 confirmed it works. The other 10 visions come from sidequests and one boss.
 
 **Story bosses as map encounters:** Siren's fight is a story event, so she is an item for now. Story bosses could be fights on the map later.
+
+## 24. The Crystal Tower as the goal, behind objectives
+
+**Asked for (round 49, 2026-11-09):** block the Crystal Tower, and open it with objectives such as "defeat X espers", "defeat X bosses" or "collect X visions". The AP goal is then to beat the final boss. The Tablet Shard goal is a stopgap until this works.
+
+**To find out:**
+- Whether the final boss can still be fought from an open world start, and whether a win can be seen.
+- How to block the tower. It has a landing point and an exit, so it needs a lock like the continents.
+- How to show the objectives in game. The item feed could count them, as it counts shards.
+
+## 25. Making the run more than picking up checks
+
+**The concern (round 49, 2026-11-09):** the game feels like exploration only: go to an area, get the chests, go to the next. Battles in between are mostly grinding. The user pictures something like FF4 Free Enterprise, where bosses are the real fun and your current setup is what makes each one a puzzle. The hard part is MRP, which needs battles. The likely answer is sliders: grind as much as you like, then turn encounters off until you want more (idea 18).
+
+**Found off-line (round 49):**
+- **Fights that need no story are already in the talk tables.** 210 talk rows start a battle through `encountGroupId`: 40 Arena, 24 Twelve Arms awakenings, 19 side-quest, 15 strong enemies, and the rest story. A battle group also has `battleFinishEventId`, so a win can run an event. So a row may be able to start any boss's group from anywhere. This is the likely way to bring story bosses back as fights on the map.
+- There are 176 battle groups with a boss in them: 48 story chapter bosses by name, 15 strong enemies and 113 others.
+- A boss's MRP is `ap` in its battle group, which the mod already writes. Boss wins could pay for most of a character's growth, so grinding becomes a choice.
+
+**Ideas, the strongest first:**
+1. **Boss fights as checks.** Start with the Twelve Arms, strong enemies and Arena: about 80 fights that are already self-contained.
+2. **Bosses pay for growth.** A large MRP and EXP reward from each boss, so a player who skips encounters is not behind.
+3. **Bosses in a shuffled order.** Level sync makes any order fair. What you hold when you meet a boss is the puzzle.
+4. **Random objectives each seed** (idea 24), so seeds ask for different things.
+5. **Hints bought with gil,** at shops or the moogle, to give gil a use. Shops could be checks too (`shops.tsv`).
+6. **Traps and DeathLink** for multiworld spice (idea 20).
+7. **Party slots as items.** Start with one or two slots and find the others, if the party limit can be changed.

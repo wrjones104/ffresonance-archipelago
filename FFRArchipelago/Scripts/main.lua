@@ -50,7 +50,7 @@
 -- follows the save slots the linked game is saved to. While any other save is loaded, the mod
 -- grants nothing, reports nothing and leaves the chests vanilla.
 
-local VERSION = "0.33.0"
+local VERSION = "0.34.0"
 local PROTOCOL = 2        -- the bridge protocol; the apworld's MOD_PROTOCOL
 
 local MOD_DIR = (debug.getinfo(1, "S").source:gsub("^@", ""):gsub("\\", "/"):match("^(.*/)Scripts/[^/]+$"))
@@ -107,7 +107,7 @@ local openArrival = nil      -- ffrap_openstart dock|air|event, kept once the us
 local continentLocks = nil   -- ffrap_lock on|off, kept once the user picks one; the seed's until then
 -- What the seed says about the start (the client's cfg lines). Not saved: ap_in.txt is read again
 -- at every start, and the seed that wrote it is the only thing that decides these.
-local seedCfg = { openworld = false, party = nil, shinies = false, crystals = false, shards = false, scale = nil }
+local seedCfg = { openworld = false, party = nil, shinies = false, crystals = false, shards = false }
 local function openStartOn() return openStart or seedCfg.openworld end
 -- An `ffrap_lock on|off` from this run wins. Then a seed that asks for locks: a saved "off" from
 -- an old test must not quietly leave a real seed unlocked. Then the saved switch.
@@ -379,15 +379,6 @@ local function readInbox(initial)
             seedCfg.shards = f[3] == "1"
         elseif f[1] == "cfg" and f[2] == "crystals" then
             seedCfg.crystals = f[3] == "1"
-        elseif f[1] == "cfg" and f[2] == "scale" then
-            local range, at, hp, attack, magic = tonumber(f[4]), tonumber(f[5]), tonumber(f[6]), tonumber(f[7]), tonumber(f[8])
-            if f[3] ~= "1" then
-                seedCfg.scale = nil
-            elseif range and at and hp and attack and magic then
-                seedCfg.scale = { range = range, at = at, withBosses = f[9] == "1", knobs = { hp = hp, attack = attack, magic = magic } }
-            else
-                log("cfg scale ignored: " .. table.concat(f, " "))
-            end
         elseif f[1] == "cfg" and f[2] == "party" then
             local party = {}
             for id in (f[3] or ""):gmatch("%d+") do party[#party + 1] = tonumber(id) end
@@ -1697,12 +1688,14 @@ end)
 local SCALE_CHECK_EVERY = 2   -- scale ticks (of STATUS_EVERY) between table checks
 local scaleChecks = 0
 
--- Round 49: the seed's scaling (cfg scale), in place of typing ffrap_scale each time. It waits for
--- the open world start, as the prologue's party is not the seed's. A save that is not the seed's
--- gets the game's own enemies back.
+-- Round 49: a seed scales its enemies by itself, in place of typing ffrap_scale each time. The
+-- user chose these numbers as a baseline: HP and power at 75%, bosses too. It waits for the open
+-- world start, as the prologue's party is not the seed's. A save that is not the seed's gets the
+-- game's own enemies back. In-game sliders are planned (IDEAS.md, idea 18).
+local SEED_SCALE = { range = 2, at = 80, withBosses = true, knobs = { hp = 75, attack = 75, magic = 75 } }
 local function seedScaleTick()
-    local s = seedCfg.scale
-    if not s or scaleByHand then return end
+    local s = SEED_SCALE
+    if not seedCfg.openworld or scaleByHand then return end
     if not sessionSave() then
         if seedScaleOn then
             seedScaleOn, scaleFollow = false, nil

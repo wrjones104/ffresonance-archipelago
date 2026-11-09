@@ -97,8 +97,7 @@ class FFResonanceWorld(World):
     def fill_slot_data(self) -> Mapping[str, Any]:
         return {
             **self.options.as_dict("goal_story_checkpoint", "tablet_shards_required", "include_shinies", "include_crystals",
-                                   "include_tablet_shards", "enemy_scaling", "enemy_level_percent", "enemy_level_range",
-                                   "enemy_hp_percent", "enemy_attack_percent", "enemy_magic_percent", "enemy_scale_bosses"),
+                                   "include_tablet_shards"),
             "goal": self.options.goal.current_key,
             "mod_protocol": MOD_PROTOCOL,
             "open_world": True,

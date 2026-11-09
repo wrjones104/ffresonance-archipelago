@@ -1,4 +1,4 @@
-"""The client's goal: Tablet Shards counted from the items received, and the seed's settings on the bridge."""
+"""The client's goal: Tablet Shards counted from the items received."""
 
 import asyncio
 import os
@@ -26,10 +26,6 @@ def check(name, cond):
     failures += 0 if cond else 1
 
 
-SCALING = {"enemy_scaling": 1, "enemy_level_range": 2, "enemy_level_percent": 80, "enemy_hp_percent": 100,
-           "enemy_attack_percent": 75, "enemy_magic_percent": 75, "enemy_scale_bosses": 0}
-
-
 def connect(ctx, seed, slot_data):
     ctx.reset_server_state()
     ctx.on_package("RoomInfo", {"seed_name": seed})
@@ -43,9 +39,9 @@ async def main():
     in_path = os.path.join(folder, "ap_in.txt")
     shard = lambda player=1: NetworkItem(SHARD_ITEM, 1, player, 0)
 
-    connect(ctx, "G1", {"goal": "tablet_shards", "tablet_shards_required": 2, "open_world": True, **SCALING})
+    connect(ctx, "G1", {"goal": "tablet_shards", "tablet_shards_required": 2, "open_world": True})
     text = open(in_path, encoding="utf-8").read()
-    check("scaling on the bridge", "cfg\tscale\t1\t2\t80\t100\t75\t75\t0\n" in text)
+    check("no scaling line on the bridge", "cfg\tscale" not in text)
     check("no shards, no goal", not ctx.goal_reached())
 
     ctx.player_names = {1: "Me", 2: "Rat"}
@@ -62,9 +58,7 @@ async def main():
     ctx.items_received = []
     check("the story does not count for the shard goal", not ctx.goal_reached())
 
-    connect(ctx, "G2", {"goal": "story_checkpoint", "goal_story_checkpoint": 8020, "enemy_scaling": 0})
-    text = open(in_path, encoding="utf-8").read()
-    check("scaling off on the bridge", "cfg\tscale\t0\n" in text)
+    connect(ctx, "G2", {"goal": "story_checkpoint", "goal_story_checkpoint": 8020})
     ctx.items_received = [shard(), shard()]
     ctx.max_story = 8019
     check("shards do not count for the story goal", not ctx.goal_reached())
