@@ -36,12 +36,12 @@ Every change was tested in the real game, apart from the items marked "not teste
 
 | Part | Files | Reviewed by me |
 |---|---|---|
-| Game mod | `FFRArchipelago/Scripts/*.lua` | not yet |
-| World: items, locations, options | `items.py`, `locations.py`, `options.py`, `world.py` | not yet |
-| Client and bridge | `client.py`, `components.py` | not yet |
-| Generated data | `data.py`, `tools/gen_apworld_data.py` | not yet |
-| Tests | `test/` | not yet |
-| Docs | `docs/`, `README.md` | not yet |
+| Game mod | `FFRArchipelago/Scripts/*.lua` | Yes |
+| World: items, locations, options | `items.py`, `locations.py`, `options.py`, `world.py` | Yes, and in progress as we go |
+| Client and bridge | `client.py`, `components.py` | Yes |
+| Generated data | `data.py`, `tools/gen_apworld_data.py` | Yes |
+| Tests | `test/` | Yes |
+| Docs | `docs/`, `README.md` | Yes |
 
 ## Credits
 
