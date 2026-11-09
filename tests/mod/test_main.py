@@ -140,6 +140,12 @@ function G.MarkChatsPlayed(sd) G.chatsMarked = (G.chatsMarked or 0) + 1; return 
 function G.SaveData() return {} end
 function G.ChatState() return "56 rows" end
 function G.VisionKeys() return "1 visions" end
+G.lockSyncs, G.lockOpens = 0, {}
+function G.OnField() return true end
+function G.ContinentSync() G.lockSyncs = G.lockSyncs + 1; return {"pharm"}, {} end
+function G.ContinentClear() G.lockCleared = true end
+function G.ContinentStatus() return "open []" end
+function G.SetContinentOpen(name, open) if name == "narnia" then return nil, "no continent" end G.lockOpens[name] = open; return 1 end
 function G.AirshipState() return "placed true" end
 function G.AirshipCondition(c) G.airshipWrote = c; return c end
 function G.NoLandShadow() return 0, 1, { "box" } end
@@ -1140,6 +1146,17 @@ assert (G.chatsMarked or 0) == 0
 L.execute('commands["ffrap_chats"]("ffrap_chats", {"done"})')
 assert G.chatsMarked == 1
 L.execute('commands["ffrap_visions"]("ffrap_visions", {})')
+# Round 40: the continent locks. Off by default and writing no key; on keeps them in step, and
+# the switch survives a restart. Off clears the boxes.
+assert "continentlocks" not in read("ap_state.txt"), read("ap_state.txt")
+L.execute('commands["ffrap_lock"]("ffrap_lock", {"on"})')
+assert "continentlocks\t1\n" in read("ap_state.txt"), read("ap_state.txt")
+L.execute('commands["ffrap_lock"]("ffrap_lock", {"open", "pharm"})')
+assert G.lockOpens.pharm is True
+L.execute('commands["ffrap_lock"]("ffrap_lock", {"close", "narnia"})')
+assert G.lockOpens.narnia is None, "a bad name changes nothing"
+L.execute('commands["ffrap_lock"]("ffrap_lock", {"off"})')
+assert G.lockCleared is True and "continentlocks\t0\n" in read("ap_state.txt"), read("ap_state.txt")
 # Round 39: `state` reads the airship's save fields and writes no spawn condition
 L.execute('commands["ffrap_airship"]("ffrap_airship", {"state"})')
 assert G.airshipWrote is None, G.airshipWrote

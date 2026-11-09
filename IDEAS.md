@@ -658,6 +658,8 @@ The "Back" prompt that menus and the chest pop-up show at the bottom right also 
 
 **Round 38 (2026-11-08): that is what happened.** The game lists its 111 boxes the same way. A box on the list looks and works like one of the game's own, and destroying it restores landing at once. So a continent lock needs no change to the game's landing check: a box per continent, listed for the shadow, destroyed when the item arrives. Still to learn (round 39): whether the listing lasts through boarding, and whether the box lasts through a map change.
 
+**Round 40 (2026-11-08):** the listing lasts through boarding, and the box does not last through a map change. Mod 0.22.0 builds the locks on that (`ffrap_lock`, `docs/open_world.md`, section 4).
+
 **Round 33 (2026-11-08):** changing a box's condition works, but only after the airship lands and takes off again. A new box reads its condition when it starts. The game's Pharm story box is one landing spot (about 950 x 600 units), so locking it does not lock Pharm. A spawned box hides the airship's shadow. Details: docs/open_world.md, section 4. Round 34 looks for a way to apply a change at once.
 
 **Round 32 (2026-11-07):** a box spawned at the airship's height, 3000 up and down, lifted the airship over it and broke the camera, and the airship could still land on it. So the box's collision counts as ground for the airship. The game's own boxes sit on the ground (the Mysidia box: centre height 393, 700 up and down). The Blueprint has no script; the C++ class `CPP_MapNonLandingArea` reads the box and the condition. Mod 0.15.0 puts boxes at the ground height and adds `ffrap_noland lock mysidia`, which tests a changed condition on the game's own box.

@@ -22,6 +22,7 @@
 --   ffrap_input [fix]            probe: the player controller's input state; fix tries the engine's resets
 --   ffrap_openstart [on|off|dock|air|event|at x y z|now [slot]]  test: the open world start (story 8000)
 --   ffrap_chats [done]           the loaded save's Active Time Chats; done marks them all played
+--   ffrap_lock [on|off|open <continent|all>|close <continent|all>]  test: the continent locks
 --   ffrap_visions                the first vision's synchro keys, to the log
 --   ffrap_inspect <class|path> [label]  one object's fields and functions to inspect_<name>[_label].tsv
 --   ffrap_title [list|add]       the Archipelago entry on the title menu (added at start-up)
@@ -49,7 +50,7 @@
 -- follows the save slots the linked game is saved to. While any other save is loaded, the mod
 -- grants nothing, reports nothing and leaves the chests vanilla.
 
-local VERSION = "0.21.0"
+local VERSION = "0.22.0"
 local PROTOCOL = 1        -- the bridge protocol; the apworld's MOD_PROTOCOL
 
 local MOD_DIR = (debug.getinfo(1, "S").source:gsub("^@", ""):gsub("\\", "/"):match("^(.*/)Scripts/[^/]+$"))
@@ -59,6 +60,7 @@ local game = require("game")
 local bridge = require("bridge")
 
 local TICK_MS = 500
+local LOCKS_EVERY = 2         -- ticks between checks that the continent locks match the save
 local FAST_MS = 100           -- the chest pop-up check (fastTick)
 local SETTLE_TICKS = 4        -- wait this long after a save loads before granting
 local MAX_GRANTS_PER_TICK = 5
@@ -102,6 +104,8 @@ local FEED_WAIT_MAX = 10     -- seconds messages wait for the feed before they g
 local feedOn = true          -- ffrap_feed on|off; kept in ap_state.txt
 local openStart = false      -- ffrap_openstart on|off: the skip goes to the open world; kept in ap_state.txt
 local openArrival = nil      -- ffrap_openstart dock|air|event, kept once the user picks one
+local continentLocks = nil   -- ffrap_lock on|off, kept once the user picks one; off until then
+local locksFailed = nil      -- the last ContinentSync failure logged, so each one is logged once
 local feedQueue = {}
 local feedQueueSince = nil   -- when the oldest waiting message came
 local feedShown = false      -- the feed has shown a line in this run
@@ -253,6 +257,7 @@ local function loadState()
         -- old key is ignored.
         if key == "itemfeed" then feedOn = value == "1" end
         if key == "openstart" then openStart = value == "1" end
+        if key == "continentlocks" then continentLocks = value == "1" end
         if key == "openarrival" and game.OPEN_STARTS[value] then
             openArrival = value
             game.OPEN_START = game.OPEN_STARTS[value]
@@ -277,6 +282,7 @@ local function saveState()
     f:write("itemfeed\t", feedOn and "1" or "0", "\n")
     f:write("openstart\t", openStart and "1" or "0", "\n")
     if openArrival then f:write("openarrival\t", openArrival, "\n") end
+    if continentLocks ~= nil then f:write("continentlocks\t", continentLocks and "1" or "0", "\n") end
     f:write("seed\t", state.seed or "", "\n")
     f:write("slots\t", slotsText(), "\n")
     f:write("slotItems\t", slotsText(true), "\n")
@@ -1015,6 +1021,25 @@ end
 
 local scaleTick   -- set with the ffrap_scale command, below
 
+-- Continent locks (game.ContinentSync): while the switch is on, the world map keeps its lock
+-- boxes in step with the save's flags. Round 40: the boxes go with each map change, so this puts
+-- them back. Only on the field: a battle is no time to spawn actors.
+local function locksTick()
+    if not continentLocks or not game.OnField() then return end
+    local placed, removed = game.ContinentSync()
+    if not placed then
+        -- `removed` holds why. Not being on the world map is the normal case.
+        if removed ~= "not on the world map" and removed ~= locksFailed then
+            log("locks: " .. tostring(removed))
+            locksFailed = removed
+        end
+        return
+    end
+    locksFailed = nil
+    if #placed > 0 then log("locks: boxes placed for " .. table.concat(placed, ", ")) end
+    if #removed > 0 then log("locks: opened " .. table.concat(removed, ", ")) end
+end
+
 local function tick()
     state.ticks = state.ticks + 1
     readInbox(false)
@@ -1048,6 +1073,7 @@ local function tick()
             pcall(popupTick)
             pcall(gateTick)
             if state.ticks % STATUS_EVERY == 0 then pcall(scaleTick) end
+            if state.ticks % LOCKS_EVERY == 0 then pcall(locksTick) end
             -- Chests and shinies are still recorded in seen.tsv for any save; scanLoot reports
             -- them only for the session's save (see opened).
             if state.ticks % CHEST_EVERY == 0 then scanLoot() end
@@ -1797,6 +1823,30 @@ command("ffrap_chats", function(p)
     local text = game.ChatState()
     log("chats: " .. text)
     notify("Active Time Chats: " .. text)
+end)
+
+-- ffrap_lock [on|off|open <continent|all>|close <continent|all>]: the continent locks, for testing
+-- until a seed decides them. `on` and `off` are the switch, kept in ap_state.txt. `open` and
+-- `close` write the continent's flag into the loaded save. With no word: the state, to the log.
+command("ffrap_lock", function(p)
+    local what, name = p and p[1], p and p[2]
+    if what == "on" or what == "off" then
+        continentLocks = what == "on"
+        saveState()
+        if not continentLocks then game.ContinentClear() end
+    elseif what == "open" or what == "close" then
+        local n, why = game.SetContinentOpen(name, what == "open")
+        if not n then
+            notify("Usage: ffrap_lock open|close <continent|all> (" .. tostring(why) .. ")")
+            return
+        end
+    elseif what then
+        notify("Usage: ffrap_lock [on|off|open <continent|all>|close <continent|all>]")
+        return
+    end
+    local text = (continentLocks and "on" or "off") .. "; " .. game.ContinentStatus()
+    log("locks: " .. text)
+    notify("Continent locks: " .. text)
 end)
 
 -- ffrap_visions: the first vision's synchro keys (round 37), for vision items on a save with none.

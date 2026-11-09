@@ -3164,15 +3164,20 @@ end
 -- no-landing boxes for that trace to ignore (round 38: 111 boxes, the airship itself,
 -- CPP_MuchaWorldSetting and StaticMeshActor_2). A listed box gives the red shadow over it, and
 -- landing stays blocked. Returns the list's size before and after, and the names in it that are
--- not the game's own boxes; nil when `pawn` is not the airship.
-ShadowIgnoreAdd = function(pawn)
+-- not the game's own boxes; nil when `pawn` is not the airship. `actors` defaults to the probe's
+-- spawned boxes. The class is checked first: the field does not exist on a pawn on foot.
+ShadowIgnoreAdd = function(pawn, actors)
+    actors = actors or nolandSpawned
+    local className = ""
+    pcall(function() className = pawn:GetClass():GetFName():ToString() end)
+    if not className:find("AirShip", 1, true) then return nil end
     local list
     pcall(function() list = pawn.m_ShadowDecalSphareTraceActorsToIgnore end)
     if not list then return nil end
     local before = #list
     local listed, ours = {}, {}
     for i = 1, before do listed[ObjText(list[i])] = true end
-    for _, a in ipairs(nolandSpawned) do
+    for _, a in ipairs(actors) do
         if Alive(a) then
             local name = ObjText(a)
             ours[name] = true
@@ -3373,6 +3378,153 @@ function G.NoLandShadow()
     local before, after, names = ShadowIgnoreAdd(pose.pawn)
     if not before then return nil, "the player is not riding the airship" end
     return before, after, names
+end
+
+-- -------------------------------------------------------------------------------------------
+-- Continent locks (docs/open_world.md, section 4)
+-- -------------------------------------------------------------------------------------------
+-- The airship cannot land on a locked continent. Each continent is covered by our own no-landing
+-- boxes, drawn by hand on a map of the game's landscape tiles, landing points and exits so that
+-- each of those lies in exactly one continent (a test checks this). Boxes are (x0, y0, x1, y1).
+-- The seas between continents take the slack, as the airship cannot land on water anyway. The
+-- Crystal Tower's exit is in no box.
+-- Round 38 and 39: a box on the shadow's ignore list gives the red shadow and blocks landing, and
+-- the listing lasts through boarding. Round 40: a box does not last through a map change, so
+-- ContinentSync places them again each time the world map loads.
+-- A continent's lock is one event flag in the save: off is locked, on is open. So an unlock
+-- belongs to the save, and an Archipelago item can open one with the existing `flag` item kind.
+-- Flags 1420 to 1429 are used nowhere in the game's data (the game's own run up to 1413, then 1450).
+G.WORLD_MAP = 1000
+G.CONTINENTS = {
+    { name = "grandshelt", flag = 1420, boxes = { { 8400, 17500, 20600, 24000 } } },
+    { name = "lanzelt", flag = 1421, boxes = { { 7050, 9050, 18200, 13650 }, { 8400, 13650, 18200, 17500 }, { 10350, 8300, 18200, 9050 } } },
+    { name = "kolobos", flag = 1422, boxes = { { 1860, 9700, 7000, 13650 }, { 1860, 13650, 8350, 20200 } } },
+    { name = "dirnado", flag = 1423, boxes = { { 10350, -3600, 23100, 6400 } } },
+    { name = "olderion", flag = 1424, boxes = { { -3300, -5050, 10300, 8950 }, { -3300, -7400, 3300, -5050 }, { -6120, -2650, -3300, 6050 } } },
+    { name = "zoldaad", flag = 1425, boxes = { { -17100, 6100, -6200, 22200 }, { -6200, 9000, 1300, 22200 }, { -6200, 6100, -3300, 9000 } } },
+    { name = "mysidia", flag = 1426, boxes = { { -20400, -13900, -14200, -1600 } } },
+    { name = "gronoa", flag = 1427, boxes = { { 6700, -16000, 24600, -5100 }, { 10350, -5100, 24600, -3650 }, { 8950, -23600, 24600, -16000 } } },
+    { name = "pharm", flag = 1428, boxes = { { -12750, -12300, -6200, 1000 }, { -12750, -22200, 3800, -12300 }, { 3800, -18950, 8950, -16000 } } },
+    { name = "ardra", flag = 1429, boxes = { { -23900, 15700, -18600, 22300 } } },
+}
+
+-- The placed boxes, by continent name. Good only for the world in continentWorld: the player
+-- controller's name is new on every map load, and a pointer into an unloaded map must not be
+-- touched, so a new name means forgetting them all without asking them anything.
+local continentActors, continentWorld, continentListed = {}, nil, nil
+
+local function ContinentNamed(name)
+    for _, c in ipairs(G.CONTINENTS) do
+        if c.name == name then return c end
+    end
+    return nil
+end
+
+local function DestroyContinent(name)
+    for _, a in ipairs(continentActors[name] or {}) do
+        if Alive(a) then pcall(function() a:K2_DestroyActor() end) end
+    end
+    continentActors[name] = nil
+end
+
+-- Spawns one continent's boxes. Returns the actors, or nil and why; a partial set is removed.
+local function PlaceContinent(world, cls, c)
+    local list = {}
+    local function give_up(why)
+        for _, a in ipairs(list) do pcall(function() a:K2_DestroyActor() end) end
+        return nil, why
+    end
+    for _, b in ipairs(c.boxes) do
+        local cx, cy, hx, hy = (b[1] + b[3]) / 2, (b[2] + b[4]) / 2, (b[3] - b[1]) / 2, (b[4] - b[2]) / 2
+        local actor
+        gateStep("locks: SpawnActor " .. c.name)
+        pcall(function() actor = world:SpawnActor(cls, { X = cx, Y = cy, Z = G.NOLAND_Z }, { Pitch = 0, Yaw = 0, Roll = 0 }) end)
+        if not (actor and Alive(actor)) then return give_up("SpawnActor failed for " .. c.name) end
+        list[#list + 1] = actor
+        local placed, why = PlaceBox(actor, cx, cy, G.NOLAND_Z, hx, hy, G.NOLAND_HALF_Z, nil)
+        if not placed then return give_up(c.name .. ": " .. tostring(why)) end
+    end
+    return list
+end
+
+-- Makes the world match the save: a box set for every locked continent, none for an open one,
+-- every box on the airship's shadow list. Safe to call often. Does nothing off the world map.
+-- Returns the names placed and the names removed (either can be empty), or nil and why.
+function G.ContinentSync()
+    if G.CurrentMap() ~= G.WORLD_MAP then return nil, "not on the world map" end
+    local pose, whyPose = G.PlayerPose()
+    if not pose then return nil, whyPose end
+    local pc = PlayerController()
+    local world = pc and ObjText(pc)
+    if not world then return nil, "no PlayerController" end
+    if world ~= continentWorld then
+        continentWorld, continentActors, continentListed = world, {}, nil
+    end
+    local placed, removed, cls = {}, {}, nil
+    for _, c in ipairs(G.CONTINENTS) do
+        local open = G.GetFlag(c.flag)
+        if open == true then
+            if continentActors[c.name] then
+                DestroyContinent(c.name)
+                removed[#removed + 1] = c.name
+            end
+        elseif open == false then
+            local have, whole = continentActors[c.name], continentActors[c.name] ~= nil
+            for _, a in ipairs(have or {}) do whole = whole and Alive(a) end
+            if not whole then
+                DestroyContinent(c.name)
+                cls = cls or LoadBlueprintClass(NOLAND_PKG, NOLAND_NAME)
+                if not cls then return nil, "could not load " .. NOLAND_NAME .. "_C" end
+                local list, why = PlaceContinent(pose.world, cls, c)
+                if not list then return nil, why end
+                continentActors[c.name] = list
+                placed[#placed + 1] = c.name
+            end
+        end
+    end
+    local all = {}
+    for _, list in pairs(continentActors) do
+        for _, a in ipairs(list) do all[#all + 1] = a end
+    end
+    local key = ObjText(pose.pawn) .. ":" .. #all
+    if #all > 0 and key ~= continentListed and ShadowIgnoreAdd(pose.pawn, all) then continentListed = key end
+    return placed, removed
+end
+
+-- Removes every lock box from the world, for `ffrap_lock off`. The saves' flags are left alone.
+function G.ContinentClear()
+    for name in pairs(continentActors) do DestroyContinent(name) end
+    continentActors, continentListed = {}, nil
+end
+
+-- Opens or closes one continent, or "all", in the loaded save. Returns how many, or nil and why.
+function G.SetContinentOpen(name, open)
+    local sd = G.SaveData()
+    if not sd then return nil, "no save loaded" end
+    local chosen = {}
+    if name == "all" then
+        chosen = G.CONTINENTS
+    else
+        local c = ContinentNamed(name)
+        if not c then return nil, "no continent named " .. tostring(name) end
+        chosen = { c }
+    end
+    local flags = {}
+    for _, c in ipairs(chosen) do flags[#flags + 1] = c.flag end
+    local found, bad = SetFlags(sd, open and flags or {}, open and {} or flags)
+    if not found or #bad > 0 then return nil, "could not write flags " .. table.concat(bad, " ") end
+    return #chosen
+end
+
+-- The locks as text, for the log.
+function G.ContinentStatus()
+    local opened, locked, boxes = {}, {}, 0
+    for _, c in ipairs(G.CONTINENTS) do
+        local list = G.GetFlag(c.flag) == true and opened or locked
+        list[#list + 1] = c.name
+        boxes = boxes + #(continentActors[c.name] or {})
+    end
+    return string.format("open [%s]; locked [%s]; %d boxes placed", table.concat(opened, ", "), table.concat(locked, ", "), boxes)
 end
 
 -- Removes the spawned boxes, puts the moved one back and gives the story boxes their own

@@ -85,7 +85,11 @@ The story counter is `Progress[0]`. Every story gate is a condition such as `{pr
   - **A spawned box hides the airship's shadow.** It sits at the Mysidia box's height (393, 700 up and down), so its top can be above the ground where it was spawned. Round 34 compares its collision with the game's own boxes (`here` now logs it).
   - `show` draws the box outlines. Useful for placing continent boxes.
 
-**Continent bounds (from landing points, with island-prefixed IDs; x/y in game units):**
+**Continent locks (mod 0.22.0):** `G.CONTINENTS` in `game.lua` is 21 rectangles for ten continents, drawn over the landscape tiles, landing points and exits. A test keeps every landing point and exit in one continent at most. Only the Crystal Tower's exit is in none, and the air start is over open sea. A lock is one event flag in the save, 1420 to 1429, on means open, so an Archipelago item can open a continent with the `flag` item kind. The boxes go with each map change, so a check every second puts them back on the world map.
+
+Still to decide: which continent or continents a seed starts with, whether the Crystal Tower needs a lock, whether fast travel (flag 34) stays off, and how to block the ships, caves and walking routes between continents.
+
+**Continent bounds (the first estimate, from landing points; superseded by `G.CONTINENTS`):**
 
 | Continent | x | y |
 |---|---|---|
@@ -208,7 +212,7 @@ The story natively awards party members, starter visions, the airship, and key i
    - Round 39: the airship vanished after a visit to a town. Mod 0.21.0 sets the save's `IsAlreadySpawnAirship` for the `air` arrival. The `dock` and `event` arrivals do not set it, as they are no longer the default.
    - Fast travel needs event flag 34, which is off on this start. Decide with the continent locks: fast travel could cross a lock.
    - A cleared `ap_state.txt` starts with the switch off, which sends a new game to the Earth Shrine (round 38), so the seed should decide.
-   - Locks: round 35 showed `lock` + `refresh` (the box's collision) works on Mysidia without landing. Round 36: the Pharm story box is not buried (its top is at z 371, the ground beside it at 34 to 201); it covers one spot. A spawned box blocks landing on Pharm at once, so continent locks can be our own boxes. Over a box the airship's shadow is gone. Round 37: the channel changes did not obviously bring it back. The airship has a list of actors the shadow's trace ignores (`m_ShadowDecalSphareTraceActorsToIgnore`), and round 38 tested adding our boxes to it (`ffrap_noland shadow`). **It works: the shadow is red over the box, landing is blocked, and removing the box gives the black shadow and landing back at once.** The game lists all 111 of its own boxes the same way. Round 39: the box and its listing last through boarding. Round 40 finds out whether the box lasts through a map change, which decides what the real continent locks must redo.
+   - Locks: round 35 showed `lock` + `refresh` (the box's collision) works on Mysidia without landing. Round 36: the Pharm story box is not buried (its top is at z 371, the ground beside it at 34 to 201); it covers one spot. A spawned box blocks landing on Pharm at once, so continent locks can be our own boxes. Over a box the airship's shadow is gone. Round 37: the channel changes did not obviously bring it back. The airship has a list of actors the shadow's trace ignores (`m_ShadowDecalSphareTraceActorsToIgnore`), and round 38 tested adding our boxes to it (`ffrap_noland shadow`). **It works: the shadow is red over the box, landing is blocked, and removing the box gives the black shadow and landing back at once.** The game lists all 111 of its own boxes the same way. Round 39: the box and its listing last through boarding. Round 40: a box does not last through a map change. Mod 0.22.0 has the real locks (`ffrap_lock`), placed again on every world-map load; see "Continent locks" in section 4.
 6. Enemy scaling integration: package tested curves into apworld options applied via `follow`.
 7. Gates: continent locks using landing exclusion zones and choke-point blockers for overland crossings.
 8. Goal and logic rules: define regions, events, and completion conditions in apworld.

@@ -306,26 +306,41 @@ World-map shinies verified as locations. Multiple crashes observed across differ
 - `GameSaveData*.sav` files begin with `SVHD` and hold no readable field names, so saves can be compared only through `ffrap_snapshot`.
 - **Added in 0.21.0:** the open world start turns on flags 21 and 24 and, for the `air` arrival, sets `IsAlreadySpawnAirship`. `ffrap_airship state` logs the airship's save fields.
 
-## Round 40 test plan (mod 0.21.0, world 0.3.1)
+**Round 40 (mod 0.21.0, 2026-11-08 and 09): visions work; the airship stays; a box does not last through a map change.**
+- **Part A, equipping visions:** all worked, with no issues. Both visions could be equipped, battles were fine, and the equipment survived a save and reload. So flags 21 and 24 were what the Equip screen needed.
+- **Part B, the airship:** `IsAlreadySpawnAirship` was the cause. The airship stayed in every case: towns (2070, 2090) and a save and reload. `ffrap_airship state` after landing read `placed true, riding false, at (-4109, -17108, 77), direction 4, island 9`, and later `island 5` over Olderion. So the game keeps the island by itself.
+- **A spawned box is gone after a map change.** It had to be spawned again after each town. When spawned again it worked (red shadow, no landing). So the locks must place their boxes on every world-map load.
+- **Also in the log:** `ffrap_scale` with `follow` on two saves moved the band with the party level (1 to 3 and back).
+- **Off-line after the round:**
+  - Each continent has its own landscape level (`Wld_<code>_landscape_BG`). Plotting the landscape tiles with every landing point and exit gave a clear map.
+  - Landing point ids are not a safe guide to a continent: some are dungeon map ids (3111 is in Olderion, 2190 in Pharm), and `maps.tsv`'s island column is wrong for sanctums. Position is the safe guide.
+  - The 21 rectangles in `G.CONTINENTS` place every landing point and exit in exactly one continent, except the Crystal Tower's exit (in none).
+  - Event flags 1414 to 1449 are used nowhere in the game's data.
+- **Added in 0.22.0: the continent locks.** `ffrap_lock on` keeps a set of boxes on the world map for every locked continent, placed again after each map change, and listed on the airship for the red shadow. A continent's lock is an event flag in the save (1420 to 1429, on means open), so an unlock stays with its save. `ffrap_lock open|close <continent|all>` writes the flag.
 
-Two parts. Send the `[FFRAP]` lines of `UE4SS.log`, and tell me what you saw where a step asks. No client or seed is needed.
+## Round 41 test plan (mod 0.22.0, world 0.3.1)
 
-**Install:** copy `FFRArchipelago/Scripts` over the installed mod. The log should say `version 0.21.0 loaded`. `Assets` and the apworld did not change.
+Four parts. Send the `[FFRAP]` lines of `UE4SS.log`, and tell me what you saw where a step asks. No client or seed is needed. The continents are `grandshelt`, `lanzelt`, `kolobos`, `dirnado`, `olderion`, `zoldaad`, `mysidia`, `gronoa`, `pharm` and `ardra`.
 
-**Part A: equipping a vision:**
-1. Start New Game (Archipelago) with `ffrap_openstart` on. The log should have `skip: ok   visions enabled: flags 21 24 on`.
-2. On the world map, run `ffrap_grant vision 13017`, then `ffrap_grant vision 13128`.
-3. Open Equipment. **Tell me:** can you see the visions? Can Rain equip one and Lasswell the other?
-4. Fight a battle or two. Does anything look wrong with an equipped vision?
-5. Save, return to the title and load that save. Are both still equipped?
+**Install:** copy `FFRArchipelago/Scripts` over the installed mod. The log should say `version 0.22.0 loaded`. `Assets` and the apworld did not change.
 
-**Part B: the airship after a town:**
-6. Run `ffrap_airship state`. Expect `placed true`.
-7. Run `ffrap_noland spawn 2000` over open land. Fly out of the box.
-8. Land next to a town, go in, come back out. **Tell me:** is the airship where you left it? Can you board it?
-9. Run `ffrap_airship state` again.
-10. Fly back over the box and run `ffrap_noland here`. **Tell me:** is the box still listed? Is the shadow red? Can you land?
-11. Save on the world map with the airship landed, go to the title and load. Is the airship still there?
-12. `ffrap_noland off`.
+**Part A: all locked:**
+1. Start New Game (Archipelago) with `ffrap_openstart` on, and wait for the world map.
+2. Run `ffrap_lock on`. Within a second the log should say `locks: boxes placed for grandshelt, lanzelt, ...` with all ten.
+3. Run `ffrap_noland show` to draw the boxes. Take a screenshot or two from the air. `ffrap_noland hide` turns them off.
+4. Fly over each continent you have time for, and try to land near its towns and at its edges. **Tell me:** is the shadow red everywhere over land? Is there any spot on a locked continent where you can land? If so, run `ffrap_noland here` there and send that line.
+5. Over high mountains (Zoldaad or Dirnado): does the airship rise, jolt or do anything strange?
 
-**If the airship is gone again:** run `ffrap_airship state` and send that line. It shows where the game thinks the airship is.
+**Part B: opening one:**
+6. Run `ffrap_lock open pharm`. The log should say `locks: opened pharm` within a second. Over Pharm the shadow should turn black, and you should be able to land.
+7. Land at a town in Pharm (Sian is a good one), go in and come out. The log should say boxes were placed again for the nine others, not Pharm. Take off: are they all still locked?
+8. Save, return to the title and load that save. Is Pharm still open and the rest locked?
+9. `ffrap_lock close pharm` while in the air over Pharm. Shadow red and no landing within a second?
+
+**Part C: on foot inside a lock:**
+10. `ffrap_lock open pharm`, land at open ground in Pharm and get out.
+11. On foot, run `ffrap_lock close pharm`. Walk around. **Tell me:** does anything stop you or look wrong? If you have a chocobo, does it move normally?
+12. Board the airship and take off. Does that work from inside a locked continent?
+
+**Part D: turning it off:**
+13. `ffrap_lock off`. Landing should work everywhere again at once.

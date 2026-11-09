@@ -1232,12 +1232,89 @@ fakePawn.m_ShadowDecalSphareTraceActorsToIgnore = setmetatable({}, {
   __index = function(_, k) if k == #items + 1 then items[k] = { get = function() return { GetFName = function() return fname("grown") end } end } end return items[k] end,
   __newindex = function(_, k, v) items[k] = { get = function() return v end } end,
 })
+savedPawnClass = fakePawn.GetClass
+fakePawn.GetClass = function() return { GetFName = function() return fname("BP_MapUnitAirShip_C") end } end
 G.NoLandSpawn(500)                 -- round 38: a spawn lists the box by itself
 shadowResult = { G.NoLandShadow() }
 """)
 assert L.eval("shadowResult[1]") == 3 and L.eval("shadowResult[2]") == 3, "listed by the spawn, and not listed twice"
 names = list(L.eval("shadowResult[3]").values())
 assert len(names) == 2 and names[0] == "SomeActor" and "BP_MapNonLandingArea_C_3" not in names, names
+# Round 40: the continent locks. Every world-map landing point and exit lies in at most one
+# continent, a box set appears for each locked one, it goes when the flag opens it, and a new
+# world (a new controller name) forgets the old actors without touching them.
+L.execute(r"""
+continentFlags = {}
+spawnCount, spawnNames = 0, {}
+local spawnBefore = fakeWorld.SpawnActor
+function fakeWorld:SpawnActor(cls, loc, rot)
+  local a = spawnBefore(self, cls, loc, rot)
+  spawnCount = spawnCount + 1
+  a.nm = "BP_MapNonLandingArea_C_lock" .. spawnCount
+  return a
+end
+savedGetFlag, savedMap = G.GetFlag, G.CurrentMap
+G.GetFlag = function(i) return continentFlags[i] == true end
+G.CurrentMap = function() return G.WORLD_MAP end
+fakePC.GetFName = function() return fname(fakePCName or "PC_1") end
+""")
+BOXES = sum(len(c["boxes"]) for c in L.eval("G.CONTINENTS").values())
+assert BOXES == 21 and len(L.eval("G.CONTINENTS")) == 10
+placed, removed = L.execute("return G.ContinentSync()")
+assert len(placed) == 10 and len(removed) == 0, (placed, removed)
+assert L.eval("spawnCount") == BOXES
+listed = L.eval("#fakePawn.m_ShadowDecalSphareTraceActorsToIgnore")
+assert listed >= BOXES, listed
+placed, removed = L.execute("return G.ContinentSync()")
+assert len(placed) == 0 and len(removed) == 0 and L.eval("spawnCount") == BOXES, "nothing to do the second time"
+L.execute("continentFlags[1428] = true")   # Pharm opens
+placed, removed = L.execute("return G.ContinentSync()")
+assert list(removed.values()) == ["pharm"] and len(placed) == 0, list(removed.values())
+assert "open [pharm]; locked [grandshelt," in L.eval("G.ContinentStatus()"), L.eval("G.ContinentStatus()")
+# a box lost to a map change comes back; the open continent does not
+L.execute("""for _, a in ipairs(nolandActors) do if a.nm:find("lock", 1, true) then a.IsValid = function() error("stale pointer touched") end end end
+fakePCName = "PC_2" """)
+before = L.eval("spawnCount")
+placed, removed = L.execute("return G.ContinentSync()")
+assert len(placed) == 9 and "pharm" not in list(placed.values()), list(placed.values())
+assert L.eval("spawnCount") == before + BOXES - 3, "the 3 Pharm boxes stay out"
+assert L.eval("select(2, G.SetContinentOpen('narnia', true))") == "no continent named narnia"
+# off the world map, nothing happens
+L.execute("G.CurrentMap = function() return 2070 end")
+assert L.eval("select(2, G.ContinentSync())") == "not on the world map"
+L.execute("G.CurrentMap = function() return G.WORLD_MAP end; G.ContinentClear()")
+assert "0 boxes placed" in L.eval("G.ContinentStatus()")
+L.execute("G.GetFlag, G.CurrentMap = savedGetFlag, savedMap; fakePC.GetFName = nil")
+# on foot the shadow list is left alone: that field does not exist on a walking pawn
+L.execute("fakePawn.GetClass = function() return { GetFName = function() return fname('BP_MapUnit_Player_C') end } end")
+assert L.eval("select(2, G.NoLandShadow())") == "the player is not riding the airship"
+L.execute("fakePawn.GetClass = savedPawnClass")
+
+# the rectangles against the game's own points: each is in one continent at most, the right one
+import csv as _csv
+_rows = lambda n: list(_csv.DictReader(open(paths.REPO / "data/game" / n, encoding="utf8"), delimiter="\t"))
+_conts = {c["name"]: [tuple(b.values()) for b in c["boxes"].values()] for c in L.eval("G.CONTINENTS").values()}
+def _in(x, y):
+    return [n for n, bs in _conts.items() if any(b[0] <= x <= b[2] and b[1] <= y <= b[3] for b in bs)]
+_names = list(_conts)
+for _i, _a in enumerate(_names):
+    for _b in _names[_i + 1:]:
+        for _p in _conts[_a]:
+            for _q in _conts[_b]:
+                assert not (_p[0] < _q[2] and _q[0] < _p[2] and _p[1] < _q[3] and _q[1] < _p[3]), (_a, _b, _p, _q)
+_points = [(float(r["x"]), float(r["y"]), r["id"]) for r in _rows("gimmicks.tsv") if r["class"] == "BP_MapAirShipLandingPoint_C"]
+_points += [(float(r["x"]), float(r["y"]), r["toMap"]) for r in _rows("transitions.tsv") if r["map"] == "1000" and r["x"]]
+assert len(_points) > 150
+_where = {_p: _in(_p[0], _p[1]) for _p in _points}
+assert all(len(v) <= 1 for v in _where.values()), [k for k, v in _where.items() if len(v) > 1]
+assert [k for k, v in _where.items() if not v] == [(-3498.0, -8440.0, "3280")], "only the Crystal Tower's exit is in no continent"
+for _px, _py, _name in ((12460, 20700, "grandshelt"), (12470, 14980, "lanzelt"), (5812, 14044, "kolobos"), (13190, 3210, "dirnado"),
+                        (-90, 2680, "olderion"), (-7200, 7200, "zoldaad"), (-17515, -8365, "mysidia"), (15895, -14150, "gronoa"),
+                        (-3920, -17480, "pharm")):
+    assert _in(_px, _py) == [_name], (_px, _py, _in(_px, _py))
+assert not _in(-5935, -8305), "the air start is over the sea, in no continent"
+print("continent locks: ok")
+
 L.execute("fakePawn.m_ShadowDecalSphareTraceActorsToIgnore = nil; G.NoLandOff()")
 L.execute(f"groundZ = {HIGH_GROUND}")
 hits = [dict(h) for h in L.eval("G.GroundUnder()").values()]
