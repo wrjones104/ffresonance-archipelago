@@ -50,14 +50,14 @@ An Archipelago implementation for Final Fantasy Resonance (UE 5.6, game module `
 - **`pcall` does not catch an access violation.** A null object from an array crashes the game when asked for its name. Ask `IsValid` first (round 41).
 
 **Hooks and probes:**
-- **Native functions called from Blueprints can be hooked** with `RegisterHook`, and a pre-hook can change their arguments (the title menu's `ExecuteEntry`).
+- **Native functions called from Blueprints can be hooked** with `RegisterHook`, and a pre-hook can change their arguments (the title menu's `ExecuteEntry`). A post hook's return value replaces the function's (round 48).
 - **Probes:**
   - `ffrap_snapshot` plus `tools/snapdiff.py`: what changed in the save.
   - `ffrap_inspect <class|path>`: an object's fields and functions.
   - `ffrap_find <text>`: classes, functions and fields by name.
   - `ffrap_layout <text>`: the panels around some on-screen text.
   - `ffrap_functions`: function signatures.
-  - Off-line, before a probe: `data/game/*.tsv`, or `dotnet run --project tools/dump_game -- assets <path>` for any asset's properties, `structs <regex>` for any class's or struct's fields, and `raw <path>` for files such as the game's ini files.
+  - Off-line, before a probe: `data/game/*.tsv`, or `dotnet run --project tools/dump_game -- assets <path>` for any asset's properties (with `DUMP_BYTECODE=1`, each Blueprint function's code too), `structs <regex>` for any class's or struct's fields, and `raw <path>` for files such as the game's ini files.
 
 **Shipping risky changes:**
 - **A crash in the engine ends the game before Lua can log.** Ship risky UI work behind a test command, off by default, that logs each step before it runs.

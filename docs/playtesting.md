@@ -384,19 +384,22 @@ World-map shinies verified as locations. Multiple crashes observed across differ
 - **Asked for:** shinies should show the Archipelago item in the pop-up, as chests do. Added in 0.31.0: a shiny is scanned when a pop-up opens, and rewrites it the same way. Off-line, `DT_DialogBox_Item` shows the two "You obtained" messages are rows of the same dialog table, so a shiny should use the box the chest code knows. Not yet seen in play. If the game marks a shiny as taken only after its box closes, the text will not change, and step 1 below will show it.
 - **MRP was not scaled.** A later continent gave far more. It is not on the enemy: it is `ap` in `DT_BattleGroup`, one value per battle. Mod 0.31.0 scales it from the battle's enemies' average level, on a curve fitted to the shipped groups (459 groups without a boss, r2 0.70). A level 45 battle at party level 3 gives about 6% of its usual MRP.
 
-## Round 48 test plan (mod 0.31.0, world 0.6.0)
+**Round 48 (mod 0.31.0, world 0.6.0, 2026-11-09): a clean multiworld session. One trap left, at the moogle.**
+- **No crashes or other issues** in a 40-minute session over 3 continents, in a multiworld with an automated second slot. Three seeds were started in the log.
+- **Shiny pop-ups work.** World-map, town and dungeon shinies logged `chest pop-up for shiny:...: text set, item line hidden`. One check had no pop-up line (`shiny:1000:189`). The timing question from round 47 is closed: the game marks a shiny as taken while its box is up.
+- **MRP scaling runs** (`MRP changed in 470 battle groups` at party level 1). The user reported no problem with it.
+- **Crystals, Unlock items, party starts and the reload** all behaved. Loading slot 2 rolled the applied items back from 36 to 34 and gave items 34 and 35 again, as designed.
+- **The moogle's Vision Enhancement screen would not close** with 2 visions and no usable Magicite. It closed once the player held a Magicite Shard. The user asked if a story tutorial is behind it.
+  - **Found off-line:** yes, in effect. `WBP_VisionUpgradeLayout:IsClosable` and the list layout's `IsClosable` return false unless the native `CPP_BFL_VisionUpgrade:IsVisionUpgrade` returns true. The same call decides whether the screen shows its Cancel guide. In the story, the tutorial always hands you Magicite first, so the lock never shows.
+  - **Upgrade costs:** `DT_VisionUpgradeItemData` needs item 25000 (Magicite Shard) for level 1, 25001 (Magicite) for level 2, 25002 (Magicite Cryst) for level 3. So a new vision cannot use a Cryst, and the player in this seed held only a Cryst.
+  - **Fix, mod 0.32.0:** a post hook on `IsVisionUpgrade` answers true in a seed. Not yet seen in play. The hook logs the game's own answer whenever it changes, so round 49 also shows what the function really tests.
+- **Noted, not a problem yet:** the airship's shadow list grows while the player picks up world-map shinies (`130 -> 154 -> 178 ...`), and the new entries are null. A map change resets it. The mod's list code asks `IsValid` first, so nulls are safe for it.
+- **Tool added:** `DUMP_BYTECODE=1 dotnet run --project tools/dump_game -- assets <path>` also writes each Blueprint function's code, which is how `IsClosable` was read.
 
-The big test. Send the `[FFRAP]` lines of `UE4SS.log`.
+## Round 49 test plan (mod 0.32.0, world 0.6.0)
 
-**Install:** copy `FFRArchipelago/Scripts` over the installed mod, and copy `dist/ff_resonance.apworld` into `custom_worlds`. Add these to your yaml, then **generate a new seed**. Connect the client first, then New Game (Archipelago).
+**Install:** copy `FFRArchipelago/Scripts` over the installed mod. The apworld did not change, so your current seed still works.
 
-```yaml
-  include_shinies: true
-  include_crystals: true
-  include_tablet_shards: true
-```
-
-1. Pick up a world-map shiny. **Does the pop-up say what it held**, as a chest's does (`You obtained the following:` or `You found the following for ...`)?
-2. Pick up a Tablet Shard shiny in a town or dungeon. Same pop-up, and the log says `check shiny:<map>:<uid>`.
-3. With `ffrap_scale ... follow` on, the log should say `MRP changed in N battle groups`. **Is MRP sensible now**, on a late continent at a low level?
-4. Play as long as you like. Tell me anything odd, and send any crash folder.
+1. Have a vision and no Magicite Shard (a Cryst alone is a good test). Talk to the moogle, open Vision Enhancement, and press Cancel. **Does the screen close?**
+2. Get a Magicite Shard and enhance a vision. Does it still work, and does the screen still close after?
+3. Send the `vision screen:` lines of `UE4SS.log`.

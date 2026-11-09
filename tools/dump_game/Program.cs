@@ -60,6 +60,8 @@ Console.WriteLine($"game:  {gameDir}\nusmap: {usmap}\noodle: {oodle}\nout:   {ou
 OodleHelper.Initialize(oodle);
 var provider = new DefaultFileProvider(gameDir, SearchOption.TopDirectoryOnly, new VersionContainer(EGame.GAME_UE5_6));
 provider.MappingsContainer = new FileUsmapTypeMappingsProvider(usmap);
+// DUMP_BYTECODE=1: "assets" also writes each Blueprint function's code (round 48).
+provider.ReadScriptData = Environment.GetEnvironmentVariable("DUMP_BYTECODE") == "1";
 provider.Initialize();
 provider.SubmitKey(new FGuid(), new FAesKey("0x" + new string('0', 64)));
 provider.PostMount();

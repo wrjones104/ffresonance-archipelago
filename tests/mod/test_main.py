@@ -279,7 +279,8 @@ def boot(before=""):
       function ExecuteInGameThread(fn) fn() end
       function RegisterConsoleCommandGlobalHandler(n, fn) commands[n] = fn end
       hooks = {}
-      function RegisterHook(name, fn) hooks[name] = fn end
+      posts = {}
+      function RegisterHook(name, fn, post) hooks[name] = fn; posts[name] = post end
       function RegisterLoadMapPostHook(fn) loadMapHook = fn end
     ''')
     G = L.execute(STUB)
@@ -1287,3 +1288,18 @@ L.execute('commands["ffrap_inspect"]("ffrap_inspect", {"CPP_InputManager"})')
 assert read("inspect_CPP_InputManager_locked.tsv") == "object\tCPP_InputManager\n", read("inspect_CPP_InputManager_locked.tsv")
 assert read("inspect_CPP_InputManager.tsv") == "object\tCPP_InputManager\n"
 print("input lock probes: ok")
+
+# Round 48: in a seed, the Vision Enhancement screen can always be closed; outside one the game decides
+VISION_EXIT = 'posts["/Script/mucha.CPP_BFL_VisionUpgrade:IsVisionUpgrade"]'
+NO = "{ get = function() return false end }"
+open(path("ap_in.txt"), "w", encoding="utf-8", newline="\n").write("seed\tS:0:1\ncfg\topenworld\t1\n")
+L, G = boot()
+tick(1)
+assert L.eval(VISION_EXIT) is not None, "hooked at the first tick"
+assert L.execute(f"return {VISION_EXIT}(nil, {NO})") is True, "a seed answers true"
+assert L.execute(f"return {VISION_EXIT}(nil, nil)") is True, "even if the game's answer cannot be read"
+open(path("ap_in.txt"), "w", encoding="utf-8", newline="\n").write("seed\tS:0:1\ncfg\topenworld\t0\n")
+L, G = boot()
+tick(1)
+assert L.execute(f"return {VISION_EXIT}(nil, {NO})") is None, "a vanilla game is left alone"
+print("vision screen exit: ok")

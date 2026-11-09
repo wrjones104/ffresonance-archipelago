@@ -50,7 +50,7 @@
 -- follows the save slots the linked game is saved to. While any other save is loaded, the mod
 -- grants nothing, reports nothing and leaves the chests vanilla.
 
-local VERSION = "0.31.0"
+local VERSION = "0.32.0"
 local PROTOCOL = 2        -- the bridge protocol; the apworld's MOD_PROTOCOL
 
 local MOD_DIR = (debug.getinfo(1, "S").source:gsub("^@", ""):gsub("\\", "/"):match("^(.*/)Scripts/[^/]+$"))
@@ -879,10 +879,36 @@ end
 -- and checked again now and then in case the game reloads the asset. Loads the asset only
 -- outside a game.
 local orderLogged = nil   -- the last order result logged, so each new one is logged once
+-- Round 48: the moogle's Vision Enhancement screen would not close with nothing to enhance. Its
+-- IsClosable functions return false unless the native CPP_BFL_VisionUpgrade:IsVisionUpgrade says
+-- true, and that says false when the player cannot enhance. The screen is a lock meant for the
+-- story's tutorial, which an open world start never plays. So a seed answers true. A post hook's
+-- return value replaces the function's. The game's own answer is logged each time it changes.
+local visionExitHooked = false
+local visionExitLast = "unset"
+local function hookVisionExit()
+    if visionExitHooked then return true end
+    local ok, err = pcall(function()
+        RegisterHook("/Script/mucha.CPP_BFL_VisionUpgrade:IsVisionUpgrade", function() end, function(_, ret)
+            local was
+            pcall(function() was = ret:get() end)
+            if was ~= visionExitLast then
+                visionExitLast = was
+                log("vision screen: the game says closable is " .. tostring(was) .. (seedCfg.openworld and "; answering true" or ""))
+            end
+            if seedCfg.openworld then return true end
+        end)
+    end)
+    visionExitHooked = ok
+    if not ok then log("vision screen: could not hook IsVisionUpgrade: " .. tostring(err)) end
+    return ok
+end
+
 local layoutLogged = false   -- the version text's layout is logged once per run (for the logo)
 local logoLogged = nil       -- the last logo failure logged, so each one is logged once
 local function titleTick()
     if state.ticks ~= 1 and state.ticks % TITLE_EVERY ~= 0 then return end
+    hookVisionExit()
     local inGame = game.InGame()
     local ok, detail = game.AddTitleEntry(not inGame)
     if ok and hookTitle() then
