@@ -3905,7 +3905,12 @@ end
 -- crystal's opening row at the fight. The Victory row plays nothing and sets a flag nothing else
 -- uses. The crystal's own last row does not run, so the crystal stays and can be used again.
 -- Round 49: a claimed crystal stands in an inner room and asks to revisit the vision instead
--- (Int_LegendEV_Retry_Start_NN_01, a yes/no). Its "yes" row, _02, is pointed at the fight too.
+-- (Int_LegendEV_Retry_Start_NN_01, a yes/no). Mod 0.35.1 made its "yes" row a Blueprint row with
+-- no Blueprint, chained to the fight: nothing happened. A guess: a talk event that starts as a
+-- Blueprint row never plays the sequence of a row it chains to (our crystal skip only ever chains
+-- Blueprint rows to Blueprint rows). So the test now copies the game's own shapes: the question's
+-- "yes" branch goes straight to the fight, as 12Arms_..._Choice does, and an unclaimed crystal's
+-- opening stays a Sequence row whose next row is the fight, as _01 leads to _01_MV.
 -- Only tables in memory change. `off` undoes all of it but the Victory row's item, which comes
 -- back when the game restarts.
 G.BOSS_TEST_FLAG = 1440       -- no condition or talk row in the game uses flags 1430 to 1449
@@ -3951,6 +3956,7 @@ function G.BossTestOff(say)
         if not o then return end
         if o.eventType ~= nil then row.EventType = o.eventType end
         if o.eventId then row.ContinuousEventList[1].EventId = FName(o.eventId) end
+        if o.branch then row.ChoicesBranchEventList[1].EventList[1].EventId = FName(o.branch) end
         if o.group then row.encountGroupId = o.group end
         if o.flags then for i, flag in ipairs(o.flags) do row.OnFlagList[i] = flag end end
         restored = restored + 1
@@ -3983,12 +3989,12 @@ function G.BossTestArm(id, say)
     if not fields then return false, "no battle group " .. tostring(id) end
     say(string.format("boss test: the group's own events: start %s, win %s, lose %s, escape %s", tostring(fields.start), fields.finish, fields.lose, fields.escape))
 
-    local entry = {}
+    local opening, question = {}, {}
     for _, c in ipairs(G.CRYSTALS) do
         local base = string.format("Int_LegendEV_%02d", c.event)
-        entry[base .. "_01"] = true
-        entry[base .. "_01_Short"] = true
-        entry[string.format("Int_LegendEV_Retry_Start_%02d_02", c.event)] = true
+        opening[base .. "_01"] = true
+        opening[base .. "_01_Short"] = true
+        question[string.format("Int_LegendEV_Retry_Start_%02d_01", c.event)] = true
     end
     local saved = { talk = {}, group = id, groupFields = fields }
     bossTestSaved = saved
@@ -4010,10 +4016,15 @@ function G.BossTestArm(id, say)
             row.ObtainItemList:Empty()
             for i = 1, #row.OnFlagList do row.OnFlagList[i] = G.BOSS_TEST_FLAG end
             win = win + 1
-        elseif entry[key] then
+        elseif opening[key] then
             saved.talk[key] = saved.talk[key] or { eventType = Int(row.EventType), eventId = ObjText(row.ContinuousEventList[1].EventId) }
-            row.EventType = EVENT_BLUEPRINT
+            row.EventType = EVENT_SEQUENCE        -- as shipped; the crystal skip makes it a Blueprint row
             row.ContinuousEventList[1].EventId = FName(BOSS_TEST_FIGHT)
+            crystals = crystals + 1
+        elseif question[key] then
+            local yes = row.ChoicesBranchEventList[1].EventList[1]
+            saved.talk[key] = saved.talk[key] or { branch = ObjText(yes.EventId) }
+            yes.EventId = FName(BOSS_TEST_FIGHT)
             crystals = crystals + 1
         end
     end)

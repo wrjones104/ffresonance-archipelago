@@ -1392,6 +1392,10 @@ G.chests = L.table()
 tick(12)
 L.execute('commands["ffrap_bossfight"]("ffrap_bossfight", {"9013"})')
 assert list(G.bossArm.values()) == [9013], list(G.bossArm.values())
+encount = 'hooks["/Script/mucha.CPP_MapManager:Encount"]'
+assert L.eval(encount) is not None, "the battle request is watched"
+L.execute(encount + "()")
+assert any("asked for a battle" in x for x in L.eval("logged").values())
 tick(3)
 assert wins() == [], "no win yet"
 G.bossWon = True

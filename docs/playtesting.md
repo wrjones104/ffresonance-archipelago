@@ -404,7 +404,9 @@ World-map shinies verified as locations. Multiple crashes observed across differ
 - **The boss test armed without errors:** group 9013's own events were read (start -1, win `C01_037_01`), and 64 crystal rows, 2 fight rows, 2 win rows and the group were written. Two of each because the composite table and its parent table both hold the rows.
 - **But touching the crystal asked to revisit the vision.** The player was in map 10231, the Sanctum of Cecil: the inner room of a crystal already claimed (10211). A claimed crystal runs `Int_LegendEV_Retry_Start_04_01`, which the test did not change. Mod 0.35.1 changes its "yes" row too.
 
-## Round 49 test plan (mod 0.35.1, world 0.8.0)
+**Round 49, second try (mod 0.35.1, 2026-11-09): "yes" did nothing.** The test armed (96 crystal rows), the vanilla revisit no longer played, but no fight started, and touching the crystal again asked again. The guess, and the change in mod 0.35.2, are in IDEAS.md (idea 25). Also found while looking: FFRS_QoL is installed, and it writes the same MRP field as our scaling (idea 18).
+
+## Round 49 test plan (mod 0.35.2, world 0.8.0)
 
 Seeds can now be finished, and a seed scales its enemies by itself. Send the `[FFRAP]` lines of `UE4SS.log`.
 
@@ -442,4 +444,4 @@ For each one, please tell me:
 - **After a win, were you back on the field with the normal results screen?** The log should say `boss test: WIN seen`, and the game should say `Boss test: win seen`.
 - **Lose one fight on purpose, once.** Is it a normal game over, or does it hang?
 
-Send the `boss test:` lines of the log. Type `ffrap_bossfight off` when done. A crash folder is useful if one crashes.
+Send the `boss test:` lines of the log. If no fight starts, the line `the game asked for a battle` (or its absence) is what tells me where it stops. Type `ffrap_bossfight off` when done. A crash folder is useful if one crashes.

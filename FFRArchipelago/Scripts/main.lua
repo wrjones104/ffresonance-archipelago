@@ -50,7 +50,7 @@
 -- follows the save slots the linked game is saved to. While any other save is loaded, the mod
 -- grants nothing, reports nothing and leaves the chests vanilla.
 
-local VERSION = "0.35.1"
+local VERSION = "0.35.2"
 local PROTOCOL = 2        -- the bridge protocol; the apworld's MOD_PROTOCOL
 
 local MOD_DIR = (debug.getinfo(1, "S").source:gsub("^@", ""):gsub("\\", "/"):match("^(.*/)Scripts/[^/]+$"))
@@ -1747,7 +1747,20 @@ end
 -- ffrap_bossfight <battle group>: touching any sanctum crystal starts that fight (a claimed one
 -- asks to revisit first: say yes), and a win is logged (round 49; IDEAS.md, idea 25).
 -- ffrap_bossfight off: undoes it.
+-- Round 49: to tell "no battle was asked for" from "a battle was asked for and did not start",
+-- the game's battle request is logged while the test is on. FFRSLib hooks the same function.
+local function hookBossTestEncount()
+    if bossTest.hooked then return end
+    bossTest.hooked = true
+    local ok, err = pcall(function()
+        RegisterHook("/Script/mucha.CPP_MapManager:Encount", function()
+            if bossTest.group then log("boss test: the game asked for a battle (CPP_MapManager:Encount)") end
+        end)
+    end)
+    log("boss test: " .. (ok and "watching CPP_MapManager:Encount" or ("could not hook CPP_MapManager:Encount: " .. tostring(err))))
+end
 bossTest.arm = function(id)
+    hookBossTestEncount()
     local ok, detail = game.BossTestArm(id, log)
     log("boss test: " .. (ok and "ready, " or "failed, ") .. tostring(detail))
     bossTest.group = ok and id or nil
