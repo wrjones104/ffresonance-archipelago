@@ -406,7 +406,9 @@ World-map shinies verified as locations. Multiple crashes observed across differ
 
 **Round 49, second try (mod 0.35.1, 2026-11-09): "yes" did nothing.** The test armed (96 crystal rows), the vanilla revisit no longer played, but no fight started, and touching the crystal again asked again. The guess, and the change in mod 0.35.2, are in IDEAS.md (idea 25). Also found while looking: FFRS_QoL is installed, and it writes the same MRP field as our scaling (idea 18).
 
-## Round 49 test plan (mod 0.35.2, world 0.8.0)
+**Round 49, third try (mod 0.35.2, 2026-11-09): still no fight.** The log shows the test armed and the `Encount` hook in place, but no `the game asked for a battle` line. So the chain stops before any battle is asked for, or event battles start some other way. Mod 0.35.3 adds a watcher to find out (IDEAS.md, idea 25).
+
+## Round 49 test plan (mod 0.35.3, world 0.8.0)
 
 Seeds can now be finished, and a seed scales its enemies by itself. Send the `[FFRAP]` lines of `UE4SS.log`.
 
@@ -424,24 +426,15 @@ For a short test, add this to your yaml. The default is 50. Shards turn on by th
 4. The moogle: have a vision and no Magicite Shard (a Cryst alone is a good test). Open Vision Enhancement and press Cancel. **Does the screen close?** Then get a Shard and enhance a vision. Does the screen still work and close after?
 5. Send the `vision screen:` lines of the log. They show what the game's own check answered.
 
-**The boss fight test.** Can any boss be fought from anywhere, and can a win be seen? It changes nothing on disk, but a fight can go wrong, so save in a spare slot first. Any sanctum crystal works now. A claimed one asks whether to revisit the vision: say yes, and the fight should start instead. Open the console and type these, one fight at a time:
+**The boss fight test, with the watcher.** The fight has not started three times, so this run looks at what the game does. Save in a spare slot first. Stand near a sanctum crystal you have claimed. In the console, one line at a time:
 
 ```
-ffrap_bossfight 9013
+ffrap_bossfight watch
 ```
 
-Then touch the crystal. It should start the fight. The crystal stays, so you can touch it again for the next one. If you touch an unclaimed one, please also tell me whether it asked anything first. Try these groups, in this order:
+1. **A control:** leave the sanctum and walk until a normal random battle starts. Win it. This shows what a battle start looks like in the log.
+2. Go back to the claimed crystal. Type `ffrap_bossfight 9957` (the Twelve Arms fight the test borrows, with its own boss). Touch the crystal and say yes. **What happens on screen after yes?** A fade, a sound, a pause, or nothing?
+3. Type `ffrap_bossfight 9013` (Siren). Touch the crystal and say yes again.
+4. Type `ffrap_bossfight off` and `ffrap_bossfight watch off`.
 
-| Group | Boss | Why |
-|---|---|---|
-| 9013 | Siren | A story boss with a story scene after the win |
-| 9079 | Ogre | A strong enemy, as a control |
-| 9021 | Leviathan | Has a scripted event inside the battle, which the test turns off |
-| 9054 | Chaotic Darkness, first form | A multi-part final boss |
-
-For each one, please tell me:
-- **Did the fight start, with the right boss?** Any odd music, stage or missing text?
-- **After a win, were you back on the field with the normal results screen?** The log should say `boss test: WIN seen`, and the game should say `Boss test: win seen`.
-- **Lose one fight on purpose, once.** Is it a normal game over, or does it hang?
-
-Send the `boss test:` lines of the log. If no fight starts, the line `the game asked for a battle` (or its absence) is what tells me where it stops. Type `ffrap_bossfight off` when done. A crash folder is useful if one crashes.
+Send all the `watch:` and `boss test:` lines of the log. There will be many; that is fine. If anything crashes, send the crash folder: the last `watch: hooking` line names the hook that did it.

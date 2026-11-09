@@ -879,6 +879,36 @@ local function FunctionLines(cls, label, out)
     return n
 end
 
+-- Round 49 probe (ffrap_bossfight watch): the native functions of a /Script/mucha class that
+-- are worth hooking, as RegisterHook paths. Left out: getters and checks (called all the time),
+-- delegates (RegisterHook cannot hook them), and functions that are not native when the flags
+-- can be read (FUNC_Native is 0x400). Returns the paths and whether the flags could be read, or
+-- nil when the class is not found.
+local SKIP_PREFIX = { "Get", "Is", "Can", "Has", "Find", "K2_", "Exec" }
+function G.FunctionPaths(className)
+    local cls = StaticFindObject("/Script/mucha." .. className)
+    if not (cls and cls:IsValid()) then return nil end
+    local paths, flagsRead = {}, true
+    pcall(function()
+        cls:ForEachFunction(function(fn)
+            local name
+            pcall(function() name = fn:GetFName():ToString() end)
+            if not name or name:find("__DelegateSignature", 1, true) then return end
+            for _, prefix in ipairs(SKIP_PREFIX) do
+                if name:sub(1, #prefix) == prefix and name ~= "Execute_EncountStart" then return end
+            end
+            local okFlags, flags = pcall(function() return fn:GetFunctionFlags() end)
+            if okFlags and type(flags) == "number" then
+                if math.floor(flags / 0x400) % 2 ~= 1 then return end
+            else
+                flagsRead = false
+            end
+            paths[#paths + 1] = "/Script/mucha." .. className .. ":" .. name
+        end)
+    end)
+    return paths, flagsRead
+end
+
 function G.ListFunctions(className, out)
     local cls = StaticFindObject("/Script/mucha." .. className)
     if not (cls and cls:IsValid()) then return nil end

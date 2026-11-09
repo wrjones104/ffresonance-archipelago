@@ -1413,3 +1413,26 @@ G.bossWon = True
 tick(3)
 assert len(wins()) == 1, "a failed arm does not watch"
 print("boss fight test: ok")
+
+# Round 49: ffrap_bossfight watch hooks each function once, logs a call with its plain arguments,
+# then holds back repeats, and stops logging when turned off
+L.execute("""
+function G.FunctionPaths(c)
+  if c == "CPP_MapManager" then return { "/Script/mucha.CPP_MapManager:Encount", "/Script/mucha.CPP_MapManager:Warp" }, true end
+  return nil
+end
+""")
+L.execute('commands["ffrap_bossfight"]("ffrap_bossfight", {"watch"})')
+L.execute('commands["ffrap_bossfight"]("ffrap_bossfight", {"watch"})')
+logs = lambda: list(L.eval("logged").values())
+assert sum("hooking /Script/mucha.CPP_MapManager:Warp" in x for x in logs()) == 1, "each function hooked once"
+assert any("no class CPP_TalkEventManager" in x for x in logs())
+L.execute('hooks["/Script/mucha.CPP_MapManager:Warp"](nil, { get = function() return 9013 end }, { get = function() return { ToString = function() return "Siren" end } end })')
+L.execute('hooks["/Script/mucha.CPP_MapManager:Warp"](nil)')
+warp = [x for x in logs() if "watch: CPP_MapManager:Warp (" in x]
+assert len(warp) == 1 and warp[0].rstrip().endswith("watch: CPP_MapManager:Warp (9013, Siren) call 1"), warp
+L.execute('commands["ffrap_bossfight"]("ffrap_bossfight", {"watch", "off"})')
+L.execute("os.time = function() return 10^9 end")
+L.execute('hooks["/Script/mucha.CPP_MapManager:Warp"](nil)')
+assert len([x for x in logs() if "watch: CPP_MapManager:Warp (" in x]) == 1, "off stops the logging"
+print("watch probe: ok")

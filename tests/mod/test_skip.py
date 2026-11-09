@@ -407,4 +407,14 @@ assert lua('talkRows["12Arms_01Sword_1stAwake_Encount"].encountGroupId') == 9957
 assert lua(win + ".OnFlagList[1]") == 901 and lua(win + ".OnFlagList[2]") == 1237 and lua(win + ".EventType") == 0
 assert lua("siren.battleEventId") == 77 and lua("siren.battleFinishEventId:ToString()") == "C01_037_01" and lua("siren.isResultSkipOnWin") is True
 assert L.execute("return G.BossTestOff(say)") == 0, "nothing to undo"
+# Round 49: the watch probe takes a class's native functions, not its getters, delegates or Blueprint events
+L.execute("""
+local function fn(name, flags) return { GetFName = function() return { ToString = function() return name end } end,
+  GetFunctionFlags = function() return flags end } end
+libs["/Script/mucha.CPP_MapManager"] = { IsValid = function() return true end, ForEachFunction = function(_, f)
+  for _, x in ipairs({ fn("Encount", 0x400), fn("GetMapId", 0x400), fn("OnDone__DelegateSignature", 0x400),
+                       fn("BP_Event", 0x800), fn("Execute_EncountStart", 0x401) }) do f(x) end end }""")
+paths, flags_read = L.execute('return G.FunctionPaths("CPP_MapManager")')
+assert list(paths.values()) == ["/Script/mucha.CPP_MapManager:Encount", "/Script/mucha.CPP_MapManager:Execute_EncountStart"], list(paths.values())
+assert flags_read is True and lua('G.FunctionPaths("CPP_Nothing")') is None
 print("skip: ok")

@@ -50,7 +50,7 @@
 -- follows the save slots the linked game is saved to. While any other save is loaded, the mod
 -- grants nothing, reports nothing and leaves the chests vanilla.
 
-local VERSION = "0.35.2"
+local VERSION = "0.35.3"
 local PROTOCOL = 2        -- the bridge protocol; the apworld's MOD_PROTOCOL
 
 local MOD_DIR = (debug.getinfo(1, "S").source:gsub("^@", ""):gsub("\\", "/"):match("^(.*/)Scripts/[^/]+$"))
@@ -1747,6 +1747,75 @@ end
 -- ffrap_bossfight <battle group>: touching any sanctum crystal starts that fight (a claimed one
 -- asks to revisit first: say yes), and a win is logged (round 49; IDEAS.md, idea 25).
 -- ffrap_bossfight off: undoes it.
+-- ffrap_bossfight watch [class ...]: round 49 probe. The fight did not start twice, and the game
+-- never asked for a battle. This hooks the native functions of the talk event and encounter
+-- classes and logs each call (the first one, then at most one line every 2 seconds and 20 in all
+-- per function), with its arguments where they are plain values or names. Each hook is logged
+-- before it is made. `watch off` stops the logging (hooks stay until the game restarts).
+local WATCH_CLASSES = { "CPP_TalkEventManager", "CPP_BFL_TalkEvent", "CPP_MapManager", "CPP_BFL_Encount",
+    "CPP_EncountManager", "CPP_BattleManager", "CPP_BFL_Battle", "CPP_BattleSystem", "CPP_MapGimmick_EventTrigger" }
+local WATCH_MAX_HOOKS, WATCH_MAX_LINES, WATCH_GAP = 200, 20, 2
+local watch = { on = false, hooked = {}, count = 0, calls = {} }
+
+local function describe(param)
+    local okGet, v = pcall(function() return param:get() end)
+    if not okGet then return "?" end
+    local t = type(v)
+    if t == "number" or t == "boolean" or t == "string" then return tostring(v) end
+    if t ~= "userdata" and t ~= "table" then return t end
+    local okText, s = pcall(function() return v:ToString() end)        -- FName, FString, FText
+    if okText and type(s) == "string" then return s end
+    local okValid, valid = pcall(function() return v:IsValid() end)
+    if okValid and valid then
+        local okName, n = pcall(function() return v:GetFName():ToString() end)
+        if okName and type(n) == "string" then return n end
+    end
+    return "userdata"
+end
+
+local function watchCall(path, ...)
+    if not watch.on then return end
+    local c = watch.calls[path]
+    if not c then
+        c = { n = 0, lines = 0, last = -WATCH_GAP }
+        watch.calls[path] = c
+    end
+    c.n = c.n + 1
+    local now = os.time()
+    if c.lines >= WATCH_MAX_LINES or now - c.last < WATCH_GAP then return end
+    c.lines, c.last = c.lines + 1, now
+    local args = {}
+    for i, p in ipairs({ ... }) do
+        if i > 3 then break end
+        args[#args + 1] = describe(p)
+    end
+    log("watch: " .. path:gsub("^/Script/mucha%.", "") .. " (" .. table.concat(args, ", ") .. ") call " .. c.n)
+end
+
+local function startWatch(classes)
+    watch.on = true
+    for _, className in ipairs(classes) do
+        local paths, flagsRead = game.FunctionPaths(className)
+        if not paths then
+            log("watch: no class " .. className)
+        else
+            log("watch: " .. className .. ": " .. #paths .. " functions" .. (flagsRead and "" or " (flags unreadable: all taken)"))
+            for _, path in ipairs(paths) do
+                if not watch.hooked[path] and watch.count < WATCH_MAX_HOOKS then
+                    log("watch: hooking " .. path)
+                    local ok, err = pcall(function()
+                        RegisterHook(path, function(_, ...) watchCall(path, ...) end)
+                    end)
+                    watch.hooked[path] = true
+                    watch.count = watch.count + 1
+                    if not ok then log("watch: could not hook " .. path .. ": " .. tostring(err)) end
+                end
+            end
+        end
+    end
+    log("watch: on, " .. watch.count .. " hooks in all")
+    return watch.count
+end
 -- Round 49: to tell "no battle was asked for" from "a battle was asked for and did not start",
 -- the game's battle request is logged while the test is on. FFRSLib hooks the same function.
 local function hookBossTestEncount()
@@ -1774,6 +1843,19 @@ bossTest.tick = function()
 end
 command("ffrap_bossfight", function(p)
     local first = tostring(p[1] or ""):lower()
+    if first == "watch" then
+        if tostring(p[2] or ""):lower() == "off" then
+            watch.on = false
+            log("watch: off")
+            notify("Watch off")
+            return
+        end
+        local classes = {}
+        for i = 2, #p do classes[#classes + 1] = tostring(p[i]) end
+        local n = startWatch(#classes > 0 and classes or WATCH_CLASSES)
+        notify("Watch on: " .. n .. " hooks (see the log)")
+        return
+    end
     if first == "off" then
         bossTest.group = nil
         log("boss test: off, " .. tostring(game.BossTestOff(log)) .. " rows put back")
@@ -1782,7 +1864,7 @@ command("ffrap_bossfight", function(p)
     end
     local id = tonumber(first)
     if not id then
-        notify("Usage: ffrap_bossfight <battle group> | off")
+        notify("Usage: ffrap_bossfight <battle group> | off | watch [class ...] | watch off")
         return
     end
     if not game.InGame() then
