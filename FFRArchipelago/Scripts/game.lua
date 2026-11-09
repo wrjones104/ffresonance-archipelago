@@ -2900,7 +2900,7 @@ G.ENEMY_CURVE = {
     Intelligence = { 0.5644, 0.03269 }, Mind = { 0.7289, 0.01236 },
     Agility = { 0.7853, 0.00899 }, Experience = { -0.0647, 0.12967 }, Money = { 0.0934, 0.09910 },
     -- Not a unit's stat: the MRP a battle gives, `ap` in DT_BattleGroup, against its enemies'
-    -- average level. Round 47: 564 groups without a boss, r2 0.70.
+    -- average level. Round 47: 459 groups without a boss, r2 0.70.
     BattleMRP = { 0.0689, 0.06162 },
 }
 G.CURVE_TOP = 70

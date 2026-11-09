@@ -381,8 +381,8 @@ World-map shinies verified as locations. Multiple crashes observed across differ
 **Round 47 (mod 0.29.0, world 0.5.0, 2026-11-09): crystals, shinies, Siren and joins all worked.**
 - **Crystals worked as designed:** the scene was skipped, the flag set, and the check went out (`check crystal:10202`). So a Blueprint row with no Blueprint is a no-op that still applies its `OnFlagList`.
 - **Shinies** gave 1 gil. **Siren** was in the menu for both Finas. **New members** kept their gear with no copy.
-- **Asked for:** shinies should show the Archipelago item in the pop-up, as chests do. Added in 0.31.0: a shiny is scanned when a pop-up opens, and rewrites it the same way.
-- **MRP was not scaled.** A later continent gave far more. It is not on the enemy: it is `ap` in `DT_BattleGroup`, one value per battle. Mod 0.31.0 scales it from the battle's enemies' average level, on a curve fitted to the shipped groups (564 groups without a boss, r2 0.70). A level 45 battle at party level 3 gives about 6% of its usual MRP.
+- **Asked for:** shinies should show the Archipelago item in the pop-up, as chests do. Added in 0.31.0: a shiny is scanned when a pop-up opens, and rewrites it the same way. Off-line, `DT_DialogBox_Item` shows the two "You obtained" messages are rows of the same dialog table, so a shiny should use the box the chest code knows. Not yet seen in play. If the game marks a shiny as taken only after its box closes, the text will not change, and step 1 below will show it.
+- **MRP was not scaled.** A later continent gave far more. It is not on the enemy: it is `ap` in `DT_BattleGroup`, one value per battle. Mod 0.31.0 scales it from the battle's enemies' average level, on a curve fitted to the shipped groups (459 groups without a boss, r2 0.70). A level 45 battle at party level 3 gives about 6% of its usual MRP.
 
 ## Round 48 test plan (mod 0.31.0, world 0.6.0)
 
