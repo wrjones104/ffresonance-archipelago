@@ -439,14 +439,22 @@ World-map shinies verified as locations. Multiple crashes observed across differ
 - **Menu values:** `ffrap_menu dump` showed our six values pending while Options was open, then none after Apply, and none in the option save (97 entries). The game only updates entries it already has (IDEAS.md, idea 18).
 - **Artifact switches:** 19 behaviour entries went in, but no switch showed; the artifacts stay greyed out in the All tab. The passkey shows its switch there too, so being a key item seems to be what matters (IDEAS.md, idea 26).
 
-## Round 53 test plan (mod 0.39.2, world 0.9.0)
+**Round 53 (mod 0.39.2, world 0.9.0, 2026-11-10): the settings menu works.**
+- **Menu:** `ffrap_menu add` seeded 6 entries. The rows opened with the current settings; setting EXP, gil and MRP to 10 and the rate to 2 applied at once (`settings: from the Options screen: ...`), and the values were there in the next session (`0 option save entries added`).
+- **Passkey:** switching it in the Items screen wrote `29520 on`, then `29520 off`, in the artifact list.
+- **Cuff Links:** off, then a load, left the chest icons up. But there was no save between the two, so the load brought the Cuff Links back on. And `zzz_TreasureMinimap_P` in `Paks/~mods` may draw the icons by itself (IDEAS.md, idea 26).
+
+## Round 54 test plan (mod 0.40.0, world 0.9.0)
 
 **Install:** copy `FFRArchipelago/Scripts`. Your seed still works.
 
-**1. Menu values.** Type `ffrap_menu add` (the log should end with `6 option save entries added` the first time). Open Options, Gameplay: **do the rows show your current settings?** Set "AP: EXP rate" to 3, apply. **Does the log say `settings: from the Options screen: exp 3`, and is EXP three times normal after a battle?** Then restart the game, `ffrap_menu add` again: is it still 3?
+**1. The menu by itself.** Load a save and open Options, Gameplay, with no command. **Are the six AP rows there, with your values?**
 
-**2. Where the passkey's switch lives.** Switch the Magitek Airship Passkey ON in the Items screen, then type `ffrap_artifact` and send the line. Switch it OFF and type it again.
+**2. Do the Cuff Links do anything?** First move `zzz_TreasureMinimap_P.pak`, `.ucas` and `.utoc` out of `Paks/~mods` (to a folder outside `Paks`), and start the game.
+- With the Cuff Links on (`ffrap_artifact` shows `30010 on`), go into a dungeon. **Are chests on the mini-map?**
+- `ffrap_artifact 30010 off`, then change map. **Are they gone?** If not, save, load that save and look again.
+- If the Cuff Links do nothing either way, try `ffrap_artifact table`, then `ffrap_artifact 30010 on` and a map change.
 
-**3. Does a reload apply an artifact switch?** `ffrap_artifact 30010 off`, save, and load that save. **Are the chest icons gone?**
+**3. The passkey,** to compare: with it ON, does the airship look different right away, or only after a map change?
 
-Send the `[FFRAP]` lines of the log.
+Send the `artifacts:` lines of the log, and say what the mini-map showed at each step. Put the TreasureMinimap files back afterwards if you want them.

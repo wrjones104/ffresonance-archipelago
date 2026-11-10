@@ -122,6 +122,7 @@ function G.ApplyRates(e, g, m) G.rates = { e, g, m } return 0 end
 function G.ApplyEncounterTables(on, rate) G.encounterTables = { on, rate } return 0, 1 end
 function G.ApplyPlayerEncounter(on) G.playerEncounters = on return 0 end
 function G.ReadOptionValues() return G.menuValues end
+function G.AddOptionRows(say, current) G.menuAdds = (G.menuAdds or 0) + 1; G.menuSeed = current; return true, "rows", 0 end
 G.ARTIFACT_FIRST, G.ARTIFACT_LAST = 30000, 30018
 function G.SyncArtifacts() G.artifactSyncs = (G.artifactSyncs or 0) + 1; return {} end
 function G.UnlockVision() return "ok", "" end
@@ -1510,3 +1511,10 @@ tick(10)
 assert list(G.rates.values())[0] == 2 and list(G.encounterTables.values())[0] is False, "the menu's values"
 assert "exp 2" in read("settings.txt") and "encounters off" in read("settings.txt")
 print("menu settings: ok")
+
+# Round 53: the Options rows go in by themselves, once per save, seeded with the current settings
+assert G.menuAdds == 1, G.menuAdds
+assert G.menuSeed["exp"] is not None and G.menuSeed["scaling"] is not None, "seeded with the settings"
+tick(20)
+assert G.menuAdds == 1, "once per save"
+print("menu rows: ok")

@@ -471,7 +471,8 @@ seedSave = { IsValid = function() return true end, HasAnyInternalFlags = functio
   HasAnyFlags = function() return false end, m_EntrySaveDataList = savedOptions }
 prevFFOseed = FindFirstOf
 function FindFirstOf(c) if c == "CPP_MuchaOptionSaveData" then return seedSave end return prevFFOseed(c) end""")
-ok, detail = L.execute("return G.AddOptionRows(say, { exp = 4, encounters = false, encounterrate = 9 })")
+ok, detail, added = L.execute("return G.AddOptionRows(say, { exp = 4, encounters = false, encounterrate = 9 })")
+assert added == 6, added
 assert ok is True and "2 rows before" in detail and "not added" not in detail and "failed" not in detail, detail
 assert "5 option save entries added" in detail, detail
 tag = lambda r: 'savedOptions.rows["Delegate.UI.System.Option.Root.GameSetting.FFRAP.' + r + '"]'
@@ -485,8 +486,8 @@ assert lua("optRows.FFRAP_Exp.Type") == 2 and lua("optRows.FFRAP_Exp.SliderInfo.
 assert lua("optRows.FFRAP_EncounterRate.SliderInfo.MaxValue") == 5 and lua("optRows.FFRAP_Scaling.Type") == 1
 assert lua("optRows.FFRAP_Exp.DisplayText:ToString()") == "AP: EXP rate"
 assert lua("optRows.b.EntryTag.TagName:ToString()").endswith("GamePad.Sensitivity"), "the game's own row is left alone"
-ok, detail = L.execute("return G.AddOptionRows(say)")
-assert "8 rows before" in detail, "a second run adds nothing"
+ok, detail, added = L.execute("return G.AddOptionRows(say)")
+assert "8 rows before" in detail and added == 0, "a second run adds nothing"
 L.execute("""
 local function entry(tag, value) return { get = function() return { TagName = FName(tag) } end }, { get = function() return { Value = value } end } end
 optSave = { IsValid = function() return true end, HasAnyInternalFlags = function() return false end, HasAnyFlags = function() return false end,
@@ -523,4 +524,14 @@ assert detail == "0 switches added", detail
 # Round 51: the menu dump lists the option save's entries, ours among them
 lines = list(L.execute("return G.OptionDump()").values())
 assert lines[0] == "CPP_MuchaOptionSaveData: 0 found", lines
+# Round 53: every artifact tag goes into the map manager's tag-to-id table, but the two already there
+L.execute("""
+idTable = { rows = { ["Artifact.AirshipSkin"] = 29520, ["Artifact.ChocoboSaddleBike"] = 29500 } }
+function idTable:ForEach(fn) for tag in pairs(self.rows) do fn({ get = function() return { TagName = FName(tag) } end }) end end
+function idTable:Add(k, id) self.rows[k.TagName:ToString()] = id end
+libs["/Game/Datatable/Map/DataAsset/DA_MapManager.DA_MapManager"] = { IsValid = function() return true end,
+  HasAnyInternalFlags = function() return false end, HasAnyFlags = function() return false end, ArtifactIdTable = idTable }""")
+ok, detail = L.execute("return G.AddArtifactIds(say)")
+assert ok is True and detail == "17 tags added", detail
+assert lua('idTable.rows["Artifact.ThiefCuffs"]') == 30010 and lua('idTable.rows["Artifact.AirshipSkin"]') == 29520
 print("skip: ok")

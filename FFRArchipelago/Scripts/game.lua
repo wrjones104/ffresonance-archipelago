@@ -4313,13 +4313,14 @@ function G.AddOptionRows(say, current)
             if tag then templates[tag] = templates[tag] or row end
         end)
     end)
-    local done = {}
+    local done, added = {}, 0
     for _, o in ipairs(G.OPTION_ROWS) do
         local row = have[o.row]
         if not row and templates[o.copy] then
             say("menu: AddRow " .. o.row)
             if pcall(function() dt:AddRow(o.row, templates[o.copy]) end) then
                 pcall(function() row = dt:FindRow(o.row) end)
+                added = added + 1
             end
         end
         if row then
@@ -4342,7 +4343,7 @@ function G.AddOptionRows(say, current)
     say("menu: option save entries")
     local seeded = SeedOptionEntries(current or {})
     return true, count .. " rows before; " .. table.concat(done, ", ") .. "; " ..
-        (seeded and (seeded .. " option save entries added") or "no option save found")
+        (seeded and (seeded .. " option save entries added") or "no option save found"), added
 end
 
 -- Our rows' values from the option save, as setting key -> number or boolean, for the rows the
@@ -4460,6 +4461,31 @@ function G.AddArtifactSwitches(say)
         end
     end
     return true, #added .. " switches added" .. (#failed > 0 and ("; failed: " .. table.concat(failed, ", ")) or "")
+end
+
+-- Round 53: the game's own switch (the Magitek Airship Passkey) wrote artifactList[29520]: the id
+-- DA_MapManager.ArtifactIdTable gives its tag, Artifact.AirshipSkin. That table knows two tags only,
+-- AirshipSkin (29520) and ChocoboSaddleBike (29500). If the game finds an artifact's state through
+-- this table, no other artifact can ever be on. ffrap_artifact table adds every other artifact's
+-- tag, with its own id. Returns how many were added, or false and why.
+local MAP_MANAGER_DA = "/Game/Datatable/Map/DataAsset/DA_MapManager.DA_MapManager"
+function G.AddArtifactIds(say)
+    say("artifacts: loading " .. MAP_MANAGER_DA)
+    local da = LoadObject(MAP_MANAGER_DA)
+    if not da then return false, "DA_MapManager could not be loaded" end
+    local have = {}
+    if not pcall(function()
+        da.ArtifactIdTable:ForEach(function(k) pcall(function() have[ObjText(k:get().TagName)] = true end) end)
+    end) then return false, "ArtifactIdTable unreadable" end
+    local added = {}
+    for id = G.ARTIFACT_FIRST, G.ARTIFACT_LAST do
+        local tag = "Artifact." .. G.ARTIFACT_TAGS[id]
+        if not have[tag] then
+            say("artifacts: table entry " .. tag .. " -> " .. id)
+            if pcall(function() da.ArtifactIdTable:Add({ TagName = FName(tag) }, id) end) then added[#added + 1] = id end
+        end
+    end
+    return true, #added .. " tags added"
 end
 
 return G

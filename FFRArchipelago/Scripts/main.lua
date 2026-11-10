@@ -50,7 +50,7 @@
 -- follows the save slots the linked game is saved to. While any other save is loaded, the mod
 -- grants nothing, reports nothing and leaves the chests vanilla.
 
-local VERSION = "0.39.2"
+local VERSION = "0.40.0"
 local PROTOCOL = 2        -- the bridge protocol; the apworld's MOD_PROTOCOL
 
 local MOD_DIR = (debug.getinfo(1, "S").source:gsub("^@", ""):gsub("\\", "/"):match("^(.*/)Scripts/[^/]+$"))
@@ -1762,7 +1762,23 @@ end
 
 local settingsMap, settingsLogged = nil, nil   -- the map the encounter tables were last written for
 local menuLogged = nil
+local function currentSettings()
+    local current = {}
+    for k in pairs(SETTING_DEFAULTS) do current[k] = setting(k) end
+    return current
+end
+-- Round 53: the rows worked and their values were kept, so they go in by themselves, once per
+-- save loaded (a table loaded again would lose them). Quiet unless a row was added.
+local menuSave = nil
+local function ensureMenu()
+    if menuSave == save.obj then return end
+    menuSave = save.obj
+    local ok, detail, added = game.AddOptionRows(function() end, currentSettings())
+    if not ok then log("menu: " .. tostring(detail))
+    elseif (added or 0) > 0 then log("menu: rows added to the Options screen; " .. tostring(detail)) end
+end
 settingsTick = function()
+    pcall(ensureMenu)
     -- Round 50: a value set in the Options screen wins over ffrap_set.
     local fromMenu = game.ReadOptionValues()
     if fromMenu then
@@ -1843,9 +1859,7 @@ command("ffrap_menu", function(p)
         notify("Usage: ffrap_menu add | dump")
         return
     end
-    local current = {}
-    for k in pairs(SETTING_DEFAULTS) do current[k] = setting(k) end
-    local ok, detail = game.AddOptionRows(log, current)
+    local ok, detail = game.AddOptionRows(log, currentSettings())
     log("menu: " .. (ok and "" or "failed: ") .. tostring(detail))
     notify("Menu: " .. tostring(detail) .. ". Open Options, Gameplay now.")
 end)
@@ -1853,6 +1867,12 @@ end)
 -- ffrap_artifact: the artifact list, on or off. ffrap_artifact <id> <on|off>: switch one (round 50:
 -- nothing in the game's menus does, and whether it changes the effect is the question).
 command("ffrap_artifact", function(p)
+    if tostring(p[1] or ""):lower() == "table" then
+        local ok, detail = game.AddArtifactIds(log)
+        log("artifacts: " .. (ok and "" or "failed: ") .. tostring(detail))
+        notify("Artifacts: " .. tostring(detail))
+        return
+    end
     if tostring(p[1] or ""):lower() == "menu" then
         local ok, detail = game.AddArtifactSwitches(log)
         log("artifacts: " .. (ok and "" or "failed: ") .. tostring(detail))
@@ -1861,7 +1881,7 @@ command("ffrap_artifact", function(p)
     end
     local id, value = tonumber(p[1]), tostring(p[2] or ""):lower()
     if p[1] and not (id and (value == "on" or value == "off")) then
-        notify("Usage: ffrap_artifact [menu | <id> <on|off>]")
+        notify("Usage: ffrap_artifact [menu | table | <id> <on|off>]")
         return
     end
     if id then
