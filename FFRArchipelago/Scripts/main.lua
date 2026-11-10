@@ -50,7 +50,7 @@
 -- follows the save slots the linked game is saved to. While any other save is loaded, the mod
 -- grants nothing, reports nothing and leaves the chests vanilla.
 
-local VERSION = "0.36.1"
+local VERSION = "0.36.2"
 local PROTOCOL = 2        -- the bridge protocol; the apworld's MOD_PROTOCOL
 
 local MOD_DIR = (debug.getinfo(1, "S").source:gsub("^@", ""):gsub("\\", "/"):match("^(.*/)Scripts/[^/]+$"))
@@ -1167,7 +1167,7 @@ local function tick()
                     local okCrystals, written = pcall(game.CrystalsPatch)
                     log("crystals: " .. tostring(written) .. " event rows set to skip the scene" .. (okCrystals and "" or " (failed)"))
                 end
-                if newSave and bossTest.group then pcall(bossTest.arm, bossTest.group) end
+                if newSave and bossTest.group then pcall(bossTest.arm, bossTest.group, bossTest.quiet) end
                 if okShop and blocked ~= nil then
                     log("vision shop " .. (blocked and "closed (no vision yet)" or "open") .. ": " .. tostring(rows) .. " rows")
                 end
@@ -1750,9 +1750,10 @@ scaleTick = function()
     scaleToParty(f.range, f.at, f.withBosses, f.knobs)
 end
 
--- ffrap_bossfight <battle group>: the closed chests near you become traps for that fight, the
--- Chamber of Arms sword pedestal starts it too, and a win is logged (round 49; IDEAS.md, idea
--- 25). ffrap_bossfight sword: gives the Ancient Greatsword the pedestal needs. off: undoes it.
+-- ffrap_bossfight <battle group> [quiet]: the closed chests near you become traps for that fight,
+-- the Chamber of Arms sword pedestal starts it too, and a win is logged (round 49; IDEAS.md, idea
+-- 25). The win plays the sword fight's own victory scene, or nothing with `quiet`.
+-- ffrap_bossfight sword: gives the Ancient Greatsword the pedestal needs. off: undoes it.
 -- ffrap_bossfight watch [class ...]: round 49 probe. The fight did not start twice, and the game
 -- never asked for a battle. This hooks the native functions of the talk event and encounter
 -- classes and logs each call (the first one, then at most one line every 2 seconds and 20 in all
@@ -1822,10 +1823,11 @@ local function startWatch(classes)
     log("watch: on, " .. watch.count .. " hooks in all")
     return watch.count
 end
-bossTest.arm = function(id)
-    local ok, detail = game.BossTestArm(id, log)
+bossTest.arm = function(id, quiet)
+    local ok, detail = game.BossTestArm(id, log, quiet)
     log("boss test: " .. (ok and "ready, " or "failed, ") .. tostring(detail))
     bossTest.group = ok and id or nil
+    bossTest.quiet = quiet
     return ok, detail
 end
 bossTest.tick = function()
@@ -1868,14 +1870,14 @@ command("ffrap_bossfight", function(p)
     end
     local id = tonumber(first)
     if not id then
-        notify("Usage: ffrap_bossfight <battle group> | sword | off | watch [class ...] | watch off")
+        notify("Usage: ffrap_bossfight <battle group> [quiet] | sword | off | watch [class ...] | watch off")
         return
     end
     if not game.InGame() then
         notify("Boss test: load a save first")
         return
     end
-    local ok, detail = bossTest.arm(math.floor(id))
+    local ok, detail = bossTest.arm(math.floor(id), tostring(p[2] or ""):lower() == "quiet")
     notify(ok and ("Boss test ready: open a closed chest, or use the Chamber of Arms sword pedestal. " .. detail) or ("Boss test failed: " .. tostring(detail)))
 end)
 
@@ -2096,6 +2098,7 @@ end)
 -- Round 42: the locks go in as the map loads, so a save loaded in the air has no moment to land.
 if RegisterLoadMapPostHook then
     local okHook, errHook = pcall(RegisterLoadMapPostHook, function(_, world)
+        pcall(game.ForgetObjects)
         local okRun, placed, why = pcall(function() return game.ContinentMapLoaded(world:get(), locksOn()) end)
         if not okRun then
             log("locks: the map load hook failed: " .. tostring(placed))

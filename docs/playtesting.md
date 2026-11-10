@@ -410,7 +410,13 @@ World-map shinies verified as locations. Multiple crashes observed across differ
 
 **Round 49, fourth try (mod 0.35.4, world 0.8.1, 2026-11-10): no fight, even with the row's own group.** Group 9957 (the Twelve Arms fight the test borrows) failed like 9013, so the problem is the borrowed row, not the boss. The watcher hooked 29 functions with no crash. A normal random battle showed only as a move to map 20001; it never called `CPP_MapManager:Encount`. Around the crystal only `CPP_TalkEventManager:OnFinishFade` ran. So hooks do not see the game's event and battle code. Mod 0.36.0 tries chests as the trigger instead (IDEAS.md, idea 25). Also seen: the shard counter, the seed's scaling and the shiny pop-ups all still work on world 0.8.1.
 
-## Round 49 test plan (mod 0.36.1, world 0.8.1)
+**Round 49, fifth try (mod 0.36.1, world 0.8.1, 2026-11-10): the pedestal started Siren.**
+- **The sword pedestal works as a boss trigger.** With 9957 it was the sword fight, and with 9013 it was **Siren**, on her own stage. Both wins logged `boss test: WIN seen`. A loss gave the normal game over: Retry, Load or Return to Title.
+- **Both wins ended on a black screen**, and the game had to be closed. The after-win row was a Blueprint row with no Blueprint; the game's own after-win rows are all Sequence rows. Mod 0.36.2 changes that (IDEAS.md, idea 25).
+- **`ffrap_scale` by hand still wins over the seed:** the user set `hp 200 power 200` to lose a fight on purpose.
+- **A crash, on an older mod (0.35.x), leaving the Rugged Mountain cave in Gronoa to the west.** `tools/crashstack.py` shows an access violation in UE4SS's `FName::ToString`, called from a Lua game-thread tick (`process_simple_actions`) through a UObject handle's metamethod. So a tick asked an object for its name after the object was freed. A map load frees the old map's objects, and `G.Live` caches the map manager, which is asked every tick. Mod 0.36.2 forgets cached objects in the `LoadMap` post hook. Not proven to be the cause; if it happens again, send `UE4SS.log` too, so the last lines show what the tick was doing.
+
+## Round 49 test plan (mod 0.36.2, world 0.8.1)
 
 Seeds can now be finished, and a seed scales its enemies by itself. Send the `[FFRAP]` lines of `UE4SS.log`.
 
@@ -428,19 +434,11 @@ For a short test, add this to your yaml. The default is 50. Shards turn on by th
 4. The moogle: have a vision and no Magicite Shard (a Cryst alone is a good test). Open Vision Enhancement and press Cancel. **Does the screen close?** Then get a Shard and enhance a vision. Does the screen still work and close after?
 5. Send the `vision screen:` lines of the log. They show what the game's own check answered.
 
-**The boss fight test.** Can any boss be started, and can a win be seen? One command arms two triggers: the closed chests near you, and the sword pedestal in the Chamber of Arms (Dirnado), which is the game's own "challenge?" fight. Save in a spare slot first.
+**The boss fight test: after the win.** The fights start; this checks that the game comes back after a win. Save in a spare slot first, in the Chamber of Arms, with `ffrap_lock off` if Dirnado is locked.
 
-**A. The sword pedestal (the control).**
+1. `ffrap_bossfight sword`, then `ffrap_bossfight 9013`. Use the sword pedestal and beat Siren. **Does the sword fight's victory scene play, and are you back in the Chamber after it?** The log should say `boss test: WIN seen`.
+2. `ffrap_bossfight 9013 quiet`. Beat Siren again. **Are you back in the Chamber with no scene?**
+3. If you like, try a chest: next to a closed chest anywhere, `ffrap_bossfight 9013 quiet`, then open it. Does a fight start?
+4. `ffrap_bossfight off`, then `ffrap_lock on`.
 
-1. Dirnado is locked in your seed, so type `ffrap_lock off` and land there. Go to the Chamber of Arms.
-2. Type `ffrap_bossfight sword`. It gives the Ancient Greatsword the pedestal needs, and logs whether you have it and whether flag 901 is on.
-3. Type `ffrap_bossfight 9957`, and use the sword pedestal. Say yes to the challenge. **Is it the normal sword fight?** If not even this works, tell me what it said.
-4. Type `ffrap_bossfight 9013` and use the pedestal again. **Is it Siren?**
-
-**B. A chest.** In any town or dungeon, next to a chest you have not opened, type `ffrap_bossfight 9013`. The log should say `1 live` or more. Open the chest. **Does a battle start?** The chest is a normal check too, so its item still goes out.
-
-For any fight that starts, please tell me:
-- **After a win, are you back on the field, with the normal results screen?** The log should say `boss test: WIN seen`.
-- **Lose one fight on purpose, once.** Is it a normal game over, or does it hang?
-
-Type `ffrap_bossfight off` and `ffrap_lock on` when done. Send the `boss test:` lines of the log.
+If a black screen comes back, wait 10 seconds before closing the game, and say which step it was. Send the `boss test:` lines of the log.

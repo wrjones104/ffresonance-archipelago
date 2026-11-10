@@ -1736,6 +1736,15 @@ function G.ChestPopupRestore()
     popupHidden = nil
 end
 
+-- Round 49: the game crashed on leaving a cave, in a Lua tick that asked a freed object for its
+-- name. A map load frees the old map's objects, and a few were still cached here, above all the
+-- map manager, which is asked every tick. Even IsValid on such a handle can crash, so a map load
+-- forgets them before the next tick. They are found again when next needed.
+function G.ForgetObjects()
+    liveCache = {}
+    popupMsgCache, popupWasShown, popupHidden = nil, false, nil
+end
+
 -- Tries to show `text` with the game's quest-notice banner (the "new quest" pop-up): the
 -- banner's view model holds NoticeData.NoticeTitle and ExecuteNotics(bool) (round 14 probes).
 -- Experimental: returns ok and a detail.
@@ -3940,12 +3949,16 @@ end
 -- asks "challenge?" and goes straight to its fight row. Only that row's group number changes, so
 -- the rest of the chain is as shipped. It needs the Ancient Greatsword in the bag and flag 901
 -- off. If Siren appears there but not from a crystal, the crystal failure was our chain.
--- The win row is the sword fight's own Victory row, made to play nothing and set a flag nothing
--- else uses (so flag 901 stays off and the pedestal can be used again). `off` undoes it all but
--- that row's item, which comes back when the game restarts.
+-- The win row sets a flag nothing else uses, so flag 901 stays off and the pedestal can be used
+-- again. Round 49: with the Victory row made a Blueprint row with no Blueprint, both wins ended
+-- on a black screen. The screen is faded out after a battle, and every after-win row the game
+-- ships is a Sequence row. So the win row is now either the Victory row with its own scene
+-- (only its flags and item change), or, with `quiet`, choice_cancel: a Sequence row with no
+-- sequence, no flags and nothing else, which gets the flag added. `off` undoes it all but the
+-- Victory row's item, which comes back when the game restarts.
 G.BOSS_TEST_FLAG = 1440       -- no condition or talk row in the game uses flags 1430 to 1449
 G.BOSS_TEST_SWORD = 10198     -- the Ancient Greatsword, which the sword pedestal checks for
-local BOSS_TEST_FIGHT, BOSS_TEST_WIN = "12Arms_01Sword_1stAwake_Encount", "12Arms_01Sword_1stAwake_Victory"
+local BOSS_TEST_FIGHT, BOSS_TEST_VICTORY, BOSS_TEST_QUIET = "12Arms_01Sword_1stAwake_Encount", "12Arms_01Sword_1stAwake_Victory", "choice_cancel"
 local bossTestSaved = nil     -- { talk = {}, group = id, groupFields = {}, chests = { ["map:id"] = {} } }
 
 local function EachTalkRow(fn)
@@ -3982,9 +3995,9 @@ local function ChestKey(data) return Int(data.mapId) .. ":" .. Int(data.ID) end
 
 -- The story's scenes must not run from here: no scene in the battle, none after it, and a loss
 -- or an escape runs nothing.
-local function BossTestWriteGroup(row)
+local function BossTestWriteGroup(row, win)
     row.battleEventId = -1
-    row.battleFinishEventId = FName(BOSS_TEST_WIN)
+    row.battleFinishEventId = FName(win)
     row.battleFinishLoseEventId = FName("None")
     row.battleFinishEscapeEventId = FName("None")
     row.isResultSkipOnWin = false
@@ -4001,8 +4014,9 @@ function G.BossTestOff(say)
         if not o then return end
         if o.encount then
             row.encountGroupId = o.encount
+        elseif o.grown then
+            row.OnFlagList:Empty()
         else
-            row.EventType = o.eventType
             for i, flag in ipairs(o.flags) do row.OnFlagList[i] = flag end
         end
         restored = restored + 1
@@ -4030,7 +4044,7 @@ function G.BossTestOff(say)
 end
 
 -- Returns true and what was written, or false and why. `say` logs each step before it runs.
-function G.BossTestArm(id, say)
+function G.BossTestArm(id, say, quiet)
     G.BossTestOff(say)
     say("boss test: reading battle group " .. tostring(id))
     local fields
@@ -4049,24 +4063,27 @@ function G.BossTestArm(id, say)
     local saved = { talk = {}, group = id, groupFields = fields, chests = {} }
     bossTestSaved = saved
     local win, fight, rows, live, group = 0, 0, 0, 0, 0
-    say("boss test: writing the sword pedestal's fight row and the win row")
+    local winRow = quiet and BOSS_TEST_QUIET or BOSS_TEST_VICTORY
+    say("boss test: writing the sword pedestal's fight row and the win row, " .. winRow)
     EachTalkRow(function(key, row)
         if key == BOSS_TEST_FIGHT then
             saved.talk[key] = saved.talk[key] or { encount = Int(row.encountGroupId) }
             row.encountGroupId = id
             fight = fight + 1
-            return
+        elseif key == winRow and quiet then
+            saved.talk[key] = saved.talk[key] or { grown = true }
+            AppendOnce(row.OnFlagList, G.BOSS_TEST_FLAG)
+            win = win + 1
+        elseif key == winRow then
+            if not saved.talk[key] then
+                local flags = {}
+                for i = 1, #row.OnFlagList do flags[i] = Int(row.OnFlagList[i]) end
+                saved.talk[key] = { flags = flags }
+            end
+            row.ObtainItemList:Empty()
+            for i = 1, #row.OnFlagList do row.OnFlagList[i] = G.BOSS_TEST_FLAG end
+            win = win + 1
         end
-        if key ~= BOSS_TEST_WIN then return end
-        if not saved.talk[key] then
-            local flags = {}
-            for i = 1, #row.OnFlagList do flags[i] = Int(row.OnFlagList[i]) end
-            saved.talk[key] = { eventType = Int(row.EventType), flags = flags }
-        end
-        row.EventType = EVENT_BLUEPRINT      -- a Blueprint row with no Blueprint plays nothing
-        row.ObtainItemList:Empty()
-        for i = 1, #row.OnFlagList do row.OnFlagList[i] = G.BOSS_TEST_FLAG end
-        win = win + 1
     end)
     say("boss test: making the chests near you traps")
     EachChestData(function(data, isLive)
@@ -4075,12 +4092,12 @@ function G.BossTestArm(id, say)
         saved.chests[key] = saved.chests[key] or { trap = data.IsTrap, group = Int(data.battleGroupId), finish = ObjText(data.battleFinishEventId) }
         data.IsTrap = true
         data.battleGroupId = id
-        data.battleFinishEventId = FName(BOSS_TEST_WIN)
+        data.battleFinishEventId = FName(winRow)
         if isLive then live = live + 1 else rows = rows + 1 end
     end)
     say("boss test: writing the battle group")
     EachGroupRow(id, function(row)
-        BossTestWriteGroup(row)
+        BossTestWriteGroup(row, winRow)
         group = group + 1
     end)
     G.SetFlag(G.BOSS_TEST_FLAG, false)

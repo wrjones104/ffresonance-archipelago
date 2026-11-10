@@ -777,6 +777,21 @@ function FindFirstOf(c)
 end
 """)
 
+# Round 49: after a map load the cached map manager is forgotten, so a freed one is never touched
+L.execute("""
+staleMgr = fakeMapMgr
+G.CurrentMap()
+touched = false
+function staleMgr:IsValid() touched = true; return true end
+fakeMapMgr = { GetSameMapId = function() return 4242 end }
+function fakeMapMgr:IsValid() return true end
+function fakeMapMgr:HasAnyInternalFlags() return false end
+function fakeMapMgr:HasAnyFlags() return false end
+G.ForgetObjects()
+""")
+assert L.eval("G.CurrentMap()") == 4242 and L.eval("touched") is False, "the old map manager was asked again"
+L.execute("fakeMapMgr = staleMgr; function staleMgr:IsValid() return true end; G.ForgetObjects()")
+
 L.execute("gateSteps = {}; G.gateTrace = function(s) gateSteps[#gateSteps + 1] = s end")
 ok, detail = L.execute("return G.InjectValuableItem()")
 assert ok is True and 'added row FFRAP_Key_29901' in detail and 'Bridge Crest' in detail, detail

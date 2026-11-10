@@ -360,6 +360,7 @@ assert ok is False and "load the slot by hand" in detail, detail
 L.execute("""
 talkRows = { ["12Arms_01Sword_1stAwake_Victory"] = { EventType = 0, ObtainItemList = arr({ { ID = 10199 } }), OnFlagList = arr({ 901, 1237 }) },
   ["12Arms_01Sword_1stAwake_Encount"] = { EventType = 0, encountGroupId = 9957 },
+  choice_cancel = { EventType = 0, OnFlagList = arr({}) },
   Other = { EventType = 0, encountGroupId = 5 } }
 shopRows = talkRows
 siren = { ID = 9013, battleEventId = 77, battleFinishEventId = FName("C01_037_01"), battleFinishLoseEventId = FName("None"),
@@ -390,7 +391,8 @@ assert lua("chestRows[1].battleFinishEventId:ToString()") == "12Arms_01Sword_1st
 assert lua("nearChests[1].m_TreasureBoxData.IsTrap") is True and lua("nearChests[1].m_TreasureBoxData.battleGroupId") == 9013, "the live copy too"
 assert lua("chestRows[2].IsTrap") is False and lua("chestRows[3].IsTrap") is False, "an opened chest and one far away stay"
 win = 'talkRows["12Arms_01Sword_1stAwake_Victory"]'
-assert lua(win + ".EventType") == 1 and lua("#" + win + ".ObtainItemList") == 0
+assert lua(win + ".EventType") == 0, "still a Sequence row, so its scene fades the screen back in"
+assert lua("#" + win + ".ObtainItemList") == 0
 assert lua(win + ".OnFlagList[1]") == 1440 and lua(win + ".OnFlagList[2]") == 1440
 assert lua("siren.battleEventId") == -1 and lua("siren.battleFinishEventId:ToString()") == "12Arms_01Sword_1stAwake_Victory"
 assert lua("siren.isResultSkipOnWin") is False
@@ -403,6 +405,14 @@ assert lua(fight) == 9957
 assert lua("chestRows[1].IsTrap") is False and lua("chestRows[1].battleGroupId") == -1
 assert lua("chestRows[1].battleFinishEventId:ToString()") == "None" and lua("nearChests[1].m_TreasureBoxData.IsTrap") is False
 assert lua(win + ".OnFlagList[1]") == 901 and lua(win + ".OnFlagList[2]") == 1237 and lua(win + ".EventType") == 0
+# quiet: the win row is choice_cancel, a Sequence row with no sequence, which gets the flag
+ok, detail = L.execute("return G.BossTestArm(9013, say, true)")
+assert ok is True and lua("siren.battleFinishEventId:ToString()") == "choice_cancel"
+assert lua("chestRows[1].battleFinishEventId:ToString()") == "choice_cancel"
+assert lua("#talkRows.choice_cancel.OnFlagList") == 1 and lua("talkRows.choice_cancel.OnFlagList[1]") == 1440
+assert lua(win + ".OnFlagList[1]") == 901, "the Victory row is left alone"
+L.execute("G.BossTestOff(say)")
+assert lua("#talkRows.choice_cancel.OnFlagList") == 0
 assert lua("siren.battleEventId") == 77 and lua("siren.battleFinishEventId:ToString()") == "C01_037_01" and lua("siren.isResultSkipOnWin") is True
 assert L.execute("return G.BossTestOff(say)") == 0, "nothing to undo"
 L.execute("nearChests = {}")

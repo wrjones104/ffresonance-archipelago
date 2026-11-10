@@ -48,6 +48,7 @@ An Archipelago implementation for Final Fantasy Resonance (UE 5.6, game module `
 - **Never use `LoopAsync` or `ExecuteAsync`**: their callbacks run Lua on UE4SS's async thread while the game thread runs Lua in the same state. The game crashed at random, in a new place each time. Use `LoopInGameThreadWithDelay` and `ExecuteInGameThreadWithDelay` (round 29).
 - **Crash reports:** `%LOCALAPPDATA%\FFRS\Saved\Crashes\*\CrashContext.runtime-xml` holds the stack as module offsets. `python tools/crashstack.py <folder>` names the UE4SS frames with `UE4SS.pdb`.
 - **`pcall` does not catch an access violation.** A null object from an array crashes the game when asked for its name. Ask `IsValid` first (round 41).
+- **A map load frees the old map's objects, and a cached handle to one can crash even on `IsValid`.** `G.ForgetObjects` clears the caches in the `LoadMap` post hook. Anything new that keeps an object across ticks must be cleared there too (round 49).
 
 **Hooks and probes:**
 - **Native functions called from Blueprints can be hooked** with `RegisterHook`, and a pre-hook can change their arguments (the title menu's `ExecuteEntry`). A post hook's return value replaces the function's (round 48).
@@ -69,6 +70,7 @@ An Archipelago implementation for Final Fantasy Resonance (UE 5.6, game module `
 - Features are switched on by event flags in `EnableFlagIdData` fields of the UI's data assets: 14 Equipment, 16 World Map, 18 Recovery, 19 Party, 24 Visions, 26 main menu, 34 fast travel. A new start that skips the story must set them (round 39).
 - More story flags an open start needs: 25 staggering, 28 Fina's summoning, 1160-1199 and 1217-1229 each tutorial's "seen" (round 45).
 - A battle's MRP is `ap` in `DT_BattleGroup`, not a field on the enemy (round 47).
+- A talk row with `encountGroupId` starts that battle group when the game's own chain reaches it, and the group's `battleFinishEventId` runs after a win. The row run after a win must be a Sequence row: a Blueprint row with no Blueprint leaves the screen black (round 49).
 - An esper in the summon menu is an ability on both Finas, added by the event row's `AbilitySettings`; its flag (90 to 98) alone does nothing (round 46).
 - A story `NoEntry` zone holds until its event's flag is on (the Earth Shrine's exit needs flag 102, round 44). `gimmicks.tsv` has the conditions.
 - `CPP_VM_Party:AddUnit` does not set `JoinStatus`: a unit added only that way gains no EXP and gear on it does not count (round 44).
