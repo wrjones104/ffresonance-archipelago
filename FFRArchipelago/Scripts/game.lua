@@ -4243,55 +4243,118 @@ function G.ApplyPlayerEncounter(on)
     return changed
 end
 
--- Round 50 probe (ffrap_menu probe): does the game's Options screen draw rows we add? Its
--- Gameplay tab is the rows of DT_OP_GameSetting, each with a Type (Slider, RadioButton, ...), a
--- DisplayText and an EntryTag the game's code acts on. This adds a copy of the "Display
--- Encounter Sensor" switch and of the camera sensitivity slider, with our labels. They keep the
--- tags of the rows they copy, so they would change those settings: the probe is to look, not to
--- use. The screen may read the table when it opens, so open it right after.
+-- Round 50: our settings as rows of the game's Options screen, Gameplay tab (ffrap_menu add). The
+-- tab is the rows of DT_OP_GameSetting. Round 50's probe showed the screen draws rows we add. A
+-- row has a Type (Slider or RadioButton), a DisplayText, an ItemDescription (the footer) and an
+-- EntryTag. The game saves each row's value as a float under its EntryTag, in the option save's
+-- m_EntrySaveDataList (CPP_MuchaOptionSaveData): a slider's number, or a switch's index (On 0,
+-- Off 1). So our rows get tags of their own, copied from a slider and a switch of the game's, and
+-- their values are read back from that map. The tags are not registered with the game, which is
+-- what this round finds out about. Sliders move in steps of 1.
 local OPTION_GAMEPLAY = "/Game/Datatable/UI/Option/Root/GameSetting/DT_OP_GameSetting.DT_OP_GameSetting"
-local OPTION_PROBES = {
-    { row = "FFRAP_Test_Switch", tag = "Delegate.UI.System.Option.Root.GameSetting.EncountSensor", label = "Archipelago test switch" },
-    { row = "FFRAP_Test_Slider", tag = "Delegate.UI.System.Option.Root.GameSetting.GamePad.Sensitivity", label = "Archipelago test slider" },
+local OPTION_SLIDER = "Delegate.UI.System.Option.Root.GameSetting.GamePad.Sensitivity"
+local OPTION_SWITCH = "Delegate.UI.System.Option.Root.GameSetting.EncountSensor"
+local OPTION_TAG = "Delegate.UI.System.Option.Root.GameSetting.FFRAP."
+G.OPTION_ROWS = {
+    { key = "exp", row = "FFRAP_Exp", copy = OPTION_SLIDER, min = 1, max = 10, default = 1,
+      label = "AP: EXP rate", help = "EXP from battles, as a multiple of normal." },
+    { key = "gil", row = "FFRAP_Gil", copy = OPTION_SLIDER, min = 1, max = 10, default = 1,
+      label = "AP: Gil rate", help = "Gil from battles, as a multiple of normal." },
+    { key = "mrp", row = "FFRAP_Mrp", copy = OPTION_SLIDER, min = 1, max = 10, default = 1,
+      label = "AP: MRP rate", help = "MRP from battles, as a multiple of normal." },
+    { key = "encounters", row = "FFRAP_Encounters", copy = OPTION_SWITCH, default = 0,
+      label = "AP: Random encounters", help = "Off: walking never starts a battle. Bosses and set battles still happen." },
+    { key = "encounterrate", row = "FFRAP_EncounterRate", copy = OPTION_SLIDER, min = 1, max = 5, default = 1,
+      label = "AP: Encounter rate", help = "How often random battles come: 1 is normal, 5 is five times as often." },
+    { key = "scaling", row = "FFRAP_Scaling", copy = OPTION_SWITCH, default = 0,
+      label = "AP: Enemy scaling", help = "Enemies follow your party's level. Off: the game's own levels." },
 }
-function G.OptionsProbe(say)
-    say("menu probe: loading " .. OPTION_GAMEPLAY)
+
+function G.AddOptionRows(say)
+    say("menu: loading " .. OPTION_GAMEPLAY)
     local dt = LoadObject(OPTION_GAMEPLAY)
     if not dt then return false, "DT_OP_GameSetting could not be loaded" end
     local templates, have, count = {}, {}, 0
     pcall(function()
         dt:ForEachRow(function(name, row)
             count = count + 1
-            local key = ObjText(name)
-            have[key] = row
+            have[ObjText(name)] = row
             local tag
             pcall(function() tag = ObjText(row.EntryTag.TagName) end)
-            if tag then templates[tag] = row end
+            if tag then templates[tag] = templates[tag] or row end
         end)
     end)
     local done = {}
-    for _, p in ipairs(OPTION_PROBES) do
-        local row = have[p.row]
-        if not row then
-            local template = templates[p.tag]
-            if not template then
-                done[#done + 1] = p.row .. ": no row with tag " .. p.tag
-            else
-                say("menu probe: AddRow " .. p.row)
-                if pcall(function() dt:AddRow(p.row, template) end) then
-                    pcall(function() row = dt:FindRow(p.row) end)
-                end
+    for _, o in ipairs(G.OPTION_ROWS) do
+        local row = have[o.row]
+        if not row and templates[o.copy] then
+            say("menu: AddRow " .. o.row)
+            if pcall(function() dt:AddRow(o.row, templates[o.copy]) end) then
+                pcall(function() row = dt:FindRow(o.row) end)
             end
         end
         if row then
-            say("menu probe: label " .. p.row)
-            local okText = pcall(function() row.DisplayText = FText(p.label) end)
-            done[#done + 1] = p.row .. (okText and ": in, labelled" or ": in, label failed")
-        elseif not done[#done] or not done[#done]:find(p.row, 1, true) then
-            done[#done + 1] = p.row .. ": AddRow failed"
+            say("menu: writing " .. o.row)
+            local ok = pcall(function()
+                row.EntryTag.TagName = FName(OPTION_TAG .. o.row)
+                row.DisplayText = FText(o.label)
+                row.ItemDescription = FText(o.help)
+                if o.min then
+                    row.SliderInfo.MinValue, row.SliderInfo.MaxValue, row.SliderInfo.DefaultValue = o.min, o.max, o.default
+                else
+                    row.DefaultRadioButtonIndex = o.default
+                end
+            end)
+            done[#done + 1] = o.row .. (ok and "" or " (write failed)")
+        else
+            done[#done + 1] = o.row .. " (not added)"
         end
     end
-    return true, count .. " rows before; " .. table.concat(done, "; ")
+    return true, count .. " rows before; " .. table.concat(done, ", ")
+end
+
+-- Our rows' values from the option save, as setting key -> number or boolean, for the rows the
+-- player has set (the game saves a row once it is applied). nil when the option save is not found.
+function G.ReadOptionValues()
+    local save = Live("CPP_MuchaOptionSaveData")
+    if not save then return nil end
+    local byTag = {}
+    for _, o in ipairs(G.OPTION_ROWS) do byTag[OPTION_TAG .. o.row] = o end
+    local out = {}
+    pcall(function()
+        save.m_EntrySaveDataList:ForEach(function(k, v)
+            pcall(function()
+                local o = byTag[ObjText(k:get().TagName)]
+                if not o then return end
+                local value = v:get().Value
+                if o.min then out[o.key] = value else out[o.key] = math.floor(value + 0.5) == 0 end
+            end)
+        end)
+    end)
+    return out
+end
+
+-- Round 50: whether the artifact list's IsActive drives an artifact's effect, as nothing in the
+-- game's menus switches one (ffrap_artifact). Returns each listed artifact as "id on|off", or,
+-- with id and on, sets that one and returns whether it was found.
+function G.Artifacts(id, on)
+    local sd = G.SaveData()
+    if not sd then return nil, "save not loaded" end
+    local states, found = {}, false
+    local ok = pcall(function()
+        sd.artifactList:ForEach(function(k, v)
+            local key, entry = Int(k:get()), v:get()
+            if id and key == id then
+                entry.IsActive = on
+                found = true
+            end
+            states[#states + 1] = key .. (entry.IsActive and " on" or " off")
+        end)
+    end)
+    if not ok then return nil, "artifactList unreadable" end
+    table.sort(states)
+    if id then return found, table.concat(states, ", ") end
+    return states
 end
 
 return G

@@ -121,6 +121,7 @@ function G.GrantItem() return "ok", "" end
 function G.ApplyRates(e, g, m) G.rates = { e, g, m } return 0 end
 function G.ApplyEncounterTables(on, rate) G.encounterTables = { on, rate } return 0, 1 end
 function G.ApplyPlayerEncounter(on) G.playerEncounters = on return 0 end
+function G.ReadOptionValues() return G.menuValues end
 G.ARTIFACT_FIRST, G.ARTIFACT_LAST = 30000, 30018
 function G.SyncArtifacts() G.artifactSyncs = (G.artifactSyncs or 0) + 1; return {} end
 function G.UnlockVision() return "ok", "" end
@@ -1501,3 +1502,11 @@ assert "exp 2" in read("settings.txt"), "kept for the next run"
 set_("reset")
 assert read("settings.txt").strip() == ""
 print("settings: ok")
+
+# Round 50: a value set in the Options screen wins over ffrap_set, and is kept in settings.txt
+L.execute('commands["ffrap_set"]("ffrap_set", {"exp", "4"})')
+G.menuValues = L.table_from({"exp": 2, "encounters": False})
+tick(10)
+assert list(G.rates.values())[0] == 2 and list(G.encounterTables.values())[0] is False, "the menu's values"
+assert "exp 2" in read("settings.txt") and "encounters off" in read("settings.txt")
+print("menu settings: ok")

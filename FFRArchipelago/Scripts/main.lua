@@ -50,7 +50,7 @@
 -- follows the save slots the linked game is saved to. While any other save is loaded, the mod
 -- grants nothing, reports nothing and leaves the chests vanilla.
 
-local VERSION = "0.38.0"
+local VERSION = "0.39.0"
 local PROTOCOL = 2        -- the bridge protocol; the apworld's MOD_PROTOCOL
 
 local MOD_DIR = (debug.getinfo(1, "S").source:gsub("^@", ""):gsub("\\", "/"):match("^(.*/)Scripts/[^/]+$"))
@@ -1761,7 +1761,25 @@ local function settingsText()
 end
 
 local settingsMap, settingsLogged = nil, nil   -- the map the encounter tables were last written for
+local menuLogged = nil
 settingsTick = function()
+    -- Round 50: a value set in the Options screen wins over ffrap_set.
+    local fromMenu = game.ReadOptionValues()
+    if fromMenu then
+        local parts = {}
+        for k, v in pairs(fromMenu) do
+            if settingsSet[k] ~= v then settingsMap = nil end
+            settingsSet[k] = v
+            parts[#parts + 1] = k .. " " .. tostring(v)
+        end
+        table.sort(parts)
+        local line = table.concat(parts, ", ")
+        if #parts > 0 and line ~= menuLogged then
+            log("settings: from the Options screen: " .. line)
+            writeSettings()
+        end
+        menuLogged = line
+    end
     local rates = game.ApplyRates(setting("exp"), setting("gil"), setting("mrp"))
     local map = game.CurrentMap()
     local rows, tables = 0, nil
@@ -1812,16 +1830,37 @@ command("ffrap_set", function(p)
     notify("Settings: " .. settingsText())
 end)
 
--- ffrap_menu probe: round 50. Two test rows in the Options screen's Gameplay tab, to see if it
--- draws rows we add. Look, do not change them: they act on the settings they were copied from.
+-- ffrap_menu add: round 50. Our settings as rows at the end of the Options screen's Gameplay tab.
+-- Behind a command for one round, as their tags are new to the game.
 command("ffrap_menu", function(p)
-    if tostring(p[1] or ""):lower() ~= "probe" then
-        notify("Usage: ffrap_menu probe")
+    if tostring(p[1] or ""):lower() ~= "add" then
+        notify("Usage: ffrap_menu add")
         return
     end
-    local ok, detail = game.OptionsProbe(log)
-    log("menu probe: " .. (ok and "" or "failed: ") .. tostring(detail))
-    notify("Menu probe: " .. tostring(detail) .. ". Open Options, Gameplay now.")
+    local ok, detail = game.AddOptionRows(log)
+    log("menu: " .. (ok and "" or "failed: ") .. tostring(detail))
+    notify("Menu: " .. tostring(detail) .. ". Open Options, Gameplay now.")
+end)
+
+-- ffrap_artifact: the artifact list, on or off. ffrap_artifact <id> <on|off>: switch one (round 50:
+-- nothing in the game's menus does, and whether it changes the effect is the question).
+command("ffrap_artifact", function(p)
+    local id, value = tonumber(p[1]), tostring(p[2] or ""):lower()
+    if p[1] and not (id and (value == "on" or value == "off")) then
+        notify("Usage: ffrap_artifact [<id> <on|off>]")
+        return
+    end
+    if id then
+        local found, states = game.Artifacts(math.floor(id), value == "on")
+        local line = (found and ("artifact " .. id .. " " .. value) or ("artifact " .. id .. " is not in the list")) .. "; " .. tostring(states)
+        log("artifacts: " .. line)
+        notify("Artifacts: " .. line)
+        return
+    end
+    local states, why = game.Artifacts()
+    local line = states and table.concat(states, ", ") or tostring(why)
+    log("artifacts: " .. line)
+    notify("Artifacts: " .. line)
 end)
 
 -- Round 49: a seed scales its enemies by itself, in place of typing ffrap_scale each time. It

@@ -444,21 +444,52 @@ libs["/Script/mucha.CPP_MapManager"] = { IsValid = function() return true end, F
 paths, flags_read = L.execute('return G.FunctionPaths("CPP_MapManager")')
 assert list(paths.values()) == ["/Script/mucha.CPP_MapManager:Encount", "/Script/mucha.CPP_MapManager:Execute_EncountStart"], list(paths.values())
 assert flags_read is True and lua('G.FunctionPaths("CPP_Nothing")') is None
-# Round 50: the Options probe adds two labelled copies of existing rows to the Gameplay tab, once
+# Round 50: our settings as Options rows with tags of their own, copied from a slider and a switch,
+# and their values read back from the option save
 L.execute("""
-optRows = { a = { Type = 1, EntryTag = { TagName = FName("Delegate.UI.System.Option.Root.GameSetting.EncountSensor") } },
-            b = { Type = 2, EntryTag = { TagName = FName("Delegate.UI.System.Option.Root.GameSetting.GamePad.Sensitivity") } } }
+local function tagged(t) return { TagName = FName(t) } end
+optRows = { a = { Type = 1, EntryTag = tagged("Delegate.UI.System.Option.Root.GameSetting.EncountSensor"), DefaultRadioButtonIndex = 0 },
+            b = { Type = 2, EntryTag = tagged("Delegate.UI.System.Option.Root.GameSetting.GamePad.Sensitivity"),
+                  SliderInfo = { MinValue = 1, MaxValue = 10, DefaultValue = 5 } } }
 optDT = { GetFullName = function() return "opt" end, IsValid = function() return true end,
   HasAnyInternalFlags = function() return false end, HasAnyFlags = function() return false end,
   ForEachRow = function(_, fn) for k, r in pairs(optRows) do fn(nameOf(k), r) end end,
-  AddRow = function(_, name, template) local copy = {} for k, v in pairs(template) do copy[k] = v end optRows[name] = copy end,
+  AddRow = function(_, name, template)
+    local copy = {} for k, v in pairs(template) do copy[k] = v end
+    copy.EntryTag = { TagName = template.EntryTag.TagName }
+    if template.SliderInfo then copy.SliderInfo = { MinValue = 0, MaxValue = 0, DefaultValue = 0 } end
+    optRows[name] = copy end,
   FindRow = function(_, name) return optRows[name] end }
 libs["/Game/Datatable/UI/Option/Root/GameSetting/DT_OP_GameSetting.DT_OP_GameSetting"] = optDT
 FText = FText or function(text) return { ToString = function() return text end } end""")
-ok, detail = L.execute("return G.OptionsProbe(say)")
-assert ok is True and "2 rows before" in detail and detail.count("in, labelled") == 2, detail
-assert lua("optRows.FFRAP_Test_Switch.Type") == 1 and lua("optRows.FFRAP_Test_Slider.Type") == 2
-assert lua("optRows.FFRAP_Test_Slider.DisplayText:ToString()") == "Archipelago test slider"
-ok, detail = L.execute("return G.OptionsProbe(say)")
-assert "4 rows before" in detail and lua("optRows.FFRAP_Test_Switch.Type") == 1, "a second run only labels"
+ok, detail = L.execute("return G.AddOptionRows(say)")
+assert ok is True and "2 rows before" in detail and "not added" not in detail and "failed" not in detail, detail
+assert lua("optRows.FFRAP_Exp.EntryTag.TagName:ToString()") == "Delegate.UI.System.Option.Root.GameSetting.FFRAP.FFRAP_Exp"
+assert lua("optRows.FFRAP_Exp.Type") == 2 and lua("optRows.FFRAP_Exp.SliderInfo.MaxValue") == 10
+assert lua("optRows.FFRAP_EncounterRate.SliderInfo.MaxValue") == 5 and lua("optRows.FFRAP_Scaling.Type") == 1
+assert lua("optRows.FFRAP_Exp.DisplayText:ToString()") == "AP: EXP rate"
+assert lua("optRows.b.EntryTag.TagName:ToString()").endswith("GamePad.Sensitivity"), "the game's own row is left alone"
+ok, detail = L.execute("return G.AddOptionRows(say)")
+assert "8 rows before" in detail, "a second run adds nothing"
+L.execute("""
+local function entry(tag, value) return { get = function() return { TagName = FName(tag) } end }, { get = function() return { Value = value } end } end
+optSave = { IsValid = function() return true end, HasAnyInternalFlags = function() return false end, HasAnyFlags = function() return false end,
+  m_EntrySaveDataList = { ForEach = function(_, fn)
+    fn(entry("Delegate.UI.System.Option.Root.GameSetting.FFRAP.FFRAP_Exp", 3))
+    fn(entry("Delegate.UI.System.Option.Root.GameSetting.FFRAP.FFRAP_Encounters", 1))
+    fn(entry("Delegate.UI.System.Option.Root.GameSetting.FFRAP.FFRAP_Scaling", 0))
+    fn(entry("Delegate.UI.System.Option.Root.GameSetting.EncountSensor", 1)) end } }
+local prevFFO = FindFirstOf
+function FindFirstOf(c) if c == "CPP_MuchaOptionSaveData" then return optSave end return prevFFO(c) end""")
+values = L.execute("return G.ReadOptionValues()")
+assert dict(values) == {"exp": 3, "encounters": False, "scaling": True}, dict(values)
+# Round 50: an artifact can be switched on or off in the artifact list
+L.execute("""
+artifactRows = { [30010] = { IsActive = false }, [30000] = { IsActive = true } }
+sd.artifactList = { ForEach = function(_, fn) for id, row in pairs(artifactRows) do
+  fn({ get = function() return id end }, { get = function() return row end }) end end }""")
+found, states = L.execute("return G.Artifacts(30010, true)")
+assert found is True and lua("artifactRows[30010].IsActive") is True and states == "30000 on, 30010 on", states
+found, _ = L.execute("return G.Artifacts(30001, true)")
+assert found is False
 print("skip: ok")

@@ -422,20 +422,21 @@ World-map shinies verified as locations. Multiple crashes observed across differ
 - **Other answers:** the shard counter counts up in the item feed (no seed finished yet). The moogle's Vision Enhancement screen shows its close button; not yet seen with no Magicite Shard at all.
 - **Scaling:** 75% felt good early, but enemies got far too easy from about party level 20, and bosses were too easy all along. The user wants bosses on their own setting, at 100% by default, and to be a real gate. Mod 0.37.0 ramps enemies and gives bosses their own band (docs/open_world.md, section 5).
 
-## Round 50 test plan (mod 0.38.0, world 0.9.0)
+**Round 50 (mod 0.38.0, world 0.9.0, 2026-11-10): settings work; the Options screen draws our rows.**
+- **Settings by console worked:** EXP, MRP, encounters off and on, and the encounter rate all did what they say. The log shows 3 rate rows and 64 to 84 map rows in 13 tables written.
+- **The Options probe worked:** "Archipelago test switch" and "Archipelago test slider" showed at the end of the Gameplay tab, in the game's style. No crash.
+- **Artifacts:** the sync ran (`artifacts: added to the artifact list: 30000, 30001, ...`), but there is still no Artifacts tab, and the Cuff Links in the bag (x2) cannot be used. On a new game the bag already holds five artifacts before any item: bonus items, so the second Cuff Links came from the seed. The Items screen has no Artifacts tab in its tab list at all (IDEAS.md, idea 26).
+- **A trapped chest in a town did not start a fight**, with either win row. Round 49's worked in a dungeon (IDEAS.md, idea 25).
+- **The ramp shows in the log:** party level 31 gave "enemies centre 28 (90%), power 100%"; level 7 gave 81% and 78%. The user will judge the feel over a longer game.
 
-**Install:** copy `FFRArchipelago/Scripts` over the installed mod, and `dist/ff_resonance.apworld` into `custom_worlds`. Generate a new seed for step 2 (an old seed still works for the rest). FFRS_QoL can stay on, but turn off its EXP, gil and MRP multipliers and its encounter settings: ours own those now, and the two would undo each other.
+## Round 51 test plan (mod 0.39.0, world 0.9.0)
 
-**1. Artifacts.** Load a save that has received artifacts. The log should say `artifacts: added to the artifact list:` and their ids (Exodus is 30001). **Is there an Artifacts tab in the Items screen, and can you switch one on?** Exodus makes every escape work.
+**Install:** copy `FFRArchipelago/Scripts`. Your seed still works. If something goes wrong in the Options screen, a crash folder helps.
 
-**2. The Bandit Cuff Links.** In a new seed (the yaml option `start_with_bandit_cuff_links` is on by default), **are chests shown on the mini-map from the start?**
+**1. Our settings in the Options screen.** Load a save, type `ffrap_menu add`, then open Options, Gameplay. **Are there six rows at the end, "AP: EXP rate" and so on?** Change "AP: EXP rate" to 3 and apply. The log should say `settings: from the Options screen: exp 3`. Win a battle: is the EXP three times normal? Try "AP: Random encounters" Off too. Then close the game, start it again, type `ffrap_menu add` again, and check the rows still show your values.
 
-**3. Settings, by console for now.** `ffrap_set` shows them. Try `ffrap_set exp 2`, `ffrap_set mrp 3`, `ffrap_set encounters off`, then `on`, and `ffrap_set encounterrate 3`. **Do battles give more EXP and MRP, do random battles stop and come back, and do they come more often at 3?** `ffrap_set scaling off` should give the game's own enemies after the next load. `ffrap_set reset` puts everything back.
+**2. Do artifacts work when switched on?** `ffrap_artifact` lists them. `ffrap_artifact 30010 on` switches the Bandit Cuff Links on. **Do chests show on the mini-map** (you may need a map change)? `ffrap_artifact 30001 on` is Exodus: does escape always work?
 
-**4. The Options screen probe.** `ffrap_menu probe`, then open Options and the Gameplay tab at once. **Are there two new rows at the bottom, "Archipelago test switch" and "Archipelago test slider"?** Do not change them: they act on the encounter sensor and camera sensitivity. A screenshot helps. If the game crashes, send the crash folder.
-
-**5. Scaling.** As last time: how do normal enemies and bosses feel?
-
-**6. A quiet boss from a chest.** Save in a spare slot. Next to a closed chest, `ffrap_bossfight 9013 quiet`, then open the chest. **After the win, does a short scene play and bring you back?** `ffrap_bossfight off` when done.
+**3. A quiet boss from a dungeon chest.** In a dungeon, next to a closed chest, `ffrap_bossfight 9013 quiet`, then open it. **Does the fight start, and does a short scene bring you back after the win?** `ffrap_bossfight off` when done.
 
 Send the `[FFRAP]` lines of the log.
