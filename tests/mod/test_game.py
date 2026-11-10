@@ -1525,3 +1525,48 @@ assert code == "ok" and "visionList 0 -> 1, synchro keys 8" in detail, (code, de
 assert L.eval("visionItems[1].ID") == 13017 and L.eval("visionItems[1].awakeningPoint") == 0
 assert L.eval("visionItems[1].keys.n") == 8 and L.eval("visionItems[1].keys[1006]") == 0
 L.execute("G.SaveData = savedSaveData")
+
+# Round 50: the player's settings. Reward rates are multiples of the shipped ones (MRP is 1.5 on
+# Expert); encounters off clears doMovementEncount and puts the player's distance out of reach;
+# a rate divides the walking distances; back on, everything is as first seen.
+L.execute("""
+diffRows = { Easy = { ExpRate = 1, MoneyRate = 1, MRPointRate = 1 }, Expert = { ExpRate = 1, MoneyRate = 1, MRPointRate = 1.5 } }
+diffDT = { IsValid = function() return true end, GetFullName = function() return "DataTable DT_GameDifficultyParam" end,
+  HasAnyInternalFlags = function() return false end, HasAnyFlags = function() return false end }
+function diffDT:ForEachRow(fn) for k, r in pairs(diffRows) do fn(fname(k), r) end end
+mapRow = { doMovementEncount = true, encountMinMovementLength = 800, encountMaxMovementLength = 1600,
+           chocoboEncountMinMovementLength = 2000, chocoboEncountMaxMovementLength = 4000 }
+mapDT = { IsValid = function() return true end, GetFullName = function() return "DataTable DT_MapData_01Gra" end,
+  HasAnyInternalFlags = function() return false end, HasAnyFlags = function() return false end,
+  GetRowStruct = function() return { GetFName = function() return { ToString = function() return "MAP_DATA" end } end } end }
+function mapDT:ForEachRow(fn) fn(fname("1000"), mapRow) end
+walker = { IsValid = function() return true end, HasAnyInternalFlags = function() return false end,
+  HasAnyFlags = function() return false end, GetFullName = function() return "BP_MapUnit_Player_Field_C /Game/Map.Player" end,
+  m_EncountThresholdDistance = 1234 }
+local prevSFOd = StaticFindObject
+function StaticFindObject(p)
+  if p == "/Game/Datatable/Difficulty/DT_GameDifficultyParam.DT_GameDifficultyParam" then return diffDT end
+  return prevSFOd(p)
+end
+local prevFAOd = FindAllOf
+function FindAllOf(c)
+  if c == "DataTable" then return { mapDT } end
+  if c == "CPP_MapUnit_Playable" then return { walker } end
+  return prevFAOd(c)
+end
+""")
+assert L.eval("G.ApplyRates(2, 3, 0.5)") == 2
+assert L.eval("diffRows.Easy.ExpRate") == 2 and L.eval("diffRows.Easy.MoneyRate") == 3
+assert L.eval("diffRows.Expert.MRPointRate") == 0.75, "a multiple of Expert's shipped 1.5"
+assert L.eval("G.ApplyRates(2, 3, 0.5)") == 0, "nothing to write twice"
+rows, tables = L.execute("return G.ApplyEncounterTables(false, 1)")
+assert (rows, tables) == (1, 1) and L.eval("mapRow.doMovementEncount") is False
+assert L.eval("G.ApplyPlayerEncounter(false)") == 1 and L.eval("walker.m_EncountThresholdDistance") == 1.0e9
+assert L.eval("G.ApplyPlayerEncounter(false)") == 0, "once"
+L.execute("G.ApplyEncounterTables(true, 2)")
+assert L.eval("mapRow.doMovementEncount") is True and L.eval("mapRow.encountMinMovementLength") == 400, "twice the battles"
+assert L.eval("mapRow.chocoboEncountMaxMovementLength") == 2000
+assert L.eval("G.ApplyPlayerEncounter(true)") == 1 and L.eval("walker.m_EncountThresholdDistance") == 1234
+L.execute("G.ApplyEncounterTables(true, 1); G.ApplyRates(1, 1, 1)")
+assert L.eval("mapRow.encountMaxMovementLength") == 1600 and L.eval("diffRows.Expert.MRPointRate") == 1.5
+print("settings: ok")

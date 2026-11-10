@@ -16,7 +16,8 @@ class TestDefault(FFResonanceTestBase):
         pool = [item.code for item in self.multiworld.itempool if item.player == self.player]
         starters = {UNIT_ITEM_BASE + 1001, UNIT_ITEM_BASE + 1002}
         unlocks = [ap_id for name, ap_id in CONTINENT_UNLOCKS.items() if name != "Grandshelt"]
-        extra = [i for i in PROGRESSION["party"] if i not in starters] + PROGRESSION["vision"] + PROGRESSION["key"] + unlocks
+        keys = [i for i in PROGRESSION["key"] if ITEMS[i]["name"] != "Bandit Cuff Links"]    # a starting item by default
+        extra = [i for i in PROGRESSION["party"] if i not in starters] + PROGRESSION["vision"] + keys + unlocks
         self.assertEqual(len(pool), len(CHESTS))
         for ap_id in extra:
             self.assertEqual(pool.count(ap_id), 1, ITEMS[ap_id]["name"])
@@ -143,6 +144,20 @@ class TestTabletShardGoal(FFResonanceTestBase):
         slot_data = self.world.fill_slot_data()
         self.assertEqual(slot_data["goal"], "tablet_shards")
         self.assertEqual(slot_data["tablet_shards_required"], 10)
+
+
+class TestCuffLinks(FFResonanceTestBase):
+    def test_start_with_the_cuff_links(self) -> None:
+        self.assertIn("Bandit Cuff Links", [i.name for i in self.multiworld.precollected_items[self.player]])
+        self.assertNotIn("Bandit Cuff Links", [i.name for i in self.multiworld.itempool if i.player == self.player])
+
+
+class TestCuffLinksShuffled(FFResonanceTestBase):
+    options = {"start_with_bandit_cuff_links": False}
+
+    def test_the_cuff_links_are_shuffled(self) -> None:
+        self.assertNotIn("Bandit Cuff Links", [i.name for i in self.multiworld.precollected_items[self.player]])
+        self.assertIn("Bandit Cuff Links", [i.name for i in self.multiworld.itempool if i.player == self.player])
 
 
 class TestDefaultOptions(FFResonanceTestBase):

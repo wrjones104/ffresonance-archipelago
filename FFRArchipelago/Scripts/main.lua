@@ -50,7 +50,7 @@
 -- follows the save slots the linked game is saved to. While any other save is loaded, the mod
 -- grants nothing, reports nothing and leaves the chests vanilla.
 
-local VERSION = "0.37.1"
+local VERSION = "0.38.0"
 local PROTOCOL = 2        -- the bridge protocol; the apworld's MOD_PROTOCOL
 
 local MOD_DIR = (debug.getinfo(1, "S").source:gsub("^@", ""):gsub("\\", "/"):match("^(.*/)Scripts/[^/]+$"))
@@ -1108,6 +1108,7 @@ local function gateTick()
 end
 
 local scaleTick   -- set with the ffrap_scale command, below
+local settingsTick   -- the player's settings (ffrap_set), below
 local bossTest = { group = nil }   -- ffrap_bossfight, below: the group armed, and its tick
 
 -- Continent locks (game.ContinentSync): while the switch is on, the world map keeps its lock
@@ -1164,6 +1165,7 @@ local function tick()
             pcall(gateTick)
             if bossTest.group then pcall(bossTest.tick) end
             if state.ticks % STATUS_EVERY == 0 then pcall(scaleTick) end
+            if state.ticks % STATUS_EVERY == 0 then pcall(settingsTick) end
             if state.ticks % LOCKS_EVERY == 0 then pcall(locksTick) end
             if state.ticks % STATUS_EVERY == 0 and seedCfg.openworld and game.OnField() then pcall(game.SyncSlotLevel) end
             if seedCfg.openworld and state.ticks % LOCKS_EVERY == 0 then
@@ -1713,6 +1715,115 @@ end)
 local SCALE_CHECK_EVERY = 2   -- scale ticks (of STATUS_EVERY) between table checks
 local scaleChecks = 0
 
+-- The player's settings (round 50; IDEAS.md, idea 18): EXP, gil and MRP rates, random encounters
+-- on or off, the encounter rate, and the seed's enemy scaling on or off. They belong to the player,
+-- not the seed, and apply to any save. settings.txt holds only what the player has set, and only
+-- ffrap_set writes it (a setting the mod saved by itself once came back as a choice, round 19).
+-- The Options screen is to set these later; ffrap_set is the way until then.
+local SETTINGS_FILE = MOD_DIR .. "settings.txt"
+local SETTING_DEFAULTS = { exp = 1, gil = 1, mrp = 1, encounters = true, encounterrate = 1, scaling = true }
+local SETTING_RANGES = { exp = { 0, 10 }, gil = { 0, 10 }, mrp = { 0, 10 }, encounterrate = { 0.1, 5 } }
+local settingsSet = {}   -- what the player has set
+local function setting(key)
+    if settingsSet[key] ~= nil then return settingsSet[key] end
+    return SETTING_DEFAULTS[key]
+end
+do
+    local f = io.open(SETTINGS_FILE, "r")
+    if f then
+        for line in f:lines() do
+            local k, v = line:match("^(%w+)%s+(%S+)")
+            if k and SETTING_DEFAULTS[k] ~= nil then
+                if type(SETTING_DEFAULTS[k]) == "boolean" then settingsSet[k] = v == "on"
+                elseif tonumber(v) then settingsSet[k] = tonumber(v) end
+            end
+        end
+        f:close()
+    end
+end
+local function writeSettings()
+    local f = io.open(SETTINGS_FILE, "w")
+    if not f then return false end
+    for k in pairs(SETTING_DEFAULTS) do
+        local v = settingsSet[k]
+        if v ~= nil then f:write(k, " ", type(v) == "boolean" and (v and "on" or "off") or tostring(v), "\n") end
+    end
+    f:close()
+    return true
+end
+local function settingsText()
+    local parts = {}
+    for _, k in ipairs({ "exp", "gil", "mrp", "encounters", "encounterrate", "scaling" }) do
+        local v = setting(k)
+        parts[#parts + 1] = k .. " " .. (type(v) == "boolean" and (v and "on" or "off") or ("x" .. tostring(v)))
+    end
+    return table.concat(parts, ", ")
+end
+
+local settingsMap, settingsLogged = nil, nil   -- the map the encounter tables were last written for
+settingsTick = function()
+    local rates = game.ApplyRates(setting("exp"), setting("gil"), setting("mrp"))
+    local map = game.CurrentMap()
+    local rows, tables = 0, nil
+    if map ~= settingsMap then
+        rows, tables = game.ApplyEncounterTables(setting("encounters"), setting("encounterrate"))
+        settingsMap = map
+    end
+    local players = game.ApplyPlayerEncounter(setting("encounters"))
+    if rates > 0 or rows > 0 or players > 0 then
+        local line = string.format("settings: %s (%d rate rows, %d map rows in %s tables, %d players changed)", settingsText(),
+            rates, rows, tostring(tables or "the same"), players)
+        if line ~= settingsLogged then log(line) end
+        settingsLogged = line
+    end
+end
+
+-- ffrap_set: shows the settings. ffrap_set <exp|gil|mrp|encounterrate> <number>, ffrap_set
+-- <encounters|scaling> <on|off>, ffrap_set reset: all back to the defaults.
+command("ffrap_set", function(p)
+    local key, value = tostring(p[1] or ""):lower(), tostring(p[2] or ""):lower()
+    if key == "reset" then
+        settingsSet = {}
+        writeSettings()
+    elseif key ~= "" then
+        local default = SETTING_DEFAULTS[key]
+        if default == nil then
+            notify("Usage: ffrap_set [exp|gil|mrp|encounterrate <number>] [encounters|scaling <on|off>] [reset]")
+            return
+        end
+        if type(default) == "boolean" then
+            if value ~= "on" and value ~= "off" then
+                notify(key .. " is on or off")
+                return
+            end
+            settingsSet[key] = value == "on"
+        else
+            local n, range = tonumber(value), SETTING_RANGES[key]
+            if not n then
+                notify(key .. " is a number from " .. range[1] .. " to " .. range[2])
+                return
+            end
+            settingsSet[key] = math.min(range[2], math.max(range[1], n))
+        end
+        writeSettings()
+    end
+    settingsMap = nil                    -- write the encounter tables again
+    log("settings: " .. settingsText())
+    notify("Settings: " .. settingsText())
+end)
+
+-- ffrap_menu probe: round 50. Two test rows in the Options screen's Gameplay tab, to see if it
+-- draws rows we add. Look, do not change them: they act on the settings they were copied from.
+command("ffrap_menu", function(p)
+    if tostring(p[1] or ""):lower() ~= "probe" then
+        notify("Usage: ffrap_menu probe")
+        return
+    end
+    local ok, detail = game.OptionsProbe(log)
+    log("menu probe: " .. (ok and "" or "failed: ") .. tostring(detail))
+    notify("Menu probe: " .. tostring(detail) .. ". Open Options, Gameplay now.")
+end)
+
 -- Round 49: a seed scales its enemies by itself, in place of typing ffrap_scale each time. It
 -- waits for the open world start, as the prologue's party is not the seed's. A save that is not
 -- the seed's gets the game's own enemies back. In-game sliders are planned (IDEAS.md, idea 18).
@@ -1749,9 +1860,8 @@ local function followRescale(f)
 end
 
 local function seedScaleTick()
-    local s = SEED_SCALE
     if not seedCfg.openworld or scaleByHand then return end
-    if not sessionSave() then
+    if not sessionSave() or not setting("scaling") then
         if seedScaleOn then
             seedScaleOn, scaleFollow = false, nil
             applyScale("off", nil, nil, false, { hp = 100, attack = 100, magic = 100 })

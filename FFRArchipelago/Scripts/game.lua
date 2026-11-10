@@ -204,7 +204,8 @@ end
 -- added there too. The Chocobo Saddle and the Premium Card start on (isInitialActive in
 -- DT_ArtifactItemData); the rest start off. Returns the ids added, or nil and why.
 G.ARTIFACT_FIRST, G.ARTIFACT_LAST = 30000, 30018
-local ARTIFACT_STARTS_ON = { [30002] = true, [30006] = true }
+-- Round 50: the Bandit Cuff Links (chests on the mini-map) start on too, as a seed can start with them.
+local ARTIFACT_STARTS_ON = { [30002] = true, [30006] = true, [30010] = true }
 function G.SyncArtifacts()
     local sd, inv = G.SaveData(), Lib("CPP_BFL_SaveDataInventory")
     if not (sd and inv) then return nil, "save not loaded" end
@@ -4134,6 +4135,163 @@ function G.BossTestArm(id, say, quiet)
         return false, detail .. " (something is missing, so nothing is left changed)"
     end
     return true, detail
+end
+
+-- -------------------------------------------------------------------------------------------
+-- Player settings (round 50; IDEAS.md, idea 18)
+-- -------------------------------------------------------------------------------------------
+-- EXP, gil and MRP rates, random encounters and their rate. Our mod owns these. FFRS_QoL writes
+-- the same rows with its multipliers and encounter settings, so with both on they undo each
+-- other: turn FFRS_QoL's versions off. The rates are the reward rates per difficulty in
+-- DT_GameDifficultyParam, as shipped: 1 for all, but MRP 1.5 on Expert. A random encounter comes
+-- after walking a random distance between a map's encountMin/MaxMovementLength (the chocobo's
+-- apart), and only where doMovementEncount is on. Those are MAP_DATA rows, one table per region.
+-- A rate divides the distances, so 2 is twice as many battles. A map's row is read as it loads,
+-- so while encounters are off the player on the current map also gets an encounter distance out
+-- of reach, as FFRS_QoL does.
+local DIFFICULTY_TABLE = "/Game/Datatable/Difficulty/DT_GameDifficultyParam.DT_GameDifficultyParam"
+local SHIPPED_RATES = { Easy = { 1, 1, 1 }, Normal = { 1, 1, 1 }, Expert = { 1, 1, 1.5 } }
+local NO_ENCOUNTER = 1.0e9
+local mapOriginals = {}        -- "table|row" -> the row's encounter fields as first seen
+local thresholdOriginals = {}  -- player full name -> encounter distance before encounters went off
+
+local function Near(a, b) return math.abs((a or 0) - (b or 0)) < 1e-4 end
+
+-- Returns how many difficulty rows changed.
+function G.ApplyRates(exp, gil, mrp)
+    local changed = 0
+    for _, dt in ipairs(TableFamily(Find(DIFFICULTY_TABLE))) do
+        pcall(function()
+            dt:ForEachRow(function(name, row)
+                local base = SHIPPED_RATES[ObjText(name)]
+                if not base then return end
+                local e, g, m = base[1] * exp, base[2] * gil, base[3] * mrp
+                if not (Near(row.ExpRate, e) and Near(row.MoneyRate, g) and Near(row.MRPointRate, m)) then
+                    row.ExpRate, row.MoneyRate, row.MRPointRate = e, g, m
+                    changed = changed + 1
+                end
+            end)
+        end)
+    end
+    return changed
+end
+
+local function MapDataTables()
+    local out = {}
+    local ok, all = pcall(FindAllOf, "DataTable")
+    for _, dt in ipairs(ok and all or {}) do
+        if Alive(dt) then
+            local okName, name = pcall(function() return dt:GetRowStruct():GetFName():ToString() end)
+            if okName and name == "MAP_DATA" then out[#out + 1] = dt end
+        end
+    end
+    return out
+end
+
+-- Writes the map tables. Returns how many rows changed and how many tables were found.
+function G.ApplyEncounterTables(on, rate)
+    local changed, tables = 0, MapDataTables()
+    for _, dt in ipairs(tables) do
+        local path = "?"
+        pcall(function() path = dt:GetFullName() end)
+        pcall(function()
+            dt:ForEachRow(function(name, row)
+                local key = path .. "|" .. ObjText(name)
+                local o = mapOriginals[key]
+                if not o then
+                    o = { on = row.doMovementEncount, row.encountMinMovementLength, row.encountMaxMovementLength,
+                          row.chocoboEncountMinMovementLength, row.chocoboEncountMaxMovementLength }
+                    mapOriginals[key] = o
+                end
+                local wantOn = on and o.on
+                local want = { o[1] / rate, o[2] / rate, o[3] / rate, o[4] / rate }
+                if row.doMovementEncount ~= wantOn or not (Near(row.encountMinMovementLength, want[1]) and
+                    Near(row.encountMaxMovementLength, want[2]) and Near(row.chocoboEncountMinMovementLength, want[3]) and
+                    Near(row.chocoboEncountMaxMovementLength, want[4])) then
+                    row.doMovementEncount = wantOn
+                    row.encountMinMovementLength, row.encountMaxMovementLength = want[1], want[2]
+                    row.chocoboEncountMinMovementLength, row.chocoboEncountMaxMovementLength = want[3], want[4]
+                    changed = changed + 1
+                end
+            end)
+        end)
+    end
+    return changed, #tables
+end
+
+-- The player on this map. Safe to call often. Returns how many players changed.
+function G.ApplyPlayerEncounter(on)
+    local changed = 0
+    local ok, players = pcall(FindAllOf, "CPP_MapUnit_Playable")
+    for _, p in ipairs(ok and players or {}) do
+        if Alive(p) then
+            pcall(function()
+                local key = p:GetFullName()
+                local now = p.m_EncountThresholdDistance
+                if not on and now < NO_ENCOUNTER then
+                    thresholdOriginals[key] = now
+                    p.m_EncountThresholdDistance = NO_ENCOUNTER
+                    changed = changed + 1
+                elseif on and thresholdOriginals[key] then
+                    if now >= NO_ENCOUNTER then p.m_EncountThresholdDistance = thresholdOriginals[key] end
+                    thresholdOriginals[key] = nil
+                    changed = changed + 1
+                end
+            end)
+        end
+    end
+    return changed
+end
+
+-- Round 50 probe (ffrap_menu probe): does the game's Options screen draw rows we add? Its
+-- Gameplay tab is the rows of DT_OP_GameSetting, each with a Type (Slider, RadioButton, ...), a
+-- DisplayText and an EntryTag the game's code acts on. This adds a copy of the "Display
+-- Encounter Sensor" switch and of the camera sensitivity slider, with our labels. They keep the
+-- tags of the rows they copy, so they would change those settings: the probe is to look, not to
+-- use. The screen may read the table when it opens, so open it right after.
+local OPTION_GAMEPLAY = "/Game/Datatable/UI/Option/Root/GameSetting/DT_OP_GameSetting.DT_OP_GameSetting"
+local OPTION_PROBES = {
+    { row = "FFRAP_Test_Switch", tag = "Delegate.UI.System.Option.Root.GameSetting.EncountSensor", label = "Archipelago test switch" },
+    { row = "FFRAP_Test_Slider", tag = "Delegate.UI.System.Option.Root.GameSetting.GamePad.Sensitivity", label = "Archipelago test slider" },
+}
+function G.OptionsProbe(say)
+    say("menu probe: loading " .. OPTION_GAMEPLAY)
+    local dt = LoadObject(OPTION_GAMEPLAY)
+    if not dt then return false, "DT_OP_GameSetting could not be loaded" end
+    local templates, have, count = {}, {}, 0
+    pcall(function()
+        dt:ForEachRow(function(name, row)
+            count = count + 1
+            local key = ObjText(name)
+            have[key] = row
+            local tag
+            pcall(function() tag = ObjText(row.EntryTag.TagName) end)
+            if tag then templates[tag] = row end
+        end)
+    end)
+    local done = {}
+    for _, p in ipairs(OPTION_PROBES) do
+        local row = have[p.row]
+        if not row then
+            local template = templates[p.tag]
+            if not template then
+                done[#done + 1] = p.row .. ": no row with tag " .. p.tag
+            else
+                say("menu probe: AddRow " .. p.row)
+                if pcall(function() dt:AddRow(p.row, template) end) then
+                    pcall(function() row = dt:FindRow(p.row) end)
+                end
+            end
+        end
+        if row then
+            say("menu probe: label " .. p.row)
+            local okText = pcall(function() row.DisplayText = FText(p.label) end)
+            done[#done + 1] = p.row .. (okText and ": in, labelled" or ": in, label failed")
+        elseif not done[#done] or not done[#done]:find(p.row, 1, true) then
+            done[#done + 1] = p.row .. ": AddRow failed"
+        end
+    end
+    return true, count .. " rows before; " .. table.concat(done, "; ")
 end
 
 return G

@@ -20,6 +20,7 @@ The world is tested off-line: Archipelago's general tests pass with it, its own 
 **What the mod needs:**
 - **UE4SS**, the only thing it needs to run. ConsoleEnablerMod and BPModLoaderMod come with UE4SS. The console is only for the `ffrap_*` commands.
 - **ModSettings** (a Blueprint mod in `Content/Paks/LogicMods`, from the same modding tools as FFRSLib) is optional. In the field, messages ("Received ...", "Sent ...", "Archipelago is paused", "Prologue skipped") go to the mod's own item feed at the bottom right of the HUD (since 0.10.0, on by default). ModSettings' Toast panel takes them off the field (the title screen), when the feed has not been able to show anything for 10 seconds since the game started, and with `ffrap_feed off`. Without ModSettings those few only go to `UE4SS.log`.
+- **FFRS_QoL conflicts with our settings (round 50).** Its EXP, gil and MRP multipliers and its encounter settings write the same rows as `ffrap_set`, so turn those off in FFRS_QoL if both are installed. Its map markers are fine.
 - **FFRSLib, FFRS_QoL, FFRBestiary and FFRRandomizer are not needed.** Their code is where the game calls come from (see "Where the game calls come from"), but this mod calls the game directly. FFRRandomizer should stay disabled (IDEAS.md, idea 10).
 
 1. **Mod.** Copy `FFRArchipelago/Scripts` and `FFRArchipelago/Assets` over the installed mod (0.18.0). Delete the old `ap_in.txt`, `ap_out.txt` and `ap_state.txt`, and keep `seen.tsv`. Keep FFRRandomizer disabled.
@@ -158,6 +159,8 @@ At run time the mod writes these files into its own folder: `ap_out.txt`, `ap_st
 | `ffrap_story [value]` | Open world probe: sets the loaded save's story counter to any value (FFRSLib's `ffrs_story_set` stops at 8050; the ending sets 9000). Only the counter, no flags. Save and reload to apply. Use it on a save that is not linked to a seed, or the client sees the story move. |
 | `ffrap_airship [condition\|off]` | Open world probe: shows or rewrites the airship's spawn condition (`DT_MapAirShip`, shipped `{progress:0}>=4250`). One word, no spaces. `off` restores it. Not saved. |
 | `ffrap_bossfight <battle group> [quiet]\|sword\|off` | Test (round 49, IDEAS.md idea 25): the closed chests near you become traps for that battle group, the Chamber of Arms sword pedestal starts it too, and a win is logged. The win plays the sword fight's victory scene, or nothing with `quiet`. `sword` gives the Ancient Greatsword the pedestal needs. `off` undoes it. `watch [class ...]` hooks the talk event and encounter classes and logs their calls; `watch off` stops the logging. |
+| `ffrap_set [exp\|gil\|mrp\|encounterrate <number>] [encounters\|scaling <on\|off>] [reset]` | The player's settings (round 50): EXP, gil and MRP rates, random encounters and their rate, and the seed's enemy scaling. Kept in `settings.txt`. Our mod owns these: turn FFRS_QoL's multipliers and encounter settings off, or the two undo each other. |
+| `ffrap_menu probe` | Test (round 50): two test rows in the Options screen's Gameplay tab. Look only: they act on the rows they copy. |
 | `ffrap_gate <subcommand>` | Experimental gate and custom key-item probe (IDEAS.md, idea 16): `spawn [combo\|box\|rock\|pot\|gate\|world] [dist] [scale]`, `item [id] [count]`, `require <item\|unit\|flag\|off> [id] [count]`, `lock`, `unlock`, `clear`, `status`. |
 
 ## Bridge format

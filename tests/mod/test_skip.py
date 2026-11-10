@@ -444,4 +444,21 @@ libs["/Script/mucha.CPP_MapManager"] = { IsValid = function() return true end, F
 paths, flags_read = L.execute('return G.FunctionPaths("CPP_MapManager")')
 assert list(paths.values()) == ["/Script/mucha.CPP_MapManager:Encount", "/Script/mucha.CPP_MapManager:Execute_EncountStart"], list(paths.values())
 assert flags_read is True and lua('G.FunctionPaths("CPP_Nothing")') is None
+# Round 50: the Options probe adds two labelled copies of existing rows to the Gameplay tab, once
+L.execute("""
+optRows = { a = { Type = 1, EntryTag = { TagName = FName("Delegate.UI.System.Option.Root.GameSetting.EncountSensor") } },
+            b = { Type = 2, EntryTag = { TagName = FName("Delegate.UI.System.Option.Root.GameSetting.GamePad.Sensitivity") } } }
+optDT = { GetFullName = function() return "opt" end, IsValid = function() return true end,
+  HasAnyInternalFlags = function() return false end, HasAnyFlags = function() return false end,
+  ForEachRow = function(_, fn) for k, r in pairs(optRows) do fn(nameOf(k), r) end end,
+  AddRow = function(_, name, template) local copy = {} for k, v in pairs(template) do copy[k] = v end optRows[name] = copy end,
+  FindRow = function(_, name) return optRows[name] end }
+libs["/Game/Datatable/UI/Option/Root/GameSetting/DT_OP_GameSetting.DT_OP_GameSetting"] = optDT
+FText = FText or function(text) return { ToString = function() return text end } end""")
+ok, detail = L.execute("return G.OptionsProbe(say)")
+assert ok is True and "2 rows before" in detail and detail.count("in, labelled") == 2, detail
+assert lua("optRows.FFRAP_Test_Switch.Type") == 1 and lua("optRows.FFRAP_Test_Slider.Type") == 2
+assert lua("optRows.FFRAP_Test_Slider.DisplayText:ToString()") == "Archipelago test slider"
+ok, detail = L.execute("return G.OptionsProbe(say)")
+assert "4 rows before" in detail and lua("optRows.FFRAP_Test_Switch.Type") == 1, "a second run only labels"
 print("skip: ok")

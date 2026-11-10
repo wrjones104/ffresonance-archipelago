@@ -422,28 +422,20 @@ World-map shinies verified as locations. Multiple crashes observed across differ
 - **Other answers:** the shard counter counts up in the item feed (no seed finished yet). The moogle's Vision Enhancement screen shows its close button; not yet seen with no Magicite Shard at all.
 - **Scaling:** 75% felt good early, but enemies got far too easy from about party level 20, and bosses were too easy all along. The user wants bosses on their own setting, at 100% by default, and to be a real gate. Mod 0.37.0 ramps enemies and gives bosses their own band (docs/open_world.md, section 5).
 
-## Round 50 test plan (mod 0.37.1, world 0.8.1)
+## Round 50 test plan (mod 0.38.0, world 0.9.0)
 
-Seeds can now be finished, and a seed scales its enemies by itself. Send the `[FFRAP]` lines of `UE4SS.log`.
+**Install:** copy `FFRArchipelago/Scripts` over the installed mod, and `dist/ff_resonance.apworld` into `custom_worlds`. Generate a new seed for step 2 (an old seed still works for the rest). FFRS_QoL can stay on, but turn off its EXP, gil and MRP multipliers and its encounter settings: ours own those now, and the two would undo each other.
 
-**Install:** copy `FFRArchipelago/Scripts` over the installed mod. If you have not installed world 0.8.0 yet, copy `dist/ff_resonance.apworld` into `custom_worlds` and **generate a new seed**. Connect the client first, then New Game (Archipelago). Do not type `ffrap_scale`.
+**1. Artifacts.** Load a save that has received artifacts. The log should say `artifacts: added to the artifact list:` and their ids (Exodus is 30001). **Is there an Artifacts tab in the Items screen, and can you switch one on?** Exodus makes every escape work.
 
-For a short test, add this to your yaml. The default is 50. Shards turn on by themselves with this goal, so `include_tablet_shards` is no longer needed.
+**2. The Bandit Cuff Links.** In a new seed (the yaml option `start_with_bandit_cuff_links` is on by default), **are chests shown on the mini-map from the start?**
 
-```yaml
-  tablet_shards_required: 10
-```
+**3. Settings, by console for now.** `ffrap_set` shows them. Try `ffrap_set exp 2`, `ffrap_set mrp 3`, `ffrap_set encounters off`, then `on`, and `ffrap_set encounterrate 3`. **Do battles give more EXP and MRP, do random battles stop and come back, and do they come more often at 3?** `ffrap_set scaling off` should give the game's own enemies after the next load. `ffrap_set reset` puts everything back.
 
-1. After the start, the log should say `scale: the seed's scaling is on`, with `hp 75%, attack 75%, magic 75%, with bosses`. **Is that a fair baseline?** Note how it feels early, and again later if you can.
-2. Receive a Tablet Shard. **Does the item feed say `Tablet Shard (1/10)`?**
-3. Receive the last one you need. **Does the game say `Goal complete!`, and does the server show your slot as finished?**
-4. The moogle: have a vision and no Magicite Shard (a Cryst alone is a good test). Open Vision Enhancement and press Cancel. **Does the screen close?** Then get a Shard and enhance a vision. Does the screen still work and close after?
-5. Send the `vision screen:` lines of the log. They show what the game's own check answered.
+**4. The Options screen probe.** `ffrap_menu probe`, then open Options and the Gameplay tab at once. **Are there two new rows at the bottom, "Archipelago test switch" and "Archipelago test slider"?** Do not change them: they act on the encounter sensor and camera sensitivity. A screenshot helps. If the game crashes, send the crash folder.
 
-**Install:** copy `FFRArchipelago/Scripts`. Your seed still works.
+**5. Scaling.** As last time: how do normal enemies and bosses feel?
 
-**1. Scaling.** No command needed. After a load, the log shows a line like `scale: party level 29 (...): enemies centre 26 (90%), power 100%; bosses centre 29, power 100%`. Play as usual. **How do normal enemies feel now, at your level?** And if you fight a boss, how does it feel at 100%?
+**6. A quiet boss from a chest.** Save in a spare slot. Next to a closed chest, `ffrap_bossfight 9013 quiet`, then open the chest. **After the win, does a short scene play and bring you back?** `ffrap_bossfight off` when done.
 
-**Artifacts (mod 0.37.1).** Load your save. The log should say `artifacts: added to the artifact list:` with the artifacts you hold (Exodus is 30001, the Premium Card 30006, the Transporter 30007). **Is there an Artifacts tab in the Items screen now, and can you switch one on?** Exodus makes every escape work, which is easy to check.
-
-**2. A quiet boss from a chest.** Save in a spare slot. Next to a closed chest, `ffrap_bossfight 9013 quiet`, then open the chest. **After the win, does a short scene play and bring you back to the field?** If it is black again, wait 10 seconds, then close the game. Send the `boss test:` lines. `ffrap_bossfight off` when done.
+Send the `[FFRAP]` lines of the log.

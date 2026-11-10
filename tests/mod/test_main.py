@@ -118,6 +118,9 @@ G.shinies = {
 }
 function G.LiveFieldItems() return G.shinies end
 function G.GrantItem() return "ok", "" end
+function G.ApplyRates(e, g, m) G.rates = { e, g, m } return 0 end
+function G.ApplyEncounterTables(on, rate) G.encounterTables = { on, rate } return 0, 1 end
+function G.ApplyPlayerEncounter(on) G.playerEncounters = on return 0 end
 G.ARTIFACT_FIRST, G.ARTIFACT_LAST = 30000, 30018
 function G.SyncArtifacts() G.artifactSyncs = (G.artifactSyncs or 0) + 1; return {} end
 function G.UnlockVision() return "ok", "" end
@@ -1461,3 +1464,40 @@ tick(12)
 assert "item30001x1" in list(G.log.values()) and "item1x1" in list(G.log.values()), list(G.log.values())
 assert (G.artifactSyncs or 0) >= 1, "the artifact list was synced after the grant"
 print("artifact grant: ok")
+
+# Round 50: ffrap_set changes the settings, keeps them in settings.txt (only what was set), and
+# they reach the game; scaling off keeps the seed from scaling enemies
+for name in ("settings.txt",):
+    try:
+        os.remove(path(name))
+    except FileNotFoundError:
+        pass
+inbox("seed\tS52:0:1\ncfg\topenworld\t1\n", "w")
+L, G = boot5("SD_SET", "0", {})
+L.globals().G = G
+L.execute(SCALE_STUB)
+tick = lambda k: [L.execute("tickFn()") for _ in range(k)]
+G.story = 1000
+G.chests = L.table()
+tick(12)
+assert list(G.rates.values()) == [1, 1, 1] and list(G.encounterTables.values()) == [True, 1], "the defaults"
+set_ = lambda *a: L.execute('commands["ffrap_set"]("ffrap_set", {' + ", ".join('"%s"' % x for x in a) + '})')
+set_("exp", "2")
+set_("encounters", "off")
+set_("encounterrate", "9")
+set_("scaling", "off")
+set_("gil", "lots")
+tick(10)
+assert list(G.rates.values()) == [2, 1, 1] and list(G.encounterTables.values()) == [False, 5], "held to the range"
+assert G.playerEncounters is False
+saved = read("settings.txt")
+assert "exp 2" in saved and "encounters off" in saved and "encounterrate 5" in saved and "gil" not in saved, saved
+G.story = 8000
+tick(20)
+assert list(G.scaleCalls.values()) == [], "scaling off: the seed does not scale"
+L2, G2 = boot5("SD_SET2", "0", {})
+L2.execute("tickFn = tickFn")
+assert "exp 2" in read("settings.txt"), "kept for the next run"
+set_("reset")
+assert read("settings.txt").strip() == ""
+print("settings: ok")
