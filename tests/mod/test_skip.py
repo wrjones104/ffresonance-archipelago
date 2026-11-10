@@ -360,7 +360,7 @@ assert ok is False and "load the slot by hand" in detail, detail
 L.execute("""
 talkRows = { ["12Arms_01Sword_1stAwake_Victory"] = { EventType = 0, ObtainItemList = arr({ { ID = 10199 } }), OnFlagList = arr({ 901, 1237 }) },
   ["12Arms_01Sword_1stAwake_Encount"] = { EventType = 0, encountGroupId = 9957 },
-  choice_cancel = { EventType = 0, OnFlagList = arr({}) },
+  Gim_EV_Majipot_Delete_02 = { EventType = 0, OnFlagList = arr({ 915 }) },
   Other = { EventType = 0, encountGroupId = 5 } }
 shopRows = talkRows
 siren = { ID = 9013, battleEventId = 77, battleFinishEventId = FName("C01_037_01"), battleFinishLoseEventId = FName("None"),
@@ -405,14 +405,14 @@ assert lua(fight) == 9957
 assert lua("chestRows[1].IsTrap") is False and lua("chestRows[1].battleGroupId") == -1
 assert lua("chestRows[1].battleFinishEventId:ToString()") == "None" and lua("nearChests[1].m_TreasureBoxData.IsTrap") is False
 assert lua(win + ".OnFlagList[1]") == 901 and lua(win + ".OnFlagList[2]") == 1237 and lua(win + ".EventType") == 0
-# quiet: the win row is choice_cancel, a Sequence row with no sequence, which gets the flag
+# quiet: the win row is the magic pots' after-win row, whose flag is ours while the test is on
+pot = "talkRows.Gim_EV_Majipot_Delete_02.OnFlagList[1]"
 ok, detail = L.execute("return G.BossTestArm(9013, say, true)")
-assert ok is True and lua("siren.battleFinishEventId:ToString()") == "choice_cancel"
-assert lua("chestRows[1].battleFinishEventId:ToString()") == "choice_cancel"
-assert lua("#talkRows.choice_cancel.OnFlagList") == 1 and lua("talkRows.choice_cancel.OnFlagList[1]") == 1440
-assert lua(win + ".OnFlagList[1]") == 901, "the Victory row is left alone"
+assert ok is True and lua("siren.battleFinishEventId:ToString()") == "Gim_EV_Majipot_Delete_02"
+assert lua("chestRows[1].battleFinishEventId:ToString()") == "Gim_EV_Majipot_Delete_02"
+assert lua(pot) == 1440 and lua(win + ".OnFlagList[1]") == 901, "the Victory row is left alone"
 L.execute("G.BossTestOff(say)")
-assert lua("#talkRows.choice_cancel.OnFlagList") == 0
+assert lua(pot) == 915
 assert lua("siren.battleEventId") == 77 and lua("siren.battleFinishEventId:ToString()") == "C01_037_01" and lua("siren.isResultSkipOnWin") is True
 assert L.execute("return G.BossTestOff(say)") == 0, "nothing to undo"
 L.execute("nearChests = {}")

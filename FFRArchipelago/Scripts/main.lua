@@ -50,7 +50,7 @@
 -- follows the save slots the linked game is saved to. While any other save is loaded, the mod
 -- grants nothing, reports nothing and leaves the chests vanilla.
 
-local VERSION = "0.36.2"
+local VERSION = "0.37.0"
 local PROTOCOL = 2        -- the bridge protocol; the apworld's MOD_PROTOCOL
 
 local MOD_DIR = (debug.getinfo(1, "S").source:gsub("^@", ""):gsub("\\", "/"):match("^(.*/)Scripts/[^/]+$"))
@@ -1582,10 +1582,15 @@ local seedScaleFailed = false   -- so a failure is logged once
 
 -- Every rescale writes the changed rows to scale.txt (one enemy a line), so a hit seen in
 -- battle can be matched with the stats behind it.
-local function applyScale(mode, a, b, withBosses, knobs)
+local function applyScale(mode, a, b, withBosses, knobs, bossBand)
+    local bosses = withBosses and ", with bosses" or ""
+    if bossBand then
+        bosses = string.format(", bosses %d to %d, hp %d%%, attack %d%%, magic %d%%", math.max(1, bossBand.a), bossBand.b,
+            bossBand.knobs.hp, bossBand.knobs.attack, bossBand.knobs.magic)
+    end
     log(string.format("scale: %s %s %s, hp %d%%, attack %d%%, magic %d%%%s: starting", mode, tostring(a), tostring(b),
-        knobs.hp, knobs.attack, knobs.magic, withBosses and ", with bosses" or ""))
-    local n, sample, lines, gameChanged = game.ScaleEnemies(mode, a, b, withBosses, knobs)
+        knobs.hp, knobs.attack, knobs.magic, bosses))
+    local n, sample, lines, gameChanged = game.ScaleEnemies(mode, a, b, withBosses, knobs, bossBand)
     if n == nil then return nil, sample end
     log("scale: " .. n .. " rows changed" .. (sample and ("; " .. sample) or ""))
     if gameChanged and gameChanged > 0 then
@@ -1595,7 +1600,7 @@ local function applyScale(mode, a, b, withBosses, knobs)
     else
         local band = mode == "fixed" and ("every enemy at level " .. tostring(a))
             or string.format("levels %s to %s", tostring(math.max(1, a)), tostring(b))
-        scaleLast = { mode = mode, a = a, b = b, withBosses = withBosses, knobs = knobs, text = band }
+        scaleLast = { mode = mode, a = a, b = b, withBosses = withBosses, knobs = knobs, bossBand = bossBand, text = band }
     end
     if lines and #lines > 0 then
         local f = io.open(MOD_DIR .. "scale.txt", "w")
@@ -1697,30 +1702,60 @@ end)
 local SCALE_CHECK_EVERY = 2   -- scale ticks (of STATUS_EVERY) between table checks
 local scaleChecks = 0
 
--- Round 49: a seed scales its enemies by itself, in place of typing ffrap_scale each time. The
--- user chose these numbers as a baseline: HP and power at 75%, bosses too. It waits for the open
--- world start, as the prologue's party is not the seed's. A save that is not the seed's gets the
--- game's own enemies back. In-game sliders are planned (IDEAS.md, idea 18).
-local SEED_SCALE = { range = 2, at = 80, withBosses = true, knobs = { hp = 75, attack = 75, magic = 75 } }
+-- Round 49: a seed scales its enemies by itself, in place of typing ffrap_scale each time. It
+-- waits for the open world start, as the prologue's party is not the seed's. A save that is not
+-- the seed's gets the game's own enemies back. In-game sliders are planned (IDEAS.md, idea 18).
+-- The user's numbers: 75% HP and power felt right early but too easy from about level 20, and
+-- bosses were too easy all along. So enemies ramp from 75% power at 80% of the party's level
+-- (party level 5) to 100% power at 90% (party level 25), and bosses stay at 100% power and the
+-- party's own level.
+local SEED_SCALE = { range = 2, rampFrom = 5, rampTo = 25, at = { 80, 90 }, power = { 75, 100 }, bossAt = 100, bossPower = 100 }
+
+local function ramp(pair, lv)
+    local s = SEED_SCALE
+    local t = math.min(1, math.max(0, (lv - s.rampFrom) / (s.rampTo - s.rampFrom)))
+    return math.floor(pair[1] + (pair[2] - pair[1]) * t + 0.5)
+end
+
+local function seedScaleToParty()
+    local lv, detail = game.PartyLevel()
+    if not lv then return nil, "party level unknown (" .. tostring(detail) .. ")" end
+    local s = SEED_SCALE
+    local at, power = ramp(s.at, lv), ramp(s.power, lv)
+    local a, b, c = game.LevelBand(lv, s.range, at)
+    local ba, bb = game.LevelBand(lv, s.range, s.bossAt)
+    log(string.format("scale: party level %d (%s): enemies centre %d (%d%%), power %d%%; bosses centre %d, power %d%%",
+        lv, detail, c, at, power, lv, s.bossPower))
+    local bossKnobs = { hp = s.bossPower, attack = s.bossPower, magic = s.bossPower }
+    local n, err = applyScale("clamp", a, b, true, { hp = power, attack = power, magic = power }, { a = ba, b = bb, knobs = bossKnobs })
+    return n, err, lv
+end
+
+-- What follow does when the party's level changes, or the table has been written over.
+local function followRescale(f)
+    if f.seed then return seedScaleToParty() end
+    return scaleToParty(f.range, f.at, f.withBosses, f.knobs)
+end
+
 local function seedScaleTick()
     local s = SEED_SCALE
     if not seedCfg.openworld or scaleByHand then return end
     if not sessionSave() then
         if seedScaleOn then
             seedScaleOn, scaleFollow = false, nil
-            applyScale("off", nil, nil, false, s.knobs)
+            applyScale("off", nil, nil, false, { hp = 100, attack = 100, magic = 100 })
         end
         return
     end
     if scaleFollow or (game.StoryCounter() or 0) < game.OPEN_START.story then return end
-    local n, err, lv = scaleToParty(s.range, s.at, s.withBosses, s.knobs)
+    local n, err, lv = seedScaleToParty()
     if n == nil then
         if not seedScaleFailed then log("scale: the seed's scaling failed: " .. tostring(err)) end
         seedScaleFailed = true
         return
     end
     seedScaleOn = true
-    scaleFollow = { range = s.range, at = s.at, knobs = s.knobs, withBosses = s.withBosses, last = lv }
+    scaleFollow = { seed = true, last = lv }
     log("scale: the seed's scaling is on, following the party's level")
 end
 
@@ -1737,8 +1772,8 @@ scaleTick = function()
             log(string.format("scale: the table changed under us: %d of %d rows differ%s%s; writing it again", differ,
                 checked, sample and (" (" .. sample .. ")") or "", reloaded and ", the table is a new object" or ""))
             local l = scaleLast
-            if scaleFollow then scaleToParty(scaleFollow.range, scaleFollow.at, scaleFollow.withBosses, scaleFollow.knobs)
-            else applyScale(l.mode, l.a, l.b, l.withBosses, l.knobs) end
+            if scaleFollow then followRescale(scaleFollow)
+            else applyScale(l.mode, l.a, l.b, l.withBosses, l.knobs, l.bossBand) end
         end
     end
     local f = scaleFollow
@@ -1747,7 +1782,7 @@ scaleTick = function()
     if not lv or lv == f.last then return end
     log("scale: party level " .. tostring(f.last) .. " -> " .. lv)
     f.last = lv
-    scaleToParty(f.range, f.at, f.withBosses, f.knobs)
+    followRescale(f)
 end
 
 -- ffrap_bossfight <battle group> [quiet]: the closed chests near you become traps for that fight,

@@ -986,6 +986,11 @@ assert L.eval("unitRows.bat.MaxHitPoint") == scaled(68, "MaxHitPoint", 1, 5)
 # the knobs reach the rows
 n, _, lines = L.execute("return G.ScaleEnemies('clamp', 5, 15, true, { hp = 50 })")[:3]
 assert n == 2 and L.eval("unitRows.bat.MaxHitPoint") == scaled(68, "MaxHitPoint", 1, 5, 50), n
+# Round 49: bosses can have their own band and knobs
+L.execute("G.ScaleEnemies('clamp', 1, 3, true, { hp = 50 }, { a = 20, b = 20, knobs = { hp = 100 } })")
+assert L.eval("unitRows.boss.Level") == 20 and L.eval("unitRows.boss.MaxHitPoint") == scaled(2000, "MaxHitPoint", 4, 20)
+assert L.eval("unitRows.bat.Level") == 1 and L.eval("unitRows.bat.MaxHitPoint") == scaled(68, "MaxHitPoint", 1, 1, 50)
+n, _, lines = L.execute("return G.ScaleEnemies('clamp', 5, 15, true, { hp = 50 })")[:3]
 # a line per changed row, for scale.txt
 assert len(lines) == 2 and any(("level 1 -> 5\tHP %d\t" % scaled(68, "MaxHitPoint", 1, 5, 50)) in l for l in lines.values()), list(lines.values())
 # Round 47: a battle's MRP follows its enemies' average level; a battle with no scaled enemy, and

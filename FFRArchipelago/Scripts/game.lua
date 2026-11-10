@@ -3126,11 +3126,12 @@ local function TableKeys(family)
 end
 
 -- Rescales every enemy row (and bosses too, if withBosses) by mode, a, b, as in ScaledLevel,
--- with the tuning knobs of ScaledStats. mode "off" restores the originals. Returns how many
+-- with the tuning knobs of ScaledStats. `bossBand` ({ a, b, knobs }) gives bosses their own band
+-- and knobs (round 49: bosses were too easy at the enemies' 75%). mode "off" restores the originals. Returns how many
 -- rows changed, one sample line (the first enemy that changed) for the log, a line per changed
 -- row (for scale.txt), and how many rows something else had changed since our last write
 -- (their values became the new originals).
-function G.ScaleEnemies(mode, a, b, withBosses, knobs)
+function G.ScaleEnemies(mode, a, b, withBosses, knobs, bossBand)
     local family = TableFamily(Find(UNIT_TABLE))
     if #family == 0 then return nil, "DT_UnitParameter not loaded" end
     local changed, sample, lines, gameChanged = 0, nil, {}, 0
@@ -3159,7 +3160,10 @@ function G.ScaleEnemies(mode, a, b, withBosses, knobs)
                         scaleOriginals[id] = orig
                     end
                     local want = orig
-                    if mode ~= "off" then want = G.ScaledStats(orig, G.ScaledLevel(orig.Level, mode, a, b), knobs) end
+                    if mode ~= "off" then
+                        local band = (cat == CATEGORY_BOSS and bossBand) or { a = a, b = b, knobs = knobs }
+                        want = G.ScaledStats(orig, G.ScaledLevel(orig.Level, mode, band.a, band.b), band.knobs)
+                    end
                     wanted[id] = want.Level
                     local diff = false
                     for _, k in ipairs(fields) do
@@ -3953,12 +3957,14 @@ end
 -- again. Round 49: with the Victory row made a Blueprint row with no Blueprint, both wins ended
 -- on a black screen. The screen is faded out after a battle, and every after-win row the game
 -- ships is a Sequence row. So the win row is now either the Victory row with its own scene
--- (only its flags and item change), or, with `quiet`, choice_cancel: a Sequence row with no
--- sequence, no flags and nothing else, which gets the flag added. `off` undoes it all but the
--- Victory row's item, which comes back when the game restarts.
+-- (only its flags and item change), or, with `quiet`, the magic pot fights' after-win row
+-- Gim_EV_Majipot_Delete_02: a short shared sequence whose only effect is flag 915, which our
+-- flag replaces. Round 49 tried choice_cancel (a Sequence row with no sequence) for `quiet`, and
+-- the screen stayed black too: an after-win row needs a sequence to fade back in. `off` undoes
+-- it all but the Victory row's item, which comes back when the game restarts.
 G.BOSS_TEST_FLAG = 1440       -- no condition or talk row in the game uses flags 1430 to 1449
 G.BOSS_TEST_SWORD = 10198     -- the Ancient Greatsword, which the sword pedestal checks for
-local BOSS_TEST_FIGHT, BOSS_TEST_VICTORY, BOSS_TEST_QUIET = "12Arms_01Sword_1stAwake_Encount", "12Arms_01Sword_1stAwake_Victory", "choice_cancel"
+local BOSS_TEST_FIGHT, BOSS_TEST_VICTORY, BOSS_TEST_QUIET = "12Arms_01Sword_1stAwake_Encount", "12Arms_01Sword_1stAwake_Victory", "Gim_EV_Majipot_Delete_02"
 local bossTestSaved = nil     -- { talk = {}, group = id, groupFields = {}, chests = { ["map:id"] = {} } }
 
 local function EachTalkRow(fn)
@@ -4014,8 +4020,6 @@ function G.BossTestOff(say)
         if not o then return end
         if o.encount then
             row.encountGroupId = o.encount
-        elseif o.grown then
-            row.OnFlagList:Empty()
         else
             for i, flag in ipairs(o.flags) do row.OnFlagList[i] = flag end
         end
@@ -4070,17 +4074,13 @@ function G.BossTestArm(id, say, quiet)
             saved.talk[key] = saved.talk[key] or { encount = Int(row.encountGroupId) }
             row.encountGroupId = id
             fight = fight + 1
-        elseif key == winRow and quiet then
-            saved.talk[key] = saved.talk[key] or { grown = true }
-            AppendOnce(row.OnFlagList, G.BOSS_TEST_FLAG)
-            win = win + 1
         elseif key == winRow then
             if not saved.talk[key] then
                 local flags = {}
                 for i = 1, #row.OnFlagList do flags[i] = Int(row.OnFlagList[i]) end
                 saved.talk[key] = { flags = flags }
             end
-            row.ObtainItemList:Empty()
+            if not quiet then row.ObtainItemList:Empty() end
             for i = 1, #row.OnFlagList do row.OnFlagList[i] = G.BOSS_TEST_FLAG end
             win = win + 1
         end

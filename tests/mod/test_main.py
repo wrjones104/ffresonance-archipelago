@@ -1321,9 +1321,10 @@ function G.LevelBand(lv, range, at)
 end
 function G.OnField() return G.onField end
 function G.ScaleCheck() return 0, 0, nil, false end
-function G.ScaleEnemies(mode, a, b, boss, knobs)
+function G.ScaleEnemies(mode, a, b, boss, knobs, bossBand)
   G.scaleCalls[#G.scaleCalls + 1] = string.format("%s %s %s %s hp%d atk%d mag%d", mode, tostring(a), tostring(b),
-    tostring(boss), knobs.hp, knobs.attack, knobs.magic)
+    tostring(boss), knobs.hp, knobs.attack, knobs.magic) ..
+    (bossBand and string.format("; bosses %d %d hp%d", bossBand.a, bossBand.b, bossBand.knobs.hp) or "")
   return 3, "sample", {}, 0
 end
 """
@@ -1339,12 +1340,16 @@ tick(30)
 assert calls() == [], "not before the open world start"
 G.story = 8000
 tick(10)
-assert calls() == ["clamp 6 10 true hp75 atk75 mag75"], calls()
+# party level 10 is a quarter of the way up the ramp: centre 83% (8), power 81%; bosses at 10, 100%
+assert calls() == ["clamp 6 10 true hp81 atk81 mag81; bosses 8 12 hp100"], calls()
 tick(10)
 assert len(calls()) == 1, "once"
-G.partyLv = 20
+G.partyLv = 30
 tick(10)
-assert calls()[-1] == "clamp 14 18 true hp75 atk75 mag75", calls()
+assert calls()[-1] == "clamp 25 29 true hp100 atk100 mag100; bosses 28 32 hp100", "the top of the ramp: centre 90% (27), power 100%"
+G.partyLv = 3
+tick(10)
+assert calls()[-1] == "clamp 0 4 true hp75 atk75 mag75; bosses 1 5 hp100", "below the ramp: centre 80% (2), power 75%"
 G.saveObj, G.saveTicks = "SD_OTHER", "600"     # a save in a slot the seed does not hold
 tick(30)
 assert calls()[-1].startswith("off "), calls()
@@ -1358,7 +1363,7 @@ G.chests = L.table()
 tick(12)
 G.story = 8000
 tick(10)
-assert calls() == ["clamp 6 10 true hp75 atk75 mag75"], calls()
+assert calls() == ["clamp 6 10 true hp81 atk81 mag81; bosses 8 12 hp100"], calls()
 L.execute('commands["ffrap_scale"]("ffrap_scale", {"off"})')
 G.partyLv = 30
 tick(30)

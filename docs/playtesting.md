@@ -416,7 +416,13 @@ World-map shinies verified as locations. Multiple crashes observed across differ
 - **`ffrap_scale` by hand still wins over the seed:** the user set `hp 200 power 200` to lose a fight on purpose.
 - **A crash, on an older mod (0.35.x), leaving the Rugged Mountain cave in Gronoa to the west.** `tools/crashstack.py` shows an access violation in UE4SS's `FName::ToString`, called from a Lua game-thread tick (`process_simple_actions`) through a UObject handle's metamethod. So a tick asked an object for its name after the object was freed. A map load frees the old map's objects, and `G.Live` caches the map manager, which is asked every tick. Mod 0.36.2 forgets cached objects in the `LoadMap` post hook. Not proven to be the cause; if it happens again, send `UE4SS.log` too, so the last lines show what the tick was doing.
 
-## Round 49 test plan (mod 0.36.2, world 0.8.1)
+**Round 49, sixth try (mod 0.36.2, world 0.8.1, 2026-11-10): a boss from the pedestal works end to end, and a chest starts one.**
+- **Pedestal, default win row:** Siren, a win, the sword fight's victory scene (it says the weapon was upgraded, though no item was given), and back in the Chamber. `boss test: WIN seen`.
+- **Chest, `quiet`:** a closed chest in map 3050 started Siren. The chest's check went out (`check chest:3050:2`), but its pop-up was missed, as the battle came instead. After the win the screen stayed black. `quiet` used `choice_cancel`, a Sequence row with no sequence. So an after-win row needs a real sequence. Mod 0.37.0 makes `quiet` use the magic pots' short after-win scene.
+- **Other answers:** the shard counter counts up in the item feed (no seed finished yet). The moogle's Vision Enhancement screen shows its close button; not yet seen with no Magicite Shard at all.
+- **Scaling:** 75% felt good early, but enemies got far too easy from about party level 20, and bosses were too easy all along. The user wants bosses on their own setting, at 100% by default, and to be a real gate. Mod 0.37.0 ramps enemies and gives bosses their own band (docs/open_world.md, section 5).
+
+## Round 50 test plan (mod 0.37.0, world 0.8.1)
 
 Seeds can now be finished, and a seed scales its enemies by itself. Send the `[FFRAP]` lines of `UE4SS.log`.
 
@@ -434,11 +440,8 @@ For a short test, add this to your yaml. The default is 50. Shards turn on by th
 4. The moogle: have a vision and no Magicite Shard (a Cryst alone is a good test). Open Vision Enhancement and press Cancel. **Does the screen close?** Then get a Shard and enhance a vision. Does the screen still work and close after?
 5. Send the `vision screen:` lines of the log. They show what the game's own check answered.
 
-**The boss fight test: after the win.** The fights start; this checks that the game comes back after a win. Save in a spare slot first, in the Chamber of Arms, with `ffrap_lock off` if Dirnado is locked.
+**Install:** copy `FFRArchipelago/Scripts`. Your seed still works.
 
-1. `ffrap_bossfight sword`, then `ffrap_bossfight 9013`. Use the sword pedestal and beat Siren. **Does the sword fight's victory scene play, and are you back in the Chamber after it?** The log should say `boss test: WIN seen`.
-2. `ffrap_bossfight 9013 quiet`. Beat Siren again. **Are you back in the Chamber with no scene?**
-3. If you like, try a chest: next to a closed chest anywhere, `ffrap_bossfight 9013 quiet`, then open it. Does a fight start?
-4. `ffrap_bossfight off`, then `ffrap_lock on`.
+**1. Scaling.** No command needed. After a load, the log shows a line like `scale: party level 29 (...): enemies centre 26 (90%), power 100%; bosses centre 29, power 100%`. Play as usual. **How do normal enemies feel now, at your level?** And if you fight a boss, how does it feel at 100%?
 
-If a black screen comes back, wait 10 seconds before closing the game, and say which step it was. Send the `boss test:` lines of the log.
+**2. A quiet boss from a chest.** Save in a spare slot. Next to a closed chest, `ffrap_bossfight 9013 quiet`, then open the chest. **After the win, does a short scene play and bring you back to the field?** If it is black again, wait 10 seconds, then close the game. Send the `boss test:` lines. `ffrap_bossfight off` when done.
