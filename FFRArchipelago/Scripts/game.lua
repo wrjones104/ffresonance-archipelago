@@ -198,6 +198,30 @@ function G.GrantItem(id, n)
     return "ok", "held " .. tostring(before) .. " -> " .. tostring(after)
 end
 
+-- Round 49: artifacts from Archipelago went into the bag only, and the Items screen showed no
+-- artifacts. The save keeps them apart, in artifactList (id -> SaveData_Artifact, which holds only
+-- IsActive), and that is what the screen and the effects read. So each artifact in the bag is
+-- added there too. The Chocobo Saddle and the Premium Card start on (isInitialActive in
+-- DT_ArtifactItemData); the rest start off. Returns the ids added, or nil and why.
+G.ARTIFACT_FIRST, G.ARTIFACT_LAST = 30000, 30018
+local ARTIFACT_STARTS_ON = { [30002] = true, [30006] = true }
+function G.SyncArtifacts()
+    local sd, inv = G.SaveData(), Lib("CPP_BFL_SaveDataInventory")
+    if not (sd and inv) then return nil, "save not loaded" end
+    local listed = {}
+    if not pcall(function() sd.artifactList:ForEach(function(k) listed[Int(k:get())] = true end) end) then
+        return nil, "artifactList unreadable"
+    end
+    local added = {}
+    for id = G.ARTIFACT_FIRST, G.ARTIFACT_LAST do
+        if not listed[id] and (Held(inv, id) or 0) > 0 and
+            pcall(function() sd.artifactList:Add(id, { IsActive = ARTIFACT_STARTS_ON[id] == true }) end) then
+            added[#added + 1] = id
+        end
+    end
+    return added
+end
+
 -- Whether the save owns a vision: true, false, or nil when the vision library is not loaded.
 function G.HasVision(id)
     local lib = Lib("CPP_BFL_Vision")

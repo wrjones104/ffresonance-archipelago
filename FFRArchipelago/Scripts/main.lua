@@ -50,7 +50,7 @@
 -- follows the save slots the linked game is saved to. While any other save is loaded, the mod
 -- grants nothing, reports nothing and leaves the chests vanilla.
 
-local VERSION = "0.37.0"
+local VERSION = "0.37.1"
 local PROTOCOL = 2        -- the bridge protocol; the apworld's MOD_PROTOCOL
 
 local MOD_DIR = (debug.getinfo(1, "S").source:gsub("^@", ""):gsub("\\", "/"):match("^(.*/)Scripts/[^/]+$"))
@@ -316,7 +316,14 @@ end
 -- -------------------------------------------------------------------------------------------
 
 local GRANTS = {
-    item = function(it) return game.GrantItem(it.id, math.max(it.count, 1)) end,
+    item = function(it)
+        local code, detail = game.GrantItem(it.id, math.max(it.count, 1))
+        if code == "ok" and it.id >= game.ARTIFACT_FIRST and it.id <= game.ARTIFACT_LAST then
+            local added, why = game.SyncArtifacts()
+            detail = detail .. "; artifact list: " .. (added and (#added .. " added") or tostring(why))
+        end
+        return code, detail
+    end,
     vision = function(it) return game.UnlockVision(it.id) end,
     unit = function(it)
         -- Round 44: in a seed, a new member comes in at the party's average level. Before the
@@ -1168,6 +1175,10 @@ local function tick()
                     log("crystals: " .. tostring(written) .. " event rows set to skip the scene" .. (okCrystals and "" or " (failed)"))
                 end
                 if newSave and bossTest.group then pcall(bossTest.arm, bossTest.group, bossTest.quiet) end
+                if newSave then
+                    local okArt, added = pcall(game.SyncArtifacts)
+                    if okArt and added and #added > 0 then log("artifacts: added to the artifact list: " .. table.concat(added, ", ")) end
+                end
                 if okShop and blocked ~= nil then
                     log("vision shop " .. (blocked and "closed (no vision yet)" or "open") .. ": " .. tostring(rows) .. " rows")
                 end

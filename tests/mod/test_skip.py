@@ -355,6 +355,20 @@ assert sum(1 for l in lines if l.startswith("FAIL")) == 1, lines
 L.execute("mapMgr.IsValid = function() return false end")
 ok, detail = L.execute("return G.SaveAndReload(2)")
 assert ok is False and "load the slot by hand" in detail, detail
+# Round 49: artifacts in the bag go into the save's artifact list once, on or off as the game ships them
+L.execute("""
+artifacts = { rows = { [30002] = { IsActive = true } } }
+function artifacts:ForEach(fn) for id in pairs(self.rows) do fn({ get = function() return id end }) end end
+function artifacts:Add(id, v) self.rows[id] = v end
+sd.artifactList = artifacts
+libs["/Script/mucha.Default__CPP_BFL_SaveDataInventory"] = { IsValid = function() return true end,
+  FindInventory = function(_, id) return bag[id] or 0 end }
+bag[30001], bag[30006], bag[30002] = 1, 1, 1""")
+added = L.execute("return G.SyncArtifacts()")
+assert sorted(added.values()) == [30001, 30006], list(added.values())
+assert lua("artifacts.rows[30001].IsActive") is False and lua("artifacts.rows[30006].IsActive") is True
+assert len(list(L.execute("return G.SyncArtifacts()").values())) == 0, "nothing twice"
+L.execute("bag[30001], bag[30006], bag[30002] = nil, nil, nil")
 # Round 49: the boss fight test makes the closed chests near you traps for the group, takes the
 # story's scenes off the group, and puts it all back
 L.execute("""

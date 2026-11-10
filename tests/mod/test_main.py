@@ -118,6 +118,8 @@ G.shinies = {
 }
 function G.LiveFieldItems() return G.shinies end
 function G.GrantItem() return "ok", "" end
+G.ARTIFACT_FIRST, G.ARTIFACT_LAST = 30000, 30018
+function G.SyncArtifacts() G.artifactSyncs = (G.artifactSyncs or 0) + 1; return {} end
 function G.UnlockVision() return "ok", "" end
 function G.HasVision(id) return (G.owned or {})[id] == true end
 function G.AddUnit() return "ok", G.unitDetail or "in the active party" end
@@ -1448,3 +1450,14 @@ L.execute("os.time = function() return 10^9 end")
 L.execute('hooks["/Script/mucha.CPP_MapManager:Warp"](nil)')
 assert len([x for x in logs() if "watch: CPP_MapManager:Warp (" in x]) == 1, "off stops the logging"
 print("watch probe: ok")
+
+# Round 49: an artifact from Archipelago is also put in the save's artifact list; other items are not
+inbox("seed\tS51:0:1\nitem\t0\titem\t30001\t1\tExodus\nitem\t1\titem\t1\t1\tPotion\n", "w")
+L, G = boot5("SD_ART", "0", {})
+G.story = 1000
+G.chests = L.table()
+tick = lambda k: [L.execute("tickFn()") for _ in range(k)]
+tick(12)
+assert "item30001x1" in list(G.log.values()) and "item1x1" in list(G.log.values()), list(G.log.values())
+assert (G.artifactSyncs or 0) >= 1, "the artifact list was synced after the grant"
+print("artifact grant: ok")
