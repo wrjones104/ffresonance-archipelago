@@ -355,18 +355,11 @@ assert sum(1 for l in lines if l.startswith("FAIL")) == 1, lines
 L.execute("mapMgr.IsValid = function() return false end")
 ok, detail = L.execute("return G.SaveAndReload(2)")
 assert ok is False and "load the slot by hand" in detail, detail
-# Round 49: the boss fight test points the crystals at a borrowed fight, with the story's scenes
-# taken off the group, and puts it all back
+# Round 49: the boss fight test makes the closed chests near you traps for the group, takes the
+# story's scenes off the group, and puts it all back
 L.execute("""
-local function cont(id) return { EventId = FName(id) } end
-talkRows = { Int_LegendEV_10_01 = { EventType = 1, ContinuousEventList = { cont("Int_LegendEV_10_07") } },
-  Int_LegendEV_10_01_Short = { EventType = 1, ContinuousEventList = { cont("Int_LegendEV_10_07") } },
-  Int_LegendEV_Retry_Start_10_02 = { EventType = 0, ContinuousEventList = { cont("Int_LegendEV_10_01_MV") } },
-  Int_LegendEV_Retry_Start_10_01 = { EventType = 0, ChoicesBranchEventList = {
-    { Index = 0, EventList = { cont("Int_LegendEV_Retry_Start_10_02") } }, { Index = 1, EventList = { cont("Int_LegendEV_Retry_Cancel") } } } },
-  ["12Arms_01Sword_1stAwake_Encount"] = { EventType = 0, encountGroupId = 9957 },
-  ["12Arms_01Sword_1stAwake_Victory"] = { EventType = 0, ObtainItemList = arr({ { ID = 10199 } }), OnFlagList = arr({ 901, 1237 }) },
-  Other = { EventType = 0, encountGroupId = 5 } }
+talkRows = { ["12Arms_01Sword_1stAwake_Victory"] = { EventType = 0, ObtainItemList = arr({ { ID = 10199 } }), OnFlagList = arr({ 901, 1237 }) },
+  Other = { EventType = 0 } }
 shopRows = talkRows
 siren = { ID = 9013, battleEventId = 77, battleFinishEventId = FName("C01_037_01"), battleFinishLoseEventId = FName("None"),
           battleFinishEscapeEventId = FName("None"), isResultSkipOnWin = true, isResultSkipOnLose = false }
@@ -374,23 +367,25 @@ libs["/Game/Datatable/Encount/DT_BattleGroup.DT_BattleGroup"] = {
   GetFullName = function() return "DT" end, IsValid = function() return true end,
   HasAnyInternalFlags = function() return false end, HasAnyFlags = function() return false end,
   ForEachRow = function(_, fn) fn(nameOf("Siren"), siren) end }
+local function chest(map, id) return { mapId = map, ID = id, ItemId = 3, ItemNum = 1, Money = -1, IsTrap = false,
+  battleGroupId = -1, battleFinishEventId = FName("None") } end
+chestRows = { chest(3020, 1), chest(3020, 2), chest(3020, 3), chest(2000, 1) }
+local function actor(data, open) return { IsValid = function() return true end, HasAnyInternalFlags = function() return false end,
+  HasAnyFlags = function() return false end, m_Id = data.ID, m_IsOpen = open, m_TreasureBoxData = data } end
+nearChests = { actor(chest(3020, 1), false), actor(chest(3020, 2), true) }
+function FindAllOf(c) if c == "CPP_MapGimmick_TreasureBox" then return nearChests end return nil end
 libs["/Script/mucha.Default__CPP_BFL_SaveDataProgress"].SetFlag = function(_, i, on) sd.Progress.eventFlag[i + 1] = on end
 sd.Progress.eventFlag[1441] = true
 said = {}
 function say(s) said[#said + 1] = s end""")
 ok, detail = L.execute("return G.BossTestArm(1, say)")
 assert ok is False and "no battle group 1" in detail, detail
-assert lua('talkRows.Int_LegendEV_10_01.ContinuousEventList[1].EventId:ToString()') == "Int_LegendEV_10_07", "no write without a group"
 ok, detail = L.execute("return G.BossTestArm(9013, say)")
-assert ok is True and "3 crystal rows" in detail, detail
-yes = 'talkRows.Int_LegendEV_Retry_Start_10_01.ChoicesBranchEventList[1].EventList[1].EventId:ToString()'
-no = 'talkRows.Int_LegendEV_Retry_Start_10_01.ChoicesBranchEventList[2].EventList[1].EventId:ToString()'
-assert lua(yes) == "12Arms_01Sword_1stAwake_Encount" and lua(no) == "Int_LegendEV_Retry_Cancel", "a claimed crystal's yes goes to the fight"
-assert lua('talkRows.Int_LegendEV_Retry_Start_10_02.ContinuousEventList[1].EventId:ToString()') == "Int_LegendEV_10_01_MV", "the old yes row is left alone"
-assert lua('talkRows.Int_LegendEV_10_01.EventType') == 0, "an opening row plays its sequence, then the fight"
-assert lua('talkRows.Int_LegendEV_10_01.ContinuousEventList[1].EventId:ToString()') == "12Arms_01Sword_1stAwake_Encount"
-assert lua('talkRows.Int_LegendEV_10_01_Short.ContinuousEventList[1].EventId:ToString()') == "12Arms_01Sword_1stAwake_Encount"
-assert lua('talkRows["12Arms_01Sword_1stAwake_Encount"].encountGroupId') == 9013 and lua("talkRows.Other.encountGroupId") == 5
+assert ok is True and "1 chests near you (1 table rows, 1 live)" in detail, detail
+assert lua("chestRows[1].IsTrap") is True and lua("chestRows[1].battleGroupId") == 9013
+assert lua("chestRows[1].battleFinishEventId:ToString()") == "12Arms_01Sword_1stAwake_Victory"
+assert lua("nearChests[1].m_TreasureBoxData.IsTrap") is True and lua("nearChests[1].m_TreasureBoxData.battleGroupId") == 9013, "the live copy too"
+assert lua("chestRows[2].IsTrap") is False and lua("chestRows[3].IsTrap") is False, "an opened chest and one far away stay"
 win = 'talkRows["12Arms_01Sword_1stAwake_Victory"]'
 assert lua(win + ".EventType") == 1 and lua("#" + win + ".ObtainItemList") == 0
 assert lua(win + ".OnFlagList[1]") == 1440 and lua(win + ".OnFlagList[2]") == 1440
@@ -400,13 +395,16 @@ assert lua("sd.Progress.eventFlag[1441]") is False, "the win flag starts off"
 assert "start 77, win C01_037_01" in " ".join(L.eval("said").values()), "the group's own events are logged"
 ok, detail = L.execute("return G.BossTestArm(9013, say)")
 assert ok is True, "arming again starts from the originals"
-assert L.execute("return G.BossTestOff(say)") == 6, "3 crystal rows, the fight, the win and the group"
-assert lua(yes) == "Int_LegendEV_Retry_Start_10_02" and lua('talkRows.Int_LegendEV_10_01.EventType') == 1, "put back as it was"
-assert lua('talkRows.Int_LegendEV_10_01.ContinuousEventList[1].EventId:ToString()') == "Int_LegendEV_10_07"
-assert lua('talkRows["12Arms_01Sword_1stAwake_Encount"].encountGroupId') == 9957
+assert L.execute("return G.BossTestOff(say)") == 4, "the win row, two copies of the chest, and the group"
+assert lua("chestRows[1].IsTrap") is False and lua("chestRows[1].battleGroupId") == -1
+assert lua("chestRows[1].battleFinishEventId:ToString()") == "None" and lua("nearChests[1].m_TreasureBoxData.IsTrap") is False
 assert lua(win + ".OnFlagList[1]") == 901 and lua(win + ".OnFlagList[2]") == 1237 and lua(win + ".EventType") == 0
 assert lua("siren.battleEventId") == 77 and lua("siren.battleFinishEventId:ToString()") == "C01_037_01" and lua("siren.isResultSkipOnWin") is True
 assert L.execute("return G.BossTestOff(say)") == 0, "nothing to undo"
+L.execute("nearChests = {}")
+ok, detail = L.execute("return G.BossTestArm(9013, say)")
+assert ok is False and "no closed chest" in detail, detail
+L.execute("function FindAllOf() return nil end")
 # Round 49: the watch probe takes a class's native functions, not its getters, delegates or Blueprint events
 L.execute("""
 local function fn(name, flags) return { GetFName = function() return { ToString = function() return name end } end,

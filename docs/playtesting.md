@@ -408,7 +408,9 @@ World-map shinies verified as locations. Multiple crashes observed across differ
 
 **Round 49, third try (mod 0.35.2, 2026-11-09): still no fight.** The log shows the test armed and the `Encount` hook in place, but no `the game asked for a battle` line. So the chain stops before any battle is asked for, or event battles start some other way. Mod 0.35.3 adds a watcher to find out (IDEAS.md, idea 25).
 
-## Round 49 test plan (mod 0.35.3, world 0.8.0)
+**Round 49, fourth try (mod 0.35.4, world 0.8.1, 2026-11-10): no fight, even with the row's own group.** Group 9957 (the Twelve Arms fight the test borrows) failed like 9013, so the problem is the borrowed row, not the boss. The watcher hooked 29 functions with no crash. A normal random battle showed only as a move to map 20001; it never called `CPP_MapManager:Encount`. Around the crystal only `CPP_TalkEventManager:OnFinishFade` ran. So hooks do not see the game's event and battle code. Mod 0.36.0 tries chests as the trigger instead (IDEAS.md, idea 25). Also seen: the shard counter, the seed's scaling and the shiny pop-ups all still work on world 0.8.1.
+
+## Round 49 test plan (mod 0.36.0, world 0.8.1)
 
 Seeds can now be finished, and a seed scales its enemies by itself. Send the `[FFRAP]` lines of `UE4SS.log`.
 
@@ -426,15 +428,17 @@ For a short test, add this to your yaml. The default is 50. Shards turn on by th
 4. The moogle: have a vision and no Magicite Shard (a Cryst alone is a good test). Open Vision Enhancement and press Cancel. **Does the screen close?** Then get a Shard and enhance a vision. Does the screen still work and close after?
 5. Send the `vision screen:` lines of the log. They show what the game's own check answered.
 
-**The boss fight test, with the watcher.** The fight has not started three times, so this run looks at what the game does. Save in a spare slot first. Stand near a sanctum crystal you have claimed. In the console, one line at a time:
+**The boss fight test, with chests.** Can a chest start any boss, and can a win be seen? Save in a spare slot first. Go into a town or dungeon with a chest you have not opened. The chest is a normal check too, so its item still goes out. In the console:
 
 ```
-ffrap_bossfight watch
+ffrap_bossfight 9957
 ```
 
-1. **A control:** leave the sanctum and walk until a normal random battle starts. Win it. This shows what a battle start looks like in the log.
-2. Go back to the claimed crystal. Type `ffrap_bossfight 9957` (the Twelve Arms fight the test borrows, with its own boss). Touch the crystal and say yes. **What happens on screen after yes?** A fade, a sound, a pause, or nothing?
-3. Type `ffrap_bossfight 9013` (Siren). Touch the crystal and say yes again.
-4. Type `ffrap_bossfight off` and `ffrap_bossfight watch off`.
+The log should say `boss test: ready` with `1 live` or more. Then open the chest.
 
-Send all the `watch:` and `boss test:` lines of the log. There will be many; that is fine. If anything crashes, send the crash folder: the last `watch: hooking` line names the hook that did it.
+1. **Does a battle start when the chest opens?** With 9957 it should be the Twelve Arms sword fight.
+2. **After a win, are you back on the field, with the normal results screen?** The log should say `boss test: WIN seen`. Did the chest also give its item, or the Archipelago pop-up?
+3. If it worked, try another closed chest with `ffrap_bossfight 9013` (Siren), and then lose one fight on purpose once. Is it a normal game over, or does it hang?
+4. Type `ffrap_bossfight off` when done.
+
+If the chest just opens as normal, that is a clear answer too. Send the `boss test:` lines of the log.

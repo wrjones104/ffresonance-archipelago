@@ -50,7 +50,7 @@
 -- follows the save slots the linked game is saved to. While any other save is loaded, the mod
 -- grants nothing, reports nothing and leaves the chests vanilla.
 
-local VERSION = "0.35.4"
+local VERSION = "0.36.0"
 local PROTOCOL = 2        -- the bridge protocol; the apworld's MOD_PROTOCOL
 
 local MOD_DIR = (debug.getinfo(1, "S").source:gsub("^@", ""):gsub("\\", "/"):match("^(.*/)Scripts/[^/]+$"))
@@ -1750,9 +1750,8 @@ scaleTick = function()
     scaleToParty(f.range, f.at, f.withBosses, f.knobs)
 end
 
--- ffrap_bossfight <battle group>: touching any sanctum crystal starts that fight (a claimed one
--- asks to revisit first: say yes), and a win is logged (round 49; IDEAS.md, idea 25).
--- ffrap_bossfight off: undoes it.
+-- ffrap_bossfight <battle group>: the closed chests near you become traps for that fight, and a
+-- win is logged (round 49; IDEAS.md, idea 25). ffrap_bossfight off: undoes it.
 -- ffrap_bossfight watch [class ...]: round 49 probe. The fight did not start twice, and the game
 -- never asked for a battle. This hooks the native functions of the talk event and encounter
 -- classes and logs each call (the first one, then at most one line every 2 seconds and 20 in all
@@ -1822,20 +1821,7 @@ local function startWatch(classes)
     log("watch: on, " .. watch.count .. " hooks in all")
     return watch.count
 end
--- Round 49: to tell "no battle was asked for" from "a battle was asked for and did not start",
--- the game's battle request is logged while the test is on. FFRSLib hooks the same function.
-local function hookBossTestEncount()
-    if bossTest.hooked then return end
-    bossTest.hooked = true
-    local ok, err = pcall(function()
-        RegisterHook("/Script/mucha.CPP_MapManager:Encount", function()
-            if bossTest.group then log("boss test: the game asked for a battle (CPP_MapManager:Encount)") end
-        end)
-    end)
-    log("boss test: " .. (ok and "watching CPP_MapManager:Encount" or ("could not hook CPP_MapManager:Encount: " .. tostring(err))))
-end
 bossTest.arm = function(id)
-    hookBossTestEncount()
     local ok, detail = game.BossTestArm(id, log)
     log("boss test: " .. (ok and "ready, " or "failed, ") .. tostring(detail))
     bossTest.group = ok and id or nil
@@ -1878,7 +1864,7 @@ command("ffrap_bossfight", function(p)
         return
     end
     local ok, detail = bossTest.arm(math.floor(id))
-    notify(ok and ("Boss test ready: touch a sanctum crystal (a claimed one: say yes to revisit). " .. detail) or ("Boss test failed: " .. tostring(detail)))
+    notify(ok and ("Boss test ready: open a closed chest near you. " .. detail) or ("Boss test failed: " .. tostring(detail)))
 end)
 
 -- ffrap_noland list: every no-landing box on this map, to noland.txt.
