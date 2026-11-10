@@ -359,7 +359,8 @@ assert ok is False and "load the slot by hand" in detail, detail
 # story's scenes off the group, and puts it all back
 L.execute("""
 talkRows = { ["12Arms_01Sword_1stAwake_Victory"] = { EventType = 0, ObtainItemList = arr({ { ID = 10199 } }), OnFlagList = arr({ 901, 1237 }) },
-  Other = { EventType = 0 } }
+  ["12Arms_01Sword_1stAwake_Encount"] = { EventType = 0, encountGroupId = 9957 },
+  Other = { EventType = 0, encountGroupId = 5 } }
 shopRows = talkRows
 siren = { ID = 9013, battleEventId = 77, battleFinishEventId = FName("C01_037_01"), battleFinishLoseEventId = FName("None"),
           battleFinishEscapeEventId = FName("None"), isResultSkipOnWin = true, isResultSkipOnLose = false }
@@ -381,7 +382,9 @@ function say(s) said[#said + 1] = s end""")
 ok, detail = L.execute("return G.BossTestArm(1, say)")
 assert ok is False and "no battle group 1" in detail, detail
 ok, detail = L.execute("return G.BossTestArm(9013, say)")
-assert ok is True and "1 chests near you (1 table rows, 1 live)" in detail, detail
+assert ok is True and "1 chests near you (1 table rows, 1 live), 1 pedestal rows" in detail, detail
+fight = 'talkRows["12Arms_01Sword_1stAwake_Encount"].encountGroupId'
+assert lua(fight) == 9013 and lua("talkRows.Other.encountGroupId") == 5, "only the sword pedestal's fight row"
 assert lua("chestRows[1].IsTrap") is True and lua("chestRows[1].battleGroupId") == 9013
 assert lua("chestRows[1].battleFinishEventId:ToString()") == "12Arms_01Sword_1stAwake_Victory"
 assert lua("nearChests[1].m_TreasureBoxData.IsTrap") is True and lua("nearChests[1].m_TreasureBoxData.battleGroupId") == 9013, "the live copy too"
@@ -395,7 +398,8 @@ assert lua("sd.Progress.eventFlag[1441]") is False, "the win flag starts off"
 assert "start 77, win C01_037_01" in " ".join(L.eval("said").values()), "the group's own events are logged"
 ok, detail = L.execute("return G.BossTestArm(9013, say)")
 assert ok is True, "arming again starts from the originals"
-assert L.execute("return G.BossTestOff(say)") == 4, "the win row, two copies of the chest, and the group"
+assert L.execute("return G.BossTestOff(say)") == 5, "the fight row, the win row, two copies of the chest, and the group"
+assert lua(fight) == 9957
 assert lua("chestRows[1].IsTrap") is False and lua("chestRows[1].battleGroupId") == -1
 assert lua("chestRows[1].battleFinishEventId:ToString()") == "None" and lua("nearChests[1].m_TreasureBoxData.IsTrap") is False
 assert lua(win + ".OnFlagList[1]") == 901 and lua(win + ".OnFlagList[2]") == 1237 and lua(win + ".EventType") == 0
@@ -403,7 +407,8 @@ assert lua("siren.battleEventId") == 77 and lua("siren.battleFinishEventId:ToStr
 assert L.execute("return G.BossTestOff(say)") == 0, "nothing to undo"
 L.execute("nearChests = {}")
 ok, detail = L.execute("return G.BossTestArm(9013, say)")
-assert ok is False and "no closed chest" in detail, detail
+assert ok is True and "0 chests near you" in detail and lua(fight) == 9013, "the pedestal works with no chest near"
+L.execute("G.BossTestOff(say)")
 L.execute("function FindAllOf() return nil end")
 # Round 49: the watch probe takes a class's native functions, not its getters, delegates or Blueprint events
 L.execute("""

@@ -1380,7 +1380,10 @@ L, G = boot5("SD_BOSS", "0", {})
 L.globals().G = G
 L.execute("""
 G.bossArm, G.bossOff, G.bossWon = {}, 0, false
-G.BOSS_TEST_FLAG = 1440
+G.BOSS_TEST_FLAG, G.BOSS_TEST_SWORD = 1440, 10198
+G.held, G.given = 0, {}
+function G.HeldCount(id) return G.held end
+function G.GrantItem(id, n) G.given[#G.given + 1] = id; G.held = G.held + n; return "ok", "held 0 -> 1" end
 function G.BossTestArm(id, say) G.bossArm[#G.bossArm + 1] = id; return id ~= 1, "detail" end
 function G.BossTestOff(say) G.bossOff = G.bossOff + 1; return 3 end
 local old = G.GetFlag
@@ -1395,6 +1398,9 @@ tick = lambda k: [L.execute("tickFn()") for _ in range(k)]
 G.story = 1000
 G.chests = L.table()
 tick(12)
+L.execute('commands["ffrap_bossfight"]("ffrap_bossfight", {"sword"})')
+L.execute('commands["ffrap_bossfight"]("ffrap_bossfight", {"sword"})')
+assert list(G.given.values()) == [10198], "the Ancient Greatsword, given once"
 L.execute('commands["ffrap_bossfight"]("ffrap_bossfight", {"9013"})')
 assert list(G.bossArm.values()) == [9013], list(G.bossArm.values())
 tick(3)

@@ -3935,11 +3935,17 @@ end
 -- row has IsTrap, battleGroupId and battleFinishEventId: a monster-in-a-box. No shipped chest sets
 -- IsTrap, so whether the engine still acts on it is what this finds out. The closed chests loaded
 -- near the player become traps for the group. A live chest keeps its own copy of its row, so the
--- copy and the table row are both written, as chest blanking does. The win row is the first
--- Twelve Arms fight's Victory row, made to play nothing and set a flag nothing else uses. `off`
--- undoes it all but that row's item, which comes back when the game restarts.
+-- copy and the table row are both written, as chest blanking does.
+-- The second trigger is the game's own: the sword pedestal in the Chamber of Arms (map 3290)
+-- asks "challenge?" and goes straight to its fight row. Only that row's group number changes, so
+-- the rest of the chain is as shipped. It needs the Ancient Greatsword in the bag and flag 901
+-- off. If Siren appears there but not from a crystal, the crystal failure was our chain.
+-- The win row is the sword fight's own Victory row, made to play nothing and set a flag nothing
+-- else uses (so flag 901 stays off and the pedestal can be used again). `off` undoes it all but
+-- that row's item, which comes back when the game restarts.
 G.BOSS_TEST_FLAG = 1440       -- no condition or talk row in the game uses flags 1430 to 1449
-local BOSS_TEST_WIN = "12Arms_01Sword_1stAwake_Victory"
+G.BOSS_TEST_SWORD = 10198     -- the Ancient Greatsword, which the sword pedestal checks for
+local BOSS_TEST_FIGHT, BOSS_TEST_WIN = "12Arms_01Sword_1stAwake_Encount", "12Arms_01Sword_1stAwake_Victory"
 local bossTestSaved = nil     -- { talk = {}, group = id, groupFields = {}, chests = { ["map:id"] = {} } }
 
 local function EachTalkRow(fn)
@@ -3993,8 +3999,12 @@ function G.BossTestOff(say)
     EachTalkRow(function(key, row)
         local o = saved.talk[key]
         if not o then return end
-        row.EventType = o.eventType
-        for i, flag in ipairs(o.flags) do row.OnFlagList[i] = flag end
+        if o.encount then
+            row.encountGroupId = o.encount
+        else
+            row.EventType = o.eventType
+            for i, flag in ipairs(o.flags) do row.OnFlagList[i] = flag end
+        end
         restored = restored + 1
     end)
     EachChestData(function(data)
@@ -4036,13 +4046,17 @@ function G.BossTestArm(id, say)
     for _, c in ipairs(G.LiveChests()) do
         if not c.open and c.rowMap then near[c.rowMap .. ":" .. tostring(c.rowId)] = true end
     end
-    if next(near) == nil then return false, "no closed chest is loaded near you" end
-
     local saved = { talk = {}, group = id, groupFields = fields, chests = {} }
     bossTestSaved = saved
-    local win, rows, live, group = 0, 0, 0, 0
-    say("boss test: writing the win row")
+    local win, fight, rows, live, group = 0, 0, 0, 0, 0
+    say("boss test: writing the sword pedestal's fight row and the win row")
     EachTalkRow(function(key, row)
+        if key == BOSS_TEST_FIGHT then
+            saved.talk[key] = saved.talk[key] or { encount = Int(row.encountGroupId) }
+            row.encountGroupId = id
+            fight = fight + 1
+            return
+        end
         if key ~= BOSS_TEST_WIN then return end
         if not saved.talk[key] then
             local flags = {}
@@ -4072,9 +4086,9 @@ function G.BossTestArm(id, say)
     G.SetFlag(G.BOSS_TEST_FLAG, false)
     local count = 0
     for _ in pairs(near) do count = count + 1 end
-    local detail = string.format("group %d: %d chests near you (%d table rows, %d live), %d win rows, %d group rows",
-        id, count, rows, live, win, group)
-    if live == 0 or win == 0 or group == 0 then
+    local detail = string.format("group %d: %d chests near you (%d table rows, %d live), %d pedestal rows, %d win rows, %d group rows",
+        id, count, rows, live, fight, win, group)
+    if fight == 0 or win == 0 or group == 0 then
         G.BossTestOff(say)
         return false, detail .. " (something is missing, so nothing is left changed)"
     end

@@ -50,7 +50,7 @@
 -- follows the save slots the linked game is saved to. While any other save is loaded, the mod
 -- grants nothing, reports nothing and leaves the chests vanilla.
 
-local VERSION = "0.36.0"
+local VERSION = "0.36.1"
 local PROTOCOL = 2        -- the bridge protocol; the apworld's MOD_PROTOCOL
 
 local MOD_DIR = (debug.getinfo(1, "S").source:gsub("^@", ""):gsub("\\", "/"):match("^(.*/)Scripts/[^/]+$"))
@@ -1750,8 +1750,9 @@ scaleTick = function()
     scaleToParty(f.range, f.at, f.withBosses, f.knobs)
 end
 
--- ffrap_bossfight <battle group>: the closed chests near you become traps for that fight, and a
--- win is logged (round 49; IDEAS.md, idea 25). ffrap_bossfight off: undoes it.
+-- ffrap_bossfight <battle group>: the closed chests near you become traps for that fight, the
+-- Chamber of Arms sword pedestal starts it too, and a win is logged (round 49; IDEAS.md, idea
+-- 25). ffrap_bossfight sword: gives the Ancient Greatsword the pedestal needs. off: undoes it.
 -- ffrap_bossfight watch [class ...]: round 49 probe. The fight did not start twice, and the game
 -- never asked for a battle. This hooks the native functions of the talk event and encounter
 -- classes and logs each call (the first one, then at most one line every 2 seconds and 20 in all
@@ -1848,6 +1849,17 @@ command("ffrap_bossfight", function(p)
         notify("Watch on: " .. n .. " hooks (see the log)")
         return
     end
+    if first == "sword" then
+        local held = game.HeldCount(game.BOSS_TEST_SWORD)
+        local text = "Ancient Greatsword held " .. tostring(held) .. "; flag 901 (sword fight won) " .. tostring(game.GetFlag(901))
+        if held == 0 then
+            local code, detail = game.GrantItem(game.BOSS_TEST_SWORD, 1)
+            text = text .. "; given: " .. tostring(code) .. ", " .. tostring(detail)
+        end
+        log("boss test: " .. text)
+        notify("Boss test: " .. text)
+        return
+    end
     if first == "off" then
         bossTest.group = nil
         log("boss test: off, " .. tostring(game.BossTestOff(log)) .. " rows put back")
@@ -1856,7 +1868,7 @@ command("ffrap_bossfight", function(p)
     end
     local id = tonumber(first)
     if not id then
-        notify("Usage: ffrap_bossfight <battle group> | off | watch [class ...] | watch off")
+        notify("Usage: ffrap_bossfight <battle group> | sword | off | watch [class ...] | watch off")
         return
     end
     if not game.InGame() then
@@ -1864,7 +1876,7 @@ command("ffrap_bossfight", function(p)
         return
     end
     local ok, detail = bossTest.arm(math.floor(id))
-    notify(ok and ("Boss test ready: open a closed chest near you. " .. detail) or ("Boss test failed: " .. tostring(detail)))
+    notify(ok and ("Boss test ready: open a closed chest, or use the Chamber of Arms sword pedestal. " .. detail) or ("Boss test failed: " .. tostring(detail)))
 end)
 
 -- ffrap_noland list: every no-landing box on this map, to noland.txt.
