@@ -50,7 +50,7 @@
 -- follows the save slots the linked game is saved to. While any other save is loaded, the mod
 -- grants nothing, reports nothing and leaves the chests vanilla.
 
-local VERSION = "0.39.0"
+local VERSION = "0.39.1"
 local PROTOCOL = 2        -- the bridge protocol; the apworld's MOD_PROTOCOL
 
 local MOD_DIR = (debug.getinfo(1, "S").source:gsub("^@", ""):gsub("\\", "/"):match("^(.*/)Scripts/[^/]+$"))
@@ -1833,8 +1833,14 @@ end)
 -- ffrap_menu add: round 50. Our settings as rows at the end of the Options screen's Gameplay tab.
 -- Behind a command for one round, as their tags are new to the game.
 command("ffrap_menu", function(p)
-    if tostring(p[1] or ""):lower() ~= "add" then
-        notify("Usage: ffrap_menu add")
+    local what = tostring(p[1] or ""):lower()
+    if what == "dump" then
+        for _, line in ipairs(game.OptionDump()) do log("menu dump: " .. line) end
+        notify("Menu dump written to the log")
+        return
+    end
+    if what ~= "add" then
+        notify("Usage: ffrap_menu add | dump")
         return
     end
     local ok, detail = game.AddOptionRows(log)
@@ -1845,9 +1851,15 @@ end)
 -- ffrap_artifact: the artifact list, on or off. ffrap_artifact <id> <on|off>: switch one (round 50:
 -- nothing in the game's menus does, and whether it changes the effect is the question).
 command("ffrap_artifact", function(p)
+    if tostring(p[1] or ""):lower() == "menu" then
+        local ok, detail = game.AddArtifactSwitches(log)
+        log("artifacts: " .. (ok and "" or "failed: ") .. tostring(detail))
+        notify("Artifacts: " .. tostring(detail) .. ". Look in the Items screen's All tab.")
+        return
+    end
     local id, value = tonumber(p[1]), tostring(p[2] or ""):lower()
     if p[1] and not (id and (value == "on" or value == "off")) then
-        notify("Usage: ffrap_artifact [<id> <on|off>]")
+        notify("Usage: ffrap_artifact [menu | <id> <on|off>]")
         return
     end
     if id then

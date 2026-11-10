@@ -4357,4 +4357,77 @@ function G.Artifacts(id, on)
     return states
 end
 
+-- Round 51: where our Options rows' values go (ffrap_menu dump). Round 50 set them and applied,
+-- and nothing reached us. Lists every option save object found and its entries, and the open
+-- Options screen's pending changes (CPP_VM_Option.ChangingOptionSetting). Returns lines.
+function G.OptionDump()
+    local lines = {}
+    local function entries(map, label)
+        local n, ours = 0, {}
+        pcall(function()
+            map:ForEach(function(k, v)
+                n = n + 1
+                local tag, value = "?", "?"
+                pcall(function() tag = ObjText(k:get().TagName) end)
+                pcall(function() value = tostring(v:get().Value) end)
+                if tag:find("FFRAP", 1, true) or n <= 3 then ours[#ours + 1] = tag:gsub("^Delegate%.UI%.System%.Option%.Root%.", "") .. "=" .. value end
+            end)
+        end)
+        lines[#lines + 1] = label .. ": " .. n .. " entries; " .. table.concat(ours, ", ")
+    end
+    for _, class in ipairs({ "CPP_MuchaOptionSaveData", "CPP_VM_Option" }) do
+        local ok, all = pcall(FindAllOf, class)
+        local list = ok and all or {}
+        lines[#lines + 1] = class .. ": " .. #list .. " found"
+        for i, o in ipairs(list) do
+            if Alive(o) then
+                local name = "?"
+                pcall(function() name = o:GetFullName() end)
+                if class == "CPP_MuchaOptionSaveData" then
+                    entries(o.m_EntrySaveDataList, "  " .. i .. " " .. name)
+                else
+                    entries(o.ChangingOptionSetting, "  " .. i .. " " .. name .. " pending")
+                end
+            end
+        end
+    end
+    return lines
+end
+
+-- Round 51: switches for artifacts, as the game's own two have (ffrap_artifact menu). The Items
+-- screen draws an OFF/ON switch on an item whose entry in DA_UI_ItemLayout's ItemBehaviorMap (item
+-- id -> UIItemBehavior) is StateOnOff (3) with ExecuteEvent the artifact's tag: the Magitek Airship
+-- Passkey (29520, Artifact.AirshipSkin) and the Magitek Armor Key (29500, Artifact.ChocoboSaddleBike).
+-- No other artifact has an entry, so none has a switch. This adds one for every artifact, keyed by
+-- its own id; artifacts are listed in the Items screen's All tab. Whether the switch works there,
+-- and also turns the effect off (round 50: off in the save list left the chest icons up), is the test.
+local ITEM_LAYOUT = "/Game/UI/MainMenu/Inventory/Data/DA_UI_ItemLayout.DA_UI_ItemLayout"
+local BEHAVIOR_ON_OFF = 3
+G.ARTIFACT_TAGS = {
+    [30000] = "BookofSage", [30001] = "Exodus", [30002] = "ChocoboSaddle", [30003] = "IkasamaCoin",
+    [30004] = "SorcererMantle", [30005] = "RobeofLord", [30006] = "BlackCard", [30007] = "Transporter",
+    [30008] = "MagatamaofSoul", [30009] = "RuneBangle", [30010] = "ThiefCuffs", [30011] = "ChocoboSaddleBike",
+    [30012] = "EXPSuppressor", [30013] = "SpeedUp", [30014] = "AirshipSkin", [30015] = "FuryRing",
+    [30016] = "EnemyLure", [30017] = "CursedRing", [30018] = "ScrollOfSage",
+}
+function G.AddArtifactSwitches(say)
+    say("artifacts: loading " .. ITEM_LAYOUT)
+    local da = LoadObject(ITEM_LAYOUT)
+    if not da then return false, "DA_UI_ItemLayout could not be loaded" end
+    local have = {}
+    if not pcall(function() da.ItemBehaviorMap:ForEach(function(k) have[Int(k:get())] = true end) end) then
+        return false, "ItemBehaviorMap unreadable"
+    end
+    local added, failed = {}, {}
+    for id = G.ARTIFACT_FIRST, G.ARTIFACT_LAST do
+        if not have[id] then
+            say("artifacts: switch for " .. id)
+            local value = { BehaviorType = BEHAVIOR_ON_OFF, ExecuteEvent = { TagName = FName("Artifact." .. G.ARTIFACT_TAGS[id]) },
+                            UseConditions = { bDefaultAvailability = true } }
+            if pcall(function() da.ItemBehaviorMap:Add(id, value) end) then added[#added + 1] = id else failed[#failed + 1] = id end
+        end
+    end
+    return true, #added .. " switches added" .. (#failed > 0 and ("; failed: " .. table.concat(failed, ", ")) or "")
+end
+
 return G

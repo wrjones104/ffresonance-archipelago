@@ -492,4 +492,19 @@ found, states = L.execute("return G.Artifacts(30010, true)")
 assert found is True and lua("artifactRows[30010].IsActive") is True and states == "30000 on, 30010 on", states
 found, _ = L.execute("return G.Artifacts(30001, true)")
 assert found is False
+# Round 51: artifact switches go into the Items screen's behaviour map, once, beside the game's own
+L.execute("""
+behaviors = { rows = { [29520] = { BehaviorType = 3 } } }
+function behaviors:ForEach(fn) for id in pairs(self.rows) do fn({ get = function() return id end }) end end
+function behaviors:Add(id, v) self.rows[id] = v end
+libs["/Game/UI/MainMenu/Inventory/Data/DA_UI_ItemLayout.DA_UI_ItemLayout"] = { IsValid = function() return true end,
+  HasAnyInternalFlags = function() return false end, HasAnyFlags = function() return false end, ItemBehaviorMap = behaviors }""")
+ok, detail = L.execute("return G.AddArtifactSwitches(say)")
+assert ok is True and detail == "19 switches added", detail
+assert lua("behaviors.rows[30010].BehaviorType") == 3 and lua("behaviors.rows[30010].ExecuteEvent.TagName:ToString()") == "Artifact.ThiefCuffs"
+ok, detail = L.execute("return G.AddArtifactSwitches(say)")
+assert detail == "0 switches added", detail
+# Round 51: the menu dump lists the option save's entries, ours among them
+lines = list(L.execute("return G.OptionDump()").values())
+assert lines[0] == "CPP_MuchaOptionSaveData: 0 found", lines
 print("skip: ok")

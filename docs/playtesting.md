@@ -429,14 +429,19 @@ World-map shinies verified as locations. Multiple crashes observed across differ
 - **A trapped chest in a town did not start a fight**, with either win row. Round 49's worked in a dungeon (IDEAS.md, idea 25).
 - **The ramp shows in the log:** party level 31 gave "enemies centre 28 (90%), power 100%"; level 7 gave 81% and 78%. The user will judge the feel over a longer game.
 
-## Round 51 test plan (mod 0.39.0, world 0.9.0)
+**Round 51 (mod 0.39.0, world 0.9.0, 2026-11-10): rows show, values do not arrive; the Cuff Links can be turned on.**
+- **Options rows:** `ffrap_menu add` put the six rows in, and they could be changed and applied. But EXP, gil and MRP at 10 gave normal rewards, and the log has no `settings: from the Options screen` line. So the values never reached the mod (IDEAS.md, idea 18).
+- **Artifacts:** `ffrap_artifact 30010 on` showed chests on the mini-map. `off` did not take them away, even after a map change. The user found the game's own switch: the Magitek Airship Passkey, a key item with OFF/ON in the Items screen. Artifacts have no icon and show only in the All tab. The Chocobo Saddle-Bike looks unused in the main game (IDEAS.md, idea 26).
+- **A trapped chest in a dungeon** (map 3000) started Siren. The user lost, so the after-win scene is still unseen.
 
-**Install:** copy `FFRArchipelago/Scripts`. Your seed still works. If something goes wrong in the Options screen, a crash folder helps.
+## Round 52 test plan (mod 0.39.1, world 0.9.0)
 
-**1. Our settings in the Options screen.** Load a save, type `ffrap_menu add`, then open Options, Gameplay. **Are there six rows at the end, "AP: EXP rate" and so on?** Change "AP: EXP rate" to 3 and apply. The log should say `settings: from the Options screen: exp 3`. Win a battle: is the EXP three times normal? Try "AP: Random encounters" Off too. Then close the game, start it again, type `ffrap_menu add` again, and check the rows still show your values.
+**Install:** copy `FFRArchipelago/Scripts`. Your seed still works.
 
-**2. Do artifacts work when switched on?** `ffrap_artifact` lists them. `ffrap_artifact 30010 on` switches the Bandit Cuff Links on. **Do chests show on the mini-map** (you may need a map change)? `ffrap_artifact 30001 on` is Exodus: does escape always work?
+**1. Artifact switches.** Load a save, type `ffrap_artifact menu`, then open the Items screen's All tab. **Do the artifacts (Bandit Cuff Links, Tome of Sages, ...) have an OFF/ON switch like the passkey?** If so, switch the Cuff Links off: **do the chest icons go away?** And on again. A screenshot helps.
 
-**3. A quiet boss from a dungeon chest.** In a dungeon, next to a closed chest, `ffrap_bossfight 9013 quiet`, then open it. **Does the fight start, and does a short scene bring you back after the win?** `ffrap_bossfight off` when done.
+**2. Where the menu values go.** Type `ffrap_menu add`, open Options, Gameplay, change "AP: EXP rate" to 3, and **before** you apply, type `ffrap_menu dump` (the console works over the menu). Then apply, close Options, and `ffrap_menu dump` again. Send the `menu dump:` lines.
+
+**3. If you like:** win a boss from a dungeon chest (`ffrap_bossfight 9013 quiet`), to see the scene after the win. `ffrap_bossfight off` when done.
 
 Send the `[FFRAP]` lines of the log.

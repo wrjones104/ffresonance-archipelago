@@ -160,8 +160,8 @@ At run time the mod writes these files into its own folder: `ap_out.txt`, `ap_st
 | `ffrap_airship [condition\|off]` | Open world probe: shows or rewrites the airship's spawn condition (`DT_MapAirShip`, shipped `{progress:0}>=4250`). One word, no spaces. `off` restores it. Not saved. |
 | `ffrap_bossfight <battle group> [quiet]\|sword\|off` | Test (round 49, IDEAS.md idea 25): the closed chests near you become traps for that battle group, the Chamber of Arms sword pedestal starts it too, and a win is logged. The win plays the sword fight's victory scene, or nothing with `quiet`. `sword` gives the Ancient Greatsword the pedestal needs. `off` undoes it. `watch [class ...]` hooks the talk event and encounter classes and logs their calls; `watch off` stops the logging. |
 | `ffrap_set [exp\|gil\|mrp\|encounterrate <number>] [encounters\|scaling <on\|off>] [reset]` | The player's settings (round 50): EXP, gil and MRP rates, random encounters and their rate, and the seed's enemy scaling. Kept in `settings.txt`. Our mod owns these: turn FFRS_QoL's multipliers and encounter settings off, or the two undo each other. |
-| `ffrap_menu add` | Test (round 50): our settings as rows at the end of the Options screen's Gameplay tab. A value set there wins over `ffrap_set`. |
-| `ffrap_artifact [<id> <on\|off>]` | Test (round 50): the save's artifact list, or switch one artifact on or off. |
+| `ffrap_menu add\|dump` | Test (round 50): our settings as rows at the end of the Options screen's Gameplay tab. A value set there wins over `ffrap_set`. `dump` logs the option save's entries and the screen's pending changes (round 51). |
+| `ffrap_artifact [menu \| <id> <on\|off>]` | Test (round 50): the save's artifact list, or switch one artifact on or off. `menu` gives every artifact an OFF/ON switch in the Items screen, as the airship passkey has (round 51). |
 | `ffrap_gate <subcommand>` | Experimental gate and custom key-item probe (IDEAS.md, idea 16): `spawn [combo\|box\|rock\|pot\|gate\|world] [dist] [scale]`, `item [id] [count]`, `require <item\|unit\|flag\|off> [id] [count]`, `lock`, `unlock`, `clear`, `status`. |
 
 ## Bridge format
@@ -209,7 +209,7 @@ kind  map  uid  row  item  count  money  visible-condition
 
 ## Playtesting and test plans
 
-In-game playtesting results (Rounds 1-50) and the current test plan (Round 51) are documented in [docs/playtesting.md](docs/playtesting.md).
+In-game playtesting results (Rounds 1-51) and the current test plan (Round 52) are documented in [docs/playtesting.md](docs/playtesting.md).
 Automated regression tests are documented in [tests/README.md](tests/README.md).
 
 ## Project status and open questions
