@@ -166,12 +166,13 @@ Both files are append-only and tab-separated, one record per line.
 
 `ap_in.txt` (client to game):
 ```
-seed  <seed name>:<team>:<slot>                  first line; a new value starts the mod's state over
-cfg   blank  <0|1>                               chest blanking
-item  <index>  <kind>  <id>  <count>  <label>    kind: item | gil | vision | unit | flag
-msg   <text>                                     shown on screen
-sync                                             report everything the save says is looted
-bind                                             link the loaded save to this session (0.5.0)
+seed   <seed name>:<team>:<slot>                  first line; a new value starts the mod's state over
+cfg    blank  <0|1>                               chest blanking
+item   <index>  <kind>  <id>  <count>  <label>    kind: item | gil | vision | unit | flag
+scout  <base64(key \t item \t player \t flags \t own)>  what a location holds, for the chest pop-up
+msg    <text>                                     shown on screen
+sync                                              report everything the save says is looted
+bind                                              link the loaded save to this session (0.5.0)
 ```
 
 **Which save a session belongs to (0.5.0).** The mod links each session to one save. A new game started during the session, never saved yet, is linked at once. An existing save is linked by `bind`. The session then remembers every slot the linked game is saved to (`slots` in `ap_state.txt`), and forgets a slot when another game is saved over it. While a save that is not linked is loaded, the mod grants nothing, writes no `check` or `story` lines and turns chest blanking off. Older mods ignore the `bind` line, so the protocol stays 1.

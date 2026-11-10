@@ -17,6 +17,7 @@ The mod and this client talk through two text files in the mod folder (see the r
 from __future__ import annotations
 
 import asyncio
+import base64
 import json
 import os
 import pkgutil
@@ -53,6 +54,15 @@ def world_version() -> str:
 
 def clean(text: Any) -> str:
     return " ".join(str(text).split())
+
+
+def encode_scout(key: str, name: str, player: str, flags: Any, own: int) -> str:
+    raw = "\t".join(clean(x) for x in (key, name, player, flags, own))
+    return base64.b64encode(raw.encode("utf-8")).decode("ascii")
+
+
+def decode_scout(encoded: str) -> list[str]:
+    return base64.b64decode(encoded.encode("ascii")).decode("utf-8").split("\t")
 
 
 class FFResonanceCommandProcessor(ClientCommandProcessor):
@@ -240,9 +250,9 @@ class FFResonanceContext(CommonContext):
         return checks, story
 
     def write_scouts(self, items: list) -> int:
-        """A `scout` line per location of this slot: what it holds and for whom.
+        """A Base64-encoded `scout` line per location of this slot: what it holds and for whom.
 
-            scout <location key> <item name> <player name> <flags> <own: 1 or 0>
+            scout <base64(location key \t item name \t player name \t flags \t own: 1 or 0)>
         """
         if self.session_key is None or not os.path.isdir(self.mod_folder):
             return 0
@@ -254,7 +264,7 @@ class FFResonanceContext(CommonContext):
                 continue
             name = self.item_names.lookup_in_slot(item.item, item.player)
             player = self.player_names.get(item.player, f"player {item.player}")
-            self.write_line("scout", key, name, player, item.flags, int(item.player == self.slot))
+            self.write_line("scout", encode_scout(key, name, player, item.flags, int(item.player == self.slot)))
             written += 1
         if written:
             self.scouts_written = True

@@ -15,7 +15,8 @@ sys.path.insert(0, AP)
 os.chdir(AP)
 
 from NetUtils import NetworkItem  # noqa: E402
-from worlds.ff_resonance.client import FFResonanceContext, LOCATION_ID_TO_KEY  # noqa: E402
+from worlds.ff_resonance.client import (FFResonanceContext, LOCATION_ID_TO_KEY, decode_scout,  # noqa: E402
+                                        encode_scout)
 from worlds.ff_resonance.locations import LOCATION_KEY_TO_ID  # noqa: E402
 
 failures = 0
@@ -55,8 +56,12 @@ async def main():
     with open(os.path.join(folder, "ap_in.txt"), encoding="utf-8") as f:
         text = f.read()
     check("two scout lines", written == 2, written)
-    check("own item line", "scout\tchest:3001:0\tTent\tJones\t0\t1\n" in text, text)
-    check("other player's line", "scout\tchest:3001:1\tHookshot\tAlice\t1\t0\n" in text, text)
+    own_b64 = encode_scout("chest:3001:0", "Tent", "Jones", 0, 1)
+    other_b64 = encode_scout("chest:3001:1", "Hookshot", "Alice", 1, 0)
+    check("own item line is base64", f"scout\t{own_b64}\n" in text, text)
+    check("other player's line is base64", f"scout\t{other_b64}\n" in text, text)
+    check("no plain item or player names in scout lines", "Tent" not in text and "Hookshot" not in text and "Alice" not in text, text)
+    check("decode_scout reverses encode_scout", decode_scout(other_b64) == ["chest:3001:1", "Hookshot", "Alice", "1", "0"])
     check("raw lists are read too", ctx.write_scouts([[500, ids[0], 1, 0]]) == 1)
 
     # a reconnect to the same session: the file has scout lines, so no second request

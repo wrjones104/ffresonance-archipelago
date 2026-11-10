@@ -50,7 +50,7 @@
 -- follows the save slots the linked game is saved to. While any other save is loaded, the mod
 -- grants nothing, reports nothing and leaves the chests vanilla.
 
-local VERSION = "0.35.3"
+local VERSION = "0.35.4"
 local PROTOCOL = 2        -- the bridge protocol; the apworld's MOD_PROTOCOL
 
 local MOD_DIR = (debug.getinfo(1, "S").source:gsub("^@", ""):gsub("\\", "/"):match("^(.*/)Scripts/[^/]+$"))
@@ -401,10 +401,16 @@ local function readInbox(initial)
                 log("bad item line: " .. table.concat(f, " | "))
             end
         elseif f[1] == "scout" then
-            -- What a location holds, for the chest pop-up (0.11.0).
-            if f[2] and f[3] then
-                state.scouts[f[2]] = { item = f[3], player = f[4] or "", flags = tonumber(f[5]) or 0,
-                                       own = f[6] == "1" }
+            -- What a location holds, for the chest pop-up (0.11.0). Base64-encoded so opening
+            -- ap_in.txt does not spoil the seed; plain fields still work for hand-written tests.
+            local key, item, player, flags, own = f[2], f[3], f[4], f[5], f[6]
+            if key and not item then
+                local d = bridge.split(bridge.decodeBase64(key))
+                key, item, player, flags, own = d[1], d[2], d[3], d[4], d[5]
+            end
+            if key and item then
+                state.scouts[key] = { item = item, player = player or "", flags = tonumber(flags) or 0,
+                                      own = own == "1" }
             end
         elseif f[1] == "client" then
             -- The client's world version, written each time it connects.

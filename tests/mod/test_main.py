@@ -788,7 +788,12 @@ assert any("Received Elixir" in t for t in G.toasts.values()), list(G.toasts.val
 print("feed fallback: ok")
 
 # 12. the chest pop-up (0.11.2): a scouted chest's check makes the pop-up say what it held
-inbox("seed\tS12:0:1\nscout\tchest:3020:3\tHookshot\tAlice\t1\t0\nscout\tchest:3020:2\tTent\tJones\t0\t1\n", "w")
+import base64
+def b64_scout(key, item, player, flags, own):
+    raw = f"{key}\t{item}\t{player}\t{flags}\t{own}"
+    return "scout\t" + base64.b64encode(raw.encode("utf-8")).decode("ascii") + "\n"
+
+inbox("seed\tS12:0:1\n" + b64_scout("chest:3020:3", "Hookshot", "Alice", 1, 0) + b64_scout("chest:3020:2", "Tent", "Jones", 0, 1), "w")
 L, G = boot5("SD_POP", "0", {})
 tick = lambda k: [L.execute("tickFn()") for _ in range(k)]
 G.story = 1000
@@ -814,7 +819,7 @@ assert G.restores > 0
 # 0.11.2: the fast check: a pop-up that has just come up scans the chests at once and rewrites
 # the pop-up in the same pass, with no regular tick in between
 n = len(list(G.popups.values()))
-inbox("scout\tchest:3020:5\tLongshot\tRat2\t1\t0\n")
+inbox(b64_scout("chest:3020:5", "Longshot", "Rat2", 1, 0))
 tick(1)
 G.chests = L.table_from({1: L.table_from({"uid": 5, "open": True, "rowMap": 3020, "rowId": 5, "uniqueId": 10,
                                           "typeId": 10, "itemId": 1, "itemNum": 1, "money": -1})})

@@ -14,7 +14,7 @@
 --     cfg shinies <0|1>                           shinies are locations: blank their rewards (0.29.0)
 --     cfg crystals <0|1>                          sanctum crystals are locations (0.29.0)
 --     cfg shards <0|1>                            Tablet Shard shinies are locations (0.30.0)
---     scout <location key> <item> <player> <flags> <own>   what a location holds (0.11.0)
+--     scout <base64>                              what a location holds: key, item, player, flags, own (0.11.0)
 --
 --   ap_out.txt  game -> client
 --     hello <mod version>                         the mod started
@@ -41,6 +41,30 @@ local function split(line)
         fields[#fields + 1] = field
     end
     return fields
+end
+B.split = split
+
+local B64 = {}
+for i = 1, 64 do
+    B64[("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"):byte(i)] = i - 1
+end
+
+function B.decodeBase64(s)
+    local out = {}
+    local buf, bits = 0, 0
+    for i = 1, #s do
+        local v = B64[s:byte(i)]
+        if v then
+            buf = (buf << 6) | v
+            bits = bits + 6
+            if bits >= 8 then
+                bits = bits - 8
+                out[#out + 1] = string.char((buf >> bits) & 0xff)
+                buf = buf & ((1 << bits) - 1)
+            end
+        end
+    end
+    return table.concat(out)
 end
 
 -- New complete lines in ap_in.txt, each as a list of fields. A line still being written (no
