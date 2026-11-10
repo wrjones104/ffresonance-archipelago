@@ -4249,8 +4249,11 @@ end
 -- EntryTag. The game saves each row's value as a float under its EntryTag, in the option save's
 -- m_EntrySaveDataList (CPP_MuchaOptionSaveData): a slider's number, or a switch's index (On 0,
 -- Off 1). So our rows get tags of their own, copied from a slider and a switch of the game's, and
--- their values are read back from that map. The tags are not registered with the game, which is
--- what this round finds out about. Sliders move in steps of 1.
+-- their values are read back from that map. Sliders move in steps of 1.
+-- Round 51: the screen held our values as pending changes, but Apply saved none of them: the save
+-- had no entry under our tags, and the game only updates entries it has. So adding the rows also
+-- adds an entry per tag (OPTION_SAVEDATA_SETTING: Value, IsDisplay, Type: Slider 1, RadioButton 2),
+-- seeded from the current settings, unless the save has one already (the game keeps it on disk).
 local OPTION_GAMEPLAY = "/Game/Datatable/UI/Option/Root/GameSetting/DT_OP_GameSetting.DT_OP_GameSetting"
 local OPTION_SLIDER = "Delegate.UI.System.Option.Root.GameSetting.GamePad.Sensitivity"
 local OPTION_SWITCH = "Delegate.UI.System.Option.Root.GameSetting.EncountSensor"
@@ -4270,7 +4273,33 @@ G.OPTION_ROWS = {
       label = "AP: Enemy scaling", help = "Enemies follow your party's level. Off: the game's own levels." },
 }
 
-function G.AddOptionRows(say)
+local ENTRY_SLIDER, ENTRY_RADIO = 1, 2
+
+-- The option save's entries for our tags, added where missing. `current` is setting key -> number
+-- or boolean. Returns how many were added, or nil when the option save is not found.
+local function SeedOptionEntries(current)
+    local save = Live("CPP_MuchaOptionSaveData")
+    if not save then return nil end
+    local have = {}
+    pcall(function()
+        save.m_EntrySaveDataList:ForEach(function(k) pcall(function() have[ObjText(k:get().TagName)] = true end) end)
+    end)
+    local added = 0
+    for _, o in ipairs(G.OPTION_ROWS) do
+        local tag = OPTION_TAG .. o.row
+        if not have[tag] then
+            local v = current[o.key]
+            local value
+            if o.min then value = math.min(o.max, math.max(o.min, tonumber(v) or o.default)) else value = (v == false) and 1 or 0 end
+            if pcall(function()
+                save.m_EntrySaveDataList:Add({ TagName = FName(tag) }, { Value = value, IsDisplay = true, Type = o.min and ENTRY_SLIDER or ENTRY_RADIO })
+            end) then added = added + 1 end
+        end
+    end
+    return added
+end
+
+function G.AddOptionRows(say, current)
     say("menu: loading " .. OPTION_GAMEPLAY)
     local dt = LoadObject(OPTION_GAMEPLAY)
     if not dt then return false, "DT_OP_GameSetting could not be loaded" end
@@ -4310,7 +4339,10 @@ function G.AddOptionRows(say)
             done[#done + 1] = o.row .. " (not added)"
         end
     end
-    return true, count .. " rows before; " .. table.concat(done, ", ")
+    say("menu: option save entries")
+    local seeded = SeedOptionEntries(current or {})
+    return true, count .. " rows before; " .. table.concat(done, ", ") .. "; " ..
+        (seeded and (seeded .. " option save entries added") or "no option save found")
 end
 
 -- Our rows' values from the option save, as setting key -> number or boolean, for the rows the

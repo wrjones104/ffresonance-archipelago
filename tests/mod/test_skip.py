@@ -462,8 +462,24 @@ optDT = { GetFullName = function() return "opt" end, IsValid = function() return
   FindRow = function(_, name) return optRows[name] end }
 libs["/Game/Datatable/UI/Option/Root/GameSetting/DT_OP_GameSetting.DT_OP_GameSetting"] = optDT
 FText = FText or function(text) return { ToString = function() return text end } end""")
-ok, detail = L.execute("return G.AddOptionRows(say)")
+L.execute("""
+savedOptions = { rows = { ["Delegate.UI.System.Option.Root.GameSetting.FFRAP.FFRAP_Gil"] = { Value = 7 } } }
+function savedOptions:ForEach(fn) for tag, v in pairs(self.rows) do
+  fn({ get = function() return { TagName = FName(tag) } end }, { get = function() return v end }) end end
+function savedOptions:Add(k, v) self.rows[k.TagName:ToString()] = v end
+seedSave = { IsValid = function() return true end, HasAnyInternalFlags = function() return false end,
+  HasAnyFlags = function() return false end, m_EntrySaveDataList = savedOptions }
+prevFFOseed = FindFirstOf
+function FindFirstOf(c) if c == "CPP_MuchaOptionSaveData" then return seedSave end return prevFFOseed(c) end""")
+ok, detail = L.execute("return G.AddOptionRows(say, { exp = 4, encounters = false, encounterrate = 9 })")
 assert ok is True and "2 rows before" in detail and "not added" not in detail and "failed" not in detail, detail
+assert "5 option save entries added" in detail, detail
+tag = lambda r: 'savedOptions.rows["Delegate.UI.System.Option.Root.GameSetting.FFRAP.' + r + '"]'
+assert lua(tag("FFRAP_Exp") + ".Value") == 4 and lua(tag("FFRAP_Exp") + ".Type") == 1, "seeded from the settings"
+assert lua(tag("FFRAP_Gil") + ".Value") == 7, "a value the player set is kept"
+assert lua(tag("FFRAP_Encounters") + ".Value") == 1 and lua(tag("FFRAP_Encounters") + ".Type") == 2, "off is index 1"
+assert lua(tag("FFRAP_EncounterRate") + ".Value") == 5 and lua(tag("FFRAP_Scaling") + ".Value") == 0, "held to the slider"
+L.execute("FindFirstOf = prevFFOseed; G.ForgetObjects()")
 assert lua("optRows.FFRAP_Exp.EntryTag.TagName:ToString()") == "Delegate.UI.System.Option.Root.GameSetting.FFRAP.FFRAP_Exp"
 assert lua("optRows.FFRAP_Exp.Type") == 2 and lua("optRows.FFRAP_Exp.SliderInfo.MaxValue") == 10
 assert lua("optRows.FFRAP_EncounterRate.SliderInfo.MaxValue") == 5 and lua("optRows.FFRAP_Scaling.Type") == 1

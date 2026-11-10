@@ -434,14 +434,19 @@ World-map shinies verified as locations. Multiple crashes observed across differ
 - **Artifacts:** `ffrap_artifact 30010 on` showed chests on the mini-map. `off` did not take them away, even after a map change. The user found the game's own switch: the Magitek Airship Passkey, a key item with OFF/ON in the Items screen. Artifacts have no icon and show only in the All tab. The Chocobo Saddle-Bike looks unused in the main game (IDEAS.md, idea 26).
 - **A trapped chest in a dungeon** (map 3000) started Siren. The user lost, so the after-win scene is still unseen.
 
-## Round 52 test plan (mod 0.39.1, world 0.9.0)
+**Round 52 (mod 0.39.1, world 0.9.0, 2026-11-10): a chest boss works end to end.**
+- **Chest boss:** in a dungeon (map 3000), `ffrap_bossfight 9013 quiet` and a closed chest gave Siren, a win (`boss test: WIN seen`), and the field again.
+- **Menu values:** `ffrap_menu dump` showed our six values pending while Options was open, then none after Apply, and none in the option save (97 entries). The game only updates entries it already has (IDEAS.md, idea 18).
+- **Artifact switches:** 19 behaviour entries went in, but no switch showed; the artifacts stay greyed out in the All tab. The passkey shows its switch there too, so being a key item seems to be what matters (IDEAS.md, idea 26).
+
+## Round 53 test plan (mod 0.39.2, world 0.9.0)
 
 **Install:** copy `FFRArchipelago/Scripts`. Your seed still works.
 
-**1. Artifact switches.** Load a save, type `ffrap_artifact menu`, then open the Items screen's All tab. **Do the artifacts (Bandit Cuff Links, Tome of Sages, ...) have an OFF/ON switch like the passkey?** If so, switch the Cuff Links off: **do the chest icons go away?** And on again. A screenshot helps.
+**1. Menu values.** Type `ffrap_menu add` (the log should end with `6 option save entries added` the first time). Open Options, Gameplay: **do the rows show your current settings?** Set "AP: EXP rate" to 3, apply. **Does the log say `settings: from the Options screen: exp 3`, and is EXP three times normal after a battle?** Then restart the game, `ffrap_menu add` again: is it still 3?
 
-**2. Where the menu values go.** Type `ffrap_menu add`, open Options, Gameplay, change "AP: EXP rate" to 3, and **before** you apply, type `ffrap_menu dump` (the console works over the menu). Then apply, close Options, and `ffrap_menu dump` again. Send the `menu dump:` lines.
+**2. Where the passkey's switch lives.** Switch the Magitek Airship Passkey ON in the Items screen, then type `ffrap_artifact` and send the line. Switch it OFF and type it again.
 
-**3. If you like:** win a boss from a dungeon chest (`ffrap_bossfight 9013 quiet`), to see the scene after the win. `ffrap_bossfight off` when done.
+**3. Does a reload apply an artifact switch?** `ffrap_artifact 30010 off`, save, and load that save. **Are the chest icons gone?**
 
 Send the `[FFRAP]` lines of the log.

@@ -50,7 +50,7 @@
 -- follows the save slots the linked game is saved to. While any other save is loaded, the mod
 -- grants nothing, reports nothing and leaves the chests vanilla.
 
-local VERSION = "0.39.1"
+local VERSION = "0.39.2"
 local PROTOCOL = 2        -- the bridge protocol; the apworld's MOD_PROTOCOL
 
 local MOD_DIR = (debug.getinfo(1, "S").source:gsub("^@", ""):gsub("\\", "/"):match("^(.*/)Scripts/[^/]+$"))
@@ -1843,7 +1843,9 @@ command("ffrap_menu", function(p)
         notify("Usage: ffrap_menu add | dump")
         return
     end
-    local ok, detail = game.AddOptionRows(log)
+    local current = {}
+    for k in pairs(SETTING_DEFAULTS) do current[k] = setting(k) end
+    local ok, detail = game.AddOptionRows(log, current)
     log("menu: " .. (ok and "" or "failed: ") .. tostring(detail))
     notify("Menu: " .. tostring(detail) .. ". Open Options, Gameplay now.")
 end)
