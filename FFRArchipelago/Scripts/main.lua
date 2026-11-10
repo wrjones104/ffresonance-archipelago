@@ -50,7 +50,7 @@
 -- follows the save slots the linked game is saved to. While any other save is loaded, the mod
 -- grants nothing, reports nothing and leaves the chests vanilla.
 
-local VERSION = "0.40.0"
+local VERSION = "0.40.1"
 local PROTOCOL = 2        -- the bridge protocol; the apworld's MOD_PROTOCOL
 
 local MOD_DIR = (debug.getinfo(1, "S").source:gsub("^@", ""):gsub("\\", "/"):match("^(.*/)Scripts/[^/]+$"))
@@ -1867,6 +1867,16 @@ end)
 -- ffrap_artifact: the artifact list, on or off. ffrap_artifact <id> <on|off>: switch one (round 50:
 -- nothing in the game's menus does, and whether it changes the effect is the question).
 command("ffrap_artifact", function(p)
+    if tostring(p[1] or ""):lower() == "minimap" then
+        local tag, value = p[2] and tostring(p[2]), tostring(p[3] or ""):lower()
+        if tag and value ~= "on" and value ~= "off" then
+            notify("Usage: ffrap_artifact minimap [<tag, e.g. ThiefCuffs> <on|off>]")
+            return
+        end
+        for _, line in ipairs(game.MiniMapArtifacts(tag, value == "on")) do log("artifacts: minimap " .. line) end
+        notify("Artifacts: mini-map states written to the log")
+        return
+    end
     if tostring(p[1] or ""):lower() == "table" then
         local ok, detail = game.AddArtifactIds(log)
         log("artifacts: " .. (ok and "" or "failed: ") .. tostring(detail))
@@ -1881,7 +1891,7 @@ command("ffrap_artifact", function(p)
     end
     local id, value = tonumber(p[1]), tostring(p[2] or ""):lower()
     if p[1] and not (id and (value == "on" or value == "off")) then
-        notify("Usage: ffrap_artifact [menu | table | <id> <on|off>]")
+        notify("Usage: ffrap_artifact [menu | table | minimap [<tag> <on|off>] | <id> <on|off>]")
         return
     end
     if id then

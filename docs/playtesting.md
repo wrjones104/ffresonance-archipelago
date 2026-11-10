@@ -444,17 +444,17 @@ World-map shinies verified as locations. Multiple crashes observed across differ
 - **Passkey:** switching it in the Items screen wrote `29520 on`, then `29520 off`, in the artifact list.
 - **Cuff Links:** off, then a load, left the chest icons up. But there was no save between the two, so the load brought the Cuff Links back on. And `zzz_TreasureMinimap_P` in `Paks/~mods` may draw the icons by itself (IDEAS.md, idea 26).
 
-## Round 54 test plan (mod 0.40.0, world 0.9.0)
+**Round 54 (mod 0.40.0, world 0.9.0, 2026-11-10): the menu goes in by itself; the Cuff Links do nothing so far.**
+- **Menu:** with no command, the AP rows were in Options with the values set earlier (`menu: rows added to the Options screen; ... 6 option save entries added`, then `settings: from the Options screen: ... exp 10.0`).
+- **Cuff Links:** with `zzz_TreasureMinimap_P` moved out of `Paks/~mods`, the chest icons went away and did not come back with the Cuff Links on, nor after `ffrap_artifact table` and map changes. So the icons were the pak mod's (IDEAS.md, idea 26).
+- **Passkey:** switching it on changes the airship as soon as the menu closes.
 
-**Install:** copy `FFRArchipelago/Scripts`. Your seed still works.
+## Round 55 test plan (mod 0.40.1, world 0.9.0)
 
-**1. The menu by itself.** Load a save and open Options, Gameplay, with no command. **Are the six AP rows there, with your values?**
+**Install:** copy `FFRArchipelago/Scripts`. Keep the TreasureMinimap files out of `~mods` for this, and tell me where you put them: what that mod changes may be something ours can do too.
 
-**2. Do the Cuff Links do anything?** First move `zzz_TreasureMinimap_P.pak`, `.ucas` and `.utoc` out of `Paks/~mods` (to a folder outside `Paks`), and start the game.
-- With the Cuff Links on (`ffrap_artifact` shows `30010 on`), go into a dungeon. **Are chests on the mini-map?**
-- `ffrap_artifact 30010 off`, then change map. **Are they gone?** If not, save, load that save and look again.
-- If the Cuff Links do nothing either way, try `ffrap_artifact table`, then `ffrap_artifact 30010 on` and a map change.
+**1. The mini-map's own artifact states.** In a dungeon with chests, type `ffrap_artifact minimap` and send the lines. Then switch the passkey on and off in the Items screen and type it again: does the list change?
 
-**3. The passkey,** to compare: with it ON, does the airship look different right away, or only after a map change?
+**2. Set the Cuff Links there.** `ffrap_artifact minimap ThiefCuffs on`. **Do chest icons show?** If not, after a map change? Then `ffrap_artifact minimap ThiefCuffs off`.
 
-Send the `artifacts:` lines of the log, and say what the mini-map showed at each step. Put the TreasureMinimap files back afterwards if you want them.
+Send the `artifacts:` lines of the log.

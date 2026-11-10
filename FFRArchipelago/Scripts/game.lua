@@ -4488,4 +4488,37 @@ function G.AddArtifactIds(say)
     return true, #added .. " tags added"
 end
 
+-- Round 54: the Cuff Links did nothing: no chest icons with artifactList[30010] on and the tag in
+-- ArtifactIdTable (the icons the user saw came from the zzz_TreasureMinimap pak mod). The
+-- passkey's switch acts at once, so it goes through a live update: the mini-map's view model
+-- (CPP_VM_MiniMap) keeps ArtifactActiveMap (tag -> on), refreshed on Delegate.Artifact.Active.Update
+-- (DA_MiniMapLayout.ArtifactUpdateTag). ffrap_artifact minimap lists that map in every mini-map
+-- view model, or sets one tag in it. Returns lines.
+function G.MiniMapArtifacts(tag, on)
+    local lines = {}
+    local ok, all = pcall(FindAllOf, "CPP_VM_MiniMap")
+    local list = ok and all or {}
+    lines[#lines + 1] = #list .. " mini-map view models"
+    for i, vm in ipairs(list) do
+        if Alive(vm) then
+            if tag then
+                local set = pcall(function() vm.ArtifactActiveMap:Add({ TagName = FName("Artifact." .. tag) }, on) end)
+                lines[#lines + 1] = "  " .. i .. ": Artifact." .. tag .. (set and (" set " .. tostring(on)) or " could not be set")
+            end
+            local states = {}
+            pcall(function()
+                vm.ArtifactActiveMap:ForEach(function(k, v)
+                    local name, value = "?", "?"
+                    pcall(function() name = ObjText(k:get().TagName) end)
+                    pcall(function() value = tostring(v:get()) end)
+                    states[#states + 1] = name:gsub("^Artifact%.", "") .. "=" .. value
+                end)
+            end)
+            table.sort(states)
+            lines[#lines + 1] = "  " .. i .. ": " .. (#states > 0 and table.concat(states, ", ") or "empty")
+        end
+    end
+    return lines
+end
+
 return G

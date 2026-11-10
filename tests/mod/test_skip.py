@@ -534,4 +534,18 @@ libs["/Game/Datatable/Map/DataAsset/DA_MapManager.DA_MapManager"] = { IsValid = 
 ok, detail = L.execute("return G.AddArtifactIds(say)")
 assert ok is True and detail == "17 tags added", detail
 assert lua('idTable.rows["Artifact.ThiefCuffs"]') == 30010 and lua('idTable.rows["Artifact.AirshipSkin"]') == 29520
+# Round 54: the mini-map view model's artifact states can be listed and one set
+L.execute("""
+miniStates = { rows = { ["Artifact.AirshipSkin"] = false } }
+function miniStates:ForEach(fn) for tag, on in pairs(self.rows) do
+  fn({ get = function() return { TagName = FName(tag) } end }, { get = function() return on end }) end end
+function miniStates:Add(k, on) self.rows[k.TagName:ToString()] = on end
+miniVM = { IsValid = function() return true end, HasAnyInternalFlags = function() return false end,
+  HasAnyFlags = function() return false end, ArtifactActiveMap = miniStates }
+function FindAllOf(c) if c == "CPP_VM_MiniMap" then return { miniVM } end return nil end""")
+lines = list(L.execute("return G.MiniMapArtifacts()").values())
+assert lines == ["1 mini-map view models", "  1: AirshipSkin=false"], lines
+lines = list(L.execute("return G.MiniMapArtifacts('ThiefCuffs', true)").values())
+assert lines[1] == "  1: Artifact.ThiefCuffs set true" and lines[2] == "  1: AirshipSkin=false, ThiefCuffs=true", lines
+L.execute("function FindAllOf() return nil end")
 print("skip: ok")
