@@ -21,6 +21,7 @@ The world is tested off-line: Archipelago's general tests pass with it, its own 
 - **UE4SS**, the only thing it needs to run. ConsoleEnablerMod and BPModLoaderMod come with UE4SS. The console is only for the `ffrap_*` commands.
 - **ModSettings** (a Blueprint mod in `Content/Paks/LogicMods`, from the same modding tools as FFRSLib) is optional. In the field, messages ("Received ...", "Sent ...", "Archipelago is paused", "Prologue skipped") go to the mod's own item feed at the bottom right of the HUD (since 0.10.0, on by default). ModSettings' Toast panel takes them off the field (the title screen), when the feed has not been able to show anything for 10 seconds since the game started, and with `ffrap_feed off`. Without ModSettings those few only go to `UE4SS.log`.
 - **FFRS_QoL conflicts with our settings (round 50).** Its EXP, gil and MRP multipliers and its encounter settings write the same rows as `ffrap_set`, so turn those off in FFRS_QoL if both are installed. Its map markers are fine.
+- **Map markers (chests, shinies, Tablet Shards) are left to other mods,** such as FFRS_QoL. They have not been tested together with this mod yet.
 - **FFRSLib, FFRS_QoL, FFRBestiary and FFRRandomizer are not needed.** Their code is where the game calls come from (see "Where the game calls come from"), but this mod calls the game directly. FFRRandomizer should stay disabled (IDEAS.md, idea 10).
 
 1. **Mod.** Copy `FFRArchipelago/Scripts` and `FFRArchipelago/Assets` over the installed mod (0.18.0). Delete the old `ap_in.txt`, `ap_out.txt` and `ap_state.txt`, and keep `seen.tsv`. Keep FFRRandomizer disabled.
@@ -209,7 +210,7 @@ kind  map  uid  row  item  count  money  visible-condition
 
 ## Playtesting and test plans
 
-In-game playtesting results (Rounds 1-57) and the current test plan (Round 58) are documented in [docs/playtesting.md](docs/playtesting.md).
+In-game playtesting results (Rounds 1-58) and the current test plan (Round 59) are documented in [docs/playtesting.md](docs/playtesting.md).
 Automated regression tests are documented in [tests/README.md](tests/README.md).
 
 ## Project status and open questions

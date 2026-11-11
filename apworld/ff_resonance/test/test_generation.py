@@ -220,20 +220,6 @@ class TestKeyCardDoors(FFResonanceTestBase):
         self.collect_by_name(["Level 2 Lab Key Card"])
         self.assertTrue(level_2.can_reach(self.multiworld.state))
 
-    def test_slot_data_asks_for_chest_icons(self) -> None:
-        self.assertEqual(self.world.fill_slot_data()["minimap_chest_icons"], 1)
-        self.assertNotIn("Chest Radar", [item.name for item in self.multiworld.itempool])
-
-
-class TestChestRadar(FFResonanceTestBase):
-    options = {"minimap_chest_icons": "item"}
-
-    def test_the_radar_is_in_the_pool(self) -> None:
-        radars = [item for item in self.multiworld.itempool if item.name == "Chest Radar"]
-        self.assertEqual(len(radars), 1)
-        self.assertTrue(radars[0].useful)
-        self.assertEqual(self.world.fill_slot_data()["minimap_chest_icons"], 2)
-
 
 class TestLocationOptionsOnByDefault(FFResonanceTestBase):
     def test_shinies_crystals_and_shards_are_locations(self) -> None:

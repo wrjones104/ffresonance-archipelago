@@ -35,6 +35,3 @@ Final Fantasy Resonance:
   shuffle_party_members: true
   shuffle_visions: true
   shuffle_key_items: true
-
-  # Treasure chests on the mini-map: start_with, item (once you receive the Chest Radar) or off.
-  minimap_chest_icons: start_with

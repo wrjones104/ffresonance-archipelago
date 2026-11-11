@@ -166,20 +166,6 @@ class ShuffleKeyItems(DefaultOnToggle):
     display_name = "Shuffle Key Items"
 
 
-class MinimapChestIcons(Choice):
-    """
-    Treasure chests show as icons on the mini-map.
-    start_with: from the start.
-    item: once you receive the Chest Radar.
-    off: never.
-    """
-    display_name = "Mini-map Chest Icons"
-    option_off = 0
-    option_start_with = 1
-    option_item = 2
-    default = 1
-
-
 @dataclass
 class FFResonanceOptions(PerGameCommonOptions):
     goal: Goal
@@ -199,7 +185,6 @@ class FFResonanceOptions(PerGameCommonOptions):
     shuffle_party_members: ShufflePartyMembers
     shuffle_visions: ShuffleVisions
     shuffle_key_items: ShuffleKeyItems
-    minimap_chest_icons: MinimapChestIcons
 
 
 option_groups = [
@@ -208,5 +193,4 @@ option_groups = [
                           StartingCharacter3, StartingCharacter4]),
     OptionGroup("Locations", [ExcludedRegions]),
     OptionGroup("Items", [ShufflePartyMembers, ShuffleVisions, ShuffleKeyItems]),
-    OptionGroup("Comfort", [MinimapChestIcons]),
 ]

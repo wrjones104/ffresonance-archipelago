@@ -481,21 +481,20 @@ World-map shinies verified as locations. Multiple crashes observed across differ
   - The airship's shadow list gained 23 nulls per landing this time (`134 -> 249, 115 null` over five landings).
 - **Scratchpad:** Mobliz Shipyard (maps 3060 to 3062): two of three elevators do not work, so chests 1 and 3 and shards 71 and 79 cannot be reached, with a boss there too, it seems. Mt. Thunderclap: the Liquid Thunder symbol on the map starts a boss battle when touched, a model for boss checks (screenshot in `.reference`).
 
-## Round 58 test plan (mod 0.46.0, world 0.15.0)
+**Round 58 (mod 0.46.0, world 0.15.0, 2026-11-11): the final win is the goal; map markers are left to other mods.**
+- **Goal:** `the last battle is won (battle group 9056, flag 40 off)`, then `Goal complete!` right after Rain beat Sol, before the ending's scenes. Story 8050 alone did not send it.
+- **Final boss lock:** sealed at visions 8 to 11 of 12, open at 12 of 12.
+- **Research Center Ruins:** the logic matches the game.
+- **Chest Radar:** the icons showed only on maps loaded after it arrived; a map already drawn kept none until the next map change. Opened chests kept their icons, and there are no shiny or shard markers as FFRS_QoL has. The user chose to leave map markers to other mods, so world 0.16.0 and mod 0.47.0 take the feature out.
+- **Quieter log:** `menu: rows added` showed once, and the tower's "trigger was not found" once per visit.
+- **Mobliz Shipyard:** `ffrap_inspect` showed elevator 75 with `m_GimmickCondition 1` (deactivated). Off-line, the level (`Dng_04Dir_41_02_GD`) has four elevators: 72 and 74 active, 73 and 75 deactivated. A five-lever puzzle (the right lever is D) turns 73 on in chapter 2; its levers start deactivated too. Nothing in the level turns 75 on. A wrong lever starts a fight (`C02_Moburizu_Switch_Fail_Encount`), maybe the boss the user expected there.
 
-**Install:** copy `FFRArchipelago/Scripts`, and copy `dist/ff_resonance.apworld` into Archipelago's `custom_worlds`. Generate a new seed from the new `apworld/Final Fantasy Resonance.yaml` (or check your own against it):
-- `goal: final_boss` is the default now (`story_checkpoint` still works as its old name). `goal_story_checkpoint` is gone: delete it.
-- Shinies, crystals and Tablet Shards are always locations now, and hidden from the template. Delete `include_shinies`, `include_crystals` and `include_tablet_shards` from your yaml, or set them to true.
-- `minimap_chest_icons` takes `start_with`, `item` or `off`. Use `item` for this round.
+## Round 59 test plan (mod 0.47.0, world 0.16.0)
 
-**1. The Chest Radar.** With `minimap_chest_icons: item`, chests are not on the mini-map at first. **Do the icons show once `Received Chest Radar` comes in, and stay after a map change and a reload?** The log says `chest icons on: ... fields written`.
+**Install:** copy `FFRArchipelago/Scripts`, and copy `dist/ff_resonance.apworld` into Archipelago's `custom_worlds`. Generate a new seed. Delete `minimap_chest_icons` from your yaml: the option is gone.
 
-**2. The goal on the last win.** Use low counts, such as `final_boss_characters: 3` and `final_boss_visions: 2`. Save on the last floor (story 8050). **Does reaching 8050 leave the goal unsent?** Beat Sol with Rain. The log says `the last battle is won (battle group 9056, flag 40 off)`. **Does the client send the goal then, before the ending's scenes?** If it comes only at the "Fin" screen (story 9000), send the log: flag 40 did not go off.
+**1. Mobliz Shipyard's elevators.** Go into Mobliz Shipyard (map 3060). The log says `shipyard: 2 stopped elevators turned on`. **Do the center and right elevators work now? Can you reach chests 1 and 3 and shards 71 and 79?** If the game crashes on entering, send the crash folder.
 
-**3. Research Center Ruins** (from round 57). Universal Tracker should show the level 1 rooms only with the level 1 card, and the level 2 rooms only with both cards.
-
-**4. Quieter log.** `menu: rows added` should show once per run, and `the last climb's trigger was not found` once per visit to the tower.
-
-**5. Optional: a Mobliz Shipyard elevator.** Stand next to an elevator that does not work and run `ffrap_inspect BP_MapGimmick_Floor_Elevator_Interact_002_C`. Send the output: it may show what the elevator waits for.
+**2. A seed with FFRS_QoL**, if you want its map markers: **do its chest and shiny markers work alongside this mod?**
 
 Send the `[FFRAP]` lines of the log.

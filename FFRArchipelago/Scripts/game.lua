@@ -4411,68 +4411,6 @@ function G.OptionDump()
 end
 
 
--- Round 57: chest icons on the mini-map, the user's yaml option. The game hides them by data, as
--- the TreasureMinimap pak mod showed (IDEAS.md, ideas 26 and 27): the Treasure interact type's
--- entry in DA_MiniMapEntryProperty has bDefaultDisplay false, and DA_MapIconBinding gives it the
--- icon UI.Map.Icon.Null. With `on`, this writes what the pak has: shown, the TreasureBox icon,
--- and that icon at the low zoom state too. Off puts back what the assets held when first seen.
--- Safe to call often: it writes only what differs. Returns how many fields changed, or nil and why.
-local MINIMAP_ENTRIES = "/Game/UI/Field/MiniMap/Entry/Data/DA_MiniMapEntryProperty.DA_MiniMapEntryProperty"
-local ICON_BINDING = "/Game/UI/Map/Icon/Data/DA_MapIconBinding.DA_MapIconBinding"
-local TREASURE_TYPE = "Field.Object.Interact.Type.Treasure"
-local CHEST_ICON = "UI.Map.Icon.TreasureBox"
-local LOW_ZOOM = "UI.Map.Zoom.State.Low"
-local chestIconOriginal = nil   -- { display, overrideDisplay, overrideState, icon }
-
-local function TreasureEntry(map)
-    local found
-    pcall(function()
-        map:ForEach(function(k, v)
-            if not found and ObjText(k:get().TagName) == TREASURE_TYPE then found = v:get() end
-        end)
-    end)
-    return found
-end
-
-function G.ShowChestIcons(on, say)
-    say = say or function() end
-    local entries, binding = LoadObject(MINIMAP_ENTRIES), LoadObject(ICON_BINDING)
-    if not (entries and binding) then return nil, "mini-map assets not loaded" end
-    local entry = TreasureEntry(entries.PropertyMap)
-    if not entry then return nil, "no Treasure entry in DA_MiniMapEntryProperty" end
-    local icon = TreasureEntry(binding.InteractBindMap)
-    local iconNow = icon and ObjText(icon.TagName) or nil
-    if not chestIconOriginal then
-        chestIconOriginal = { display = entry.bDefaultDisplay, overrideDisplay = entry.bOverrideDefaultDisplay,
-                              overrideState = entry.bOverrideStatePropertyMap, icon = iconNow }
-    end
-    local o = chestIconOriginal
-    local want = on and { display = true, overrideDisplay = true, overrideState = true, icon = CHEST_ICON } or o
-    local changed = 0
-    if entry.bDefaultDisplay ~= want.display or entry.bOverrideDefaultDisplay ~= want.overrideDisplay then
-        say("chest icons: display " .. tostring(want.display))
-        entry.bOverrideDefaultDisplay, entry.bDefaultDisplay = want.overrideDisplay, want.display
-        changed = changed + 1
-    end
-    if entry.bOverrideStatePropertyMap ~= want.overrideState then
-        say("chest icons: state map " .. tostring(want.overrideState))
-        if want.overrideState then
-            pcall(function()
-                entry.StatePropertyMap:Add({ TagName = FName(LOW_ZOOM) },
-                    { bOverrideIconTag = true, IconTag = { TagName = FName(CHEST_ICON) } })
-            end)
-        end
-        entry.bOverrideStatePropertyMap = want.overrideState
-        changed = changed + 1
-    end
-    if want.icon and iconNow ~= want.icon then
-        say("chest icons: icon " .. want.icon)
-        pcall(function() binding.InteractBindMap:Add({ TagName = FName(TREASURE_TYPE) }, { TagName = FName(want.icon) }) end)
-        changed = changed + 1
-    end
-    return changed
-end
-
 -- Round 58: the final boss lock. In the Crystal Tower (map 3280) the climb to the top floor
 -- (3281) starts at an interact trigger, gimmick 133, whose event is
 -- C08_Dng_10Cry_41_CanNotRetrun_01: the point of no return. The lock goes before it, or a player
@@ -4505,6 +4443,31 @@ function G.SealTowerTop(sealed)
     gateStep((sealed and "seal" or "open") .. " the tower's last climb")
     pcall(function() best:SetActorEnableCollision(not sealed) end)
     return 1
+end
+
+-- Round 58: Mobliz Shipyard (map 3060). Two of its four elevators, uids 73 and 75, start
+-- deactivated (Dng_04Dir_41_02_GD). In chapter 2 a lever puzzle turns 73 on
+-- (BP_MapGimmick_SwitchSequence_C_1; its levers start deactivated too), and nothing in the level
+-- turns 75 on, so a story scene likely does. The open world start skips both, so the chests and
+-- shards past them could not be reached (round 57). Returns how many it turned on.
+G.SHIPYARD_MAP = 3060
+local SHIPYARD_ELEVATORS = { [73] = true, [75] = true }
+local GIMMICK_ACTIVE = 0   -- eMapGimmickState: Active 0, Deactive 1
+function G.WakeShipyardElevators()
+    local ok, all = pcall(FindAllOf, "BP_MapGimmick_Floor_Elevator_Interact_002_C")
+    local woke = 0
+    for _, a in ipairs(ok and all or {}) do
+        if Alive(a) then
+            local uid, condition
+            pcall(function() uid, condition = a.m_UniqueId, a.m_GimmickCondition end)
+            if SHIPYARD_ELEVATORS[uid] and condition ~= GIMMICK_ACTIVE then
+                gateStep("turn on shipyard elevator " .. uid)
+                pcall(function() a:SetGimmickCondition(GIMMICK_ACTIVE, false) end)
+                woke = woke + 1
+            end
+        end
+    end
+    return woke
 end
 
 return G

@@ -107,7 +107,7 @@ class FFResonanceWorld(World):
     def fill_slot_data(self) -> Mapping[str, Any]:
         return {
             **self.options.as_dict("tablet_shards_required", "include_shinies", "include_crystals",
-                                   "include_tablet_shards", "minimap_chest_icons"),
+                                   "include_tablet_shards"),
             "goal": self.options.goal.current_key,
             "mod_protocol": MOD_PROTOCOL,
             "open_world": True,

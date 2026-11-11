@@ -128,7 +128,8 @@ function G.EnsureOptionRows(current)
   G.menuRowsIn = true; G.menuAdds = (G.menuAdds or 0) + 1; return 6, "rows"
 end
 function G.AddOptionRows(say, current) return true, "rows", 6 end
-function G.ShowChestIcons(on) G.chestIcons = on; return 0 end
+G.SHIPYARD_MAP = 3060
+function G.WakeShipyardElevators() G.shipyardCalls = (G.shipyardCalls or 0) + 1; return 0 end
 G.TOWER_TOP = { map = 3280, x = 15890, y = -55300, reach = 500 }
 function G.SealTowerTop(sealed) G.sealed = sealed; return 0 end
 function G.UnlockVision() return "ok", "" end
@@ -1399,8 +1400,8 @@ tick(30)
 assert calls() == [], "not an open world seed"
 print("seed scaling: ok")
 
-# Round 57: an open world seed's save gets the Chocobo once, and the chest icons the yaml asks for
-inbox("seed\tS57:0:1\ncfg\topenworld\t1\ncfg\tchesticons\t1\n", "w")
+# Round 57: an open world seed's save gets the Chocobo once; round 58: and the shipyard's elevators
+inbox("seed\tS57:0:1\ncfg\topenworld\t1\n", "w")
 L, G = boot5("SD_CHOCOBO", "0", {})
 L.globals().G = G
 L.execute(SCALE_STUB)
@@ -1413,12 +1414,16 @@ assert "item30002x1" not in list(G.log.values()), "not before the open world sta
 G.story = 8000
 tick(12)
 assert list(G.log.values()).count("item30002x1") == 1, list(G.log.values())
-assert G.chestIcons is True
+assert G.shipyardCalls is None, "only in the shipyard"
+G.map = 3060
+tick(12)
+assert G.shipyardCalls and G.shipyardCalls > 0
+G.map = 2002
 G.held = 0
 tick(12)
 assert list(G.log.values()).count("item30002x1") == 1, "once per save loaded"
 
-inbox("seed\tS57b:0:1\ncfg\topenworld\t1\ncfg\tchesticons\t0\n", "w")
+inbox("seed\tS57b:0:1\ncfg\topenworld\t1\n", "w")
 L, G = boot5("SD_CHOCOBO2", "0", {})
 L.globals().G = G
 L.execute(SCALE_STUB)
@@ -1427,23 +1432,7 @@ G.chests = L.table()
 G.story = 8000
 tick(12)
 assert "item30002x1" not in list(G.log.values()), "a save that holds the saddle gets none"
-assert G.chestIcons is False, "the yaml said no"
-
-# Round 58: with `cfg chesticons 2` the icons wait for the Chest Radar's flag
-inbox("seed\tS58c:0:1\ncfg\topenworld\t1\ncfg\tchesticons\t2\n", "w")
-L, G = boot5("SD_RADAR", "0", {})
-L.globals().G = G
-L.execute(SCALE_STUB)
-L.execute("function G.HeldCount(id) return 1 end; function G.GetFlag(i) return i == 1430 and G.radar or false end")
-G.chests = L.table()
-G.story = 8000
-G.radar = False
-tick(12)
-assert G.chestIcons is False, "no radar yet"
-G.radar = True
-tick(12)
-assert G.chestIcons is True, "the radar arrived"
-print("chocobo and chest icons: ok")
+print("chocobo and shipyard: ok")
 
 # Round 58: the tower's last climb stays sealed while the client's counts are short, and says so near it
 inbox("seed\tS58:0:1\ncfg\topenworld\t1\ncfg\tfinalboss\t2\t6\t3\t12\n", "w")

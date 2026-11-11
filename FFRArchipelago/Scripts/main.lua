@@ -50,7 +50,7 @@
 -- follows the save slots the linked game is saved to. While any other save is loaded, the mod
 -- grants nothing, reports nothing and leaves the chests vanilla.
 
-local VERSION = "0.46.0"
+local VERSION = "0.47.0"
 local PROTOCOL = 2        -- the bridge protocol; the apworld's MOD_PROTOCOL
 
 local MOD_DIR = (debug.getinfo(1, "S").source:gsub("^@", ""):gsub("\\", "/"):match("^(.*/)Scripts/[^/]+$"))
@@ -107,7 +107,7 @@ local openArrival = nil      -- ffrap_openstart dock|air|event, kept once the us
 local continentLocks = nil   -- ffrap_lock on|off, kept once the user picks one; the seed's until then
 -- What the seed says about the start (the client's cfg lines). Not saved: ap_in.txt is read again
 -- at every start, and the seed that wrote it is the only thing that decides these.
-local seedCfg = { openworld = false, party = nil, shinies = false, crystals = false, shards = false, chesticons = 0 }
+local seedCfg = { openworld = false, party = nil, shinies = false, crystals = false, shards = false }
 local function openStartOn() return openStart or seedCfg.openworld end
 -- An `ffrap_lock on|off` from this run wins. Then a seed that asks for locks: a saved "off" from
 -- an old test must not quietly leave a real seed unlocked. Then the saved switch.
@@ -380,8 +380,6 @@ local function readInbox(initial)
             seedCfg.shards = f[3] == "1"
         elseif f[1] == "cfg" and f[2] == "crystals" then
             seedCfg.crystals = f[3] == "1"
-        elseif f[1] == "cfg" and f[2] == "chesticons" then
-            seedCfg.chesticons = tonumber(f[3]) or 0
         elseif f[1] == "cfg" and f[2] == "finalboss" then
             seedCfg.finalboss = { characters = tonumber(f[3]) or 0, needCharacters = tonumber(f[4]) or 0,
                                   visions = tonumber(f[5]) or 0, needVisions = tonumber(f[6]) or 0 }
@@ -1835,13 +1833,9 @@ settingsTick = function()
 end
 
 -- Round 57: what every seed's open world save gets, the user's wish: the Chocobo (the Choboco
--- Saddle, 30002, which the game checks: round 5) next to the free airship, once per save loaded,
--- and the chest icons on the mini-map when the seed's yaml asks for them (any other save gets
--- the game's own icons back).
+-- Saddle, 30002, which the game checks: round 5) next to the free airship, once per save loaded.
+-- Round 58: and the Mobliz Shipyard's two stopped elevators, turned on at each visit.
 local CHOCOBO_SADDLE = 30002
--- The Chest Radar item turns this flag on (tools/gen_apworld_data.py). With `cfg chesticons 2`
--- the chest icons wait for it; with 1 they show from the start.
-local CHEST_RADAR_FLAG = 1430
 
 -- Round 58: the final boss lock (Worlds Collide style, the user's choice). The client counts the
 -- characters and visions received and writes them in a `cfg finalboss` line; while either count
@@ -1881,7 +1875,7 @@ finalLockTick = function()
         lockNoticed = false
     end
 end
-local saddleSave, iconsLogged = nil, nil
+local saddleSave, shipyardLogged = nil, false
 seedExtrasTick = function()
     local seedSave = seedCfg.openworld and sessionSave() and (game.StoryCounter() or 0) >= game.OPEN_START.story
     if seedSave and saddleSave ~= save.obj and game.OnField() then
@@ -1892,13 +1886,13 @@ seedExtrasTick = function()
         end
     end
     pcall(finalLockTick)
-    local want = sessionSave() and (seedCfg.chesticons == 1 or
-        (seedCfg.chesticons == 2 and game.GetFlag(CHEST_RADAR_FLAG) == true)) or false
-    local changed, why = game.ShowChestIcons(want, log)
-    local line = changed == nil and ("chest icons: " .. tostring(why)) or
-        (changed > 0 and ("chest icons " .. (want and "on" or "off") .. ": " .. changed .. " fields written")) or nil
-    if line and line ~= iconsLogged then log(line) end
-    if line then iconsLogged = line end
+    if seedSave and game.CurrentMap() == game.SHIPYARD_MAP then
+        local woke = game.WakeShipyardElevators()
+        if woke > 0 and not shipyardLogged then log("shipyard: " .. woke .. " stopped elevators turned on") end
+        shipyardLogged = shipyardLogged or woke > 0
+    else
+        shipyardLogged = false
+    end
 end
 
 -- ffrap_set: shows the settings. ffrap_set <exp|gil|mrp|encounterrate> <number>, ffrap_set

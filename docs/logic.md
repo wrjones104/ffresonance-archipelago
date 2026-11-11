@@ -159,6 +159,8 @@ Candidates for player customization:
 
 ## 8a. Gates the game already checks (round 56, off-line)
 
+Round 58: Mobliz Shipyard (map 3060) is not a gate but a stuck switch. Two of its four elevators (uids 73 and 75) start deactivated; in chapter 2 a lever puzzle turns 73 on, and a story scene likely turns 75 on. The open world start skips both, so chests 1 and 3 and shards 71 and 79 could not be reached. Mod 0.47.0 turns both on at each visit on a seed's save, so the logic stays as it is.
+
 From the game data dump. Each still needs a test in game: does the gate open with an item from Archipelago, on the open world start?
 
 | Gate | What the game checks | Logic | State |

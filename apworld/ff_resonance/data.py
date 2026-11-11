@@ -450,7 +450,6 @@ ITEMS = {1001: {'category': 'consumable', 'count': 1, 'game_id': 1, 'kind': 'ite
  700001426: {'category': 'continent', 'count': 1, 'game_id': 1426, 'kind': 'flag', 'name': 'Mysidia Unlock'},
  700001427: {'category': 'continent', 'count': 1, 'game_id': 1427, 'kind': 'flag', 'name': 'Gronoa Unlock'},
  700001428: {'category': 'continent', 'count': 1, 'game_id': 1428, 'kind': 'flag', 'name': 'Pharm Unlock'},
- 700001430: {'category': 'radar', 'count': 1, 'game_id': 1430, 'kind': 'flag', 'name': 'Chest Radar'},
  800001001: {'category': 'party', 'count': 1, 'game_id': 1001, 'kind': 'unit', 'name': 'Rain'},
  800001002: {'category': 'party', 'count': 1, 'game_id': 1002, 'kind': 'unit', 'name': 'Lasswell'},
  800001003: {'category': 'party', 'count': 1, 'game_id': 1003, 'kind': 'unit', 'name': 'Fina'},
@@ -4188,6 +4187,5 @@ CONTINENT_UNLOCKS = {'Grandshelt': 700001420,
  'Pharm': 700001428}
 
 UNIT_ITEM_BASE = 800000000
-CHEST_RADAR = 700001430
 FINAL_AREA = 'Crystal Tower'
 OPEN_AREA = 'Open'

@@ -498,35 +498,20 @@ for name in ("FFRAP_Exp", "FFRAP_Gil", "FFRAP_Mrp", "FFRAP_Encounters", "FFRAP_E
     L.execute('optRows["%s"] = nil' % name)
 added = L.execute("return (G.EnsureOptionRows({}))")
 assert added == 7 and lua("optRows.FFRAP_Exp.DisplayText:ToString()") == "AP: EXP rate", added
-# Round 57: chest icons on the mini-map: shown with the TreasureBox icon, then back as they were
+# Round 58: the shipyard's two stopped elevators are turned on, the others left alone
 L.execute("""
-local function tagMap(rows)
-  local m = { rows = rows }
-  function m:ForEach(fn) for tag, v in pairs(self.rows) do
-    fn({ get = function() return { TagName = FName(tag) } end }, { get = function() return v end }) end end
-  function m:Add(k, v) self.rows[k.TagName:ToString()] = v end
-  return m
+function elevator(uid, condition)
+  return { IsValid = function() return true end, HasAnyInternalFlags = function() return false end,
+    HasAnyFlags = function() return false end, m_UniqueId = uid, m_GimmickCondition = condition,
+    SetGimmickCondition = function(self, c) self.m_GimmickCondition = c end }
 end
-lowZoom = tagMap({})
-treasureEntry = { bOverrideDefaultDisplay = true, bDefaultDisplay = false, bOverrideStatePropertyMap = false, StatePropertyMap = lowZoom }
-iconBinding = tagMap({ ["Field.Object.Interact.Type.Treasure"] = { TagName = FName("UI.Map.Icon.Null") } })
-local function asset(fields)
-  fields.IsValid = function() return true end
-  fields.HasAnyInternalFlags = function() return false end
-  fields.HasAnyFlags = function() return false end
-  return fields
-end
-libs["/Game/UI/Field/MiniMap/Entry/Data/DA_MiniMapEntryProperty.DA_MiniMapEntryProperty"] =
-  asset({ PropertyMap = tagMap({ ["Field.Object.Interact.Type.Treasure"] = treasureEntry }) })
-libs["/Game/UI/Map/Icon/Data/DA_MapIconBinding.DA_MapIconBinding"] = asset({ InteractBindMap = iconBinding })""")
-assert lua("G.ShowChestIcons(true)") == 3
-assert lua("treasureEntry.bDefaultDisplay") is True and lua("treasureEntry.bOverrideStatePropertyMap") is True
-assert lua('lowZoom.rows["UI.Map.Zoom.State.Low"].IconTag.TagName:ToString()') == "UI.Map.Icon.TreasureBox"
-assert lua('iconBinding.rows["Field.Object.Interact.Type.Treasure"].TagName:ToString()') == "UI.Map.Icon.TreasureBox"
-assert lua("G.ShowChestIcons(true)") == 0, "nothing twice"
-assert lua("G.ShowChestIcons(false)") == 3
-assert lua("treasureEntry.bDefaultDisplay") is False and lua("treasureEntry.bOverrideStatePropertyMap") is False
-assert lua('iconBinding.rows["Field.Object.Interact.Type.Treasure"].TagName:ToString()') == "UI.Map.Icon.Null", "the game's own icon"
+lifts = { elevator(72, 0), elevator(73, 1), elevator(74, 0), elevator(75, 1) }
+prevFAO = FindAllOf
+function FindAllOf(c) if c == "BP_MapGimmick_Floor_Elevator_Interact_002_C" then return lifts end return nil end""")
+assert lua("G.WakeShipyardElevators()") == 2
+assert [lua(f"lifts[{i}].m_GimmickCondition") for i in range(1, 5)] == [0, 0, 0, 0]
+assert lua("G.WakeShipyardElevators()") == 0, "nothing twice"
+L.execute("FindAllOf = prevFAO")
 # Round 58: the tower's last climb is sealed by the trigger's collision, found by its position
 L.execute("""
 function trigger(x, y)
