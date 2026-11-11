@@ -1,0 +1,26 @@
+map	chest	shards	condition	room	row
+2031	0	3	{progress:43}==10	1-Star Chamber	01_01
+2031	1	6	{progress:43}==11	1-Star Chamber	01_02
+2031	2	9	{progress:43}==12	1-Star Chamber	01_03
+2031	3	12	{progress:43}==13	1-Star Chamber	01_04
+2031	4	16	{progress:43}==14	1-Star Chamber	01_05
+2031	5	20	{progress:43}==15	1-Star Chamber	01_06
+2031	6	24	{progress:43}==16	1-Star Chamber	01_07
+2031	7	28	{progress:43}==17	1-Star Chamber	01_08
+2031	8	32	{progress:43}==18	2-Star Chamber	02_01
+2031	9	36	{progress:43}==19	2-Star Chamber	02_02
+2031	10	40	{progress:43}==20	2-Star Chamber	02_03
+2031	11	44	{progress:43}==21	2-Star Chamber	02_04
+2031	12	48	{progress:43}==22	2-Star Chamber	02_05
+2031	13	52	{progress:43}==23	2-Star Chamber	02_06
+2031	14	56	{progress:43}==24	2-Star Chamber	02_07
+2031	15	60	{progress:43}==25	2-Star Chamber	02_08
+2031	16	64	{progress:43}==26	3-Star Chamber	03_01
+2031	17	68	{progress:43}==27	3-Star Chamber	03_02
+2031	18	72	{progress:43}==28	3-Star Chamber	03_03
+2031	19	76	{progress:43}==29	3-Star Chamber	03_04
+2031	20	80	{progress:43}==30	3-Star Chamber	03_05
+2031	21	84	{progress:43}==31	3-Star Chamber	03_06
+2031	22	89	{progress:43}==32	4-Star Chamber	04_01
+2031	23	94	{progress:43}==33	4-Star Chamber	04_02
+2031	24	99	{progress:43}==34	4-Star Chamber	04_03

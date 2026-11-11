@@ -244,6 +244,7 @@ def main() -> None:
                                  "game_id": item_id, "count": count, "category": kind})
         return ap_id
 
+    shards_for = {(int(r["map"]), int(r["chest"])): int(r["shards"]) for r in read_tsv("game/shard_chests.tsv")}
     chests, kept_chests, no_box = [], [], []
     for r in read_tsv("game/chests.tsv"):
         map_id, chest_id = int(r["mapId"]), int(r["ID"])
@@ -256,6 +257,8 @@ def main() -> None:
                  "region": chest_region(r["row"]), "area": chest_area(map_id, r["row"]),
                  "open_world": map_id not in NO_OPEN_WORLD_ROUTE, "row": r["row"],
                  "id": CHEST_LOCATION_BASE + map_id * 1000 + chest_id, "vanilla": ap_item}
+        if (map_id, chest_id) in shards_for:
+            entry["shards"] = shards_for[(map_id, chest_id)]
         (chests if ap_item is not None else kept_chests).append(entry)
 
     # Chests are numbered from 1 within each place name, in the order of their AP ids (map id,

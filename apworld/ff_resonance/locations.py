@@ -71,6 +71,13 @@ def create_regions_and_locations(world: FFResonanceWorld) -> None:
         # A place with no route on the open world start may only hold filler.
         if loc["region"] in excluded or not loc["open_world"]:
             location.progress_type = LocationProgressType.EXCLUDED
+        # Oblivion Palace's chests open as Tablet Shards are turned in (3 for the first, 99 for
+        # the last). With the shards not in the pool, logic cannot count them: filler only.
+        if "shards" in loc:
+            if world.options.include_tablet_shards:
+                location.access_rule = lambda state, n=loc["shards"]: state.has("Tablet Shard", player, n)
+            else:
+                location.progress_type = LocationProgressType.EXCLUDED
         region.locations.append(location)
         if loc["vanilla"] is not None:
             world.vanilla_items.append(loc["vanilla"])

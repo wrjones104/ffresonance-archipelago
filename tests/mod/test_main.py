@@ -1355,6 +1355,13 @@ assert calls()[-1] == "clamp 25 29 true hp100 atk100 mag100; bosses 28 32 hp100"
 G.partyLv = 3
 tick(10)
 assert calls()[-1] == "clamp 0 4 true hp75 atk75 mag75; bosses 1 5 hp100", "below the ramp: centre 80% (2), power 75%"
+# Round 56: a new strength rescales at once: expert is centre 90% (3), power 90%; bosses 105%, 115%
+L.execute('commands["ffrap_set"]("ffrap_set", {"strength", "expert"})')
+tick(10)
+assert calls()[-1] == "clamp 1 5 true hp90 atk90 mag90; bosses 1 5 hp115", calls()
+L.execute('commands["ffrap_set"]("ffrap_set", {"reset"})')
+tick(10)
+assert calls()[-1] == "clamp 0 4 true hp75 atk75 mag75; bosses 1 5 hp100", "back to normal"
 G.saveObj, G.saveTicks = "SD_OTHER", "600"     # a save in a slot the seed does not hold
 tick(30)
 assert calls()[-1].startswith("off "), calls()
@@ -1494,6 +1501,17 @@ assert "exp 2" in saved and "encounters off" in saved and "encounterrate 5" in s
 G.story = 8000
 tick(20)
 assert list(G.scaleCalls.values()) == [], "scaling off: the seed does not scale"
+# Round 56: a save not linked to the seed gets the game's own rates and encounters back
+L.execute(CAPTURE)
+G.slotOf = L.table_from({"900": 5})
+load(G, "SD_SET_OTHER", "900")
+tick(10)
+assert list(G.rates.values()) == [1, 1, 1] and list(G.encounterTables.values()) == [True, 1], "the game's own values"
+assert G.playerEncounters is True
+assert any("not linked to the seed" in x for x in logs()), "said why"
+load(G, "SD_SET", "0")
+tick(10)
+assert list(G.rates.values()) == [2, 1, 1] and list(G.encounterTables.values()) == [False, 5], "back on the linked save"
 L2, G2 = boot5("SD_SET2", "0", {})
 L2.execute("tickFn = tickFn")
 assert "exp 2" in read("settings.txt"), "kept for the next run"
@@ -1509,9 +1527,10 @@ assert list(G.rates.values())[0] == 2 and list(G.encounterTables.values())[0] is
 assert "exp 2" in read("settings.txt") and "encounters off" in read("settings.txt")
 print("menu settings: ok")
 
-# Round 53: the Options rows go in by themselves, once per save, seeded with the current settings
-assert G.menuAdds == 1, G.menuAdds
+# Round 53: the Options rows go in by themselves, once per save loaded, seeded with the current
+# settings. This run loaded three saves (round 56's test above).
+assert G.menuAdds == 3, G.menuAdds
 assert G.menuSeed["exp"] is not None and G.menuSeed["scaling"] is not None, "seeded with the settings"
 tick(20)
-assert G.menuAdds == 1, "once per save"
+assert G.menuAdds == 3, "once per save"
 print("menu rows: ok")

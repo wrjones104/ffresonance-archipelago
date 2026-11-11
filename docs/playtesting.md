@@ -454,10 +454,18 @@ World-map shinies verified as locations. Multiple crashes observed across differ
 - **TreasureMinimap:** off-line, the pak changes three mini-map and world-map data assets only, to show chest, exit and "check" icons the game hides (IDEAS.md, ideas 26 and 27).
 - **Decided:** artifacts are left out for now, the passkey too. World 0.10.0 and mod 0.41.0 take them out.
 
-## Round 56 test plan (mod 0.41.0, world 0.10.0)
+## Round 56 test plan (mod 0.42.0, world 0.11.0)
 
-No round is needed for this alone: it only takes things out. Install it with the next round.
+**Install:** copy `FFRArchipelago/Scripts`, and copy `dist/ff_resonance.apworld` into Archipelago's `custom_worlds`. Generate a new seed with `include_tablet_shards: true` (or the shard goal). The old yaml's `start_with_bandit_cuff_links` line can go.
 
-**Install:** copy `FFRArchipelago/Scripts`, and copy `dist/ff_resonance.apworld` into Archipelago's `custom_worlds`. Generate a new seed: the old yaml's `start_with_bandit_cuff_links` line can go.
+**1. Settings on other saves.** Load a save that is not the seed's. The log should say `settings: the game's own (this save is not linked to the seed)`. **Is EXP back to normal there?** Then load the seed's save: your rates should come back.
 
-**Check:** no artifact (Exodus, the Cuff Links, the Transporter and so on) arrives from Archipelago, and items still arrive as before.
+**2. Scaling strength.** Options, Gameplay: **is there an "AP: Scaling strength" row with Casual, Normal and Expert?** Set Expert and apply. The log should show `scale: ... strength expert`. **Do enemies feel harder?** Does changing the game's own Difficulty row still work as before?
+
+**3. Oblivion Palace (Lanzelt).** With a few Tablet Shards from Archipelago:
+- **Can you get in?** A blocking base stands while its quest has not started. If something blocks you, take `ffrap_snapshot`, talk to whoever is there, and take it again.
+- **Does the turn-in take the shards from Archipelago?** If it opens the first chest at 3 shards, the logic is right.
+
+**4. Research Center Ruins (Gronoa), if you get there.** Which chests are behind the level 1 door, and which behind the level 2 door? With a key card from Archipelago, does the door open?
+
+Send the `[FFRAP]` lines of the log and the snapshots.

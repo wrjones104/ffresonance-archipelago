@@ -7,6 +7,13 @@ from ..options import Goal, TabletShardsRequired
 from . import FFResonanceTestBase
 
 ARTIFACT_IDS = (30000, 30018)    # DT_ArtifactItemData's rows
+LAST_PALACE_CHEST = "chest:2031:24"   # Oblivion Palace's 4-Star Chamber: all 99 shards
+PALACE_SHARDS = 99
+
+
+def palace_location(test, key):
+    name = next(c["name"] for c in CHESTS if c["key"] == key)
+    return test.multiworld.get_location(name, test.player)
 
 
 class TestDefault(FFResonanceTestBase):
@@ -89,6 +96,19 @@ class TestTabletShards(FFResonanceTestBase):
         shards = [i for i in self.multiworld.itempool if i.player == self.player and i.name == "Tablet Shard"]
         self.assertEqual(len(shards), len(TABLET_SHINIES))
 
+    def test_the_palace_chests_need_their_shards(self) -> None:
+        last = palace_location(self, LAST_PALACE_CHEST)
+        shards = [i for i in self.multiworld.itempool if i.player == self.player and i.name == "Tablet Shard"]
+        self.assertTrue(all(i.advancement for i in shards), "the last chest counts every shard")
+        self.collect_all_but(["Tablet Shard"])
+        self.assertFalse(last.can_reach(self.multiworld.state))
+        self.collect(shards[:PALACE_SHARDS - 1])
+        self.assertFalse(last.can_reach(self.multiworld.state))
+        self.collect(shards[PALACE_SHARDS - 1:])
+        self.assertTrue(last.can_reach(self.multiworld.state))
+        first = palace_location(self, "chest:2031:0")
+        self.assertEqual(first.progress_type, LocationProgressType.DEFAULT)
+
 
 class TestCrystals(FFResonanceTestBase):
     options = {"include_crystals": True}
@@ -129,10 +149,10 @@ class TestTabletShardGoal(FFResonanceTestBase):
         self.assertEqual(names, {loc["name"] for loc in CHESTS + TABLET_SHINIES})
         self.assertEqual(self.world.fill_slot_data()["include_tablet_shards"], 1)
 
-    def test_only_the_shards_needed_are_progression(self) -> None:
+    def test_the_palace_makes_every_shard_progression(self) -> None:
         shards = [i for i in self.multiworld.itempool if i.player == self.player and i.name == "Tablet Shard"]
         self.assertEqual(len(shards), 99)
-        self.assertEqual(sum(i.advancement for i in shards), 10)
+        self.assertEqual(sum(i.advancement for i in shards), PALACE_SHARDS)
 
     def test_the_goal_needs_the_shards(self) -> None:
         shards = [i for i in self.multiworld.itempool if i.player == self.player and i.name == "Tablet Shard" and i.advancement]
@@ -145,6 +165,12 @@ class TestTabletShardGoal(FFResonanceTestBase):
         slot_data = self.world.fill_slot_data()
         self.assertEqual(slot_data["goal"], "tablet_shards")
         self.assertEqual(slot_data["tablet_shards_required"], 10)
+
+
+class TestPalaceWithoutShards(FFResonanceTestBase):
+    def test_the_palace_chests_hold_filler_only(self) -> None:
+        self.assertEqual(palace_location(self, LAST_PALACE_CHEST).progress_type, LocationProgressType.EXCLUDED)
+        self.assertEqual(palace_location(self, "chest:2031:0").progress_type, LocationProgressType.EXCLUDED)
 
 
 class TestNoArtifacts(FFResonanceTestBase):

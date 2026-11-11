@@ -436,7 +436,8 @@ L.execute("""
 local function tagged(t) return { TagName = FName(t) } end
 optRows = { a = { Type = 1, EntryTag = tagged("Delegate.UI.System.Option.Root.GameSetting.EncountSensor"), DefaultRadioButtonIndex = 0 },
             b = { Type = 2, EntryTag = tagged("Delegate.UI.System.Option.Root.GameSetting.GamePad.Sensitivity"),
-                  SliderInfo = { MinValue = 1, MaxValue = 10, DefaultValue = 5 } } }
+                  SliderInfo = { MinValue = 1, MaxValue = 10, DefaultValue = 5 } },
+            c = { Type = 1, EntryTag = tagged("Delegate.UI.System.Option.Root.GameSetting.Difficulty"), DefaultRadioButtonIndex = 1 } }
 optDT = { GetFullName = function() return "opt" end, IsValid = function() return true end,
   HasAnyInternalFlags = function() return false end, HasAnyFlags = function() return false end,
   ForEachRow = function(_, fn) for k, r in pairs(optRows) do fn(nameOf(k), r) end end,
@@ -457,23 +458,26 @@ seedSave = { IsValid = function() return true end, HasAnyInternalFlags = functio
   HasAnyFlags = function() return false end, m_EntrySaveDataList = savedOptions }
 prevFFOseed = FindFirstOf
 function FindFirstOf(c) if c == "CPP_MuchaOptionSaveData" then return seedSave end return prevFFOseed(c) end""")
-ok, detail, added = L.execute("return G.AddOptionRows(say, { exp = 4, encounters = false, encounterrate = 9 })")
-assert added == 6, added
-assert ok is True and "2 rows before" in detail and "not added" not in detail and "failed" not in detail, detail
-assert "5 option save entries added" in detail, detail
+ok, detail, added = L.execute("return G.AddOptionRows(say, { exp = 4, encounters = false, encounterrate = 9, strength = 2 })")
+assert added == 7, added
+assert ok is True and "3 rows before" in detail and "not added" not in detail and "failed" not in detail, detail
+assert "6 option save entries added" in detail, detail
 tag = lambda r: 'savedOptions.rows["Delegate.UI.System.Option.Root.GameSetting.FFRAP.' + r + '"]'
 assert lua(tag("FFRAP_Exp") + ".Value") == 4 and lua(tag("FFRAP_Exp") + ".Type") == 1, "seeded from the settings"
 assert lua(tag("FFRAP_Gil") + ".Value") == 7, "a value the player set is kept"
 assert lua(tag("FFRAP_Encounters") + ".Value") == 1 and lua(tag("FFRAP_Encounters") + ".Type") == 2, "off is index 1"
 assert lua(tag("FFRAP_EncounterRate") + ".Value") == 5 and lua(tag("FFRAP_Scaling") + ".Value") == 0, "held to the slider"
+assert lua(tag("FFRAP_ScalingStrength") + ".Value") == 2 and lua(tag("FFRAP_ScalingStrength") + ".Type") == 2, "a choice is its index"
 L.execute("FindFirstOf = prevFFOseed; G.ForgetObjects()")
 assert lua("optRows.FFRAP_Exp.EntryTag.TagName:ToString()") == "Delegate.UI.System.Option.Root.GameSetting.FFRAP.FFRAP_Exp"
 assert lua("optRows.FFRAP_Exp.Type") == 2 and lua("optRows.FFRAP_Exp.SliderInfo.MaxValue") == 10
 assert lua("optRows.FFRAP_EncounterRate.SliderInfo.MaxValue") == 5 and lua("optRows.FFRAP_Scaling.Type") == 1
 assert lua("optRows.FFRAP_Exp.DisplayText:ToString()") == "AP: EXP rate"
 assert lua("optRows.b.EntryTag.TagName:ToString()").endswith("GamePad.Sensitivity"), "the game's own row is left alone"
+assert lua("optRows.FFRAP_ScalingStrength.DefaultRadioButtonIndex") == 1 and lua("optRows.c.EntryTag.TagName:ToString()").endswith(".Difficulty"), \
+    "a copy of the Difficulty row, with the game's own left alone"
 ok, detail, added = L.execute("return G.AddOptionRows(say)")
-assert "8 rows before" in detail and added == 0, "a second run adds nothing"
+assert "10 rows before" in detail and added == 0, "a second run adds nothing"
 L.execute("""
 local function entry(tag, value) return { get = function() return { TagName = FName(tag) } end }, { get = function() return { Value = value } end } end
 optSave = { IsValid = function() return true end, HasAnyInternalFlags = function() return false end, HasAnyFlags = function() return false end,
@@ -481,11 +485,12 @@ optSave = { IsValid = function() return true end, HasAnyInternalFlags = function
     fn(entry("Delegate.UI.System.Option.Root.GameSetting.FFRAP.FFRAP_Exp", 3))
     fn(entry("Delegate.UI.System.Option.Root.GameSetting.FFRAP.FFRAP_Encounters", 1))
     fn(entry("Delegate.UI.System.Option.Root.GameSetting.FFRAP.FFRAP_Scaling", 0))
+    fn(entry("Delegate.UI.System.Option.Root.GameSetting.FFRAP.FFRAP_ScalingStrength", 2))
     fn(entry("Delegate.UI.System.Option.Root.GameSetting.EncountSensor", 1)) end } }
 local prevFFO = FindFirstOf
 function FindFirstOf(c) if c == "CPP_MuchaOptionSaveData" then return optSave end return prevFFO(c) end""")
 values = L.execute("return G.ReadOptionValues()")
-assert dict(values) == {"exp": 3, "encounters": False, "scaling": True}, dict(values)
+assert dict(values) == {"exp": 3, "encounters": False, "scaling": True, "strength": 2}, dict(values)
 # Round 51: the menu dump lists the option save's entries, ours among them
 lines = list(L.execute("return G.OptionDump()").values())
 assert lines[0] == "CPP_MuchaOptionSaveData: 0 found", lines

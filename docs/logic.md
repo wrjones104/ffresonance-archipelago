@@ -157,6 +157,17 @@ Candidates for player customization:
 5. Kolobos: determine exact story unlock timing.
 6. Goal: verify whether story progression reliably reaches 8050 at game completion.
 
+## 8a. Gates the game already checks (round 56, off-line)
+
+From the game data dump. Each still needs a test in game: does the gate open with an item from Archipelago, on the open world start?
+
+| Gate | What the game checks | Logic | State |
+|---|---|---|---|
+| Oblivion Palace (map 2031, Lanzelt): 25 chests | A Tablet Shard turn-in: `DT_TalkEvent_CollectMedal` opens chest *n* at 3, 6, 9, 12, 16, 20, ... 99 shards. Each step is `{progress:43}==k&{transferItem:0,25004}>=N`. A blocking base stands while `{progress:43}==0` (quest not started) | World 0.11.0: each palace chest needs its shards. All 99 shards are progression then. Without `include_tablet_shards` the chests are filler only | In logic. In game: what starts the quest (sets progress 43 to 10), and whether `transferItem` counts shards from Archipelago |
+| Treasure radar (Magi-tenna 27006, Resonance Stone 27007, High-Power Generator 27008) | A side quest on the airship (`DT_MapAirShip`): boarding with a part runs the next step, `{progress:49}==30 & {progress:51}==14 & {item:27007}>=1` and so on, 15 steps in all | Not yet. The 94 world-map shinies have no visibility condition, so what each tier reveals is not in our tables | Probe in game first |
+| Research Center Ruins (map 3220, Gronoa) | Doors 41, 42 and 43 run `Gim_EV_HaveKeyItemLV1` to `LV3`, so the door tests the card. The cards are shinies on the same map (32: level 1, 33: level 2, 37: level 3), with 3 Tablet Shards (34 to 36) | Not yet. By position: the level 1 door leads to chests 0, 1 and 3, the level 2 card and two shards; the level 2 door to chests 2, 4 and 5, the level 3 card and a shard; the level 3 door to no chest | Confirm the rooms in game. Then the cards' shinies become locations (the user's list) |
+| Zoldaad Castle throne room (map 3160) | The door's events test `{item:20021}` (Throne Room Key) with flags 407 and 422 | Not yet | The only plain item check found. Tunnel and Dungeon Keys are not in any condition |
+
 ## 9. How this becomes code (for reference)
 
 Once requirements are finalized:

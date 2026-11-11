@@ -50,7 +50,7 @@
 -- follows the save slots the linked game is saved to. While any other save is loaded, the mod
 -- grants nothing, reports nothing and leaves the chests vanilla.
 
-local VERSION = "0.41.0"
+local VERSION = "0.42.0"
 local PROTOCOL = 2        -- the bridge protocol; the apworld's MOD_PROTOCOL
 
 local MOD_DIR = (debug.getinfo(1, "S").source:gsub("^@", ""):gsub("\\", "/"):match("^(.*/)Scripts/[^/]+$"))
@@ -1705,13 +1705,14 @@ local SCALE_CHECK_EVERY = 2   -- scale ticks (of STATUS_EVERY) between table che
 local scaleChecks = 0
 
 -- The player's settings (round 50; IDEAS.md, idea 18): EXP, gil and MRP rates, random encounters
--- on or off, the encounter rate, and the seed's enemy scaling on or off. They belong to the player,
--- not the seed, and apply to any save. settings.txt holds only what the player has set, and only
--- ffrap_set writes it (a setting the mod saved by itself once came back as a choice, round 19).
--- The Options screen is to set these later; ffrap_set is the way until then.
+-- on or off, the encounter rate, and the seed's enemy scaling on or off and its strength. They
+-- belong to the player, not the seed, but apply only to the seed's save (round 56). settings.txt
+-- holds only what the player has set, through ffrap_set or the Options rows (a setting the mod
+-- saved by itself once came back as a choice, round 19).
 local SETTINGS_FILE = MOD_DIR .. "settings.txt"
-local SETTING_DEFAULTS = { exp = 1, gil = 1, mrp = 1, encounters = true, encounterrate = 1, scaling = true }
-local SETTING_RANGES = { exp = { 0, 10 }, gil = { 0, 10 }, mrp = { 0, 10 }, encounterrate = { 0.1, 5 } }
+local SETTING_DEFAULTS = { exp = 1, gil = 1, mrp = 1, encounters = true, encounterrate = 1, scaling = true, strength = 1 }
+local SETTING_RANGES = { exp = { 0, 10 }, gil = { 0, 10 }, mrp = { 0, 10 }, encounterrate = { 0.1, 5 }, strength = { 0, 2 } }
+local STRENGTH_NAMES = { [0] = "casual", [1] = "normal", [2] = "expert" }
 local settingsSet = {}   -- what the player has set
 local function setting(key)
     if settingsSet[key] ~= nil then return settingsSet[key] end
@@ -1742,12 +1743,23 @@ local function writeSettings()
 end
 local function settingsText()
     local parts = {}
-    for _, k in ipairs({ "exp", "gil", "mrp", "encounters", "encounterrate", "scaling" }) do
+    for _, k in ipairs({ "exp", "gil", "mrp", "encounters", "encounterrate", "scaling", "strength" }) do
         local v = setting(k)
-        parts[#parts + 1] = k .. " " .. (type(v) == "boolean" and (v and "on" or "off") or ("x" .. tostring(v)))
+        local text
+        if k == "strength" then text = STRENGTH_NAMES[v] or tostring(v)
+        elseif type(v) == "boolean" then text = v and "on" or "off"
+        else text = "x" .. tostring(v) end
+        parts[#parts + 1] = k .. " " .. text
     end
     return table.concat(parts, ", ")
 end
+
+-- Round 56: the rates and encounter settings apply only to the save linked to the seed. Any other
+-- save gets the game's own values back, as the Options rows may not be there to change them.
+local function seedSave()
+    return state.seed ~= nil and save.ok
+end
+local settingsActive = nil   -- whether the last write was the player's settings or the game's own
 
 local settingsMap, settingsLogged = nil, nil   -- the map the encounter tables were last written for
 local menuLogged = nil
@@ -1785,16 +1797,24 @@ settingsTick = function()
         end
         menuLogged = line
     end
-    local rates = game.ApplyRates(setting("exp"), setting("gil"), setting("mrp"))
+    local active = seedSave()
+    if active ~= settingsActive then settingsMap = nil end
+    settingsActive = active
+    local function applied(k)
+        if active then return setting(k) end
+        return SETTING_DEFAULTS[k]
+    end
+    local rates = game.ApplyRates(applied("exp"), applied("gil"), applied("mrp"))
     local map = game.CurrentMap()
     local rows, tables = 0, nil
     if map ~= settingsMap then
-        rows, tables = game.ApplyEncounterTables(setting("encounters"), setting("encounterrate"))
+        rows, tables = game.ApplyEncounterTables(applied("encounters"), applied("encounterrate"))
         settingsMap = map
     end
-    local players = game.ApplyPlayerEncounter(setting("encounters"))
+    local players = game.ApplyPlayerEncounter(applied("encounters"))
     if rates > 0 or rows > 0 or players > 0 then
-        local line = string.format("settings: %s (%d rate rows, %d map rows in %s tables, %d players changed)", settingsText(),
+        local what = active and settingsText() or "the game's own (this save is not linked to the seed)"
+        local line = string.format("settings: %s (%d rate rows, %d map rows in %s tables, %d players changed)", what,
             rates, rows, tostring(tables or "the same"), players)
         if line ~= settingsLogged then log(line) end
         settingsLogged = line
@@ -1802,16 +1822,22 @@ settingsTick = function()
 end
 
 -- ffrap_set: shows the settings. ffrap_set <exp|gil|mrp|encounterrate> <number>, ffrap_set
--- <encounters|scaling> <on|off>, ffrap_set reset: all back to the defaults.
+-- <encounters|scaling> <on|off>, ffrap_set strength <casual|normal|expert>, ffrap_set reset: all
+-- back to the defaults.
 command("ffrap_set", function(p)
     local key, value = tostring(p[1] or ""):lower(), tostring(p[2] or ""):lower()
+    if key == "strength" then
+        for n, name in pairs(STRENGTH_NAMES) do
+            if value == name then value = tostring(n) end
+        end
+    end
     if key == "reset" then
         settingsSet = {}
         writeSettings()
     elseif key ~= "" then
         local default = SETTING_DEFAULTS[key]
         if default == nil then
-            notify("Usage: ffrap_set [exp|gil|mrp|encounterrate <number>] [encounters|scaling <on|off>] [reset]")
+            notify("Usage: ffrap_set [exp|gil|mrp|encounterrate <number>] [encounters|scaling <on|off>] [strength casual|normal|expert] [reset]")
             return
         end
         if type(default) == "boolean" then
@@ -1826,7 +1852,9 @@ command("ffrap_set", function(p)
                 notify(key .. " is a number from " .. range[1] .. " to " .. range[2])
                 return
             end
-            settingsSet[key] = math.min(range[2], math.max(range[1], n))
+            n = math.min(range[2], math.max(range[1], n))
+            if key == "strength" then n = math.floor(n + 0.5) end
+            settingsSet[key] = n
         end
         writeSettings()
     end
@@ -1860,23 +1888,34 @@ end)
 -- bosses were too easy all along. So enemies ramp from 75% power at 80% of the party's level
 -- (party level 5) to 100% power at 90% (party level 25), and bosses stay at 100% power and the
 -- party's own level.
-local SEED_SCALE = { range = 2, rampFrom = 5, rampTo = 25, at = { 80, 90 }, power = { 75, 100 }, bossAt = 100, bossPower = 100 }
+-- Round 56: the strength row picks one of three. Normal is the round 49 curve. Expert players
+-- asked for a hard run (the user's Discord): the game's Expert multipliers (enemy HP x1.6, damage
+-- taken x1.4) apply in battle on top of these, so the two stack.
+local SEED_SCALES = {
+    [0] = { at = { 75, 85 }, power = { 65, 85 }, bossAt = 95, bossPower = 85 },
+    [1] = { at = { 80, 90 }, power = { 75, 100 }, bossAt = 100, bossPower = 100 },
+    [2] = { at = { 90, 100 }, power = { 90, 115 }, bossAt = 105, bossPower = 115 },
+}
+local SEED_RAMP = { range = 2, rampFrom = 5, rampTo = 25 }
+
+local function seedScale()
+    return SEED_SCALES[setting("strength")] or SEED_SCALES[1]
+end
 
 local function ramp(pair, lv)
-    local s = SEED_SCALE
-    local t = math.min(1, math.max(0, (lv - s.rampFrom) / (s.rampTo - s.rampFrom)))
+    local t = math.min(1, math.max(0, (lv - SEED_RAMP.rampFrom) / (SEED_RAMP.rampTo - SEED_RAMP.rampFrom)))
     return math.floor(pair[1] + (pair[2] - pair[1]) * t + 0.5)
 end
 
 local function seedScaleToParty()
     local lv, detail = game.PartyLevel()
     if not lv then return nil, "party level unknown (" .. tostring(detail) .. ")" end
-    local s = SEED_SCALE
+    local s = seedScale()
     local at, power = ramp(s.at, lv), ramp(s.power, lv)
-    local a, b, c = game.LevelBand(lv, s.range, at)
-    local ba, bb = game.LevelBand(lv, s.range, s.bossAt)
-    log(string.format("scale: party level %d (%s): enemies centre %d (%d%%), power %d%%; bosses centre %d, power %d%%",
-        lv, detail, c, at, power, lv, s.bossPower))
+    local a, b, c = game.LevelBand(lv, SEED_RAMP.range, at)
+    local ba, bb, bc = game.LevelBand(lv, SEED_RAMP.range, s.bossAt)
+    log(string.format("scale: party level %d (%s), strength %s: enemies centre %d (%d%%), power %d%%; bosses centre %d, power %d%%",
+        lv, detail, STRENGTH_NAMES[setting("strength")] or "?", c, at, power, bc, s.bossPower))
     local bossKnobs = { hp = s.bossPower, attack = s.bossPower, magic = s.bossPower }
     local n, err = applyScale("clamp", a, b, true, { hp = power, attack = power, magic = power }, { a = ba, b = bb, knobs = bossKnobs })
     return n, err, lv
@@ -1897,6 +1936,8 @@ local function seedScaleTick()
         end
         return
     end
+    -- A new strength from the Options screen rescales at once.
+    if scaleFollow and scaleFollow.seed and scaleFollow.strength ~= setting("strength") then scaleFollow = nil end
     if scaleFollow or (game.StoryCounter() or 0) < game.OPEN_START.story then return end
     local n, err, lv = seedScaleToParty()
     if n == nil then
@@ -1905,7 +1946,7 @@ local function seedScaleTick()
         return
     end
     seedScaleOn = true
-    scaleFollow = { seed = true, last = lv }
+    scaleFollow = { seed = true, last = lv, strength = setting("strength") }
     log("scale: the seed's scaling is on, following the party's level")
 end
 

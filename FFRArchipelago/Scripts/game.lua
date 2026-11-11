@@ -4232,6 +4232,10 @@ end
 local OPTION_GAMEPLAY = "/Game/Datatable/UI/Option/Root/GameSetting/DT_OP_GameSetting.DT_OP_GameSetting"
 local OPTION_SLIDER = "Delegate.UI.System.Option.Root.GameSetting.GamePad.Sensitivity"
 local OPTION_SWITCH = "Delegate.UI.System.Option.Root.GameSetting.EncountSensor"
+-- Round 56: the Difficulty row's choices (DT_OP_RadioButton_Difficulty) read Casual, Normal and
+-- Expert, which is what our scaling strength needs. A copy has our tag, so it does not change the
+-- game's own difficulty.
+local OPTION_CHOICE = "Delegate.UI.System.Option.Root.GameSetting.Difficulty"
 local OPTION_TAG = "Delegate.UI.System.Option.Root.GameSetting.FFRAP."
 G.OPTION_ROWS = {
     { key = "exp", row = "FFRAP_Exp", copy = OPTION_SLIDER, min = 1, max = 10, default = 1,
@@ -4246,6 +4250,8 @@ G.OPTION_ROWS = {
       label = "AP: Encounter rate", help = "How often random battles come: 1 is normal, 5 is five times as often." },
     { key = "scaling", row = "FFRAP_Scaling", copy = OPTION_SWITCH, default = 0,
       label = "AP: Enemy scaling", help = "Enemies follow your party's level. Off: the game's own levels." },
+    { key = "strength", row = "FFRAP_ScalingStrength", copy = OPTION_CHOICE, choices = 3, default = 1,
+      label = "AP: Scaling strength", help = "How strong scaled enemies and bosses are. It stacks with the game's own difficulty." },
 }
 
 local ENTRY_SLIDER, ENTRY_RADIO = 1, 2
@@ -4265,7 +4271,9 @@ local function SeedOptionEntries(current)
         if not have[tag] then
             local v = current[o.key]
             local value
-            if o.min then value = math.min(o.max, math.max(o.min, tonumber(v) or o.default)) else value = (v == false) and 1 or 0 end
+            if o.min then value = math.min(o.max, math.max(o.min, tonumber(v) or o.default))
+            elseif o.choices then value = math.min(o.choices - 1, math.max(0, math.floor(tonumber(v) or o.default)))
+            else value = (v == false) and 1 or 0 end
             if pcall(function()
                 save.m_EntrySaveDataList:Add({ TagName = FName(tag) }, { Value = value, IsDisplay = true, Type = o.min and ENTRY_SLIDER or ENTRY_RADIO })
             end) then added = added + 1 end
@@ -4335,7 +4343,9 @@ function G.ReadOptionValues()
                 local o = byTag[ObjText(k:get().TagName)]
                 if not o then return end
                 local value = v:get().Value
-                if o.min then out[o.key] = value else out[o.key] = math.floor(value + 0.5) == 0 end
+                if o.min then out[o.key] = value
+                elseif o.choices then out[o.key] = math.floor(value + 0.5)
+                else out[o.key] = math.floor(value + 0.5) == 0 end
             end)
         end)
     end)

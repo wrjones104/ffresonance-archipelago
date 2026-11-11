@@ -56,6 +56,10 @@ def make_dump(root):
     write(root, f"{T}/Item/Vision/DT_VisionItemData.json", {"Rows": {"cloud": item(13110, "Cloud", "Equipment")}})
     write(root, f"{T}/Item/DT_ValuableItemData.json", {"Rows": {"jade": item(20005, "White Jade Stone", "Valuable")}})
     write(root, f"{T}/Item/DT_ArtifactItemData.json", {"Rows": {}})
+    write(root, f"{T}/Event/Data/CollectMedal/DT_TalkEvent_CollectMedal.json", {"Rows": {
+        "01_02": {"Num": 6, "Condition": "{progress:43}==11", "Text": ftext("1-Star Chamber"), "TreasureBoxItemId": 1},
+        "01_01": {"Num": 3, "Condition": "{progress:43}==10", "Text": ftext("1-Star Chamber"), "TreasureBoxItemId": 0},
+    }})
     write(root, f"{T}/Unit/DT_UnitParameter.json", {"Rows": {
         "rain": {"ID": 1001, "Name": ftext("Rain"), "Category": "eUnitCategory::Playable", "Race": "eRace::Human", "Level": 1},
         "ifrit": {"ID": 10452, "Name": ftext("Ifrit"), "Category": "eUnitCategory::Beast", "Race": "eRace::Beast", "Level": 1},
@@ -160,6 +164,10 @@ def main():
         maps = {r["key"]: r["id"] for r in tsv(game / "maps.tsv")}
         assert maps == {"Wld": "1000", "01Gra_40": "3000", "01Gra_41": "3001", "01Gra_02": "2011"}, maps
         assert tsv(game / "shops.tsv")[0]["item"] == "1"
+        # Round 56: Oblivion Palace's chests, in chest order, with the shards each needs in all
+        shard_rows = tsv(game / "shard_chests.tsv")
+        assert [(r["map"], r["chest"], r["shards"]) for r in shard_rows] == [("2031", "0", "3"), ("2031", "1", "6")], shard_rows
+        assert shard_rows[0]["room"] == "1-Star Chamber" and shard_rows[0]["condition"] == "{progress:43}==10"
 
         chests = tsv(game / "chests.tsv")
         assert [c["row"] for c in chests] == ["Dng_01Gra_40_0", "Dng_01Gra_40_1", "Dng_01Gra_40_2",

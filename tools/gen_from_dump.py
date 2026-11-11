@@ -112,6 +112,19 @@ def items():
     return rows
 
 
+# Round 56: Oblivion Palace (map 2031) opens its chests one by one as Tablet Shards are turned in.
+# DT_TalkEvent_CollectMedal has one row per chest: the shards needed in all (Num), the side quest
+# step it belongs to (progress 43) and the chest's ID in map 2031 (TreasureBoxItemId).
+SHARD_CHEST_MAP = 2031
+
+
+def shard_chests():
+    rows = [[SHARD_CHEST_MAP, r["TreasureBoxItemId"], r["Num"], r["Condition"], text(r.get("Text")), key]
+            for key, r in table_rows("Event/Data/CollectMedal/DT_TalkEvent_CollectMedal").items()]
+    rows.sort(key=lambda r: r[1])
+    write_tsv("shard_chests.tsv", ["map", "chest", "shards", "condition", "room", "row"], rows)
+
+
 def units():
     rows = []
     for key, r in table_rows("Unit/DT_UnitParameter").items():
@@ -366,6 +379,7 @@ def main():
         sys.exit("No dump/ yet. Run: dotnet run --project tools/dump_game -- all")
     item_rows = items()
     units()
+    shard_chests()
     by_key = maps()
     shops()
     field_rows, box_rows = actors(by_key)

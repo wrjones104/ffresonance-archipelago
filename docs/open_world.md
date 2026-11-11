@@ -153,6 +153,15 @@ MP does not correlate with level (r² 0.09) and remains unchanged.
 - MRP is scaled too, from mod 0.31.0: `ap` in `DT_BattleGroup`, by the battle's enemies' average level (round 47).
 - From mod 0.34.0 (round 49), an open world seed scales by itself: `follow`, 80% of the party's level plus or minus 2, HP and power at 75%, bosses too. The user chose 75% as a baseline. Low-level enemies need the nerf because many have strong attacks, and it may make mid and late game enemies too easy. It needs a longer game to judge.
 - **Round 49 result:** 75% felt right early, but enemies were far too easy from about party level 20, and bosses were too easy all along. Part of it is the band: 80% of level 30 is 24, six levels down, and stats grow about x1.6 to x2.8 per 10 levels. Mod 0.37.0 ramps enemies from 75% power at 80% of the party's level (party level 5) to 100% power at 90% (party level 25), and gives bosses their own band: the party's level, 100% power. The user wants bosses to gate: the right elements or gear should matter. That needs more boss tuning later. World 0.7.0 had yaml options for this. They were removed in 0.8.0, because these belong in the game as sliders (IDEAS.md, idea 18). `ffrap_scale` in the same run still wins, for testing.
+- **Round 56: three strengths, and the game's Expert on top.** Players on the Discord who play on Expert want a hard run too. The game's difficulty is `DT_GameDifficultyParam`: Expert gives enemies HP x1.6, break x1.6 and agility x1.4, and the party takes x1.4 damage and deals x0.8. These apply in battle, on top of the enemy rows our scaling writes, so the two stack. Our reward rates multiply each difficulty's own (Expert's MRP x1.5 stays). Mod 0.42.0 adds "AP: Scaling strength" to the Options rows. The level centre and power ramp from party level 5 to 25:
+
+  | Strength | Enemy level | Enemy power | Boss level | Boss power |
+  |---|---|---|---|---|
+  | Casual | 75% to 85% | 65% to 85% | 95% | 85% |
+  | Normal (round 49's curve) | 80% to 90% | 75% to 100% | 100% | 100% |
+  | Expert | 90% to 100% | 90% to 115% | 105% | 115% |
+
+  A first guess, to tune from play.
 
 **Round 31 & 32 findings:**
 - The simple exponential growth rate produced excessive attack at low levels. Real enemies follow `log(stat) = a + b log(level) + c level` (r² 0.88 for attack, 0.70 for HP). Using relative level ratios eliminates constant `a`.
