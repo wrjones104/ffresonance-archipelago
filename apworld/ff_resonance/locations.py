@@ -23,6 +23,10 @@ location_name_groups["Crystals"] = {loc["name"] for loc in CRYSTALS}
 location_name_groups["Tablet Shard Shinies"] = {loc["name"] for loc in TABLET_SHINIES}
 location_name_groups["Fragment Bosses"] = {loc["name"] for loc in BOSSES if loc["fragment"]}
 
+# Round 60: at party level 28 Sephiroth took no damage, even with enemy scaling at its lowest. So
+# priority_bosses does not put a needed item on him.
+SEPHIROTH = "boss:9138"
+
 GOAL_EVENT = "Story Goal"
 SHARD_GOAL_EVENT = "Tablet Shard Goal"
 VICTORY = "Victory"
@@ -90,6 +94,9 @@ def create_regions_and_locations(world: FFResonanceWorld) -> None:
                 location.access_rule = lambda state, names=names: state.has_all(names, player)
             else:
                 location.progress_type = LocationProgressType.EXCLUDED
+        if (world.options.priority_bosses and loc.get("fragment") is False and loc["key"] != SEPHIROTH
+                and location.progress_type == LocationProgressType.DEFAULT):
+            location.progress_type = LocationProgressType.PRIORITY
         region.locations.append(location)
         # Round 59: a story boss gives a Crystal Fragment, always its own.
         if loc.get("fragment"):

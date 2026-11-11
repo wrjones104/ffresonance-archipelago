@@ -2,7 +2,7 @@ from BaseClasses import LocationProgressType
 
 from ..data import BOSSES, CHESTS, CONTINENT_UNLOCKS, CRYSTALS, FRAGMENT_ITEM, ITEMS, NO_BOX, TABLET_SHINIES, PROGRESSION, SHINIES, SHUFFLE_ID_LIMIT, UNIT_ITEM_BASE
 from ..items import CLASSIFICATIONS, FILLER_CATEGORIES, FRAGMENT_NAME, item_name_groups
-from ..locations import GOAL_EVENT, LOCATION_KEY_TO_ID, VICTORY
+from ..locations import GOAL_EVENT, LOCATION_KEY_TO_ID, SEPHIROTH, VICTORY
 from ..options import Goal, TabletShardsRequired
 from . import FFResonanceTestBase
 
@@ -170,6 +170,12 @@ class TestBosses(FFResonanceTestBase):
         state.collect(fragments[2], prevent_sweep=True)
         self.assertTrue(goal.can_reach(state))
 
+    def test_shuffled_bosses_are_priority_but_not_sephiroth(self) -> None:
+        for boss in BOSSES:
+            plain = boss["fragment"] or boss["key"] == SEPHIROTH
+            wanted = LocationProgressType.DEFAULT if plain else LocationProgressType.PRIORITY
+            self.assertEqual(self.multiworld.get_location(boss["name"], self.player).progress_type, wanted, boss["name"])
+
     def test_a_boss_is_on_its_continent(self) -> None:
         boss = self.boss_location(LIQUID_THUNDER)
         self.assertFalse(boss.can_reach(self.multiworld.state))
@@ -179,6 +185,23 @@ class TestBosses(FFResonanceTestBase):
     def test_slot_data(self) -> None:
         slot_data = self.world.fill_slot_data()
         self.assertEqual((slot_data["include_bosses"], slot_data["final_boss_fragments"]), (1, 3))
+
+
+class TestBossesNotPriority(FFResonanceTestBase):
+    options = {"include_bosses": True, "priority_bosses": False}
+
+    def test_no_boss_is_priority(self) -> None:
+        priority = [loc.name for loc in self.multiworld.get_locations(self.player)
+                    if loc.progress_type == LocationProgressType.PRIORITY]
+        self.assertFalse(priority)
+
+
+class TestPriorityBossInExcludedRegion(FFResonanceTestBase, real_defaults=True):
+    options = {"excluded_regions": ["Bosses"]}
+
+    def test_excluded_wins(self) -> None:
+        boss = self.multiworld.get_location(next(b["name"] for b in BOSSES if not b["fragment"]), self.player)
+        self.assertEqual(boss.progress_type, LocationProgressType.EXCLUDED)
 
 
 class TestFragmentsWithoutBosses(FFResonanceTestBase):

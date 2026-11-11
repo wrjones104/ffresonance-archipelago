@@ -499,21 +499,33 @@ World-map shinies verified as locations. Multiple crashes observed across differ
 - **From the log:** `client: world version 0.15.0`. The 0.16.0 apworld was not the one in use.
 - **Found off-line: the generation tests had not been running.** `python -m unittest worlds.ff_resonance.test` loads only the package, so `run_all.py` ran 6 empty tests and printed ok. 12 tests had gone stale since the location options became on by default. The runner now names `test_generation`, and the tests are fixed.
 
-## Round 60 test plan (mod 0.48.0, world 0.17.0)
+**Round 60 (mod 0.48.0, world 0.17.0, 2026-11-11): the bosses work as locations.**
+- **Cave masters:** Shoggoth's fight starts and ends well, and the win sends the check (`check boss:9080`, then the item). No pop-up comes up, as the win row has no reward left. The user wants the reward pop-up back, saying what the boss held, as a chest's does.
+- **Liquid Thunder:** `check boss:9083`, then `Received Crystal Fragment (1/1)`.
+- **Sanctissimus Shrine:** all six fights are there and each gives its fragment (2 to 7). No `story` line with 6123 after Archaeoaevis.
+- **Dragon's Maw:** Intangir and the Rogue Magitek Weapon are there, and both send their checks.
+- **Whirlpool Hollow:** open from the start with only the airship. Sephiroth could not be beaten at party level 28: every hit did 0 damage, even with `ffrap_scale` at 1% HP, attack and magic. Scaling writes level, HP, attack and magic, not defence. So his check and his row without the vision are still not seen.
+- **The tower's notice** was not tried.
+- **The chest pop-up's text is slower than it was:** a second or two at times. From the log: the first pop-up on each map takes 0.5 s after the check, the later ones none. Round 49 made a map load forget the cached message widget, and the fast check needs that widget.
+- **"A few shinies gave no Archipelago item."** The log has five checks with no item after them. Four are in `KEPT_VANILLA` (`chest:3230:2`, `chest:3260:3`, `shiny:1000:4`, `shiny:1000:189`): they keep the game's own item and are not locations. `shiny:3260:1` is in no table (`field_items.tsv` has only 7 and 8 on map 3260). The two shinies hold a Magicite Shard in `field_items.tsv`, which looks wrong for a kept spot: to look at.
+- **FFRS_QoL's rates won over ours.** Its code writes the three difficulty rows every 3 seconds. Ours wrote them every 5 seconds, so its values were in use most of the time. It writes the map tables' encounter fields when its config changes, and ours wrote them only on a map change.
+- **The user asks for:** the encounter slider from 0.5 to 3 in steps of 0.5, and a yaml option, on by default, that makes the bosses with shuffled items priority locations.
+- **Also in the log:** `menu: DT_OP_GameSetting could not be loaded`, twice, in battles on map 10218. It came back by itself.
 
-**Install:** copy `FFRArchipelago/Scripts`, and copy `dist/ff_resonance.apworld` into Archipelago's `custom_worlds`. Generate a new seed. For a short test, use `starting_continent: dirnado` and `final_boss_fragments: 1`: Shoggoth Cave and Mt. Thunderclap are both on Dirnado.
+## Round 61 test plan (mod 0.49.0, world 0.18.0)
 
-**New:** 25 boss fights are locations (docs/bosses.md). The 15 cave masters, Sephiroth, Intangir and the Rogue Magitek Weapon hold shuffled items. Liquid Thunder and the six Sanctissimus Shrine fights each hold a Crystal Fragment. The tower's last climb needs `final_boss_fragments` of them (default 4 of 7).
+**Install:** copy `FFRArchipelago/Scripts`, and copy `dist/ff_resonance.apworld` into Archipelago's `custom_worlds`. Generate a new seed. Leave FFRS_QoL on with its own rates, to test that ours win.
 
-**1. A cave master.** Beat Shoggoth, or any other. The log says `bosses: N win rows changed` after the save loads, then `check boss:9080` after the win. **Does the win scene end well with no Magicite, and does the Archipelago item go out?**
+**1. A cave master's pop-up.** Beat one. The win now gives one Potion, so the game's reward pop-up comes up. **Does a pop-up come, and does it say what the boss held for Archipelago?** The log says `check boss:<group>` and then `chest pop-up for boss:<group>: text set`. If the pop-up says "Potion", send that log line.
 
-**2. Liquid Thunder.** Beat it on Mt. Thunderclap. The log says `check boss:9083`. **Does the item feed show "Crystal Fragment (1/1)"?**
+**2. The chest pop-up's speed.** Open the first chest or shiny on a few maps. **Is the Archipelago text there at once again?**
 
-**3. The tower.** Before the fragment, walk to the last climb. **Does the notice say "Crystal Fragments 0/1", and does the climb open once you have it?**
+**3. Rates with FFRS_QoL.** Set our EXP rate in the Options screen to a value FFRS_QoL does not have, and win a battle. **Is the EXP ours?** The log says once: `settings: the rates had been changed and were written back`.
 
-**4. If you have time: the other places.**
-- Sanctissimus Shrine (Gronoa): **are the six fights there?** After Archaeoaevis, the log must show no `story` line with 6123.
-- Dragon's Maw (Pharm): **are Intangir and the Rogue Magitek Weapon there?**
-- Whirlpool Hollow: **can you get in with only the airship, and does Sephiroth give no vision by himself?** The logic lets a player go there from the start.
+**4. The encounter slider.** It is now "AP: Encounter rate (x0.5)", from 1 to 6: 1 is half as often, 2 is normal, 6 is three times. **Does it show, start at 2, and does 6 bring battles quickly?** Keep FFRS_QoL's own encounter rate at 1.
+
+**5. Priority bosses.** In the spoiler log, the cave masters and the two Dragon's Maw bosses should mostly hold progression or useful items. Sephiroth is left out.
+
+**6. From round 60, not tried yet.** With too few fragments, walk to the tower's last climb. **Does the notice say "Crystal Fragments x/y"?**
 
 Send the `[FFRAP]` lines of the log.

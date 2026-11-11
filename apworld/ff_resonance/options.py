@@ -160,6 +160,15 @@ class IncludeBosses(DefaultOnToggle):
     visibility = Visibility.none
 
 
+class PriorityBosses(DefaultOnToggle):
+    """
+    The cave masters and the two Dragon's Maw bosses are priority locations: the generator puts
+    items that someone needs on them first, so they are worth the fight. Story bosses always hold
+    a Crystal Fragment. Sephiroth is left out, as he can be far too strong for the party.
+    """
+    display_name = "Priority Bosses"
+
+
 class ExcludedRegions(OptionSet):
     """
     Regions where you only find your own filler items, never anything another player needs. Use
@@ -207,6 +216,7 @@ class FFResonanceOptions(PerGameCommonOptions):
     include_crystals: IncludeCrystals
     include_tablet_shards: IncludeTabletShards
     include_bosses: IncludeBosses
+    priority_bosses: PriorityBosses
     excluded_regions: ExcludedRegions
     shuffle_party_members: ShufflePartyMembers
     shuffle_visions: ShuffleVisions
@@ -217,6 +227,6 @@ option_groups = [
     OptionGroup("Goal", [Goal, TabletShardsRequired, FinalBossCharacters, FinalBossVisions, FinalBossFragments]),
     OptionGroup("Start", [StartingContinent, StartingRoster, StartingCharacter1, StartingCharacter2,
                           StartingCharacter3, StartingCharacter4]),
-    OptionGroup("Locations", [ExcludedRegions]),
+    OptionGroup("Locations", [PriorityBosses, ExcludedRegions]),
     OptionGroup("Items", [ShufflePartyMembers, ShuffleVisions, ShuffleKeyItems]),
 ]

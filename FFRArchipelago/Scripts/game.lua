@@ -1650,6 +1650,27 @@ local popupHidden = nil               -- { line = widget, message = widget, visi
 -- searching every rich text in the game (round 26: "the wait is real").
 local popupMsgCache = nil
 local popupWasShown = false           -- the cached message was on screen at the last check
+-- Round 60: a map load forgets the cached message (round 49), so each map's first pop-up waited
+-- for the regular tick: a second or two, where it had been at once. The dialog box is there
+-- before it is shown, so its message widgets are found by name after each map load and the fast
+-- check asks them.
+local POPUP_MESSAGE_NAME = "Text_Message"
+local popupCandidates = {}
+
+-- Finds the dialog box's message widgets, shown or not. Returns how many are kept; 0 when the
+-- game has made no dialog box yet.
+function G.PrimePopup()
+    if #popupCandidates > 0 then return #popupCandidates end
+    local ok, all = pcall(FindAllOf, "RichTextBlock")
+    for _, b in ipairs(ok and all or {}) do
+        if Alive(b) then
+            local name
+            pcall(function() name = b:GetFName():ToString() end)
+            if name == POPUP_MESSAGE_NAME then popupCandidates[#popupCandidates + 1] = b end
+        end
+    end
+    return #popupCandidates
+end
 
 local function PopupText(b)
     local t
@@ -1685,7 +1706,15 @@ function G.PopupJustOpened()
     local m = popupMsgCache
     if not (m and Alive(m) and Shown(m)) then
         popupWasShown = false
-        return false
+        m = nil
+        for _, c in ipairs(popupCandidates) do
+            if Alive(c) and Shown(c) then
+                local t = PopupText(c)
+                if t and t:find(POPUP_MARKER, 1, true) then m = c break end
+            end
+        end
+        if not m then return false end
+        popupMsgCache = m
     end
     if popupWasShown then return false end
     local t = PopupText(m)
@@ -1743,6 +1772,7 @@ end
 function G.ForgetObjects()
     liveCache = {}
     popupMsgCache, popupWasShown, popupHidden = nil, false, nil
+    popupCandidates = {}
 end
 
 -- Tries to show `text` with the game's quest-notice banner (the "new quest" pop-up): the
@@ -2066,8 +2096,13 @@ local BOSS_ROWS_NO_REWARD = {
 -- Archaeoaevis's win row writes story 6123, which must not reach a save at story 8000.
 local BOSS_ROWS_NO_STORY = { Dng_08Gro_43_BattleEnd_01 = true }
 
--- Takes those rewards and that story value out of the win rows. Safe to run again. Returns the
--- number of rows written.
+-- Round 60: the user wants the win's reward pop-up kept, to say what the boss held (as a chest's
+-- does). The pop-up needs a reward, so the row gives one Potion in place of its own item, as a
+-- blanked chest gives 1 gil.
+local BOSS_STAND_IN = 1
+
+-- Swaps those rewards for the stand-in and takes that story value out of the win rows. Safe to
+-- run again. Returns the number of rows written.
 function G.BossesPatch()
     local written = 0
     for _, dt in ipairs(TableFamily(Find(SHOP_TABLE))) do
@@ -2075,7 +2110,8 @@ function G.BossesPatch()
             dt:ForEachRow(function(name, row)
                 local key = ObjText(name)
                 if BOSS_ROWS_NO_REWARD[key] then
-                    row.ObtainItemList:Empty()
+                    local reward = row.ObtainItemList[1]
+                    reward.ID, reward.Num = BOSS_STAND_IN, 1
                     written = written + 1
                 elseif BOSS_ROWS_NO_STORY[key] then
                     row.ProgressList:Empty()
@@ -4295,8 +4331,11 @@ G.OPTION_ROWS = {
       label = "AP: MRP rate", help = "MRP from battles, as a multiple of normal." },
     { key = "encounters", row = "FFRAP_Encounters", copy = OPTION_SWITCH, default = 0,
       label = "AP: Random encounters", help = "Off: walking never starts a battle. Bosses and set battles still happen." },
-    { key = "encounterrate", row = "FFRAP_EncounterRate", copy = OPTION_SLIDER, min = 1, max = 5, default = 1,
-      label = "AP: Encounter rate", help = "How often random battles come: 1 is normal, 5 is five times as often." },
+    -- Round 60: the user wants 0.5 to 3 in steps of 0.5. The slider moves in whole steps and its
+    -- row has no step size, so each step counts as a half. The row has a new name, so a value
+    -- saved under the old one (whole rates) is not read as halves.
+    { key = "encounterrate", row = "FFRAP_EncounterHalves", copy = OPTION_SLIDER, min = 1, max = 6, default = 2, step = 0.5,
+      label = "AP: Encounter rate (x0.5)", help = "How often random battles come, in halves: 1 is half as often, 2 is normal, 6 is three times as often." },
     { key = "scaling", row = "FFRAP_Scaling", copy = OPTION_SWITCH, default = 0,
       label = "AP: Enemy scaling", help = "Enemies follow your party's level. Off: the game's own levels." },
     { key = "strength", row = "FFRAP_ScalingStrength", copy = OPTION_CHOICE, choices = 3, default = 1,
@@ -4322,7 +4361,9 @@ local function SeedOptionEntries(current)
         if not have[tag] then
             local v = current[o.key]
             local value
-            if o.min then value = math.min(o.max, math.max(o.min, tonumber(v) or o.default))
+            if o.min then
+                local steps = tonumber(v) and math.floor(tonumber(v) / (o.step or 1) + 0.5) or o.default
+                value = math.min(o.max, math.max(o.min, steps))
             elseif o.choices then value = math.min(o.choices - 1, math.max(0, math.floor(tonumber(v) or o.default)))
             else value = (v == false) and 1 or 0 end
             if pcall(function()
@@ -4413,7 +4454,7 @@ function G.ReadOptionValues()
                 local o = byTag[ObjText(k:get().TagName)]
                 if not o then return end
                 local value = v:get().Value
-                if o.min then out[o.key] = value
+                if o.min then out[o.key] = value * (o.step or 1)
                 elseif o.choices then out[o.key] = math.floor(value + 0.5)
                 else out[o.key] = math.floor(value + 0.5) == 0 end
             end)

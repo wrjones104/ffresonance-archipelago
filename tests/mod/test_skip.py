@@ -292,14 +292,17 @@ assert lua("#crystalRows.Int_LegendEV_10_07.ObtainItemList") == 0 and lua("#crys
 _crystals = [r.split("\t") for r in (paths.REPO / "data/crystals.tsv").read_text(encoding="utf8").splitlines()[1:]]
 _lua = [(c["event"], c["map"], c["flag"]) for c in L.eval("G.CRYSTALS").values()]
 assert sorted(_lua) == sorted((int(a), int(b), int(c)) for a, b, c, _ in _crystals), "data/crystals.tsv and G.CRYSTALS differ"
-# Round 59: the boss win rows lose their own reward and story value; other rows are left alone
+POTION = 1
+# Round 59: the boss win rows lose their own reward and story value; other rows are left alone.
+# Round 60: the reward becomes one Potion, so the win's pop-up still comes up
 L.execute("""
-bossRows = { StrEne_C01_Orge_Destroy = { ObtainItemList = arr({ { ID = 25000 } }), OnFlagList = arr({ 146, 1231 }) },
+bossRows = { StrEne_C01_Orge_Destroy = { ObtainItemList = arr({ { ID = 25000, Num = 3 } }), OnFlagList = arr({ 146, 1231 }) },
   Dng_08Gro_43_BattleEnd_01 = { ProgressList = arr({ { ID = 0, Value = 6123 } }), OnFlagList = arr({ 608 }) },
   StrEne_CompleteTrophyGet = { ObtainItemList = arr({ { ID = 1 } }), ProgressList = arr({ { ID = 0, Value = 1 } }) } }
 shopRows = bossRows""")
 assert lua("G.BossesPatch()") == 2
-assert lua("#bossRows.StrEne_C01_Orge_Destroy.ObtainItemList") == 0 and lua("#bossRows.StrEne_C01_Orge_Destroy.OnFlagList") == 2
+assert lua("#bossRows.StrEne_C01_Orge_Destroy.ObtainItemList") == 1 and lua("#bossRows.StrEne_C01_Orge_Destroy.OnFlagList") == 2
+assert (lua("bossRows.StrEne_C01_Orge_Destroy.ObtainItemList[1].ID"), lua("bossRows.StrEne_C01_Orge_Destroy.ObtainItemList[1].Num")) == (POTION, 1)
 assert lua("#bossRows.Dng_08Gro_43_BattleEnd_01.ProgressList") == 0 and lua("#bossRows.Dng_08Gro_43_BattleEnd_01.OnFlagList") == 1
 assert lua("#bossRows.StrEne_CompleteTrophyGet.ObtainItemList") == 1 and lua("#bossRows.StrEne_CompleteTrophyGet.ProgressList") == 1
 _bosses = [r.split("\t") for r in (paths.REPO / "data/bosses.tsv").read_text(encoding="utf8").splitlines()[1:]]
@@ -481,12 +484,12 @@ tag = lambda r: 'savedOptions.rows["Delegate.UI.System.Option.Root.GameSetting.F
 assert lua(tag("FFRAP_Exp") + ".Value") == 4 and lua(tag("FFRAP_Exp") + ".Type") == 1, "seeded from the settings"
 assert lua(tag("FFRAP_Gil") + ".Value") == 7, "a value the player set is kept"
 assert lua(tag("FFRAP_Encounters") + ".Value") == 1 and lua(tag("FFRAP_Encounters") + ".Type") == 2, "off is index 1"
-assert lua(tag("FFRAP_EncounterRate") + ".Value") == 5 and lua(tag("FFRAP_Scaling") + ".Value") == 0, "held to the slider"
+assert lua(tag("FFRAP_EncounterHalves") + ".Value") == 6 and lua(tag("FFRAP_Scaling") + ".Value") == 0, "held to the slider"
 assert lua(tag("FFRAP_ScalingStrength") + ".Value") == 2 and lua(tag("FFRAP_ScalingStrength") + ".Type") == 2, "a choice is its index"
 L.execute("FindFirstOf = prevFFOseed; G.ForgetObjects()")
 assert lua("optRows.FFRAP_Exp.EntryTag.TagName:ToString()") == "Delegate.UI.System.Option.Root.GameSetting.FFRAP.FFRAP_Exp"
 assert lua("optRows.FFRAP_Exp.Type") == 2 and lua("optRows.FFRAP_Exp.SliderInfo.MaxValue") == 10
-assert lua("optRows.FFRAP_EncounterRate.SliderInfo.MaxValue") == 5 and lua("optRows.FFRAP_Scaling.Type") == 1
+assert lua("optRows.FFRAP_EncounterHalves.SliderInfo.MaxValue") == 6 and lua("optRows.FFRAP_Scaling.Type") == 1
 assert lua("optRows.FFRAP_Exp.DisplayText:ToString()") == "AP: EXP rate"
 assert lua("optRows.b.EntryTag.TagName:ToString()").endswith("GamePad.Sensitivity"), "the game's own row is left alone"
 assert lua("optRows.FFRAP_ScalingStrength.DefaultRadioButtonIndex") == 1 and lua("optRows.c.EntryTag.TagName:ToString()").endswith(".Difficulty"), \
@@ -499,17 +502,20 @@ optSave = { IsValid = function() return true end, HasAnyInternalFlags = function
   m_EntrySaveDataList = { ForEach = function(_, fn)
     fn(entry("Delegate.UI.System.Option.Root.GameSetting.FFRAP.FFRAP_Exp", 3))
     fn(entry("Delegate.UI.System.Option.Root.GameSetting.FFRAP.FFRAP_Encounters", 1))
+    fn(entry("Delegate.UI.System.Option.Root.GameSetting.FFRAP.FFRAP_EncounterHalves", 5))
+    fn(entry("Delegate.UI.System.Option.Root.GameSetting.FFRAP.FFRAP_EncounterRate", 4))
     fn(entry("Delegate.UI.System.Option.Root.GameSetting.FFRAP.FFRAP_Scaling", 0))
     fn(entry("Delegate.UI.System.Option.Root.GameSetting.FFRAP.FFRAP_ScalingStrength", 2))
     fn(entry("Delegate.UI.System.Option.Root.GameSetting.EncountSensor", 1)) end } }
 local prevFFO = FindFirstOf
 function FindFirstOf(c) if c == "CPP_MuchaOptionSaveData" then return optSave end return prevFFO(c) end""")
 values = L.execute("return G.ReadOptionValues()")
-assert dict(values) == {"exp": 3, "encounters": False, "scaling": True, "strength": 2}, dict(values)
+# Round 60: the encounter slider counts in halves, and the old row's saved value is not read
+assert dict(values) == {"exp": 3, "encounters": False, "encounterrate": 2.5, "scaling": True, "strength": 2}, dict(values)
 # Round 57: the rows are put back when the game's table has lost them, and left alone when there
 added = L.execute("return (G.EnsureOptionRows({}))")
 assert added == 0, "the rows are there"
-for name in ("FFRAP_Exp", "FFRAP_Gil", "FFRAP_Mrp", "FFRAP_Encounters", "FFRAP_EncounterRate", "FFRAP_Scaling", "FFRAP_ScalingStrength"):
+for name in ("FFRAP_Exp", "FFRAP_Gil", "FFRAP_Mrp", "FFRAP_Encounters", "FFRAP_EncounterHalves", "FFRAP_Scaling", "FFRAP_ScalingStrength"):
     L.execute('optRows["%s"] = nil' % name)
 added = L.execute("return (G.EnsureOptionRows({}))")
 assert added == 7 and lua("optRows.FFRAP_Exp.DisplayText:ToString()") == "AP: EXP rate", added

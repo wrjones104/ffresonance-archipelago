@@ -50,7 +50,7 @@
 -- follows the save slots the linked game is saved to. While any other save is loaded, the mod
 -- grants nothing, reports nothing and leaves the chests vanilla.
 
-local VERSION = "0.48.0"
+local VERSION = "0.49.0"
 local PROTOCOL = 2        -- the bridge protocol; the apworld's MOD_PROTOCOL
 
 local MOD_DIR = (debug.getinfo(1, "S").source:gsub("^@", ""):gsub("\\", "/"):match("^(.*/)Scripts/[^/]+$"))
@@ -70,6 +70,7 @@ local AUTO_SKIP_WAIT = 4      -- ticks to wait after the first autosave before t
 local TITLE_LINE = "FFRArchipelago " .. VERSION   -- shown above the game's version on the title
 local LOGO_PATH = MOD_DIR .. "Assets/archipelago_logo.png"
 local CHEST_EVERY = 2         -- ticks between chest scans
+local PRIME_EVERY = 4          -- ticks between searches for the dialog box, until it is found
 local STATUS_EVERY = 10       -- ticks between status file writes
 
 local function log(msg)
@@ -625,6 +626,23 @@ local function opened(key, fresh)
         local s = state.scouts[key]
         -- Round 47: a shiny says what it held too, through the same dialog box.
         if s and (key:find("^chest:") or key:find("^shiny:")) then popup = { text = popupText(s), key = key, tries = POPUP_TRIES } end
+    end
+end
+
+-- Round 59: a boss's check is the flag its win row sets. Round 60: a boss with a shuffled item
+-- keeps its reward pop-up (game.BossesPatch), and the pop-up says what the boss held. The win
+-- scene can play between the flag and the pop-up, so the pop-up is waited for much longer than a
+-- chest's.
+local BOSS_POPUP_TRIES = 60
+local function scanBosses()
+    if not (seedCfg.bosses and sessionSave()) then return end
+    for _, b in ipairs(game.BOSSES) do
+        local key = "boss:" .. b.group
+        if game.GetFlag(b.flag) == true and report("check", key) then
+            log("check " .. key)
+            local s = state.scouts[key]
+            if s then popup = { text = popupText(s), key = key, tries = BOSS_POPUP_TRIES } end
+        end
     end
 end
 
@@ -1213,14 +1231,8 @@ local function tick()
                     end
                 end
             end
-            -- Round 59: a boss's check is the flag its win row sets.
-            if seedCfg.bosses and sessionSave() and state.ticks % CHEST_EVERY == 0 then
-                for _, b in ipairs(game.BOSSES) do
-                    if game.GetFlag(b.flag) == true and report("check", "boss:" .. b.group) then
-                        log("check boss:" .. b.group)
-                    end
-                end
-            end
+            if state.ticks % CHEST_EVERY == 0 then scanBosses() end
+            if state.ticks % PRIME_EVERY == 0 then pcall(game.PrimePopup) end
             if sessionSave() then
                 applyItems()
                 watchStory()
@@ -1793,7 +1805,19 @@ local function settingsText()
 end
 
 
-local settingsMap, settingsLogged = nil, nil   -- the map the encounter tables were last written for
+local settingsLogged = nil
+-- Round 60: FFRS_QoL writes the same rate rows every 3 seconds, and our write came every 5, so
+-- its rates were the ones in use most of the time. The fast tick now writes ours back within
+-- 0.1 s. It writes what settingsTick last wrote, so a new setting still goes through there.
+local defendedRates, defendLogged = nil, false
+local function defendRates()
+    if not defendedRates then return end
+    if game.ApplyRates(defendedRates[1], defendedRates[2], defendedRates[3]) > 0 and not defendLogged then
+        defendLogged = true
+        log("settings: the rates had been changed and were written back (the game loaded its table again, or " ..
+            "another mod such as FFRS_QoL writes the same rows); this is logged once")
+    end
+end
 local menuLogged = nil
 local function currentSettings()
     local current = {}
@@ -1822,7 +1846,6 @@ settingsTick = function()
     if fromMenu then
         local parts = {}
         for k, v in pairs(fromMenu) do
-            if settingsSet[k] ~= v then settingsMap = nil end
             settingsSet[k] = v
             parts[#parts + 1] = k .. " " .. tostring(v)
         end
@@ -1835,16 +1858,14 @@ settingsTick = function()
         menuLogged = line
     end
     local rates = game.ApplyRates(setting("exp"), setting("gil"), setting("mrp"))
-    local map = game.CurrentMap()
-    local rows, tables = 0, nil
-    if map ~= settingsMap then
-        rows, tables = game.ApplyEncounterTables(setting("encounters"), setting("encounterrate"))
-        settingsMap = map
-    end
+    defendedRates = { setting("exp"), setting("gil"), setting("mrp") }
+    -- Round 60: written at every pass, not once per map: FFRS_QoL writes these rows too, when its
+    -- config changes.
+    local rows, tables = game.ApplyEncounterTables(setting("encounters"), setting("encounterrate"))
     local players = game.ApplyPlayerEncounter(setting("encounters"))
     if rates > 0 or rows > 0 or players > 0 then
-        local line = string.format("settings: %s (%d rate rows, %d map rows in %s tables, %d players changed)", settingsText(),
-            rates, rows, tostring(tables or "the same"), players)
+        local line = string.format("settings: %s (%d rate rows, %d map rows in %d tables, %d players changed)", settingsText(),
+            rates, rows, tables, players)
         if line ~= settingsLogged then log(line) end
         settingsLogged = line
     end
@@ -1954,7 +1975,6 @@ command("ffrap_set", function(p)
         end
         writeSettings()
     end
-    settingsMap = nil                    -- write the encounter tables again
     log("settings: " .. settingsText())
     notify("Settings: " .. settingsText())
 end)
@@ -2495,6 +2515,7 @@ if randomizerWarning then log(randomizerWarning) end
 -- once, so the check is reported and the pop-up rewritten within about 0.1 s, not on the next
 -- one-second scan. Most passes are one widget lookup.
 local function fastTick()
+    pcall(defendRates)
     if not game.InGame() or state.inGameTicks <= SETTLE_TICKS or not sessionSave() then return end
     if not game.PopupJustOpened() then return end
     local mapId = game.CurrentMap()
@@ -2502,6 +2523,7 @@ local function fastTick()
         pcall(scanChests, mapId)
         pcall(scanShinies, mapId)
     end
+    pcall(scanBosses)
     pcall(popupTick)
 end
 

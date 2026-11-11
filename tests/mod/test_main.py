@@ -1586,6 +1586,17 @@ G.story = 1000
 G.chests = L.table()
 tick(12)
 assert list(G.rates.values()) == [1, 1, 1] and list(G.encounterTables.values()) == [True, 1], "the defaults"
+# Round 60: the fast tick writes the rates back when something else has changed them
+L.execute(CAPTURE)
+L.execute("""G.rateCalls = 0
+local plain = G.ApplyRates
+function G.ApplyRates(e, g, m) G.rateCalls = G.rateCalls + 1; plain(e, g, m); return G.foreignRates and 3 or 0 end""")
+L.execute("fastFn()")
+assert G.rateCalls == 1 and list(G.rates.values()) == [1, 1, 1]
+G.foreignRates = True
+L.execute("fastFn(); fastFn()")
+G.foreignRates = False
+assert len([x for x in logs() if "written back" in x]) == 1, "logged once"
 set_ = lambda *a: L.execute('commands["ffrap_set"]("ffrap_set", {' + ", ".join('"%s"' % x for x in a) + '})')
 set_("exp", "2")
 set_("encounters", "off")
@@ -1636,7 +1647,7 @@ print("menu rows: ok")
 # win flag, a Crystal Fragment is applied as nothing, and the tower counts fragments
 MARAUDER, LIQUID_THUNDER = 9079, 9083
 inbox("seed\tS59:0:1\ncfg\topenworld\t1\ncfg\tbosses\t1\ncfg\tfinalboss\t6\t6\t12\t12\t1\t2\n"
-      "item\t0\ttoken\t0\t1\tCrystal Fragment (1/2)\n", "w")
+      "item\t0\ttoken\t0\t1\tCrystal Fragment (1/2)\n" + b64_scout(f"boss:{MARAUDER}", "Hookshot", "Alice", 1, 0), "w")
 L, G = boot5("SD_BOSS", "0", {})
 L.globals().G = G
 L.execute(SCALE_STUB)
@@ -1656,6 +1667,11 @@ L.execute("G.wonFlags[146] = true")
 tick(4)
 assert read("ap_out.txt").count(f"check\tboss:{MARAUDER}\n") == 1, read("ap_out.txt")
 assert f"check\tboss:{LIQUID_THUNDER}" not in read("ap_out.txt")
+# Round 60: the win's pop-up says what the boss held; a boss with no scout asks for none
+assert list(G.popups.values()) == ["You found the following for Alice:\nHookshot"], list(G.popups.values())
+L.execute("G.wonFlags[215] = true; G.popupOpen = true; fastFn()")
+assert f"check\tboss:{LIQUID_THUNDER}\n" in read("ap_out.txt"), "the fast check reports a boss as its pop-up comes up"
+assert len(list(G.popups.values())) == 1
 tick(4)
 assert read("ap_out.txt").count(f"check\tboss:{MARAUDER}\n") == 1, "reported once"
 G.map = 3280

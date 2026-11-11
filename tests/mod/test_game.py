@@ -465,6 +465,18 @@ L.execute('rich.shown = false; rich.text = "Quit the game?"')
 assert L.eval("G.PopupJustOpened()") is False
 L.execute("rich.shown = true")
 assert L.eval("G.PopupJustOpened()") is False, "another dialog in the same box is not a chest pop-up"
+# Round 60: a map load forgets the widget. It is found again by name before any pop-up is shown,
+# so the first pop-up on the new map is seen by the fast check too.
+L.execute('G.ForgetObjects(); rich.shown = false; rich.text = "You obtained the following:"')
+assert L.eval("G.PopupJustOpened()") is False, "forgotten"
+assert L.eval("G.PrimePopup()") == 1
+L.execute('rich.shown = true; rich.text = "Quit the game?"')
+assert L.eval("G.PopupJustOpened()") is False, "the dialog box with another message"
+L.execute('rich.shown = false')
+L.eval("G.PopupJustOpened()")
+L.execute('rich.shown = true; rich.text = "You obtained the following:"')
+assert L.eval("G.PopupJustOpened()") is True, "the first pop-up after a map load"
+assert L.eval("G.PopupJustOpened()") is False, "once"
 
 # 0.9.0: the item feed on the field HUD
 L.execute(r"""
