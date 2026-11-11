@@ -11,7 +11,7 @@ LAST_PALACE_CHEST = "chest:2031:24"   # Oblivion Palace's 4-Star Chamber: all 99
 PALACE_SHARDS = 99
 
 
-def palace_location(test, key):
+def chest_location(test, key):
     name = next(c["name"] for c in CHESTS if c["key"] == key)
     return test.multiworld.get_location(name, test.player)
 
@@ -97,7 +97,7 @@ class TestTabletShards(FFResonanceTestBase):
         self.assertEqual(len(shards), len(TABLET_SHINIES))
 
     def test_the_palace_chests_need_their_shards(self) -> None:
-        last = palace_location(self, LAST_PALACE_CHEST)
+        last = chest_location(self, LAST_PALACE_CHEST)
         shards = [i for i in self.multiworld.itempool if i.player == self.player and i.name == "Tablet Shard"]
         self.assertTrue(all(i.advancement for i in shards), "the last chest counts every shard")
         self.collect_all_but(["Tablet Shard"])
@@ -106,7 +106,7 @@ class TestTabletShards(FFResonanceTestBase):
         self.assertFalse(last.can_reach(self.multiworld.state))
         self.collect(shards[PALACE_SHARDS - 1:])
         self.assertTrue(last.can_reach(self.multiworld.state))
-        first = palace_location(self, "chest:2031:0")
+        first = chest_location(self, "chest:2031:0")
         self.assertEqual(first.progress_type, LocationProgressType.DEFAULT)
 
 
@@ -169,8 +169,31 @@ class TestTabletShardGoal(FFResonanceTestBase):
 
 class TestPalaceWithoutShards(FFResonanceTestBase):
     def test_the_palace_chests_hold_filler_only(self) -> None:
-        self.assertEqual(palace_location(self, LAST_PALACE_CHEST).progress_type, LocationProgressType.EXCLUDED)
-        self.assertEqual(palace_location(self, "chest:2031:0").progress_type, LocationProgressType.EXCLUDED)
+        self.assertEqual(chest_location(self, LAST_PALACE_CHEST).progress_type, LocationProgressType.EXCLUDED)
+        self.assertEqual(chest_location(self, "chest:2031:0").progress_type, LocationProgressType.EXCLUDED)
+
+
+class TestKeyCardDoors(FFResonanceTestBase):
+    def test_the_lab_rooms_need_their_cards(self) -> None:
+        level_1 = chest_location(self, "chest:3220:0")
+        level_2 = chest_location(self, "chest:3220:2")
+        self.collect_all_but(["Level 1 Lab Key Card", "Level 2 Lab Key Card"])
+        self.assertFalse(level_1.can_reach(self.multiworld.state))
+        self.collect_by_name(["Level 1 Lab Key Card"])
+        self.assertTrue(level_1.can_reach(self.multiworld.state))
+        self.assertFalse(level_2.can_reach(self.multiworld.state))
+        self.collect_by_name(["Level 2 Lab Key Card"])
+        self.assertTrue(level_2.can_reach(self.multiworld.state))
+
+    def test_slot_data_asks_for_chest_icons(self) -> None:
+        self.assertEqual(self.world.fill_slot_data()["minimap_chest_icons"], 1)
+
+
+class TestKeyCardDoorsWithoutKeyItems(FFResonanceTestBase):
+    options = {"shuffle_key_items": False}
+
+    def test_the_lab_rooms_hold_filler_only(self) -> None:
+        self.assertEqual(chest_location(self, "chest:3220:2").progress_type, LocationProgressType.EXCLUDED)
 
 
 class TestNoArtifacts(FFResonanceTestBase):

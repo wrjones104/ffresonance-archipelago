@@ -162,6 +162,14 @@ class ShuffleVisions(DefaultOnToggle):
     display_name = "Shuffle Visions"
 
 
+class MinimapChestIcons(DefaultOnToggle):
+    """
+    Shows treasure chests on the mini-map, as icons. The game hides them; this is what the
+    TreasureMinimap mod does, built in. Only on this seed's save.
+    """
+    display_name = "Mini-map Chest Icons"
+
+
 class ShuffleKeyItems(DefaultOnToggle):
     """
     EXPERIMENTAL. Adds the key items to the item pool, one of each (29): keys, quest items and
@@ -189,6 +197,7 @@ class FFResonanceOptions(PerGameCommonOptions):
     shuffle_party_members: ShufflePartyMembers
     shuffle_visions: ShuffleVisions
     shuffle_key_items: ShuffleKeyItems
+    minimap_chest_icons: MinimapChestIcons
 
 
 option_groups = [
@@ -197,4 +206,5 @@ option_groups = [
                           StartingCharacter3, StartingCharacter4]),
     OptionGroup("Locations", [IncludeShinies, IncludeTabletShards, IncludeCrystals, ExcludedRegions]),
     OptionGroup("Items", [ShufflePartyMembers, ShuffleVisions, ShuffleKeyItems]),
+    OptionGroup("Comfort", [MinimapChestIcons]),
 ]

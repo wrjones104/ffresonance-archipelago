@@ -171,6 +171,7 @@ class FFResonanceContext(CommonContext):
         wanted.append(("cfg", "shinies", int(bool(slot_data.get("include_shinies")))))
         wanted.append(("cfg", "crystals", int(bool(slot_data.get("include_crystals")))))
         wanted.append(("cfg", "shards", int(bool(slot_data.get("include_tablet_shards")))))
+        wanted.append(("cfg", "chesticons", int(bool(slot_data.get("minimap_chest_icons")))))
         party = slot_data.get("starting_party") or []
         if party:
             wanted.append(("cfg", "party", ",".join(str(unit) for unit in party)))

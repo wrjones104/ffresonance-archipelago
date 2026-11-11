@@ -42,6 +42,7 @@ An Archipelago implementation for Final Fantasy Resonance (UE 5.6, game module `
   - `ETextJustify`: Left 0, Center 1, Right 2.
   - `ESlateVisibility`: Visible 0, Collapsed 1, Hidden 2.
 - **Text with icons is a `RichTextBlock`**, which is not a `TextBlock`. Search both.
+- **Rows added to a game data table do not stay.** The game can load the table again, and the title screen has its own copy. Check for them every tick and add them again (the Options rows, round 57).
 - **Never save a label read back as text before its string table has loaded.** It reads `<MISSING STRING TABLE ENTRY>`, and writing that back makes it the label (round 37).
 
 **Threads:**

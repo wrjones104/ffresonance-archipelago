@@ -367,6 +367,11 @@ def main() -> None:
 
     chests.sort(key=lambda e: e["id"])
     shinies.sort(key=lambda e: e["id"])
+    # Round 57: data/gates.tsv, by hand from play: the items a location needs (game item ids).
+    by_key = {e["key"]: e for e in chests + shinies + tablet_shinies}
+    for r in read_tsv("gates.tsv"):
+        assert r["location"] in by_key, f"gates.tsv: no location {r['location']}"
+        by_key[r["location"]]["needs"] = [int(i) * 1000 + 1 for i in r["needs"].split(",")]
     location_names = [e["name"] for e in chests + shinies + crystals + tablet_shinies]
     assert len(location_names) == len(set(location_names)), "duplicate location names"
 

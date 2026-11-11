@@ -50,7 +50,7 @@
 -- follows the save slots the linked game is saved to. While any other save is loaded, the mod
 -- grants nothing, reports nothing and leaves the chests vanilla.
 
-local VERSION = "0.42.0"
+local VERSION = "0.43.0"
 local PROTOCOL = 2        -- the bridge protocol; the apworld's MOD_PROTOCOL
 
 local MOD_DIR = (debug.getinfo(1, "S").source:gsub("^@", ""):gsub("\\", "/"):match("^(.*/)Scripts/[^/]+$"))
@@ -107,7 +107,7 @@ local openArrival = nil      -- ffrap_openstart dock|air|event, kept once the us
 local continentLocks = nil   -- ffrap_lock on|off, kept once the user picks one; the seed's until then
 -- What the seed says about the start (the client's cfg lines). Not saved: ap_in.txt is read again
 -- at every start, and the seed that wrote it is the only thing that decides these.
-local seedCfg = { openworld = false, party = nil, shinies = false, crystals = false, shards = false }
+local seedCfg = { openworld = false, party = nil, shinies = false, crystals = false, shards = false, chesticons = false }
 local function openStartOn() return openStart or seedCfg.openworld end
 -- An `ffrap_lock on|off` from this run wins. Then a seed that asks for locks: a saved "off" from
 -- an old test must not quietly leave a real seed unlocked. Then the saved switch.
@@ -379,6 +379,8 @@ local function readInbox(initial)
             seedCfg.shards = f[3] == "1"
         elseif f[1] == "cfg" and f[2] == "crystals" then
             seedCfg.crystals = f[3] == "1"
+        elseif f[1] == "cfg" and f[2] == "chesticons" then
+            seedCfg.chesticons = f[3] == "1"
         elseif f[1] == "cfg" and f[2] == "party" then
             local party = {}
             for id in (f[3] or ""):gmatch("%d+") do party[#party + 1] = tonumber(id) end
@@ -1102,6 +1104,8 @@ end
 
 local scaleTick   -- set with the ffrap_scale command, below
 local settingsTick   -- the player's settings (ffrap_set), below
+local menuTick       -- our rows in the Options screen, below
+local seedExtrasTick -- the Chocobo and the chest icons, below
 local bossTest = { group = nil }   -- ffrap_bossfight, below: the group armed, and its tick
 
 -- Continent locks (game.ContinentSync): while the switch is on, the world map keeps its lock
@@ -1133,6 +1137,7 @@ local function tick()
         pcall(flushFeed)
         pcall(game.FeedTick, feedClock)
     end
+    if titleReady or game.InGame() then pcall(menuTick) end
     if not game.InGame() then
         if state.inGameTicks > 0 then log("left the game (title screen or loading)") end
         state.inGameTicks = 0
@@ -1159,6 +1164,7 @@ local function tick()
             if bossTest.group then pcall(bossTest.tick) end
             if state.ticks % STATUS_EVERY == 0 then pcall(scaleTick) end
             if state.ticks % STATUS_EVERY == 0 then pcall(settingsTick) end
+            if state.ticks % LOCKS_EVERY == 0 then pcall(seedExtrasTick) end
             if state.ticks % LOCKS_EVERY == 0 then pcall(locksTick) end
             if state.ticks % STATUS_EVERY == 0 and seedCfg.openworld and game.OnField() then pcall(game.SyncSlotLevel) end
             if seedCfg.openworld and state.ticks % LOCKS_EVERY == 0 then
@@ -1706,7 +1712,9 @@ local scaleChecks = 0
 
 -- The player's settings (round 50; IDEAS.md, idea 18): EXP, gil and MRP rates, random encounters
 -- on or off, the encounter rate, and the seed's enemy scaling on or off and its strength. They
--- belong to the player, not the seed, but apply only to the seed's save (round 56). settings.txt
+-- belong to the player, not the seed, and apply to any save. Round 56 kept them to the seed's
+-- save, as the user had not seen the rows on a regular save; with the rows always there (round
+-- 57) the user wants them on every save, where they can be changed. settings.txt
 -- holds only what the player has set, through ffrap_set or the Options rows (a setting the mod
 -- saved by itself once came back as a choice, round 19).
 local SETTINGS_FILE = MOD_DIR .. "settings.txt"
@@ -1754,12 +1762,6 @@ local function settingsText()
     return table.concat(parts, ", ")
 end
 
--- Round 56: the rates and encounter settings apply only to the save linked to the seed. Any other
--- save gets the game's own values back, as the Options rows may not be there to change them.
-local function seedSave()
-    return state.seed ~= nil and save.ok
-end
-local settingsActive = nil   -- whether the last write was the player's settings or the game's own
 
 local settingsMap, settingsLogged = nil, nil   -- the map the encounter tables were last written for
 local menuLogged = nil
@@ -1768,18 +1770,20 @@ local function currentSettings()
     for k in pairs(SETTING_DEFAULTS) do current[k] = setting(k) end
     return current
 end
--- Round 53: the rows worked and their values were kept, so they go in by themselves, once per
--- save loaded (a table loaded again would lose them). Quiet unless a row was added.
-local menuSave = nil
-local function ensureMenu()
-    if menuSave == save.obj then return end
-    menuSave = save.obj
-    local ok, detail, added = game.AddOptionRows(function() end, currentSettings())
-    if not ok then log("menu: " .. tostring(detail))
-    elseif (added or 0) > 0 then log("menu: rows added to the Options screen; " .. tostring(detail)) end
+-- Round 57: the rows are checked every tick, at the title too, and put back when missing (a
+-- table the game loads again loses them). Quiet unless rows were added or it failed.
+local menuFailed = nil
+menuTick = function()
+    local added, detail = game.EnsureOptionRows(currentSettings())
+    if added == nil then
+        if detail ~= menuFailed then log("menu: " .. tostring(detail)) end
+        menuFailed = detail
+    elseif added > 0 then
+        menuFailed = nil
+        log("menu: rows added to the Options screen; " .. tostring(detail))
+    end
 end
 settingsTick = function()
-    pcall(ensureMenu)
     -- Round 50: a value set in the Options screen wins over ffrap_set.
     local fromMenu = game.ReadOptionValues()
     if fromMenu then
@@ -1797,28 +1801,43 @@ settingsTick = function()
         end
         menuLogged = line
     end
-    local active = seedSave()
-    if active ~= settingsActive then settingsMap = nil end
-    settingsActive = active
-    local function applied(k)
-        if active then return setting(k) end
-        return SETTING_DEFAULTS[k]
-    end
-    local rates = game.ApplyRates(applied("exp"), applied("gil"), applied("mrp"))
+    local rates = game.ApplyRates(setting("exp"), setting("gil"), setting("mrp"))
     local map = game.CurrentMap()
     local rows, tables = 0, nil
     if map ~= settingsMap then
-        rows, tables = game.ApplyEncounterTables(applied("encounters"), applied("encounterrate"))
+        rows, tables = game.ApplyEncounterTables(setting("encounters"), setting("encounterrate"))
         settingsMap = map
     end
-    local players = game.ApplyPlayerEncounter(applied("encounters"))
+    local players = game.ApplyPlayerEncounter(setting("encounters"))
     if rates > 0 or rows > 0 or players > 0 then
-        local what = active and settingsText() or "the game's own (this save is not linked to the seed)"
-        local line = string.format("settings: %s (%d rate rows, %d map rows in %s tables, %d players changed)", what,
+        local line = string.format("settings: %s (%d rate rows, %d map rows in %s tables, %d players changed)", settingsText(),
             rates, rows, tostring(tables or "the same"), players)
         if line ~= settingsLogged then log(line) end
         settingsLogged = line
     end
+end
+
+-- Round 57: what every seed's open world save gets, the user's wish: the Chocobo (the Choboco
+-- Saddle, 30002, which the game checks: round 5) next to the free airship, once per save loaded,
+-- and the chest icons on the mini-map when the seed's yaml asks for them (any other save gets
+-- the game's own icons back).
+local CHOCOBO_SADDLE = 30002
+local saddleSave, iconsLogged = nil, nil
+seedExtrasTick = function()
+    local seedSave = seedCfg.openworld and sessionSave() and (game.StoryCounter() or 0) >= game.OPEN_START.story
+    if seedSave and saddleSave ~= save.obj and game.OnField() then
+        saddleSave = save.obj
+        if (game.HeldCount(CHOCOBO_SADDLE) or 0) == 0 then
+            local code, detail = game.GrantItem(CHOCOBO_SADDLE, 1)
+            log("chocobo: saddle given (" .. tostring(code) .. ", " .. tostring(detail) .. ")")
+        end
+    end
+    local want = seedCfg.chesticons and sessionSave()
+    local changed, why = game.ShowChestIcons(want, log)
+    local line = changed == nil and ("chest icons: " .. tostring(why)) or
+        (changed > 0 and ("chest icons " .. (want and "on" or "off") .. ": " .. changed .. " fields written")) or nil
+    if line and line ~= iconsLogged then log(line) end
+    if line then iconsLogged = line end
 end
 
 -- ffrap_set: shows the settings. ffrap_set <exp|gil|mrp|encounterrate> <number>, ffrap_set

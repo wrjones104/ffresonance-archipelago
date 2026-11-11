@@ -1,0 +1,10 @@
+location	needs	round	note
+chest:3220:0	20009	57	Research Center Ruins: behind the level 1 door, with the level 2 card
+chest:3220:1	20009	57	Research Center Ruins: behind the level 1 door
+chest:3220:3	20009	57	Research Center Ruins: behind the level 1 door
+shiny:3220:34	20009	57	Research Center Ruins: a Tablet Shard behind the level 1 door
+shiny:3220:36	20009	57	Research Center Ruins: a Tablet Shard behind the level 1 door
+chest:3220:2	20009,20010	57	Research Center Ruins: behind the level 2 door, with the level 3 card (level 1 too, as the level 2 card is found behind the level 1 door)
+chest:3220:4	20009,20010	57	Research Center Ruins: behind the level 2 door
+chest:3220:5	20009,20010	57	Research Center Ruins: behind the level 2 door
+shiny:3220:35	20009,20010	57	Research Center Ruins: a Tablet Shard behind the level 2 door

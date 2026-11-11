@@ -4258,9 +4258,11 @@ local ENTRY_SLIDER, ENTRY_RADIO = 1, 2
 
 -- The option save's entries for our tags, added where missing. `current` is setting key -> number
 -- or boolean. Returns how many were added, or nil when the option save is not found.
+local optionEntriesSeeded = false
 local function SeedOptionEntries(current)
     local save = Live("CPP_MuchaOptionSaveData")
     if not save then return nil end
+    optionEntriesSeeded = true
     local have = {}
     pcall(function()
         save.m_EntrySaveDataList:ForEach(function(k) pcall(function() have[ObjText(k:get().TagName)] = true end) end)
@@ -4329,6 +4331,25 @@ function G.AddOptionRows(say, current)
         (seeded and (seeded .. " option save entries added") or "no option save found"), added
 end
 
+-- Round 57: the rows did not stay. They went in once per save load, so a table the game loaded
+-- again lost them, and the title screen's Options never had them. This checks the table and puts
+-- the rows back when they are missing; main.lua calls it every tick, at the title too. A table
+-- not in memory is loaded, so the screen finds ours when it opens. Returns how many rows were
+-- added (0 when they were there), or nil and why.
+function G.EnsureOptionRows(current)
+    local dt = LoadObject(OPTION_GAMEPLAY)
+    if not dt then return nil, "DT_OP_GameSetting could not be loaded" end
+    local present = false
+    pcall(function() present = dt:FindRow(G.OPTION_ROWS[1].row) ~= nil end)
+    if present then
+        if not optionEntriesSeeded then SeedOptionEntries(current or {}) end
+        return 0
+    end
+    local ok, detail, added = G.AddOptionRows(function() end, current)
+    if not ok then return nil, detail end
+    return added, detail
+end
+
 -- Our rows' values from the option save, as setting key -> number or boolean, for the rows the
 -- player has set (the game saves a row once it is applied). nil when the option save is not found.
 function G.ReadOptionValues()
@@ -4389,5 +4410,67 @@ function G.OptionDump()
     return lines
 end
 
+
+-- Round 57: chest icons on the mini-map, the user's yaml option. The game hides them by data, as
+-- the TreasureMinimap pak mod showed (IDEAS.md, ideas 26 and 27): the Treasure interact type's
+-- entry in DA_MiniMapEntryProperty has bDefaultDisplay false, and DA_MapIconBinding gives it the
+-- icon UI.Map.Icon.Null. With `on`, this writes what the pak has: shown, the TreasureBox icon,
+-- and that icon at the low zoom state too. Off puts back what the assets held when first seen.
+-- Safe to call often: it writes only what differs. Returns how many fields changed, or nil and why.
+local MINIMAP_ENTRIES = "/Game/UI/Field/MiniMap/Entry/Data/DA_MiniMapEntryProperty.DA_MiniMapEntryProperty"
+local ICON_BINDING = "/Game/UI/Map/Icon/Data/DA_MapIconBinding.DA_MapIconBinding"
+local TREASURE_TYPE = "Field.Object.Interact.Type.Treasure"
+local CHEST_ICON = "UI.Map.Icon.TreasureBox"
+local LOW_ZOOM = "UI.Map.Zoom.State.Low"
+local chestIconOriginal = nil   -- { display, overrideDisplay, overrideState, icon }
+
+local function TreasureEntry(map)
+    local found
+    pcall(function()
+        map:ForEach(function(k, v)
+            if not found and ObjText(k:get().TagName) == TREASURE_TYPE then found = v:get() end
+        end)
+    end)
+    return found
+end
+
+function G.ShowChestIcons(on, say)
+    say = say or function() end
+    local entries, binding = LoadObject(MINIMAP_ENTRIES), LoadObject(ICON_BINDING)
+    if not (entries and binding) then return nil, "mini-map assets not loaded" end
+    local entry = TreasureEntry(entries.PropertyMap)
+    if not entry then return nil, "no Treasure entry in DA_MiniMapEntryProperty" end
+    local icon = TreasureEntry(binding.InteractBindMap)
+    local iconNow = icon and ObjText(icon.TagName) or nil
+    if not chestIconOriginal then
+        chestIconOriginal = { display = entry.bDefaultDisplay, overrideDisplay = entry.bOverrideDefaultDisplay,
+                              overrideState = entry.bOverrideStatePropertyMap, icon = iconNow }
+    end
+    local o = chestIconOriginal
+    local want = on and { display = true, overrideDisplay = true, overrideState = true, icon = CHEST_ICON } or o
+    local changed = 0
+    if entry.bDefaultDisplay ~= want.display or entry.bOverrideDefaultDisplay ~= want.overrideDisplay then
+        say("chest icons: display " .. tostring(want.display))
+        entry.bOverrideDefaultDisplay, entry.bDefaultDisplay = want.overrideDisplay, want.display
+        changed = changed + 1
+    end
+    if entry.bOverrideStatePropertyMap ~= want.overrideState then
+        say("chest icons: state map " .. tostring(want.overrideState))
+        if want.overrideState then
+            pcall(function()
+                entry.StatePropertyMap:Add({ TagName = FName(LOW_ZOOM) },
+                    { bOverrideIconTag = true, IconTag = { TagName = FName(CHEST_ICON) } })
+            end)
+        end
+        entry.bOverrideStatePropertyMap = want.overrideState
+        changed = changed + 1
+    end
+    if want.icon and iconNow ~= want.icon then
+        say("chest icons: icon " .. want.icon)
+        pcall(function() binding.InteractBindMap:Add({ TagName = FName(TREASURE_TYPE) }, { TagName = FName(want.icon) }) end)
+        changed = changed + 1
+    end
+    return changed
+end
 
 return G

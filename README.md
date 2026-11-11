@@ -159,8 +159,8 @@ At run time the mod writes these files into its own folder: `ap_out.txt`, `ap_st
 | `ffrap_story [value]` | Open world probe: sets the loaded save's story counter to any value (FFRSLib's `ffrs_story_set` stops at 8050; the ending sets 9000). Only the counter, no flags. Save and reload to apply. Use it on a save that is not linked to a seed, or the client sees the story move. |
 | `ffrap_airship [condition\|off]` | Open world probe: shows or rewrites the airship's spawn condition (`DT_MapAirShip`, shipped `{progress:0}>=4250`). One word, no spaces. `off` restores it. Not saved. |
 | `ffrap_bossfight <battle group> [quiet]\|sword\|off` | Test (round 49, IDEAS.md idea 25): the closed chests near you become traps for that battle group, the Chamber of Arms sword pedestal starts it too, and a win is logged. The win plays the sword fight's victory scene, or nothing with `quiet`. `sword` gives the Ancient Greatsword the pedestal needs. `off` undoes it. `watch [class ...]` hooks the talk event and encounter classes and logs their calls; `watch off` stops the logging. |
-| `ffrap_set [exp\|gil\|mrp\|encounterrate <number>] [encounters\|scaling <on\|off>] [strength casual\|normal\|expert] [reset]` | The player's settings (round 50): EXP, gil and MRP rates, random encounters and their rate, the seed's enemy scaling and its strength (round 56). Kept in `settings.txt`. They apply only to the save linked to the seed; any other save gets the game's own values (round 56). Our mod owns these: turn FFRS_QoL's multipliers and encounter settings off, or the two undo each other. |
-| `ffrap_menu add\|dump` | Our settings as rows at the end of the Options screen's Gameplay tab, added by themselves on each save load from mod 0.40.0 (`add` does it by hand). A value set there wins over `ffrap_set`. `dump` logs the option save's entries and the screen's pending changes. |
+| `ffrap_set [exp\|gil\|mrp\|encounterrate <number>] [encounters\|scaling <on\|off>] [strength casual\|normal\|expert] [reset]` | The player's settings (round 50): EXP, gil and MRP rates, random encounters and their rate, the seed's enemy scaling and its strength (round 56). Kept in `settings.txt`. They apply to any save (round 56 kept them to the seed's save; round 57 undid that). Our mod owns these: turn FFRS_QoL's multipliers and encounter settings off, or the two undo each other. |
+| `ffrap_menu add\|dump` | Our settings as rows at the end of the Options screen's Gameplay tab, put back by themselves whenever the game's table has lost them, at the title too, from mod 0.43.0 (`add` does it by hand). A value set there wins over `ffrap_set`. `dump` logs the option save's entries and the screen's pending changes. |
 | `ffrap_gate <subcommand>` | Experimental gate and custom key-item probe (IDEAS.md, idea 16): `spawn [combo\|box\|rock\|pot\|gate\|world] [dist] [scale]`, `item [id] [count]`, `require <item\|unit\|flag\|off> [id] [count]`, `lock`, `unlock`, `clear`, `status`. |
 
 ## Bridge format
@@ -208,7 +208,7 @@ kind  map  uid  row  item  count  money  visible-condition
 
 ## Playtesting and test plans
 
-In-game playtesting results (Rounds 1-55) and the current test plan (Round 56) are documented in [docs/playtesting.md](docs/playtesting.md).
+In-game playtesting results (Rounds 1-56) and the current test plan (Round 57) are documented in [docs/playtesting.md](docs/playtesting.md).
 Automated regression tests are documented in [tests/README.md](tests/README.md).
 
 ## Project status and open questions

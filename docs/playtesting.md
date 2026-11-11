@@ -454,18 +454,25 @@ World-map shinies verified as locations. Multiple crashes observed across differ
 - **TreasureMinimap:** off-line, the pak changes three mini-map and world-map data assets only, to show chest, exit and "check" icons the game hides (IDEAS.md, ideas 26 and 27).
 - **Decided:** artifacts are left out for now, the passkey too. World 0.10.0 and mod 0.41.0 take them out.
 
-## Round 56 test plan (mod 0.42.0, world 0.11.0)
+**Round 56 (mod 0.42.0, world 0.11.0, 2026-11-11): the palace logic and the shard goal work.**
+- **Oblivion Palace:** with 4 shards from Archipelago, one chest opened in game, and Universal Tracker showed chest 1 in logic. At 6 shards the tracker showed the second, and it opened.
+- **Shard goal:** reached, the first time it was played to the end.
+- **Research Center Ruins (map 3220):** the level 1 card is shiny 32, the level 2 card (33) is behind the level 1 door, and the level 3 card (37) is behind the level 2 door. The level 3 door leads to the White Jade Stone area, with a boss in vanilla.
+- **Scaling strength:** the row works, and the difference shows.
+- **Menu:** the AP rows did not stay; the user typed `ffrap_menu add` every time. With the rows always there, the user wants the settings on any save again.
 
-**Install:** copy `FFRArchipelago/Scripts`, and copy `dist/ff_resonance.apworld` into Archipelago's `custom_worlds`. Generate a new seed with `include_tablet_shards: true` (or the shard goal). The old yaml's `start_with_bandit_cuff_links` line can go.
+## Round 57 test plan (mod 0.43.0, world 0.12.0)
 
-**1. Settings on other saves.** Load a save that is not the seed's. The log should say `settings: the game's own (this save is not linked to the seed)`. **Is EXP back to normal there?** Then load the seed's save: your rates should come back.
+**Install:** copy `FFRArchipelago/Scripts`, and copy `dist/ff_resonance.apworld` into Archipelago's `custom_worlds`. Generate a new seed. The yaml has a new option, `minimap_chest_icons` (on by default). Keep the TreasureMinimap pak out of `~mods`.
 
-**2. Scaling strength.** Options, Gameplay: **is there an "AP: Scaling strength" row with Casual, Normal and Expert?** Set Expert and apply. The log should show `scale: ... strength expert`. **Do enemies feel harder?** Does changing the game's own Difficulty row still work as before?
+**1. The AP rows, with no command.** Open Options at the title screen: **are the AP rows there?** Load a save, open Options, change map, open it again. The log says `menu: rows added ...` each time the mod had to put them back.
 
-**3. Oblivion Palace (Lanzelt).** With a few Tablet Shards from Archipelago:
-- **Can you get in?** A blocking base stands while its quest has not started. If something blocks you, take `ffrap_snapshot`, talk to whoever is there, and take it again.
-- **Does the turn-in take the shards from Archipelago?** If it opens the first chest at 3 shards, the logic is right.
+**2. The Chocobo.** On the new seed, once you're in the open world: the log says `chocobo: saddle given`. **Can you ride a chocobo?**
 
-**4. Research Center Ruins (Gronoa), if you get there.** Which chests are behind the level 1 door, and which behind the level 2 door? With a key card from Archipelago, does the door open?
+**3. Chest icons.** In a dungeon with chests: **are chests on the mini-map?** After a map change? The log says `chest icons on: ... fields written`. On a save that is not the seed's they should be gone.
 
-Send the `[FFRAP]` lines of the log and the snapshots.
+**4. Research Center Ruins.** Universal Tracker should show the level 1 rooms only with the level 1 card, and the level 2 rooms only with both cards.
+
+**5. The final boss goal.** Generate a second seed with `goal: story_checkpoint` (8050). Save before the Crystal Tower's last fight, then beat the final boss. **Does the client send the goal?** Send the `story ... -> ...` lines of the log: they show which checkpoints the ending passes.
+
+Send the `[FFRAP]` lines of the log.

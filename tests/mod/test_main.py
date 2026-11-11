@@ -122,7 +122,13 @@ function G.ApplyRates(e, g, m) G.rates = { e, g, m } return 0 end
 function G.ApplyEncounterTables(on, rate) G.encounterTables = { on, rate } return 0, 1 end
 function G.ApplyPlayerEncounter(on) G.playerEncounters = on return 0 end
 function G.ReadOptionValues() return G.menuValues end
-function G.AddOptionRows(say, current) G.menuAdds = (G.menuAdds or 0) + 1; G.menuSeed = current; return true, "rows", 0 end
+function G.EnsureOptionRows(current)
+  G.menuChecks = (G.menuChecks or 0) + 1; G.menuSeed = current
+  if G.menuRowsIn then return 0 end
+  G.menuRowsIn = true; G.menuAdds = (G.menuAdds or 0) + 1; return 6, "rows"
+end
+function G.AddOptionRows(say, current) return true, "rows", 6 end
+function G.ShowChestIcons(on) G.chestIcons = on; return 0 end
 function G.UnlockVision() return "ok", "" end
 function G.HasVision(id) return (G.owned or {})[id] == true end
 function G.AddUnit() return "ok", G.unitDetail or "in the active party" end
@@ -1391,6 +1397,37 @@ tick(30)
 assert calls() == [], "not an open world seed"
 print("seed scaling: ok")
 
+# Round 57: an open world seed's save gets the Chocobo once, and the chest icons the yaml asks for
+inbox("seed\tS57:0:1\ncfg\topenworld\t1\ncfg\tchesticons\t1\n", "w")
+L, G = boot5("SD_CHOCOBO", "0", {})
+L.globals().G = G
+L.execute(SCALE_STUB)
+L.execute("function G.HeldCount(id) return G.held or 0 end")
+tick = lambda k: [L.execute("tickFn()") for _ in range(k)]
+G.chests = L.table()
+G.story = 1000
+tick(12)
+assert "item30002x1" not in list(G.log.values()), "not before the open world start"
+G.story = 8000
+tick(12)
+assert list(G.log.values()).count("item30002x1") == 1, list(G.log.values())
+assert G.chestIcons is True
+G.held = 0
+tick(12)
+assert list(G.log.values()).count("item30002x1") == 1, "once per save loaded"
+
+inbox("seed\tS57b:0:1\ncfg\topenworld\t1\ncfg\tchesticons\t0\n", "w")
+L, G = boot5("SD_CHOCOBO2", "0", {})
+L.globals().G = G
+L.execute(SCALE_STUB)
+L.execute("function G.HeldCount(id) return 1 end")
+G.chests = L.table()
+G.story = 8000
+tick(12)
+assert "item30002x1" not in list(G.log.values()), "a save that holds the saddle gets none"
+assert G.chestIcons is False, "the yaml said no"
+print("chocobo and chest icons: ok")
+
 # Round 49: ffrap_bossfight arms, logs a win once, can be turned off, and arms again on a new save
 inbox("seed\tS50:0:1\ncfg\topenworld\t1\n", "w")
 L, G = boot5("SD_BOSS", "0", {})
@@ -1501,17 +1538,13 @@ assert "exp 2" in saved and "encounters off" in saved and "encounterrate 5" in s
 G.story = 8000
 tick(20)
 assert list(G.scaleCalls.values()) == [], "scaling off: the seed does not scale"
-# Round 56: a save not linked to the seed gets the game's own rates and encounters back
-L.execute(CAPTURE)
+# Round 57: the settings apply to a save not linked to the seed too (round 56 kept them off it)
 G.slotOf = L.table_from({"900": 5})
 load(G, "SD_SET_OTHER", "900")
 tick(10)
-assert list(G.rates.values()) == [1, 1, 1] and list(G.encounterTables.values()) == [True, 1], "the game's own values"
-assert G.playerEncounters is True
-assert any("not linked to the seed" in x for x in logs()), "said why"
+assert list(G.rates.values()) == [2, 1, 1] and list(G.encounterTables.values()) == [False, 5], "the player's values"
 load(G, "SD_SET", "0")
 tick(10)
-assert list(G.rates.values()) == [2, 1, 1] and list(G.encounterTables.values()) == [False, 5], "back on the linked save"
 L2, G2 = boot5("SD_SET2", "0", {})
 L2.execute("tickFn = tickFn")
 assert "exp 2" in read("settings.txt"), "kept for the next run"
@@ -1527,10 +1560,12 @@ assert list(G.rates.values())[0] == 2 and list(G.encounterTables.values())[0] is
 assert "exp 2" in read("settings.txt") and "encounters off" in read("settings.txt")
 print("menu settings: ok")
 
-# Round 53: the Options rows go in by themselves, once per save loaded, seeded with the current
-# settings. This run loaded three saves (round 56's test above).
-assert G.menuAdds == 3, G.menuAdds
+# Round 57: the Options rows are checked every tick and put back only when missing, seeded with
+# the current settings
+assert G.menuAdds == 1, G.menuAdds
 assert G.menuSeed["exp"] is not None and G.menuSeed["scaling"] is not None, "seeded with the settings"
-tick(20)
-assert G.menuAdds == 3, "once per save"
+checks = G.menuChecks
+G.menuRowsIn = False      # the game loaded its table again
+tick(4)
+assert G.menuAdds == 2 and G.menuChecks >= checks + 4, (G.menuAdds, G.menuChecks)
 print("menu rows: ok")

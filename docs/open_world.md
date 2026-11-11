@@ -67,7 +67,7 @@ The story counter is `Progress[0]`. Every story gate is a condition such as `{pr
 |---|---|---|
 | The airship | Free from the start (decided, round 31) | No item |
 | Continents | No landing on a continent until its item arrives (idea 17), with the game's own no-landing boxes (below) | Round 32 probe: `ffrap_noland` |
-| Ships and the Chocobo | The Chocobo is item 30002, and the game checks the item (round 5). Ship routes are story transitions | Chocobo: works. Ships: unknown at 9000 |
+| Ships and the Chocobo | The Chocobo is item 30002, and the game checks the item (round 5). Ship routes are story transitions | Chocobo: given on every seed's open world save from mod 0.43.0 (the user's wish: the airship and the Chocobo from the start). Ships: unknown at 9000 |
 | Dungeons and choke points | Our own blockers (idea 16), which work everywhere (mod 0.11.3). Or the game's own exits, with their condition rewritten | Blockers: work. Rewriting a live exit's condition: not tried |
 | Key items the game checks | The Throne Room Key door; the Cabin Key exit; the radar parts for world-map treasures | Already in the pool (world 0.3.0) |
 

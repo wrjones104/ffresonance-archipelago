@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 from BaseClasses import ItemClassification, Location, LocationProgressType, Region
 
 from .data import CHESTS, CONTINENT_UNLOCKS, CRYSTALS, FINAL_AREA, ITEMS, OPEN_AREA, SHINIES, TABLET_SHINIES
-from .items import GAME, FFResonanceItem
+from .items import GAME, FFResonanceItem, progression_ids
 
 if TYPE_CHECKING:
     from .world import FFResonanceWorld
@@ -64,6 +64,7 @@ def create_regions_and_locations(world: FFResonanceWorld) -> None:
     if world.options.include_tablet_shards:
         chosen += TABLET_SHINIES
     excluded = world.options.excluded_regions.value
+    in_pool = set(progression_ids(world))
 
     for loc in chosen:
         region = regions[loc["area"]]
@@ -76,6 +77,14 @@ def create_regions_and_locations(world: FFResonanceWorld) -> None:
         if "shards" in loc:
             if world.options.include_tablet_shards:
                 location.access_rule = lambda state, n=loc["shards"]: state.has("Tablet Shard", player, n)
+            else:
+                location.progress_type = LocationProgressType.EXCLUDED
+        # Doors that test a key item (data/gates.tsv). With the item not in the pool, logic
+        # cannot count the copy the game hands out: filler only.
+        if "needs" in loc:
+            if in_pool.issuperset(loc["needs"]):
+                names = [ITEMS[ap_id]["name"] for ap_id in loc["needs"]]
+                location.access_rule = lambda state, names=names: state.has_all(names, player)
             else:
                 location.progress_type = LocationProgressType.EXCLUDED
         region.locations.append(location)
