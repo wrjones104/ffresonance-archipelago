@@ -212,6 +212,8 @@ Round 48: no seed has been finished yet. The only goal in the apworld was `goal_
 
 Round 49 (world 0.7.0): the default goal is `tablet_shards`, with `tablet_shards_required` (default 50 of 99). It is a stopgap that needs nothing from the story. It turns on `include_tablet_shards`. The client counts the shards it received, so spending or losing one in game does not matter. Only the shards the goal needs are progression items. The planned goal is the Crystal Tower's final boss, behind objectives (IDEAS.md, idea 24).
 
+Round 58 (world 0.13.0, mod 0.44.0): with the `story_checkpoint` goal, the tower's point of no return stays sealed until the player has `final_boss_characters` party members (default 6, the starting party counts) and `final_boss_visions` visions (default 12) from Archipelago. The goal's logic needs the same counts (IDEAS.md, idea 24).
+
 ## 8. What the story used to give, now items
 
 The story natively awards party members, starter visions, the airship, and key items. In open world, these become Archipelago items or starting loadout:

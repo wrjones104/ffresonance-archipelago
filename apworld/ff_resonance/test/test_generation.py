@@ -1,7 +1,7 @@
 from BaseClasses import LocationProgressType
 
 from ..data import CHESTS, CONTINENT_UNLOCKS, CRYSTALS, ITEMS, NO_BOX, TABLET_SHINIES, PROGRESSION, SHINIES, SHUFFLE_ID_LIMIT, UNIT_ITEM_BASE
-from ..items import CLASSIFICATIONS, FILLER_CATEGORIES
+from ..items import CLASSIFICATIONS, FILLER_CATEGORIES, item_name_groups
 from ..locations import GOAL_EVENT, LOCATION_KEY_TO_ID
 from ..options import Goal, TabletShardsRequired
 from . import FFResonanceTestBase
@@ -171,6 +171,41 @@ class TestPalaceWithoutShards(FFResonanceTestBase):
     def test_the_palace_chests_hold_filler_only(self) -> None:
         self.assertEqual(chest_location(self, LAST_PALACE_CHEST).progress_type, LocationProgressType.EXCLUDED)
         self.assertEqual(chest_location(self, "chest:2031:0").progress_type, LocationProgressType.EXCLUDED)
+
+
+class TestFinalBossLock(FFResonanceTestBase):
+    options = {"final_boss_characters": 4, "final_boss_visions": 3}
+
+    def test_the_goal_needs_the_characters_and_visions(self) -> None:
+        members = [i for i in self.multiworld.itempool if i.player == self.player and i.name in item_name_groups["Party Members"]]
+        visions = [i for i in self.multiworld.itempool if i.player == self.player and i.name in item_name_groups["Visions"]]
+        self.collect_all_but(["Party Members", "Visions"] + [i.name for i in members + visions])
+        self.assertBeatable(False)
+        self.collect(members[:2])            # the starting two and two more: four
+        self.collect(visions[:2])
+        self.assertBeatable(False)
+        self.collect(visions[2:3])
+        self.assertBeatable(True)
+
+    def test_slot_data(self) -> None:
+        slot_data = self.world.fill_slot_data()
+        self.assertEqual((slot_data["final_boss_characters"], slot_data["final_boss_visions"]), (4, 3))
+
+
+class TestFinalBossLockWithoutShuffles(FFResonanceTestBase):
+    options = {"final_boss_characters": 8, "final_boss_visions": 26, "shuffle_party_members": False, "shuffle_visions": False}
+
+    def test_the_counts_are_lowered_to_what_the_pool_holds(self) -> None:
+        slot_data = self.world.fill_slot_data()
+        self.assertEqual((slot_data["final_boss_characters"], slot_data["final_boss_visions"]), (2, 0))
+
+
+class TestFinalBossLockNotForShards(FFResonanceTestBase):
+    options = {"goal": "tablet_shards", "tablet_shards_required": 10}
+
+    def test_the_shard_goal_has_no_lock(self) -> None:
+        slot_data = self.world.fill_slot_data()
+        self.assertEqual((slot_data["final_boss_characters"], slot_data["final_boss_visions"]), (0, 0))
 
 
 class TestKeyCardDoors(FFResonanceTestBase):

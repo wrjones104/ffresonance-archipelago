@@ -115,6 +115,9 @@ class FFResonanceContext(CommonContext):
         self.mod_version: str | None = None
         self.goal_announced = False           # the in-game toast was sent; a reconnect re-sends only the status
         self.scouts_written = False           # scout lines are in ap_in.txt for this session
+        self.starting_party: list[int] = []
+        self.lock_needs = (0, 0)              # the final boss lock: characters, visions
+        self.lock_written: tuple | None = None  # the last finalboss line written
 
     # -- files ------------------------------------------------------------------------------------
 
@@ -199,10 +202,33 @@ class FFResonanceContext(CommonContext):
             name = info["name"]
             if item.item == SHARD_ITEM and self.goal_kind == SHARD_GOAL:
                 shards += 1
-                name = f"{name} ({shards}/{self.shards_needed})"
+                # Past the goal only the count is shown (round 56 read "99/20").
+                name = f"{name} ({shards}/{self.shards_needed})" if shards <= self.shards_needed else f"{name} ({shards})"
             label = name if item.player == self.slot else f"{name} from {sender}"
             self.write_line("item", index, info["kind"], info["game_id"], info["count"], label)
         self.items_written = len(self.items_received)
+
+    def lock_counts(self) -> tuple[int, int]:
+        """Characters held (the starting party and every member received) and visions received."""
+        members = set(self.starting_party)
+        visions = set()
+        for item in self.items_received:
+            info = ITEMS.get(item.item)
+            if info and info["category"] == "party":
+                members.add(info["game_id"])
+            elif info and info["category"] == "vision":
+                visions.add(info["game_id"])
+        return len(members), len(visions)
+
+    def write_lock(self) -> None:
+        """Round 58: tells the mod how far the final boss lock is, each time that changes."""
+        if self.session_key is None or not os.path.isdir(self.mod_folder):
+            return
+        characters, visions = self.lock_counts()
+        line = (characters, self.lock_needs[0], visions, self.lock_needs[1])
+        if line != self.lock_written:
+            self.write_line("cfg", "finalboss", *line)
+            self.lock_written = line
 
     def shards_received(self) -> int:
         return sum(1 for item in self.items_received if item.item == SHARD_ITEM)
@@ -296,6 +322,9 @@ class FFResonanceContext(CommonContext):
             self.goal = int(slot_data.get("goal_story_checkpoint", 8050))
             self.goal_kind = str(slot_data.get("goal", "story_checkpoint"))    # a seed before world 0.7.0 has no "goal"
             self.shards_needed = int(slot_data.get("tablet_shards_required", 99))
+            self.starting_party = [int(unit) for unit in slot_data.get("starting_party") or []]
+            self.lock_needs = (int(slot_data.get("final_boss_characters", 0)), int(slot_data.get("final_boss_visions", 0)))
+            self.lock_written = None
             # The 0.6.7 release never stores RoomInfo's seed name (seed_name stays None), so it is
             # captured above; later versions also keep it in server_seed_name.
             seed = getattr(self, "server_seed_name", None) or self.room_seed_name or self.seed_name
@@ -337,6 +366,7 @@ async def game_loop(ctx: FFResonanceContext) -> None:
         try:
             if ctx.session_key is not None and ctx.slot is not None:
                 ctx.write_new_items()
+                ctx.write_lock()
                 checks, story = ctx.read_new_output()
                 if checks:
                     sent = await ctx.check_locations(checks)

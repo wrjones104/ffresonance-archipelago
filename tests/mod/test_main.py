@@ -129,6 +129,8 @@ function G.EnsureOptionRows(current)
 end
 function G.AddOptionRows(say, current) return true, "rows", 6 end
 function G.ShowChestIcons(on) G.chestIcons = on; return 0 end
+G.TOWER_TOP = { map = 3280, x = 15890, y = -55300, reach = 500 }
+function G.SealTowerTop(sealed) G.sealed = sealed; return 0 end
 function G.UnlockVision() return "ok", "" end
 function G.HasVision(id) return (G.owned or {})[id] == true end
 function G.AddUnit() return "ok", G.unitDetail or "in the active party" end
@@ -1427,6 +1429,36 @@ tick(12)
 assert "item30002x1" not in list(G.log.values()), "a save that holds the saddle gets none"
 assert G.chestIcons is False, "the yaml said no"
 print("chocobo and chest icons: ok")
+
+# Round 58: the tower's last climb stays sealed while the client's counts are short, and says so near it
+inbox("seed\tS58:0:1\ncfg\topenworld\t1\ncfg\tfinalboss\t2\t6\t3\t12\n", "w")
+L, G = boot5("SD_LOCK", "0", {})
+L.globals().G = G
+L.execute(SCALE_STUB)
+L.execute(CAPTURE)
+L.execute("function G.HeldCount(id) return 1 end")
+L.execute("function G.PlayerPose() return { x = G.poseX or 0, y = -55300 } end")
+G.chests = L.table()
+G.story = 8000
+G.map = 1000
+L.execute("function G.CurrentMap() return G.map end")
+tick(12)
+assert G.sealed is None, "nothing outside the tower"
+G.map = 3280
+G.poseX = 0
+tick(12)
+assert G.sealed is True
+assert not any("way to the top is sealed" in x for x in logs()), "not said far away"
+G.poseX = 15000
+tick(6)
+said = [x for x in logs() if "way to the top is sealed" in x]
+assert len(said) == 1 and "characters 2/6, visions 3/12" in said[0], said
+tick(6)
+assert len([x for x in logs() if "way to the top is sealed" in x]) == 1, "once per approach"
+inbox("cfg\tfinalboss\t6\t6\t12\t12\n", "a")
+tick(6)
+assert G.sealed is False, "open once both counts are met"
+print("final boss lock: ok")
 
 # Round 49: ffrap_bossfight arms, logs a win once, can be turned off, and arms again on a new save
 inbox("seed\tS50:0:1\ncfg\topenworld\t1\n", "w")

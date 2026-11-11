@@ -4473,4 +4473,38 @@ function G.ShowChestIcons(on, say)
     return changed
 end
 
+-- Round 58: the final boss lock. In the Crystal Tower (map 3280) the climb to the top floor
+-- (3281) starts at an interact trigger, gimmick 133, whose event is
+-- C08_Dng_10Cry_41_CanNotRetrun_01: the point of no return. The lock goes before it, or a player
+-- without the counts could be stuck upstairs. With its collision off the trigger cannot be
+-- reached, so the prompt never comes; on again, it works as the game made it. It is found by its
+-- position in gimmicks.tsv. Returns 1 when it changed, 0 when it was already right, or nil and
+-- why (with the nearest trigger's distance, to fix the position if it is off).
+G.TOWER_TOP = { map = 3280, x = 15890, y = -55300, reach = 500 }
+function G.SealTowerTop(sealed)
+    if G.CurrentMap() ~= G.TOWER_TOP.map then return nil, "not in the Crystal Tower" end
+    local ok, all = pcall(FindAllOf, "BP_MapGimmick_InteractEventTrigger_C")
+    local best, bestDistance
+    for _, a in ipairs(ok and all or {}) do
+        if Alive(a) then
+            local loc
+            pcall(function() loc = a:K2_GetActorLocation() end)
+            if loc then
+                local d = math.sqrt((loc.X - G.TOWER_TOP.x) ^ 2 + (loc.Y - G.TOWER_TOP.y) ^ 2)
+                if not bestDistance or d < bestDistance then best, bestDistance = a, d end
+            end
+        end
+    end
+    if not best or bestDistance > G.TOWER_TOP.reach then
+        return nil, "the last climb's trigger was not found (nearest trigger " ..
+            (bestDistance and string.format("%.0f away", bestDistance) or "none") .. ")"
+    end
+    local collides
+    pcall(function() collides = best:GetActorEnableCollision() end)
+    if collides == not sealed then return 0 end
+    gateStep((sealed and "seal" or "open") .. " the tower's last climb")
+    pcall(function() best:SetActorEnableCollision(not sealed) end)
+    return 1
+end
+
 return G

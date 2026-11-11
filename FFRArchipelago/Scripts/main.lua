@@ -50,7 +50,7 @@
 -- follows the save slots the linked game is saved to. While any other save is loaded, the mod
 -- grants nothing, reports nothing and leaves the chests vanilla.
 
-local VERSION = "0.43.0"
+local VERSION = "0.44.0"
 local PROTOCOL = 2        -- the bridge protocol; the apworld's MOD_PROTOCOL
 
 local MOD_DIR = (debug.getinfo(1, "S").source:gsub("^@", ""):gsub("\\", "/"):match("^(.*/)Scripts/[^/]+$"))
@@ -351,6 +351,7 @@ local function newSession(key)
     state.syncPending = true
     state.slots, state.slotItems, state.bindPending, state.live = {}, {}, false, nil
     state.scouts = {}
+    seedCfg.finalboss = nil
     save.obj = nil     -- judge the loaded save again for this session
     saveState()
     local f = io.open(bridge.outPath, "w")
@@ -381,6 +382,9 @@ local function readInbox(initial)
             seedCfg.crystals = f[3] == "1"
         elseif f[1] == "cfg" and f[2] == "chesticons" then
             seedCfg.chesticons = f[3] == "1"
+        elseif f[1] == "cfg" and f[2] == "finalboss" then
+            seedCfg.finalboss = { characters = tonumber(f[3]) or 0, needCharacters = tonumber(f[4]) or 0,
+                                  visions = tonumber(f[5]) or 0, needVisions = tonumber(f[6]) or 0 }
         elseif f[1] == "cfg" and f[2] == "party" then
             local party = {}
             for id in (f[3] or ""):gmatch("%d+") do party[#party + 1] = tonumber(id) end
@@ -1106,6 +1110,7 @@ local scaleTick   -- set with the ffrap_scale command, below
 local settingsTick   -- the player's settings (ffrap_set), below
 local menuTick       -- our rows in the Options screen, below
 local seedExtrasTick -- the Chocobo and the chest icons, below
+local finalLockTick  -- the Crystal Tower's last climb, below
 local bossTest = { group = nil }   -- ffrap_bossfight, below: the group armed, and its tick
 
 -- Continent locks (game.ContinentSync): while the switch is on, the world map keeps its lock
@@ -1822,6 +1827,39 @@ end
 -- and the chest icons on the mini-map when the seed's yaml asks for them (any other save gets
 -- the game's own icons back).
 local CHOCOBO_SADDLE = 30002
+
+-- Round 58: the final boss lock (Worlds Collide style, the user's choice). The client counts the
+-- characters and visions received and writes them in a `cfg finalboss` line; while either count
+-- is short, the Crystal Tower's point of no return stays sealed (game.SealTowerTop), and walking
+-- up to it says what is missing, once per approach. A seed with no line (the shard goal, an old
+-- seed) is never sealed.
+local lockLogged, lockNoticed = nil, false
+local LOCK_NOTICE_NEAR, LOCK_NOTICE_AGAIN = 1200, 2500
+finalLockTick = function()
+    if game.CurrentMap() ~= game.TOWER_TOP.map then
+        lockNoticed = false
+        return
+    end
+    local lock = seedCfg.finalboss
+    local short = lock and sessionSave() and (lock.characters < lock.needCharacters or lock.visions < lock.needVisions)
+    local changed, why = game.SealTowerTop(short and true or false)
+    local text = lock and string.format("characters %d/%d, visions %d/%d", lock.characters, lock.needCharacters,
+        lock.visions, lock.needVisions) or "no lock for this seed"
+    local line = changed == nil and ("final boss lock: " .. tostring(why)) or
+        ("final boss lock: " .. (short and "sealed" or "open") .. " (" .. text .. ")")
+    if line ~= lockLogged then log(line) end
+    lockLogged = line
+    if not short then return end
+    local pose = game.PlayerPose()
+    if not pose then return end
+    local d = math.sqrt((pose.x - game.TOWER_TOP.x) ^ 2 + (pose.y - game.TOWER_TOP.y) ^ 2)
+    if d < LOCK_NOTICE_NEAR and not lockNoticed then
+        lockNoticed = true
+        notify("The way to the top is sealed. Archipelago needs " .. text)
+    elseif d > LOCK_NOTICE_AGAIN then
+        lockNoticed = false
+    end
+end
 local saddleSave, iconsLogged = nil, nil
 seedExtrasTick = function()
     local seedSave = seedCfg.openworld and sessionSave() and (game.StoryCounter() or 0) >= game.OPEN_START.story
@@ -1832,6 +1870,7 @@ seedExtrasTick = function()
             log("chocobo: saddle given (" .. tostring(code) .. ", " .. tostring(detail) .. ")")
         end
     end
+    pcall(finalLockTick)
     local want = seedCfg.chesticons and sessionSave()
     local changed, why = game.ShowChestIcons(want, log)
     local line = changed == nil and ("chest icons: " .. tostring(why)) or

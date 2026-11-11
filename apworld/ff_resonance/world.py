@@ -68,6 +68,8 @@ class FFResonanceWorld(World):
         self.vanilla_items: list[int] = []
         self.starting_party: list[int] = []
         self.starting_continent = ""
+        self.final_boss_characters = 0
+        self.final_boss_visions = 0
 
     def generate_early(self) -> None:
         if self.options.goal.value == ffr_options.Goal.option_tablet_shards:
@@ -81,6 +83,14 @@ class FFResonanceWorld(World):
                 unit = self.random.choice([u for u in ALL_PARTY_MEMBERS if u not in self.starting_party and
                                            u not in [p.value for p in picks[:self.options.starting_roster.value]]])
             self.starting_party.append(unit)
+        # Round 58: the final boss lock (Worlds Collide style). It belongs to the story goal: the
+        # shard goal never needs the last fight. A count the pool cannot meet is lowered to what
+        # it can.
+        if self.options.goal.value == ffr_options.Goal.option_story_checkpoint:
+            most_characters = len(ALL_PARTY_MEMBERS) if self.options.shuffle_party_members else len(self.starting_party)
+            most_visions = len(items.item_name_groups["Visions"]) if self.options.shuffle_visions else 0
+            self.final_boss_characters = min(self.options.final_boss_characters.value, most_characters)
+            self.final_boss_visions = min(self.options.final_boss_visions.value, most_visions)
 
     def create_regions(self) -> None:
         locations.create_regions_and_locations(self)
@@ -102,5 +112,7 @@ class FFResonanceWorld(World):
             "mod_protocol": MOD_PROTOCOL,
             "open_world": True,
             "starting_party": self.starting_party,
+            "final_boss_characters": self.final_boss_characters,
+            "final_boss_visions": self.final_boss_visions,
             "starting_continent": self.starting_continent,
         }

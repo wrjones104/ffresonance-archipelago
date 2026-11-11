@@ -468,9 +468,9 @@ World-map shinies verified as locations. Multiple crashes observed across differ
   - At the goal, the server sent the rest of the player's items (about 350) in 37 seconds, with no trouble. The shard count reads past the goal, such as `Tablet Shard (99/20)`.
   - The airship's shadow list gains 14 null entries each time the player lands on the world map and boards again (`126 -> 210, 84 null` over six landings). No crash or slowdown seen. To look at (open_world.md, section 4).
 
-## Round 57 test plan (mod 0.43.0, world 0.12.0)
+## Round 57 test plan (mod 0.44.0, world 0.13.0)
 
-**Install:** copy `FFRArchipelago/Scripts`, and copy `dist/ff_resonance.apworld` into Archipelago's `custom_worlds`. Generate a new seed. The yaml has a new option, `minimap_chest_icons` (on by default). Keep the TreasureMinimap pak out of `~mods`.
+**Install:** copy `FFRArchipelago/Scripts`, and copy `dist/ff_resonance.apworld` into Archipelago's `custom_worlds`. Generate new seeds. The yaml has new options: `minimap_chest_icons` (on by default), and for the story goal `final_boss_characters` (default 6) and `final_boss_visions` (default 12). Keep the TreasureMinimap pak out of `~mods`.
 
 **1. The AP rows, with no command.** Open Options at the title screen: **are the AP rows there?** Load a save, open Options, change map, open it again. The log says `menu: rows added ...` each time the mod had to put them back.
 
@@ -480,6 +480,9 @@ World-map shinies verified as locations. Multiple crashes observed across differ
 
 **4. Research Center Ruins.** Universal Tracker should show the level 1 rooms only with the level 1 card, and the level 2 rooms only with both cards.
 
-**5. The final boss goal.** Generate a second seed with `goal: story_checkpoint` (8050). Save before the Crystal Tower's last fight, then beat the final boss. **Does the client send the goal?** Send the `story ... -> ...` lines of the log: they show which checkpoints the ending passes.
+**5. The final boss lock and goal.** Generate a seed with `goal: story_checkpoint`. To reach the end quickly, low counts help, such as `final_boss_characters: 3` and `final_boss_visions: 2`.
+- Go into the Crystal Tower before you have the counts. The log says `final boss lock: sealed (characters ..., visions ...)`. **Near the last climb, does the notice say what is missing, and does the "can not return" prompt stay away?** If the log says `the last climb's trigger was not found (nearest trigger ... away)`, send that line.
+- Get the counts (Universal Tracker shows the goal in logic). The log says `final boss lock: open`. **Does the prompt come back?**
+- Save before the last fight, then beat the final boss. **Does the client send the goal?** Send the `story ... -> ...` lines: they show which checkpoints the ending passes.
 
 Send the `[FFRAP]` lines of the log.

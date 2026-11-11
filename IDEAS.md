@@ -817,6 +817,13 @@ The "Back" prompt that menus and the chest pop-up show at the bottom right also 
 - How to block the tower. It has a landing point and an exit, so it needs a lock like the continents.
 - How to show the objectives in game. The item feed could count them, as it counts shards.
 
+**Round 58: the first objectives, characters and visions (the user's choice, in the style of Worlds Collide).** World 0.13.0 adds `final_boss_characters` (default 6 of 8, the starting party counts) and `final_boss_visions` (default 12 of 26), for the `story_checkpoint` goal only. A count the pool cannot meet is lowered (party members or visions not shuffled). The goal's logic needs them. The client counts what it has received and writes a `cfg finalboss` line each time that changes. Mod 0.44.0 seals the tower's point of no return until both are met:
+- The climb to the top floor (map 3281) starts at an interact trigger on map 3280, gimmick 133, event `C08_Dng_10Cry_41_CanNotRetrun_01`. The lock goes there, before the point of no return, so a player without the counts is never stuck upstairs.
+- The trigger's collision goes off, so its prompt cannot come; on again once the counts are met. Spawned blockers (idea 16) would also work, but this leaves nothing in the world.
+- Walking near it says what is missing: "The way to the top is sealed. Archipelago needs characters 4/6, visions 9/12".
+- From 3281 an exit leads to an event map (5191), likely the last fight. The tower's own story triggers: `C08_802_01` at story 8000 by the entrance and `C08_811_02` at 8030 near the point of no return.
+- Next objective kinds: continents unlocked, Tablet Shards, bosses or espers defeated; later "N of these", as Worlds Collide has.
+
 ## 25. Making the run more than picking up checks
 
 **The concern (round 49, 2026-11-09):** the game feels like exploration only: go to an area, get the chests, go to the next. Battles in between are mostly grinding. The user pictures something like FF4 Free Enterprise, where bosses are the real fun and your current setup is what makes each one a puzzle. The hard part is MRP, which needs battles. The likely answer is sliders: grind as much as you like, then turn encounters off until you want more (idea 18).

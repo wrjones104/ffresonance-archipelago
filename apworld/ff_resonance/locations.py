@@ -99,6 +99,11 @@ def create_regions_and_locations(world: FFResonanceWorld) -> None:
     else:
         goal_region = regions[FINAL_AREA]
         goal = FFResonanceLocation(player, GOAL_EVENT, None, goal_region)
+        # The final boss lock: the starting party counts, so only the members beyond it are items.
+        members = max(0, world.final_boss_characters - len(world.starting_party))
+        visions = world.final_boss_visions
+        goal.access_rule = lambda state: (state.has_group("Party Members", player, members) and
+                                          state.has_group("Visions", player, visions))
     goal.place_locked_item(FFResonanceItem(VICTORY, ItemClassification.progression, None, player))
     goal_region.locations.append(goal)
     world.multiworld.completion_condition[player] = lambda state: state.has(VICTORY, player)

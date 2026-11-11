@@ -65,6 +65,27 @@ async def main():
     ctx.max_story = 8020
     check("the story goal", ctx.goal_reached())
 
+    # Round 58: the final boss lock's counts go to the mod each time they change
+    from worlds.ff_resonance.data import ITEMS, UNIT_ITEM_BASE
+    vision_ids = sorted(ap_id for ap_id, info in ITEMS.items() if info["category"] == "vision")
+    connect(ctx, "G4", {"goal": "story_checkpoint", "starting_party": [1001, 1002],
+                        "final_boss_characters": 4, "final_boss_visions": 2})
+    lock_lines = lambda: [line for line in open(in_path, encoding="utf-8").read().splitlines() if line.startswith("cfg\tfinalboss")]
+    ctx.items_received = []
+    ctx.write_lock()
+    check("the starting party counts", lock_lines()[-1] == "cfg\tfinalboss\t2\t4\t0\t2")
+    ctx.write_lock()
+    check("written once while nothing changes", len(lock_lines()) == 1)
+    ctx.items_received = [NetworkItem(UNIT_ITEM_BASE + 1003, 1, 1, 0), NetworkItem(UNIT_ITEM_BASE + 1001, 1, 1, 0),
+                          NetworkItem(vision_ids[0], 1, 1, 0), NetworkItem(vision_ids[0], 1, 1, 0)]
+    ctx.write_lock()
+    check("a starter received again and a repeated vision count once", lock_lines()[-1] == "cfg\tfinalboss\t3\t4\t1\t2")
+    connect(ctx, "G5", {"goal": "tablet_shards", "tablet_shards_required": 1})
+    ctx.items_received = [shard(), shard()]
+    ctx.write_new_items()
+    shard_lines = [line for line in open(in_path, encoding="utf-8").read().splitlines() if line.startswith("item")]
+    check("past the goal only the count shows", shard_lines[-1].endswith("Tablet Shard (2)"))
+
     connect(ctx, "G3", {"goal_story_checkpoint": 1130})
     check("a seed before world 0.7.0 has the story goal", ctx.goal_kind == "story_checkpoint" and ctx.goal == 1130)
 

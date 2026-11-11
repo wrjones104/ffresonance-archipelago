@@ -40,6 +40,29 @@ class GoalStoryCheckpoint(Range):
     default = 8050
 
 
+class FinalBossCharacters(Range):
+    """
+    With the story_checkpoint goal: how many party members you must have before the Crystal
+    Tower's last climb opens. Your starting party counts. The way up stays sealed until then.
+    With shuffle_party_members off, only the starting party can count, so this is lowered to it.
+    """
+    display_name = "Final Boss Characters"
+    range_start = 0
+    range_end = 8
+    default = 6
+
+
+class FinalBossVisions(Range):
+    """
+    With the story_checkpoint goal: how many visions you must have received before the Crystal
+    Tower's last climb opens. With shuffle_visions off, this is lowered to 0.
+    """
+    display_name = "Final Boss Visions"
+    range_start = 0
+    range_end = 26
+    default = 12
+
+
 class StartingContinent(Choice):
     """
     The continent you can land on from the start. Every other continent needs its Unlock item,
@@ -184,6 +207,8 @@ class FFResonanceOptions(PerGameCommonOptions):
     goal: Goal
     tablet_shards_required: TabletShardsRequired
     goal_story_checkpoint: GoalStoryCheckpoint
+    final_boss_characters: FinalBossCharacters
+    final_boss_visions: FinalBossVisions
     starting_continent: StartingContinent
     starting_roster: StartingRoster
     starting_character_1: StartingCharacter1
@@ -201,7 +226,7 @@ class FFResonanceOptions(PerGameCommonOptions):
 
 
 option_groups = [
-    OptionGroup("Goal", [Goal, TabletShardsRequired, GoalStoryCheckpoint]),
+    OptionGroup("Goal", [Goal, TabletShardsRequired, GoalStoryCheckpoint, FinalBossCharacters, FinalBossVisions]),
     OptionGroup("Start", [StartingContinent, StartingRoster, StartingCharacter1, StartingCharacter2,
                           StartingCharacter3, StartingCharacter4]),
     OptionGroup("Locations", [IncludeShinies, IncludeTabletShards, IncludeCrystals, ExcludedRegions]),

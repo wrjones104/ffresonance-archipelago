@@ -527,6 +527,26 @@ assert lua("G.ShowChestIcons(true)") == 0, "nothing twice"
 assert lua("G.ShowChestIcons(false)") == 3
 assert lua("treasureEntry.bDefaultDisplay") is False and lua("treasureEntry.bOverrideStatePropertyMap") is False
 assert lua('iconBinding.rows["Field.Object.Interact.Type.Treasure"].TagName:ToString()') == "UI.Map.Icon.Null", "the game's own icon"
+# Round 58: the tower's last climb is sealed by the trigger's collision, found by its position
+L.execute("""
+function trigger(x, y)
+  return { IsValid = function() return true end, HasAnyInternalFlags = function() return false end,
+    HasAnyFlags = function() return false end, collision = true,
+    K2_GetActorLocation = function() return { X = x, Y = y, Z = 0 } end,
+    GetActorEnableCollision = function(self) return self.collision end,
+    SetActorEnableCollision = function(self, on) self.collision = on end }
+end
+farTrigger, lastTrigger = trigger(0, 0), trigger(15900, -55290)
+prevFAO, prevMap = FindAllOf, G.CurrentMap
+function FindAllOf(c) if c == "BP_MapGimmick_InteractEventTrigger_C" then return { farTrigger, lastTrigger } end return nil end
+function G.CurrentMap() return 3280 end""")
+assert lua("G.SealTowerTop(true)") == 1 and lua("lastTrigger.collision") is False and lua("farTrigger.collision") is True
+assert lua("G.SealTowerTop(true)") == 0, "nothing twice"
+assert lua("G.SealTowerTop(false)") == 1 and lua("lastTrigger.collision") is True
+L.execute("function FindAllOf(c) if c == 'BP_MapGimmick_InteractEventTrigger_C' then return { farTrigger } end return nil end")
+missing = list(L.execute("return { G.SealTowerTop(true) }").values())
+assert len(missing) == 1 and "not found" in missing[0] and "away" in missing[0], missing
+L.execute("FindAllOf, G.CurrentMap = prevFAO, prevMap")
 # Round 51: the menu dump lists the option save's entries, ours among them
 lines = list(L.execute("return G.OptionDump()").values())
 assert lines[0] == "CPP_MuchaOptionSaveData: 0 found", lines
