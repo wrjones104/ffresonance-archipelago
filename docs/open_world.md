@@ -89,6 +89,8 @@ The story counter is `Progress[0]`. Every story gate is a condition such as `{pr
 
 World 0.4.0 puts the locks in real seeds: `starting_continent`, and one Unlock item per other continent. Ardra has no locations, so it has no item and stays locked.
 
+Round 56: the airship's shadow list gains 14 null entries each time the player lands and boards again (`126 -> 210, 84 null` over six landings). `ShadowIgnoreAdd` skips them, and no crash or slowdown was seen, but the list keeps growing in a long session. Worth a look: whether the game copies the old list on boarding, and whether the nulls can be dropped.
+
 Still to decide: whether the Crystal Tower needs a lock (it is open in game, and logic treats it as the last area), whether fast travel (flag 34) stays off, and how to block the ships, caves and walking routes between continents, which can still cross a lock. Round 44: Grandshelt and Lanzelt are joined on foot, so a player walked across. The user suggests a gate, or removing the bridges. Not urgent. Round 48, a rough off-line pass over `transitions.tsv`: the maps that are not the world map join all nine continents into one network, so the routes need a real list before the logic can trust the locks.
 
 **Continent bounds (the first estimate, from landing points; superseded by `G.CONTINENTS`):**

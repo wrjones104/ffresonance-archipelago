@@ -460,6 +460,13 @@ World-map shinies verified as locations. Multiple crashes observed across differ
 - **Research Center Ruins (map 3220):** the level 1 card is shiny 32, the level 2 card (33) is behind the level 1 door, and the level 3 card (37) is behind the level 2 door. The level 3 door leads to the White Jade Stone area, with a boss in vanilla.
 - **Scaling strength:** the row works, and the difference shows.
 - **Menu:** the AP rows did not stay; the user typed `ffrap_menu add` every time. With the rows always there, the user wants the settings on any save again.
+- **From the log** (sent after the round):
+  - The rows went in at each save load (`menu: rows added ... 7 option save entries added`), and 50 seconds later `ffrap_menu add` found the table with 15 rows again: the game had loaded it again. That is what mod 0.43.0's check every tick is for.
+  - The palace turn-in takes the shards you hold: at the first chest the bag went from 4 shards to 0 (the next shard was `held 0 -> 1`). Each step counts the shards turned in so far, so the logic's count of shards received matches.
+  - Research Center Ruins, in the order played: card 1 (shiny 32), shard 34, chests 0 and 1, shard 36, chest 3, card 2 (33), chests 5 and 2, shard 35, chest 4, card 3 (37). That is `data/gates.tsv` exactly.
+  - The key card pickups are already reported as checks (`check shiny:3220:32`); they are not locations yet.
+  - At the goal, the server sent the rest of the player's items (about 350) in 37 seconds, with no trouble. The shard count reads past the goal, such as `Tablet Shard (99/20)`.
+  - The airship's shadow list gains 14 null entries each time the player lands on the world map and boards again (`126 -> 210, 84 null` over six landings). No crash or slowdown seen. To look at (open_world.md, section 4).
 
 ## Round 57 test plan (mod 0.43.0, world 0.12.0)
 
