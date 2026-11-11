@@ -228,7 +228,7 @@ Round 57: the lock worked in game, and the goal at 8050 fired too early. The ord
 | `C08_822_05` | | 9000 | |
 | `StaffRoll_Fin` | | 8040 | |
 
-World 0.14.0 renames the goal `final_boss` (`story_checkpoint` still works as its old name) and drops `goal_story_checkpoint`. Mod 0.45.0 writes `won 9056` when flag 40 goes off at story 8050, which happens only after the last win. The client also takes story 9000 as the goal, in case the win was missed.
+World 0.15.0 makes `final_boss` the default goal. World 0.14.0 renames the goal `final_boss` (`story_checkpoint` still works as its old name) and drops `goal_story_checkpoint`. Mod 0.45.0 writes `won 9056` when flag 40 goes off at story 8050, which happens only after the last win. The client also takes story 9000 as the goal, in case the win was missed.
 
 ## 8. What the story used to give, now items
 

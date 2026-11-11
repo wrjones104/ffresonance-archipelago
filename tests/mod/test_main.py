@@ -1428,6 +1428,21 @@ G.story = 8000
 tick(12)
 assert "item30002x1" not in list(G.log.values()), "a save that holds the saddle gets none"
 assert G.chestIcons is False, "the yaml said no"
+
+# Round 58: with `cfg chesticons 2` the icons wait for the Chest Radar's flag
+inbox("seed\tS58c:0:1\ncfg\topenworld\t1\ncfg\tchesticons\t2\n", "w")
+L, G = boot5("SD_RADAR", "0", {})
+L.globals().G = G
+L.execute(SCALE_STUB)
+L.execute("function G.HeldCount(id) return 1 end; function G.GetFlag(i) return i == 1430 and G.radar or false end")
+G.chests = L.table()
+G.story = 8000
+G.radar = False
+tick(12)
+assert G.chestIcons is False, "no radar yet"
+G.radar = True
+tick(12)
+assert G.chestIcons is True, "the radar arrived"
 print("chocobo and chest icons: ok")
 
 # Round 58: the tower's last climb stays sealed while the client's counts are short, and says so near it

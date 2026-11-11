@@ -35,11 +35,11 @@ async def main():
     ctx.start_session()   # a reconnect: the same file, one more client line
     print("INBOX2", open(os.path.join(folder, "ap_in.txt")).read().replace("\t", "|").replace("\n", "/"))
     # The seed's start settings: written once, however often the client reconnects.
-    slot = {"open_world": True, "starting_party": [1007, 1006], "include_tablet_shards": True, "minimap_chest_icons": True}
+    slot = {"open_world": True, "starting_party": [1007, 1006], "include_tablet_shards": True, "minimap_chest_icons": 2}
     ctx.write_config(slot)
     ctx.write_config(slot)
     text = open(os.path.join(folder, "ap_in.txt")).read()
-    print("CONFIG", text.count("cfg\topenworld\t1\n"), text.count("cfg\tparty\t1007,1006\n"), text.count("cfg\tshards\t1\n"), text.count("cfg\tchesticons\t1\n"))
+    print("CONFIG", text.count("cfg\topenworld\t1\n"), text.count("cfg\tparty\t1007,1006\n"), text.count("cfg\tshards\t1\n"), text.count("cfg\tchesticons\t2\n"))
     if ctx.keep_alive_task: ctx.keep_alive_task.cancel()
 asyncio.run(main())
 '''

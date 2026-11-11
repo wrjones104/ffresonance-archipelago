@@ -120,7 +120,10 @@ GENERIC_PLACE_NAMES = {"Dungeon", "Shipyard", "Slums"}
 
 # Progression items (world 0.3.0).
 UNIT_ITEM_BASE = 800_000_000       # AP id of a party member: base + unit id
-CONTINENT_ITEM_BASE = 700_000_000  # AP id of a continent's unlock: base + its event flag
+CONTINENT_ITEM_BASE = 700_000_000  # AP id of an item that turns on an event flag: base + the flag
+# The Chest Radar (world 0.14.0) turns on a flag no condition or talk row in the game uses; the mod
+# shows the mini-map's chest icons once it is on (main.lua, CHEST_RADAR_FLAG).
+CHEST_RADAR_FLAG = 1430
 # Maps with no route on the open world start, so their chests may only hold filler (world 0.4.0).
 # Each is entered only from a story event, or lies behind a map that is: the burning Grandshelt
 # Castle (3020), the Imperial Residences (2113) and Fina's Psyche (3211, 3212). From
@@ -339,6 +342,9 @@ def main() -> None:
             items[ap_id] = {"name": f"{name} Unlock", "kind": "flag", "game_id": continent["flag"], "count": 1,
                             "category": "continent"}
             unlocks[name] = ap_id
+    chest_radar = CONTINENT_ITEM_BASE + CHEST_RADAR_FLAG
+    items[chest_radar] = {"name": "Chest Radar", "kind": "flag", "game_id": CHEST_RADAR_FLAG, "count": 1,
+                          "category": "radar"}
     for r in item_rows:
         item_id, name = int(r["id"]), names[int(r["id"])]
         if r["table"] == "vision":
@@ -399,6 +405,7 @@ def main() -> None:
         f.write("# Continent name -> the AP id of its unlock item\n")
         f.write("CONTINENT_UNLOCKS = " + pprint.pformat(unlocks, width=110, sort_dicts=False) + "\n\n")
         f.write(f"UNIT_ITEM_BASE = {UNIT_ITEM_BASE}\n")
+        f.write(f"CHEST_RADAR = {chest_radar}\n")
         f.write(f"FINAL_AREA = {FINAL_AREA!r}\n")
         f.write(f"OPEN_AREA = {OPEN_AREA!r}\n")
     print(f"{len(chests)} chest locations ({len(kept_chests)} kept vanilla, {len(no_box)} with no box), "

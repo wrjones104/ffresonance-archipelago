@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from Options import Choice, DefaultOnToggle, OptionGroup, OptionSet, PerGameCommonOptions, Range, Toggle
+from Options import Choice, DefaultOnToggle, OptionGroup, OptionSet, PerGameCommonOptions, Range, Visibility
 
 from .data import CHESTS, CRYSTALS, SHINIES, TABLET_SHINIES
 
@@ -8,22 +8,20 @@ from .data import CHESTS, CRYSTALS, SHINIES, TABLET_SHINIES
 class Goal(Choice):
     """
     What completes your seed.
-    tablet_shards: receive the number of Tablet Shards set by tablet_shards_required. This turns
-    on include_tablet_shards. Shards you only hold in game do not count: they must come from
-    Archipelago.
-    final_boss: win the last battle, Rain against Sol at the top of the Crystal Tower. The way
-    up is sealed until you have final_boss_characters and final_boss_visions.
-    story_checkpoint is the old name of final_boss.
+    final_boss: win the last battle at the top of the Crystal Tower. The way up stays sealed until
+    you have the party members and visions that final_boss_characters and final_boss_visions ask for.
+    tablet_shards: receive the number of Tablet Shards set by tablet_shards_required. Only shards
+    received from Archipelago count.
     """
     display_name = "Goal"
     option_tablet_shards = 0
     option_final_boss = 1
     alias_story_checkpoint = 1
-    default = 0
+    default = 1
 
 
 class TabletShardsRequired(Range):
-    """How many of the 99 Tablet Shards you must receive, when the goal is tablet_shards."""
+    """With the tablet_shards goal: how many of the 99 Tablet Shards you must receive."""
     display_name = "Tablet Shards Required"
     range_start = 1
     range_end = 99
@@ -32,9 +30,8 @@ class TabletShardsRequired(Range):
 
 class FinalBossCharacters(Range):
     """
-    With the final_boss goal: how many party members you must have before the Crystal
-    Tower's last climb opens. Your starting party counts. The way up stays sealed until then.
-    With shuffle_party_members off, only the starting party can count, so this is lowered to it.
+    With the final_boss goal: how many party members you need before the way to the top of the
+    Crystal Tower opens. Your starting party counts.
     """
     display_name = "Final Boss Characters"
     range_start = 0
@@ -43,10 +40,7 @@ class FinalBossCharacters(Range):
 
 
 class FinalBossVisions(Range):
-    """
-    With the final_boss goal: how many visions you must have received before the Crystal
-    Tower's last climb opens. With shuffle_visions off, this is lowered to 0.
-    """
+    """With the final_boss goal: how many visions you need before the way to the top of the Crystal Tower opens."""
     display_name = "Final Boss Visions"
     range_start = 0
     range_end = 26
@@ -55,8 +49,8 @@ class FinalBossVisions(Range):
 
 class StartingContinent(Choice):
     """
-    The continent you can land on from the start. Every other continent needs its Unlock item,
-    which the logic places where you can reach it. Weigh the options for a random start.
+    The continent you can land on at the start. Each other continent opens when you receive its
+    Unlock item.
     """
     display_name = "Starting Continent"
     option_grandshelt = 0
@@ -73,8 +67,8 @@ class StartingContinent(Choice):
 
 class StartingRoster(Range):
     """
-    How many party members you start with, from 1 to 4, all at level 1. The rest are in the item pool when
-    shuffle_party_members is on. Weigh the values for a random size, for example {1: 0, 2: 50}.
+    How many party members you start with, all at level 1. With shuffle_party_members on, the
+    others are items you can find.
     """
     display_name = "Starting Roster"
     range_start = 1
@@ -100,7 +94,7 @@ class StartingCharacter(Choice):
 
 
 class StartingCharacter1(StartingCharacter):
-    """The first party member, who leads the party. Weigh the options for a random pick."""
+    """The first party member, who leads the party."""
     display_name = "Starting Character 1"
     default = 1001
 
@@ -123,37 +117,29 @@ class StartingCharacter4(StartingCharacter):
     default = 1004
 
 
-class IncludeShinies(Toggle):
-    """
-    EXPERIMENTAL. Adds the shining spots ("shinies") that hold consumables, equipment or gil as
-    locations: 92, all on the world map, read from the game's own files. A shiny that is a
-    location gives 1 gil, and the check is the real reward. Shinies elsewhere hold Tablet Shards
-    or key items, so they are not locations.
-    """
+# The location options are always on for players; they stay settable for test seeds.
+class IncludeShinies(DefaultOnToggle):
+    """The shining spots on the world map are locations."""
     display_name = "Include Shinies"
+    visibility = Visibility.none
 
 
-class IncludeTabletShards(Toggle):
-    """
-    EXPERIMENTAL. Makes the 99 shinies that hold a Tablet Shard locations, and puts the 99 Tablet
-    Shards in the item pool. Such a shiny gives 1 gil, and the check is the real reward. The
-    tablet_shards goal turns this on.
-    """
+class IncludeTabletShards(DefaultOnToggle):
+    """The shinies that hold a Tablet Shard are locations, and the 99 shards are items."""
     display_name = "Include Tablet Shards"
+    visibility = Visibility.none
 
 
-class IncludeCrystals(Toggle):
-    """
-    EXPERIMENTAL. Makes the 16 crystals in the Sanctums of Light locations. Touching one skips the
-    summoning scene and the questions, and gives its check, which can be anything in the multiworld.
-    """
+class IncludeCrystals(DefaultOnToggle):
+    """The crystals in the Sanctums of Light are locations."""
     display_name = "Include Crystals"
+    visibility = Visibility.none
 
 
 class ExcludedRegions(OptionSet):
     """
-    Regions whose chests and shinies may only hold filler from your own game, never anything
-    another player needs. Use this for areas you cannot go back to, or do not want to play.
+    Regions where you only find your own filler items, never anything another player needs. Use
+    this for areas you do not want to play.
     """
     display_name = "Excluded Regions"
     valid_keys = sorted({loc["region"] for loc in CHESTS + SHINIES + CRYSTALS + TABLET_SHINIES})
@@ -161,35 +147,37 @@ class ExcludedRegions(OptionSet):
 
 class ShufflePartyMembers(DefaultOnToggle):
     """
-    Adds every party member you do not start with to the item pool. One received joins at your
-    party's average level, in the active party when there is room and the roster otherwise.
-    With this off, they never join.
+    The party members you do not start with are items. One you receive joins at your party's
+    average level. With this off, only your starting party plays.
     """
     display_name = "Shuffle Party Members"
 
 
 class ShuffleVisions(DefaultOnToggle):
-    """
-    EXPERIMENTAL. Adds all 26 visions to the item pool. There is no logic for them yet.
-    """
+    """The 26 visions are items. With this off, they are not in the item pool."""
     display_name = "Shuffle Visions"
-
-
-class MinimapChestIcons(DefaultOnToggle):
-    """
-    Shows treasure chests on the mini-map, as icons. The game hides them; this is what the
-    TreasureMinimap mod does, built in. Only on this seed's save.
-    """
-    display_name = "Mini-map Chest Icons"
 
 
 class ShuffleKeyItems(DefaultOnToggle):
     """
-    EXPERIMENTAL. Adds the key items to the item pool, one of each (29): keys, quest items and
-    Colosseum proofs. Left out: artifacts, the DLC items, Magicite, Tablet Shards and the items
-    with no English name. The story still hands out its own. There is no logic for them yet.
+    The key items are items: keys, key cards, quest items and Colosseum proofs. Some doors and
+    chests need them.
     """
     display_name = "Shuffle Key Items"
+
+
+class MinimapChestIcons(Choice):
+    """
+    Treasure chests show as icons on the mini-map.
+    start_with: from the start.
+    item: once you receive the Chest Radar.
+    off: never.
+    """
+    display_name = "Mini-map Chest Icons"
+    option_off = 0
+    option_start_with = 1
+    option_item = 2
+    default = 1
 
 
 @dataclass
@@ -218,7 +206,7 @@ option_groups = [
     OptionGroup("Goal", [Goal, TabletShardsRequired, FinalBossCharacters, FinalBossVisions]),
     OptionGroup("Start", [StartingContinent, StartingRoster, StartingCharacter1, StartingCharacter2,
                           StartingCharacter3, StartingCharacter4]),
-    OptionGroup("Locations", [IncludeShinies, IncludeTabletShards, IncludeCrystals, ExcludedRegions]),
+    OptionGroup("Locations", [ExcludedRegions]),
     OptionGroup("Items", [ShufflePartyMembers, ShuffleVisions, ShuffleKeyItems]),
     OptionGroup("Comfort", [MinimapChestIcons]),
 ]

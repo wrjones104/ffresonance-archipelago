@@ -891,4 +891,6 @@ The "Back" prompt that menus and the chest pop-up show at the bottom right also 
 
 **Round 57: the icons show and stay.** The user asks for more, as FFRS_QoL does: hide a chest's icon once it is opened, and mark shinies and Tablet Shards too. To look at in FFRS_QoL's code.
 
+**Round 58: the Chest Radar (world 0.15.0, mod 0.46.0), at the user's request.** `minimap_chest_icons` is now `start_with` (the default, as before), `item` or `off`. With `item`, a Chest Radar takes the place of one filler item in the pool (classed useful). It is a flag item: it turns on event flag 1430, which nothing in the game uses (1430 to 1449 are free; the boss test uses 1440). The mod shows the icons once the flag is on, so it stays with the save. The name keeps it apart from the airship's Treasure Radar quest.
+
 **Round 57: built as a yaml option.** `minimap_chest_icons` (on by default) goes to the mod in slot data. On the seed's save, mod 0.43.0 writes the Treasure entry as the pak has it (shown, the `TreasureBox` icon, also at the low zoom state) and the icon binding; on any other save it puts back what the assets held. Chests only: the pak also shows `Check` spots and map exits, which may be shinies and doors. Not seen in game yet.

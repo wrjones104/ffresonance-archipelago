@@ -3,18 +3,38 @@ name: Player{number}
 game: Final Fantasy Resonance
 
 Final Fantasy Resonance:
-  # What completes your seed: tablet_shards (receive tablet_shards_required shards) or
-  # final_boss (win the last battle, Rain against Sol).
+  # What completes your seed.
+  # final_boss: win the last battle at the top of the Crystal Tower.
+  # tablet_shards: receive tablet_shards_required Tablet Shards.
   goal: final_boss
-  tablet_shards_required: 50
 
-  # With the final_boss goal, the Crystal Tower's last climb stays sealed until you have this many
-  # party members (your starting party counts) and visions.
+  # With the final_boss goal, the way to the top of the Crystal Tower stays sealed until you have
+  # this many party members (your starting party counts) and visions.
   final_boss_characters: 6
   final_boss_visions: 12
 
-  # EXPERIMENTAL: the shinies seen so far become locations. They still give their vanilla item.
-  include_shinies: false
+  # With the tablet_shards goal: how many of the 99 Tablet Shards you must receive.
+  tablet_shards_required: 50
 
-  # Regions whose locations may only hold your own filler, e.g. ['Crystal Tower'].
+  # The continent you can land on at the start: grandshelt, lanzelt, kolobos, dirnado, olderion,
+  # zoldaad, mysidia, gronoa or pharm. Each other continent opens when you receive its Unlock item.
+  starting_continent: grandshelt
+
+  # How many party members you start with (1 to 4), and who. Only the first starting_roster count.
+  # Choices: rain, lasswell, fina, lid, nichol, archwitch_fina, jake, sakura.
+  starting_roster: 2
+  starting_character_1: rain
+  starting_character_2: lasswell
+  starting_character_3: fina
+  starting_character_4: lid
+
+  # Regions where you only find your own filler items, e.g. ['Crystal Tower'].
   excluded_regions: []
+
+  # The party members you do not start with, the 26 visions, and the key items are items you can find.
+  shuffle_party_members: true
+  shuffle_visions: true
+  shuffle_key_items: true
+
+  # Treasure chests on the mini-map: start_with, item (once you receive the Chest Radar) or off.
+  minimap_chest_icons: start_with

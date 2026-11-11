@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 from BaseClasses import Item, ItemClassification
 from Options import OptionError
 
-from .data import CHESTS, CONTINENT_UNLOCKS, ITEMS, PROGRESSION, UNIT_ITEM_BASE
+from .data import CHEST_RADAR, CHESTS, CONTINENT_UNLOCKS, ITEMS, PROGRESSION, UNIT_ITEM_BASE
 
 if TYPE_CHECKING:
     from .world import FFResonanceWorld
@@ -28,6 +28,7 @@ CLASSIFICATIONS = {
     "vision": ItemClassification.progression,
     "key": ItemClassification.progression,
     "continent": ItemClassification.progression,
+    "radar": ItemClassification.useful,
 }
 
 item_name_groups: dict[str, set[str]] = {
@@ -78,10 +79,12 @@ def create_all_items(world: FFResonanceWorld) -> None:
     """
     pool_ids = list(world.vanilla_items)
     extra = progression_ids(world)
+    if world.options.minimap_chest_icons.value == world.options.minimap_chest_icons.option_item:
+        extra.append(CHEST_RADAR)
     filler_at = [i for i, ap_id in enumerate(pool_ids) if ITEMS[ap_id]["category"] in FILLER_CATEGORIES]
     if len(extra) > len(filler_at):
-        raise OptionError(f"{world.player_name}: {len(extra)} progression items, but only {len(filler_at)} "
-                          f"filler items to replace. Turn on include_shinies, or turn off a shuffle option.")
+        raise OptionError(f"{world.player_name}: {len(extra)} items to add, but only {len(filler_at)} "
+                          f"filler items to replace. Turn off a shuffle option.")
     for i in sorted(world.random.sample(filler_at, len(extra)), reverse=True):
         pool_ids.pop(i)
     pool = [create_item(world, ITEMS[ap_id]["name"]) for ap_id in pool_ids + extra]

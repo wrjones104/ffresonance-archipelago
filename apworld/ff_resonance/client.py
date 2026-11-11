@@ -178,7 +178,8 @@ class FFResonanceContext(CommonContext):
         wanted.append(("cfg", "shinies", int(bool(slot_data.get("include_shinies")))))
         wanted.append(("cfg", "crystals", int(bool(slot_data.get("include_crystals")))))
         wanted.append(("cfg", "shards", int(bool(slot_data.get("include_tablet_shards")))))
-        wanted.append(("cfg", "chesticons", int(bool(slot_data.get("minimap_chest_icons")))))
+        # 0 off, 1 from the start, 2 once the Chest Radar arrives (a seed before 0.14.0 sent true or false)
+        wanted.append(("cfg", "chesticons", int(slot_data.get("minimap_chest_icons") or 0)))
         party = slot_data.get("starting_party") or []
         if party:
             wanted.append(("cfg", "party", ",".join(str(unit) for unit in party)))

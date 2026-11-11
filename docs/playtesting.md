@@ -481,16 +481,21 @@ World-map shinies verified as locations. Multiple crashes observed across differ
   - The airship's shadow list gained 23 nulls per landing this time (`134 -> 249, 115 null` over five landings).
 - **Scratchpad:** Mobliz Shipyard (maps 3060 to 3062): two of three elevators do not work, so chests 1 and 3 and shards 71 and 79 cannot be reached, with a boss there too, it seems. Mt. Thunderclap: the Liquid Thunder symbol on the map starts a boss battle when touched, a model for boss checks (screenshot in `.reference`).
 
-## Round 58 test plan (mod 0.45.0, world 0.14.0)
+## Round 58 test plan (mod 0.46.0, world 0.15.0)
 
-**Install:** copy `FFRArchipelago/Scripts`, and copy `dist/ff_resonance.apworld` into Archipelago's `custom_worlds`. Generate a new seed. In the yaml, `goal: story_checkpoint` is now `goal: final_boss` (the old name still works), and `goal_story_checkpoint` is gone: delete it from your yaml.
+**Install:** copy `FFRArchipelago/Scripts`, and copy `dist/ff_resonance.apworld` into Archipelago's `custom_worlds`. Generate a new seed from the new `apworld/Final Fantasy Resonance.yaml` (or check your own against it):
+- `goal: final_boss` is the default now (`story_checkpoint` still works as its old name). `goal_story_checkpoint` is gone: delete it.
+- Shinies, crystals and Tablet Shards are always locations now, and hidden from the template. Delete `include_shinies`, `include_crystals` and `include_tablet_shards` from your yaml, or set them to true.
+- `minimap_chest_icons` takes `start_with`, `item` or `off`. Use `item` for this round.
 
-**1. The goal on the last win.** Use `goal: final_boss` with low counts, such as `final_boss_characters: 3` and `final_boss_visions: 2`. Save on the last floor (story 8050). **Does reaching 8050 leave the goal unsent?** Beat Sol with Rain. The log says `the last battle is won (battle group 9056, flag 40 off)`. **Does the client send the goal then, before the ending's scenes?** If it comes only at the "Fin" screen (story 9000), send the log: flag 40 did not go off.
+**1. The Chest Radar.** With `minimap_chest_icons: item`, chests are not on the mini-map at first. **Do the icons show once `Received Chest Radar` comes in, and stay after a map change and a reload?** The log says `chest icons on: ... fields written`.
 
-**2. Research Center Ruins** (from round 57). Universal Tracker should show the level 1 rooms only with the level 1 card, and the level 2 rooms only with both cards.
+**2. The goal on the last win.** Use low counts, such as `final_boss_characters: 3` and `final_boss_visions: 2`. Save on the last floor (story 8050). **Does reaching 8050 leave the goal unsent?** Beat Sol with Rain. The log says `the last battle is won (battle group 9056, flag 40 off)`. **Does the client send the goal then, before the ending's scenes?** If it comes only at the "Fin" screen (story 9000), send the log: flag 40 did not go off.
 
-**3. Quieter log.** `menu: rows added` should show once per run, and `the last climb's trigger was not found` once per visit to the tower.
+**3. Research Center Ruins** (from round 57). Universal Tracker should show the level 1 rooms only with the level 1 card, and the level 2 rooms only with both cards.
 
-**4. Optional: a Mobliz Shipyard elevator.** Stand next to an elevator that does not work and run `ffrap_inspect BP_MapGimmick_Floor_Elevator_Interact_002_C`. Send the output: it may show what the elevator waits for.
+**4. Quieter log.** `menu: rows added` should show once per run, and `the last climb's trigger was not found` once per visit to the tower.
+
+**5. Optional: a Mobliz Shipyard elevator.** Stand next to an elevator that does not work and run `ffrap_inspect BP_MapGimmick_Floor_Elevator_Interact_002_C`. Send the output: it may show what the elevator waits for.
 
 Send the `[FFRAP]` lines of the log.
