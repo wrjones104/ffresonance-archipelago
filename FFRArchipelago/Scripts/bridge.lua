@@ -20,6 +20,7 @@
 --     hello <mod version>                         the mod started
 --     check <location key>                        e.g. chest:2031:7
 --     story <counter>                             the story counter changed
+--     won <battle group>                          a battle that matters was won: 9056, the last one (0.45.0)
 --     applied <index>                             item <index> was handled
 --
 -- The client may rewrite ap_in.txt from the start (for example after it reconnects and the

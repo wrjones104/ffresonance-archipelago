@@ -3,9 +3,15 @@ name: Player{number}
 game: Final Fantasy Resonance
 
 Final Fantasy Resonance:
-  # The story checkpoint that completes your goal (1020 to 8050; the thousands digit is the
-  # chapter). 1130 makes a short test seed.
-  goal_story_checkpoint: 8050
+  # What completes your seed: tablet_shards (receive tablet_shards_required shards) or
+  # final_boss (win the last battle, Rain against Sol).
+  goal: final_boss
+  tablet_shards_required: 50
+
+  # With the final_boss goal, the Crystal Tower's last climb stays sealed until you have this many
+  # party members (your starting party counts) and visions.
+  final_boss_characters: 6
+  final_boss_visions: 12
 
   # EXPERIMENTAL: the shinies seen so far become locations. They still give their vanilla item.
   include_shinies: false

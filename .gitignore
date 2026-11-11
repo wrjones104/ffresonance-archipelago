@@ -24,3 +24,6 @@ dist/
 /dump/
 tools/dump_game/bin/
 tools/dump_game/obj/
+
+# References for local development
+.reference

@@ -34,8 +34,8 @@ The story counter is `Progress[0]`. Every story gate is a condition such as `{pr
 | 4250 | The airship appears on the world map (`DT_MapAirShip`, `spawnCondition`) |
 | 5020 | World map exits open to Mysidia, Sunioo, the Nameless Ruins, the Tower of Mysidia, Jotunn Cave, Salome Cave and three Sanctums |
 | 7090 | The world map exit to the Crystal Tower opens |
-| 8050 | After the last boss (Sol). The world's goal today |
-| 9000 | The ending sets this (event `C08_822_05`, before the staff roll). Chapter 9 in `DT_ChapterData` is "Epilogue". This is the cleared state |
+| 8050 | After the first Sol fight (battle group 9053), before the last floor (round 57). The goal up to world 0.13.0 |
+| 9000 | The ending sets this (event `C08_822_05`, before the staff roll; seen in round 57). The staff roll then sets 8040 again (`StaffRoll_Fin`). Chapter 9 in `DT_ChapterData` is "Epilogue". This is the cleared state |
 | over 10000 | Tested in 6 places only (airship deck variants). Probably unused |
 
 **Story blockers mostly close for good.** Of the map blockers with a story condition, most test `<` or `==`: they stand only during one story scene. For example, 42 of the 47 `BP_MapGimmick_NoEntry_C` zones with a story condition are like that. At 9000 nearly all of them are gone. The few that open later (such as `{progress:0}>=4000` in the Earth Shrine) are open at 9000 too.
@@ -213,6 +213,22 @@ Round 48: no seed has been finished yet. The only goal in the apworld was `goal_
 Round 49 (world 0.7.0): the default goal is `tablet_shards`, with `tablet_shards_required` (default 50 of 99). It is a stopgap that needs nothing from the story. It turns on `include_tablet_shards`. The client counts the shards it received, so spending or losing one in game does not matter. Only the shards the goal needs are progression items. The planned goal is the Crystal Tower's final boss, behind objectives (IDEAS.md, idea 24).
 
 Round 58 (world 0.13.0, mod 0.44.0): with the `story_checkpoint` goal, the tower's point of no return stays sealed until the player has `final_boss_characters` party members (default 6, the starting party counts) and `final_boss_visions` visions (default 12) from Archipelago. The goal's logic needs the same counts (IDEAS.md, idea 24).
+
+Round 57: the lock worked in game, and the goal at 8050 fired too early. The order after the point of no return, from `DT_TalkEventData_Chapter08` and `DT_BattleGroup`:
+
+| Row | Battle group | Story | Flag 40 |
+|---|---|---|---|
+| `C08_811_02` | | 8040 | on |
+| `C08_812_01` | 9053, Sol | | on |
+| `C08_813_02_A` (after the win) | | 8050 | |
+| `C08_815_01` | 9054, the Chaos of Darkness, first form | | |
+| `C08_817_01` | 9055, second form | | |
+| `C08_819_04` | 9056, Rain alone against Sol | | |
+| `C08_821_01` (after the win) | | | off |
+| `C08_822_05` | | 9000 | |
+| `StaffRoll_Fin` | | 8040 | |
+
+World 0.14.0 renames the goal `final_boss` (`story_checkpoint` still works as its old name) and drops `goal_story_checkpoint`. Mod 0.45.0 writes `won 9056` when flag 40 goes off at story 8050, which happens only after the last win. The client also takes story 9000 as the goal, in case the win was missed.
 
 ## 8. What the story used to give, now items
 

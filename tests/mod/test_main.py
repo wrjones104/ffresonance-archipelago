@@ -1455,10 +1455,34 @@ said = [x for x in logs() if "way to the top is sealed" in x]
 assert len(said) == 1 and "characters 2/6, visions 3/12" in said[0], said
 tick(6)
 assert len([x for x in logs() if "way to the top is sealed" in x]) == 1, "once per approach"
+# Round 57: the trigger is loaded only near the climb; its absence is logged once per visit
+L.execute("""function G.SealTowerTop(sealed) G.sealed = sealed
+  if G.towerFar then return nil, "the last climb's trigger was not found" end return 0 end""")
+for far in (True, False, True, False):
+    G.towerFar = far
+    tick(6)
+assert len([x for x in logs() if "trigger was not found" in x]) == 1, logs()
+assert len([x for x in logs() if "final boss lock: sealed" in x]) == 1, logs()
+# Round 57: the menu rows went back in every few seconds; only the first time is logged
+G.menuRowsIn = False
+tick(2)
+assert G.menuAdds >= 2 and len([x for x in logs() if "rows added" in x]) == 1, logs()
 inbox("cfg\tfinalboss\t6\t6\t12\t12\n", "a")
 tick(6)
 assert G.sealed is False, "open once both counts are met"
 print("final boss lock: ok")
+
+# Round 58: the last battle is won when flag 40 goes off at story 8050; reported once as `won 9056`
+L.execute("G.flag40 = true; local old = G.GetFlag; G.GetFlag = function(i) if i == 40 then return G.flag40 end return old and old(i) end")
+G.story = 8050
+tick(4)
+assert "won\t9056" not in read("ap_out.txt"), "flag 40 is on until the win"
+G.flag40 = False
+tick(4)
+assert read("ap_out.txt").count("won\t9056") == 1, read("ap_out.txt")
+tick(4)
+assert read("ap_out.txt").count("won\t9056") == 1, "once"
+print("last battle: ok")
 
 # Round 49: ffrap_bossfight arms, logs a win once, can be turned off, and arms again on a new save
 inbox("seed\tS50:0:1\ncfg\topenworld\t1\n", "w")

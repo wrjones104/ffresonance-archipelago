@@ -71,7 +71,7 @@ class TestDefault(FFResonanceTestBase):
 
     def test_slot_data(self) -> None:
         slot_data = self.world.fill_slot_data()
-        self.assertEqual(slot_data["goal_story_checkpoint"], 8050)
+        self.assertEqual(slot_data["goal"], "final_boss")
         self.assertEqual(slot_data["mod_protocol"], 2)
         self.assertEqual(slot_data["starting_party"], [1001, 1002])
         self.assertEqual(slot_data["starting_continent"], "Grandshelt")
@@ -133,12 +133,12 @@ class TestExcludedRegions(FFResonanceTestBase):
             self.assertEqual(location.progress_type, LocationProgressType.EXCLUDED)
 
 
-class TestGoalOption(FFResonanceTestBase):
-    options = {"goal_story_checkpoint": 8020}
+class TestGoalOldName(FFResonanceTestBase):
+    options = {"goal": "story_checkpoint"}
 
-    def test_goal_in_slot_data(self) -> None:
-        self.assertEqual(self.world.fill_slot_data()["goal_story_checkpoint"], 8020)
-        self.assertEqual(self.world.fill_slot_data()["goal"], "story_checkpoint")
+    def test_the_old_name_is_the_final_boss(self) -> None:
+        self.assertEqual(self.world.fill_slot_data()["goal"], "final_boss")
+        self.assertNotIn("goal_story_checkpoint", self.world.fill_slot_data())
 
 
 class TestTabletShardGoal(FFResonanceTestBase):

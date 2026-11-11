@@ -824,6 +824,8 @@ The "Back" prompt that menus and the chest pop-up show at the bottom right also 
 - From 3281 an exit leads to an event map (5191), likely the last fight. The tower's own story triggers: `C08_802_01` at story 8000 by the entrance and `C08_811_02` at 8030 near the point of no return.
 - Next objective kinds: continents unlocked, Tablet Shards, bosses or espers defeated; later "N of these", as Worlds Collide has.
 
+**Round 57: the lock works.** With characters 2/4 and visions 0/8 the prompt stayed away and the notice showed; with the counts met it came back. The trigger is loaded only near the climb (from about 38,000 units away the nearest trigger was another one), so mod 0.45.0 logs its absence once per visit. The goal fired at 8050, which is before the last floor: world 0.14.0's `final_boss` goal is the win over Sol in battle group 9056 (open_world.md has the order of the last fights).
+
 ## 25. Making the run more than picking up checks
 
 **The concern (round 49, 2026-11-09):** the game feels like exploration only: go to an area, get the chests, go to the next. Battles in between are mostly grinding. The user pictures something like FF4 Free Enterprise, where bosses are the real fun and your current setup is what makes each one a puzzle. The hard part is MRP, which needs battles. The likely answer is sliders: grind as much as you like, then turn encounters off until you want more (idea 18).
@@ -886,5 +888,7 @@ The "Back" prompt that menus and the chest pop-up show at the bottom right also 
 **As an Archipelago item:** a "Treasure Radar" that shows chest icons once it arrives, or a yaml option to start with the icons on. It could pair with the progressive radars on the user's list.
 
 **To find out:** whether writing `bDefaultDisplay` and the icon tags in the loaded assets is enough (the entries hold a nested `StatePropertyMap`, which is harder to write from Lua than a flat field), and whether the mini-map reads the assets once or on each map load. FFRS_QoL's chest markers may do the same thing.
+
+**Round 57: the icons show and stay.** The user asks for more, as FFRS_QoL does: hide a chest's icon once it is opened, and mark shinies and Tablet Shards too. To look at in FFRS_QoL's code.
 
 **Round 57: built as a yaml option.** `minimap_chest_icons` (on by default) goes to the mod in slot data. On the seed's save, mod 0.43.0 writes the Treasure entry as the pak has it (shown, the `TreasureBox` icon, also at the low zoom state) and the icon binding; on any other save it puts back what the assets held. Chests only: the pak also shows `Check` spots and map exits, which may be shinies and doors. Not seen in game yet.

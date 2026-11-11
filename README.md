@@ -27,7 +27,7 @@ The world is tested off-line: Archipelago's general tests pass with it, its own 
 2. **World.** Run `python tools/build_apworld.py`, then copy `dist/ff_resonance.apworld` into your Archipelago `custom_worlds` folder. Or, from source, copy `apworld/ff_resonance` into `worlds/`.
 3. **Seed.**
    - Copy `apworld/Final Fantasy Resonance.yaml` into Archipelago's `Players` folder and set a name.
-   - For a first test, set `goal_story_checkpoint` to a value a little past your save, e.g. 1130.
+   - For a short test seed, use `goal: tablet_shards` with a low `tablet_shards_required`, or `goal: final_boss` with low `final_boss_characters` and `final_boss_visions`.
    - Run `Generate.py`, then host the seed (`MultiServer.py <zip>`, or the website).
 4. **Play.**
    - In the Launcher, open **Final Fantasy Resonance Client** and connect.
@@ -187,10 +187,11 @@ seed     <session>                  the lines after it belong to that session
 check    chest:<row mapId>:<row ID>     (a rowless chest with a reward: chest:<map>:u<m_UniqueId>)
 check    shiny:<map>:<m_UniqueId>
 story    <counter>
+won      <battle group>             9056: the last battle, Rain against Sol (mod 0.45.0)
 applied  <index>  <ok|fail>  <detail>
 ```
 
-The client only counts `check` and `story` lines after a `seed` line for its own session. A new session empties `ap_out.txt`, so checks from another seed, or from before connecting, are never sent.
+The client only counts `check`, `story` and `won` lines after a `seed` line for its own session. A new session empties `ap_out.txt`, so checks from another seed, or from before connecting, are never sent.
 
 `<map>` is always the map as the save keys it, `CPP_MapManager:GetSameMapId()`.
 
@@ -208,7 +209,7 @@ kind  map  uid  row  item  count  money  visible-condition
 
 ## Playtesting and test plans
 
-In-game playtesting results (Rounds 1-56) and the current test plan (Round 57) are documented in [docs/playtesting.md](docs/playtesting.md).
+In-game playtesting results (Rounds 1-57) and the current test plan (Round 58) are documented in [docs/playtesting.md](docs/playtesting.md).
 Automated regression tests are documented in [tests/README.md](tests/README.md).
 
 ## Project status and open questions

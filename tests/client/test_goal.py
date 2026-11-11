@@ -86,6 +86,22 @@ async def main():
     shard_lines = [line for line in open(in_path, encoding="utf-8").read().splitlines() if line.startswith("item")]
     check("past the goal only the count shows", shard_lines[-1].endswith("Tablet Shard (2)"))
 
+    # Round 58: the final boss goal is the mod's `won 9056` line, or the ending's story 9000
+    out_path = os.path.join(folder, "ap_out.txt")
+    connect(ctx, "G6", {"goal": "final_boss"})
+    with open(out_path, "w", encoding="utf-8") as f:
+        f.write("hello\t0.45.0\nseed\tG6:0:1\nstory\t8050\n")
+    ctx.read_new_output()
+    check("story 8050 is not the final boss", not ctx.goal_reached())
+    with open(out_path, "a", encoding="utf-8") as f:
+        f.write("won\t9056\n")
+    ctx.read_new_output()
+    check("the last battle won", ctx.goal_reached() and "Sol" in ctx.goal_text())
+    connect(ctx, "G7", {"goal": "final_boss"})
+    check("a new seed starts with no battles won", not ctx.goal_reached())
+    ctx.max_story = 9000
+    check("the ending's 9000 if the win was missed", ctx.goal_reached())
+
     connect(ctx, "G3", {"goal_story_checkpoint": 1130})
     check("a seed before world 0.7.0 has the story goal", ctx.goal_kind == "story_checkpoint" and ctx.goal == 1130)
 

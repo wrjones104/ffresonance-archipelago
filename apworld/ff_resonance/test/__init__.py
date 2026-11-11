@@ -8,4 +8,4 @@ class FFResonanceTestBase(WorldTestBase):
         # Most tests look at the pool without the 99 shards, which the default goal brings in.
         # A test of the shard goal says so. This base class itself runs with the real defaults.
         super().__init_subclass__(**kwargs)
-        cls.options = {"goal": "story_checkpoint", **cls.__dict__.get("options", {})}
+        cls.options = {"goal": "final_boss", **cls.__dict__.get("options", {})}

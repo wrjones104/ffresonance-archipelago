@@ -86,7 +86,7 @@ class FFResonanceWorld(World):
         # Round 58: the final boss lock (Worlds Collide style). It belongs to the story goal: the
         # shard goal never needs the last fight. A count the pool cannot meet is lowered to what
         # it can.
-        if self.options.goal.value == ffr_options.Goal.option_story_checkpoint:
+        if self.options.goal.value == ffr_options.Goal.option_final_boss:
             most_characters = len(ALL_PARTY_MEMBERS) if self.options.shuffle_party_members else len(self.starting_party)
             most_visions = len(items.item_name_groups["Visions"]) if self.options.shuffle_visions else 0
             self.final_boss_characters = min(self.options.final_boss_characters.value, most_characters)
@@ -106,7 +106,7 @@ class FFResonanceWorld(World):
 
     def fill_slot_data(self) -> Mapping[str, Any]:
         return {
-            **self.options.as_dict("goal_story_checkpoint", "tablet_shards_required", "include_shinies", "include_crystals",
+            **self.options.as_dict("tablet_shards_required", "include_shinies", "include_crystals",
                                    "include_tablet_shards", "minimap_chest_icons"),
             "goal": self.options.goal.current_key,
             "mod_protocol": MOD_PROTOCOL,

@@ -11,11 +11,14 @@ class Goal(Choice):
     tablet_shards: receive the number of Tablet Shards set by tablet_shards_required. This turns
     on include_tablet_shards. Shards you only hold in game do not count: they must come from
     Archipelago.
-    story_checkpoint: reach goal_story_checkpoint. EXPERIMENTAL: no seed has reached one yet.
+    final_boss: win the last battle, Rain against Sol at the top of the Crystal Tower. The way
+    up is sealed until you have final_boss_characters and final_boss_visions.
+    story_checkpoint is the old name of final_boss.
     """
     display_name = "Goal"
     option_tablet_shards = 0
-    option_story_checkpoint = 1
+    option_final_boss = 1
+    alias_story_checkpoint = 1
     default = 0
 
 
@@ -27,22 +30,9 @@ class TabletShardsRequired(Range):
     default = 50
 
 
-class GoalStoryCheckpoint(Range):
-    """
-    The story checkpoint that completes your goal, when the goal is story_checkpoint. A seed
-    starts in the open world at story 8000, so the goal must be past that. 8050 is the last
-    checkpoint the game's story conditions test. Whether the ending reaches it has not been
-    confirmed yet.
-    """
-    display_name = "Goal Story Checkpoint"
-    range_start = 8001
-    range_end = 8050
-    default = 8050
-
-
 class FinalBossCharacters(Range):
     """
-    With the story_checkpoint goal: how many party members you must have before the Crystal
+    With the final_boss goal: how many party members you must have before the Crystal
     Tower's last climb opens. Your starting party counts. The way up stays sealed until then.
     With shuffle_party_members off, only the starting party can count, so this is lowered to it.
     """
@@ -54,7 +44,7 @@ class FinalBossCharacters(Range):
 
 class FinalBossVisions(Range):
     """
-    With the story_checkpoint goal: how many visions you must have received before the Crystal
+    With the final_boss goal: how many visions you must have received before the Crystal
     Tower's last climb opens. With shuffle_visions off, this is lowered to 0.
     """
     display_name = "Final Boss Visions"
@@ -206,7 +196,6 @@ class ShuffleKeyItems(DefaultOnToggle):
 class FFResonanceOptions(PerGameCommonOptions):
     goal: Goal
     tablet_shards_required: TabletShardsRequired
-    goal_story_checkpoint: GoalStoryCheckpoint
     final_boss_characters: FinalBossCharacters
     final_boss_visions: FinalBossVisions
     starting_continent: StartingContinent
@@ -226,7 +215,7 @@ class FFResonanceOptions(PerGameCommonOptions):
 
 
 option_groups = [
-    OptionGroup("Goal", [Goal, TabletShardsRequired, GoalStoryCheckpoint, FinalBossCharacters, FinalBossVisions]),
+    OptionGroup("Goal", [Goal, TabletShardsRequired, FinalBossCharacters, FinalBossVisions]),
     OptionGroup("Start", [StartingContinent, StartingRoster, StartingCharacter1, StartingCharacter2,
                           StartingCharacter3, StartingCharacter4]),
     OptionGroup("Locations", [IncludeShinies, IncludeTabletShards, IncludeCrystals, ExcludedRegions]),

@@ -39,6 +39,9 @@ POLL_SECONDS = 0.5
 GOAL_MESSAGE = "Goal complete!"
 GOAL_MESSAGE_LINE = f"msg\t{GOAL_MESSAGE}"
 SHARD_GOAL = "tablet_shards"
+FINAL_GOAL = "final_boss"
+FINAL_BATTLE = 9056   # Rain against Sol, reported by the mod as `won 9056`
+ENDING_STORY = 9000   # the ending sets this after its scenes: the goal if the win was missed
 SHARD_ITEM = next(ap_id for ap_id, info in ITEMS.items() if info["name"] == "Tablet Shard")
 
 
@@ -112,6 +115,7 @@ class FFResonanceContext(CommonContext):
         self.out_offset = 0
         self.out_scope: str | None = None     # the seed key the ap_out.txt lines being read belong to
         self.max_story = 0
+        self.battles_won: set[int] = set()
         self.mod_version: str | None = None
         self.goal_announced = False           # the in-game toast was sent; a reconnect re-sends only the status
         self.scouts_written = False           # scout lines are in ap_in.txt for this session
@@ -236,11 +240,15 @@ class FFResonanceContext(CommonContext):
     def goal_reached(self) -> bool:
         if self.goal_kind == SHARD_GOAL:
             return self.shards_received() >= self.shards_needed
-        return self.max_story >= self.goal
+        if self.goal_kind == FINAL_GOAL:
+            return FINAL_BATTLE in self.battles_won or self.max_story >= ENDING_STORY
+        return self.max_story >= self.goal        # a seed before world 0.14.0: a story checkpoint
 
     def goal_text(self) -> str:
         if self.goal_kind == SHARD_GOAL:
             return f"{self.shards_needed} Tablet Shards ({self.shards_received()} so far)"
+        if self.goal_kind == FINAL_GOAL:
+            return "the last battle, Rain against Sol"
         return f"story checkpoint {self.goal}"
 
     def read_new_output(self) -> tuple[set[int], int | None]:
@@ -274,6 +282,8 @@ class FFResonanceContext(CommonContext):
                     checks.add(location)
             elif kind == "story" and val.lstrip("-").isdigit():
                 story = max(story or 0, int(val))
+            elif kind == "won" and val.isdigit():
+                self.battles_won.add(int(val))
         return checks, story
 
     def write_scouts(self, items: list) -> int:
@@ -336,6 +346,7 @@ class FFResonanceContext(CommonContext):
                 return
             self.session_key = f"{seed}:{self.team}:{self.slot}"
             self.max_story = 0
+            self.battles_won = set()
             self.start_session()
             self.write_config(slot_data)
             self.scout_locations()

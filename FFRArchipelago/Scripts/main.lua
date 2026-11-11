@@ -50,7 +50,7 @@
 -- follows the save slots the linked game is saved to. While any other save is loaded, the mod
 -- grants nothing, reports nothing and leaves the chests vanilla.
 
-local VERSION = "0.44.0"
+local VERSION = "0.45.0"
 local PROTOCOL = 2        -- the bridge protocol; the apworld's MOD_PROTOCOL
 
 local MOD_DIR = (debug.getinfo(1, "S").source:gsub("^@", ""):gsub("\\", "/"):match("^(.*/)Scripts/[^/]+$"))
@@ -724,12 +724,21 @@ local function scanLoot()
     scanShinies(mapId)
 end
 
+-- Round 58: the goal is the last battle, Rain against Sol (battle group 9056). Story 8050 comes
+-- before the last floor, and 9000 only after the ending's scenes (round 57). The row run after
+-- that win (C08_821_01) turns story flag 40 off. Flag 40 is on from the Sol fight before 8050
+-- (C08_812_01) until then, so at 8050 it reads off only after the win.
+local FINAL_BATTLE, FINAL_STORY, FINAL_FLAG = 9056, 8050, 40
+
 local function watchStory()
     local n = game.StoryCounter()
     if n and n ~= state.lastStory then
         if state.lastStory then log("story " .. state.lastStory .. " -> " .. n) end
         state.lastStory = n
         report("story", n)
+    end
+    if n == FINAL_STORY and game.GetFlag(FINAL_FLAG) == false and report("won", FINAL_BATTLE) then
+        log("the last battle is won (battle group " .. FINAL_BATTLE .. ", flag " .. FINAL_FLAG .. " off)")
     end
 end
 
@@ -1777,7 +1786,7 @@ local function currentSettings()
 end
 -- Round 57: the rows are checked every tick, at the title too, and put back when missing (a
 -- table the game loads again loses them). Quiet unless rows were added or it failed.
-local menuFailed = nil
+local menuFailed, menuAdded = nil, false
 menuTick = function()
     local added, detail = game.EnsureOptionRows(currentSettings())
     if added == nil then
@@ -1785,7 +1794,10 @@ menuTick = function()
         menuFailed = detail
     elseif added > 0 then
         menuFailed = nil
-        log("menu: rows added to the Options screen; " .. tostring(detail))
+        -- Round 57: the game loads its table again every few seconds, so the rows go back in all
+        -- the time. Only the first time is logged.
+        if not menuAdded then log("menu: rows added to the Options screen; " .. tostring(detail)) end
+        menuAdded = true
     end
 end
 settingsTick = function()
@@ -1833,11 +1845,11 @@ local CHOCOBO_SADDLE = 30002
 -- is short, the Crystal Tower's point of no return stays sealed (game.SealTowerTop), and walking
 -- up to it says what is missing, once per approach. A seed with no line (the shard goal, an old
 -- seed) is never sealed.
-local lockLogged, lockNoticed = nil, false
+local lockLogged, lockMissLogged, lockNoticed = nil, false, false
 local LOCK_NOTICE_NEAR, LOCK_NOTICE_AGAIN = 1200, 2500
 finalLockTick = function()
     if game.CurrentMap() ~= game.TOWER_TOP.map then
-        lockNoticed = false
+        lockLogged, lockMissLogged, lockNoticed = nil, false, false
         return
     end
     local lock = seedCfg.finalboss
@@ -1845,10 +1857,16 @@ finalLockTick = function()
     local changed, why = game.SealTowerTop(short and true or false)
     local text = lock and string.format("characters %d/%d, visions %d/%d", lock.characters, lock.needCharacters,
         lock.visions, lock.needVisions) or "no lock for this seed"
-    local line = changed == nil and ("final boss lock: " .. tostring(why)) or
-        ("final boss lock: " .. (short and "sealed" or "open") .. " (" .. text .. ")")
-    if line ~= lockLogged then log(line) end
-    lockLogged = line
+    if changed == nil then
+        -- Round 57: the trigger is loaded only near the last climb, so far from it this is normal.
+        -- It comes back with its collision on, and the next tick seals it again.
+        if not lockMissLogged then log("final boss lock: " .. tostring(why)) end
+        lockMissLogged = true
+    else
+        local line = "final boss lock: " .. (short and "sealed" or "open") .. " (" .. text .. ")"
+        if line ~= lockLogged then log(line) end
+        lockLogged = line
+    end
     if not short then return end
     local pose = game.PlayerPose()
     if not pose then return end

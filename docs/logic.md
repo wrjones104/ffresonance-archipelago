@@ -16,7 +16,7 @@ Related: [progression.md](progression.md) (the chapter-by-chapter reference), [I
 - Before world 0.4.0, the game was treated as one region. Every location was reachable from the start as far as logic went. Late-game chests were simply late.
 - Progression items exist with no logic yet (world 0.3.0). One of each party member after the prologue (Fina, Lid, Nichol, Jake, Sakura, and Archwitch Fina since world 0.3.1), each of the 26 visions, and 43 key items and artifacts go into the pool in place of filler (29 key items since world 0.10.0, which leaves artifacts out: IDEAS.md, idea 26). Each has an option on by default. They are classed as progression so logic can use them later. The story still hands out vanilla copies, and chests or shinies holding them keep them so the story remains beatable. Equipment is "useful", while consumables and gil are "filler".
 - There are 202 chest locations across 10 regions, plus 92 optional world-map shinies, all derived from game files (world 0.2.0). Locations are named after game maps (for example "Village of Kol Chest 1"). Chests and shinies holding items at id 13000 and up (visions, key items, valuables, Tablet Shards) keep vanilla content and are not locations, alongside the 15 chest rows with no placed map box.
-- The default goal is reaching story checkpoint 8050 (`goal_story_checkpoint`).
+- The goals are `tablet_shards` (the default) and `final_boss`: win the last battle, Rain against Sol (world 0.14.0; before that, story checkpoint 8050).
 - Supported player options include the goal, `include_shinies`, `excluded_regions`, `shuffle_party_members`, `shuffle_visions` and `shuffle_key_items`.
 
 ## 2. The experience
@@ -155,7 +155,7 @@ Candidates for player customization:
 3. Party members: confirmed in rounds 30 and 32; `AddUnit` grants playable units to party or roster, and roster units can be swapped into the active party.
 4. Revisiting: catalog which regions remain accessible after chapter completion.
 5. Kolobos: determine exact story unlock timing.
-6. Goal: verify whether story progression reliably reaches 8050 at game completion.
+6. Goal: round 57 reached 8050 before the last floor, so world 0.14.0 uses the last battle's win instead (open_world.md, section on the goal).
 
 ## 8a. Gates the game already checks (round 56, off-line)
 

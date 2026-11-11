@@ -468,21 +468,29 @@ World-map shinies verified as locations. Multiple crashes observed across differ
   - At the goal, the server sent the rest of the player's items (about 350) in 37 seconds, with no trouble. The shard count reads past the goal, such as `Tablet Shard (99/20)`.
   - The airship's shadow list gains 14 null entries each time the player lands on the world map and boards again (`126 -> 210, 84 null` over six landings). No crash or slowdown seen. To look at (open_world.md, section 4).
 
-## Round 57 test plan (mod 0.44.0, world 0.13.0)
+**Round 57 (mod 0.44.0, world 0.13.0, 2026-11-11): the lock works; the goal came too early.**
+- **Menu:** the AP rows were there every time, at the title too.
+- **Chocobo:** given on the new seed (`chocobo: saddle given (ok, held 0 -> 1)`), and it works.
+- **Chest icons:** shown and kept after map changes (`chest icons on: 3 fields written`). The user asks for more: hide an icon once its chest is open, and mark shinies and shards, as FFRS_QoL does (IDEAS.md, idea 27). The old pak mods moved out of `~mods` were probably overwritten by FFRS_QoL anyway.
+- **Research Center Ruins:** not tested; next round.
+- **Final boss lock:** `sealed (characters 2/4, visions 0/8)`, the notice showed near the climb, and the prompt stayed away. After the counts came in, `open (characters 6/4, visions 10/8)` and the climb worked.
+- **Goal:** sent at story 8050, which is after the first Sol fight and before the last floor. More fights and scenes come after it. The story went 8050 -> 9000 at the "Fin" screen, then 9000 -> 8040 (the staff roll's row sets it back). The user would rather have the win over Sol (Rain alone) as the goal, or 9000.
+- **From the log:**
+  - `final boss lock: the last climb's trigger was not found (nearest trigger 57538 away)` alternated with `sealed` all through the tower: the trigger is loaded only near the climb. It was sealed again each time it came back.
+  - `menu: rows added` came every few seconds to a minute: the game loads the Options table again all the time. The rows were always back in time.
+  - The airship's shadow list gained 23 nulls per landing this time (`134 -> 249, 115 null` over five landings).
+- **Scratchpad:** Mobliz Shipyard (maps 3060 to 3062): two of three elevators do not work, so chests 1 and 3 and shards 71 and 79 cannot be reached, with a boss there too, it seems. Mt. Thunderclap: the Liquid Thunder symbol on the map starts a boss battle when touched, a model for boss checks (screenshot in `.reference`).
 
-**Install:** copy `FFRArchipelago/Scripts`, and copy `dist/ff_resonance.apworld` into Archipelago's `custom_worlds`. Generate new seeds. The yaml has new options: `minimap_chest_icons` (on by default), and for the story goal `final_boss_characters` (default 6) and `final_boss_visions` (default 12). Keep the TreasureMinimap pak out of `~mods`.
+## Round 58 test plan (mod 0.45.0, world 0.14.0)
 
-**1. The AP rows, with no command.** Open Options at the title screen: **are the AP rows there?** Load a save, open Options, change map, open it again. The log says `menu: rows added ...` each time the mod had to put them back.
+**Install:** copy `FFRArchipelago/Scripts`, and copy `dist/ff_resonance.apworld` into Archipelago's `custom_worlds`. Generate a new seed. In the yaml, `goal: story_checkpoint` is now `goal: final_boss` (the old name still works), and `goal_story_checkpoint` is gone: delete it from your yaml.
 
-**2. The Chocobo.** On the new seed, once you're in the open world: the log says `chocobo: saddle given`. **Can you ride a chocobo?**
+**1. The goal on the last win.** Use `goal: final_boss` with low counts, such as `final_boss_characters: 3` and `final_boss_visions: 2`. Save on the last floor (story 8050). **Does reaching 8050 leave the goal unsent?** Beat Sol with Rain. The log says `the last battle is won (battle group 9056, flag 40 off)`. **Does the client send the goal then, before the ending's scenes?** If it comes only at the "Fin" screen (story 9000), send the log: flag 40 did not go off.
 
-**3. Chest icons.** In a dungeon with chests: **are chests on the mini-map?** After a map change? The log says `chest icons on: ... fields written`. On a save that is not the seed's they should be gone.
+**2. Research Center Ruins** (from round 57). Universal Tracker should show the level 1 rooms only with the level 1 card, and the level 2 rooms only with both cards.
 
-**4. Research Center Ruins.** Universal Tracker should show the level 1 rooms only with the level 1 card, and the level 2 rooms only with both cards.
+**3. Quieter log.** `menu: rows added` should show once per run, and `the last climb's trigger was not found` once per visit to the tower.
 
-**5. The final boss lock and goal.** Generate a seed with `goal: story_checkpoint`. To reach the end quickly, low counts help, such as `final_boss_characters: 3` and `final_boss_visions: 2`.
-- Go into the Crystal Tower before you have the counts. The log says `final boss lock: sealed (characters ..., visions ...)`. **Near the last climb, does the notice say what is missing, and does the "can not return" prompt stay away?** If the log says `the last climb's trigger was not found (nearest trigger ... away)`, send that line.
-- Get the counts (Universal Tracker shows the goal in logic). The log says `final boss lock: open`. **Does the prompt come back?**
-- Save before the last fight, then beat the final boss. **Does the client send the goal?** Send the `story ... -> ...` lines: they show which checkpoints the ending passes.
+**4. Optional: a Mobliz Shipyard elevator.** Stand next to an elevator that does not work and run `ffrap_inspect BP_MapGimmick_Floor_Elevator_Interact_002_C`. Send the output: it may show what the elevator waits for.
 
 Send the `[FFRAP]` lines of the log.
