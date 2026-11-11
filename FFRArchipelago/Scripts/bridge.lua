@@ -5,7 +5,7 @@
 -- mod folder. Each line is tab-separated fields.
 --
 --   ap_in.txt   client -> game
---     item <index> <kind> <id> <count> <label>    kind: item | vision | unit | flag
+--     item <index> <kind> <id> <count> <label>    kind: item | vision | unit | flag | token (0.48.0: nothing in game)
 --     msg  <text>                                 shown on screen, not stored
 --     client <world version>                      the client that wrote the file (0.7.1)
 --     cfg blank <0|1>                             chest blanking
@@ -14,11 +14,13 @@
 --     cfg shinies <0|1>                           shinies are locations: blank their rewards (0.29.0)
 --     cfg crystals <0|1>                          sanctum crystals are locations (0.29.0)
 --     cfg shards <0|1>                            Tablet Shard shinies are locations (0.30.0)
+--     cfg bosses <0|1>                            boss fights are locations (0.48.0)
+--     cfg finalboss <have> <need> ...             the tower lock: characters, visions, Crystal Fragments (0.44.0, 0.48.0)
 --     scout <base64>                              what a location holds: key, item, player, flags, own (0.11.0)
 --
 --   ap_out.txt  game -> client
 --     hello <mod version>                         the mod started
---     check <location key>                        e.g. chest:2031:7
+--     check <location key>                        e.g. chest:2031:7, boss:9079 (a battle group)
 --     story <counter>                             the story counter changed
 --     won <battle group>                          a battle that matters was won: 9056, the last one (0.45.0)
 --     applied <index>                             item <index> was handled

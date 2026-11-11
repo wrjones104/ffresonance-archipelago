@@ -2,14 +2,15 @@ from dataclasses import dataclass
 
 from Options import Choice, DefaultOnToggle, OptionGroup, OptionSet, PerGameCommonOptions, Range, Visibility
 
-from .data import CHESTS, CRYSTALS, SHINIES, TABLET_SHINIES
+from .data import BOSSES, CHESTS, CRYSTALS, SHINIES, TABLET_SHINIES
 
 
 class Goal(Choice):
     """
     What completes your seed.
     final_boss: win the last battle at the top of the Crystal Tower. The way up stays sealed until
-    you have the party members and visions that final_boss_characters and final_boss_visions ask for.
+    you have the party members, visions and Crystal Fragments that final_boss_characters,
+    final_boss_visions and final_boss_fragments ask for.
     tablet_shards: receive the number of Tablet Shards set by tablet_shards_required. Only shards
     received from Archipelago count.
     """
@@ -18,6 +19,9 @@ class Goal(Choice):
     option_final_boss = 1
     alias_story_checkpoint = 1
     default = 1
+
+
+FRAGMENT_BOSSES = sum(1 for boss in BOSSES if boss["fragment"])
 
 
 class TabletShardsRequired(Range):
@@ -45,6 +49,17 @@ class FinalBossVisions(Range):
     range_start = 0
     range_end = 26
     default = 12
+
+
+class FinalBossFragments(Range):
+    """
+    With the final_boss goal: how many Crystal Fragments you need before the way to the top of the
+    Crystal Tower opens. A story boss gives one when you beat it.
+    """
+    display_name = "Final Boss Fragments"
+    range_start = 0
+    range_end = FRAGMENT_BOSSES
+    default = 4
 
 
 class StartingContinent(Choice):
@@ -136,13 +151,22 @@ class IncludeCrystals(DefaultOnToggle):
     visibility = Visibility.none
 
 
+class IncludeBosses(DefaultOnToggle):
+    """
+    Boss fights are locations. The 15 cave masters and the optional bosses hold shuffled items.
+    A story boss holds a Crystal Fragment.
+    """
+    display_name = "Include Bosses"
+    visibility = Visibility.none
+
+
 class ExcludedRegions(OptionSet):
     """
     Regions where you only find your own filler items, never anything another player needs. Use
     this for areas you do not want to play.
     """
     display_name = "Excluded Regions"
-    valid_keys = sorted({loc["region"] for loc in CHESTS + SHINIES + CRYSTALS + TABLET_SHINIES})
+    valid_keys = sorted({loc["region"] for loc in CHESTS + SHINIES + CRYSTALS + TABLET_SHINIES + BOSSES})
 
 
 class ShufflePartyMembers(DefaultOnToggle):
@@ -172,6 +196,7 @@ class FFResonanceOptions(PerGameCommonOptions):
     tablet_shards_required: TabletShardsRequired
     final_boss_characters: FinalBossCharacters
     final_boss_visions: FinalBossVisions
+    final_boss_fragments: FinalBossFragments
     starting_continent: StartingContinent
     starting_roster: StartingRoster
     starting_character_1: StartingCharacter1
@@ -181,6 +206,7 @@ class FFResonanceOptions(PerGameCommonOptions):
     include_shinies: IncludeShinies
     include_crystals: IncludeCrystals
     include_tablet_shards: IncludeTabletShards
+    include_bosses: IncludeBosses
     excluded_regions: ExcludedRegions
     shuffle_party_members: ShufflePartyMembers
     shuffle_visions: ShuffleVisions
@@ -188,7 +214,7 @@ class FFResonanceOptions(PerGameCommonOptions):
 
 
 option_groups = [
-    OptionGroup("Goal", [Goal, TabletShardsRequired, FinalBossCharacters, FinalBossVisions]),
+    OptionGroup("Goal", [Goal, TabletShardsRequired, FinalBossCharacters, FinalBossVisions, FinalBossFragments]),
     OptionGroup("Start", [StartingContinent, StartingRoster, StartingCharacter1, StartingCharacter2,
                           StartingCharacter3, StartingCharacter4]),
     OptionGroup("Locations", [ExcludedRegions]),

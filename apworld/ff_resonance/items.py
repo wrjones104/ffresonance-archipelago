@@ -5,12 +5,13 @@ from typing import TYPE_CHECKING
 from BaseClasses import Item, ItemClassification
 from Options import OptionError
 
-from .data import CHESTS, CONTINENT_UNLOCKS, ITEMS, PROGRESSION, UNIT_ITEM_BASE
+from .data import CHESTS, CONTINENT_UNLOCKS, FRAGMENT_ITEM, ITEMS, PROGRESSION, UNIT_ITEM_BASE
 
 if TYPE_CHECKING:
     from .world import FFResonanceWorld
 
 GAME = "Final Fantasy Resonance"
+FRAGMENT_NAME = ITEMS[FRAGMENT_ITEM]["name"]
 
 ITEM_NAME_TO_ID: dict[str, int] = {info["name"]: ap_id for ap_id, info in ITEMS.items()}
 
@@ -28,6 +29,7 @@ CLASSIFICATIONS = {
     "vision": ItemClassification.progression,
     "key": ItemClassification.progression,
     "continent": ItemClassification.progression,
+    "fragment": ItemClassification.progression,
 }
 
 item_name_groups: dict[str, set[str]] = {

@@ -138,6 +138,8 @@ function G.AddUnit() return "ok", G.unitDetail or "in the active party" end
 function G.VisionShopGuard() return nil end
 G.CRYSTALS = { { event = 10, map = 10200, flag = 1000 } }
 function G.CrystalsPatch() G.crystalPatches = (G.crystalPatches or 0) + 1; return 3 end
+G.BOSSES = { { group = 9079, flag = 146 }, { group = 9083, flag = 215 } }
+function G.BossesPatch() G.bossPatches = (G.bossPatches or 0) + 1; return 2 end
 function G.BlankFieldItem(s) G.blanked = (G.blanked or 0) + 1; return true end
 function G.SyncSlotLevel() G.slotSyncs = (G.slotSyncs or 0) + 1; return false end
 function G.SetUnitLevel(id, level) G.leveled = { id = id, level = level }; return true, "level " .. level end
@@ -1629,3 +1631,39 @@ G.menuRowsIn = False      # the game loaded its table again
 tick(4)
 assert G.menuAdds == 2 and G.menuChecks >= checks + 4, (G.menuAdds, G.menuChecks)
 print("menu rows: ok")
+
+# Round 59: with the seed's cfg, the boss win rows are patched once per save, a boss reports by its
+# win flag, a Crystal Fragment is applied as nothing, and the tower counts fragments
+MARAUDER, LIQUID_THUNDER = 9079, 9083
+inbox("seed\tS59:0:1\ncfg\topenworld\t1\ncfg\tbosses\t1\ncfg\tfinalboss\t6\t6\t12\t12\t1\t2\n"
+      "item\t0\ttoken\t0\t1\tCrystal Fragment (1/2)\n", "w")
+L, G = boot5("SD_BOSS", "0", {})
+L.globals().G = G
+L.execute(SCALE_STUB)
+L.execute(CAPTURE)
+L.execute("function G.HeldCount(id) return 1 end")
+L.execute("function G.PlayerPose() return { x = 15000, y = -55300 } end")
+L.execute("function G.CurrentMap() return G.map end")
+L.execute("G.wonFlags = {}; local old = G.GetFlag; G.GetFlag = function(i) if G.wonFlags[i] then return true end return old and old(i) end")
+G.chests = L.table()
+G.story = 8000
+G.map = 1000
+tick(12)
+assert G.bossPatches == 1, G.bossPatches
+assert "check\tboss:" not in read("ap_out.txt"), "no win yet"
+assert "applied\t0" in read("ap_out.txt"), "a fragment is applied, though it is nothing in the game"
+L.execute("G.wonFlags[146] = true")
+tick(4)
+assert read("ap_out.txt").count(f"check\tboss:{MARAUDER}\n") == 1, read("ap_out.txt")
+assert f"check\tboss:{LIQUID_THUNDER}" not in read("ap_out.txt")
+tick(4)
+assert read("ap_out.txt").count(f"check\tboss:{MARAUDER}\n") == 1, "reported once"
+G.map = 3280
+tick(12)
+assert G.sealed is True, "one fragment of two keeps the tower sealed"
+said = [x for x in logs() if "way to the top is sealed" in x]
+assert len(said) == 1 and "Crystal Fragments 1/2" in said[0], said
+inbox("cfg\tfinalboss\t6\t6\t12\t12\t2\t2\n", "a")
+tick(6)
+assert G.sealed is False, "open with both fragments"
+print("bosses: ok")

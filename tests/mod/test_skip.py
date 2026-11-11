@@ -292,6 +292,21 @@ assert lua("#crystalRows.Int_LegendEV_10_07.ObtainItemList") == 0 and lua("#crys
 _crystals = [r.split("\t") for r in (paths.REPO / "data/crystals.tsv").read_text(encoding="utf8").splitlines()[1:]]
 _lua = [(c["event"], c["map"], c["flag"]) for c in L.eval("G.CRYSTALS").values()]
 assert sorted(_lua) == sorted((int(a), int(b), int(c)) for a, b, c, _ in _crystals), "data/crystals.tsv and G.CRYSTALS differ"
+# Round 59: the boss win rows lose their own reward and story value; other rows are left alone
+L.execute("""
+bossRows = { StrEne_C01_Orge_Destroy = { ObtainItemList = arr({ { ID = 25000 } }), OnFlagList = arr({ 146, 1231 }) },
+  Dng_08Gro_43_BattleEnd_01 = { ProgressList = arr({ { ID = 0, Value = 6123 } }), OnFlagList = arr({ 608 }) },
+  StrEne_CompleteTrophyGet = { ObtainItemList = arr({ { ID = 1 } }), ProgressList = arr({ { ID = 0, Value = 1 } }) } }
+shopRows = bossRows""")
+assert lua("G.BossesPatch()") == 2
+assert lua("#bossRows.StrEne_C01_Orge_Destroy.ObtainItemList") == 0 and lua("#bossRows.StrEne_C01_Orge_Destroy.OnFlagList") == 2
+assert lua("#bossRows.Dng_08Gro_43_BattleEnd_01.ProgressList") == 0 and lua("#bossRows.Dng_08Gro_43_BattleEnd_01.OnFlagList") == 1
+assert lua("#bossRows.StrEne_CompleteTrophyGet.ObtainItemList") == 1 and lua("#bossRows.StrEne_CompleteTrophyGet.ProgressList") == 1
+_bosses = [r.split("\t") for r in (paths.REPO / "data/bosses.tsv").read_text(encoding="utf8").splitlines()[1:]]
+_lua = [(b["group"], b["flag"]) for b in L.eval("G.BOSSES").values()]
+assert sorted(_lua) == sorted((int(r[0]), int(r[1])) for r in _bosses), "data/bosses.tsv and G.BOSSES differ"
+assert len({flag for _, flag in _lua}) == len(_lua), "a win flag is one boss"
+L.execute("shopRows = crystalRows")
 # Round 46: a shiny that is a location is blanked; a key item, a story spot and an open one are not
 L.execute("""
 function shiny(id, money, open) local a = { m_ItemId = id, m_ItemNum = 2, m_Money = money }

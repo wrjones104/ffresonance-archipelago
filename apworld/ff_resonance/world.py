@@ -70,6 +70,7 @@ class FFResonanceWorld(World):
         self.starting_continent = ""
         self.final_boss_characters = 0
         self.final_boss_visions = 0
+        self.final_boss_fragments = 0
 
     def generate_early(self) -> None:
         if self.options.goal.value == ffr_options.Goal.option_tablet_shards:
@@ -91,6 +92,8 @@ class FFResonanceWorld(World):
             most_visions = len(items.item_name_groups["Visions"]) if self.options.shuffle_visions else 0
             self.final_boss_characters = min(self.options.final_boss_characters.value, most_characters)
             self.final_boss_visions = min(self.options.final_boss_visions.value, most_visions)
+            if self.options.include_bosses:
+                self.final_boss_fragments = self.options.final_boss_fragments.value
 
     def create_regions(self) -> None:
         locations.create_regions_and_locations(self)
@@ -107,12 +110,13 @@ class FFResonanceWorld(World):
     def fill_slot_data(self) -> Mapping[str, Any]:
         return {
             **self.options.as_dict("tablet_shards_required", "include_shinies", "include_crystals",
-                                   "include_tablet_shards"),
+                                   "include_tablet_shards", "include_bosses"),
             "goal": self.options.goal.current_key,
             "mod_protocol": MOD_PROTOCOL,
             "open_world": True,
             "starting_party": self.starting_party,
             "final_boss_characters": self.final_boss_characters,
             "final_boss_visions": self.final_boss_visions,
+            "final_boss_fragments": self.final_boss_fragments,
             "starting_continent": self.starting_continent,
         }

@@ -17,6 +17,7 @@ An Archipelago implementation for Final Fantasy Resonance (UE 5.6, game module `
   - `docs/progression.md`: the game's chapters and gates.
   - `docs/logic.md`: the progression logic design (in progress).
   - `docs/open_world.md`: the open world design (the main direction since round 30): the cleared state, gates, enemy scaling.
+  - `docs/bosses.md`: boss fights as locations, Crystal Fragments, and how the story bosses come back.
   - `DISCLOSURE.md`: the AI disclosure. Keep it accurate.
 
 ## How we work
@@ -81,4 +82,5 @@ An Archipelago implementation for Final Fantasy Resonance (UE 5.6, game module `
 
 **Tooling:**
 - **The Bash tool can collapse backslashes** in heredocs and inline Python (`\\n` arrives as a line break). Write edit scripts and test patches as files with the Write tool, then run them.
+- **`python -m unittest worlds.ff_resonance.test` runs nothing of ours**: it loads only the package. Name the module, `worlds.ff_resonance.test.test_generation`. The runner printed ok for a long time while 12 tests were stale (round 59).
 - When a test file's version string is replaced in bulk, comments that mention versions change too, so anchor edits on text that does not.

@@ -853,6 +853,8 @@ The "Back" prompt that menus and the chest pop-up show at the bottom right also 
 - There are 176 battle groups with a boss in them: 48 story chapter bosses by name, 15 strong enemies and 113 others.
 - A boss's MRP is `ap` in its battle group, which the mod already writes. Boss wins could pay for most of a character's growth, so grinding becomes a choice.
 
+**Round 59: [docs/bosses.md](docs/bosses.md) has the design.** 25 fights that still start by themselves are locations in world 0.17.0, and story bosses give Crystal Fragments for the tower.
+
 **Ideas, the strongest first:**
 1. **Boss fights as checks.** Start with the Twelve Arms, strong enemies and Arena: about 80 fights that are already self-contained.
 2. **Bosses pay for growth.** A large MRP and EXP reward from each boss, so a player who skips encounters is not behind.

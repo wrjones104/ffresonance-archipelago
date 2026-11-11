@@ -8,6 +8,8 @@ Inputs, from the game's own files (tools/dump_game, then tools/gen_from_dump.py)
     data/game/field_items.tsv      every field item (shiny) placed on a map
 And from play:
     data/shinies.tsv               shinies seen in game (the mod's seen.tsv): marks a shiny "seen"
+And by hand, from the dump (docs/bosses.md):
+    data/bosses.tsv                boss fights that are locations: battle group, win flag, map, kind
 
 A chest table row is a location only when a box for it is placed on some map (the boxes
 column; gen_from_dump.box_matches says how a box is matched to its row). The rounds agree:
@@ -26,6 +28,7 @@ Ids are derived from the game's own keys, so they never change between data refr
     shiny location  2_000_000_000 + map * 1000 + uid
     item            item id * 1000 + count     (e.g. Potion x3 -> 1003)
     gil             900_000_000 + amount
+    boss location   4_000_000_000 + battle group
 """
 
 import collections
@@ -43,6 +46,12 @@ MAGICITE_IDS = (25000, 25002)     # except these, in chests (the mod blanks them
 CRYSTAL_LOCATION_BASE = 3_000_000_000    # + the sanctum's map id
 TABLET_SHARD = 25004              # a shiny holding one is a location of its own kind (round 47)
 CONSUMABLE_LIMIT = 1000
+
+# Round 59: a boss fight is a location (data/bosses.tsv). A "story" boss holds a locked Crystal
+# Fragment; a cave master or an optional boss holds a shuffled item.
+BOSS_LOCATION_BASE = 4_000_000_000       # + the battle group
+FRAGMENT_ITEM = 600_000_001
+FRAGMENT_NAME = "Crystal Fragment"
 
 CHEST_LOCATION_BASE = 1_000_000_000
 SHINY_LOCATION_BASE = 2_000_000_000
@@ -324,6 +333,18 @@ def main() -> None:
                          "region": "Sanctums", "area": area, "open_world": True,
                          "id": CRYSTAL_LOCATION_BASE + map_id, "vanilla": None})
     crystals.sort(key=lambda e: e["id"])
+    # Boss fights (data/bosses.tsv). A cave master's own reward (Magicite) goes into the pool.
+    bosses = []
+    for r in read_tsv("bosses.tsv"):
+        group, map_id = int(r["group"]), int(r["map"])
+        place = ascii_name(maps[map_id]["name"])
+        name = place if r["kind"] == "cave" else f"{place}: {r['name']}"
+        vanilla = item_for(int(r["reward"]), 1, 0, in_chest=True) if r["kind"] == "cave" else None
+        bosses.append({"key": f"boss:{group}", "name": name, "region": "Bosses", "area": map_area(map_id),
+                       "open_world": True, "id": BOSS_LOCATION_BASE + group, "vanilla": vanilla,
+                       "fragment": r["kind"] == "story"})
+    bosses.sort(key=lambda e: e["id"])
+    items[FRAGMENT_ITEM] = {"name": FRAGMENT_NAME, "kind": "token", "game_id": 0, "count": 1, "category": "fragment"}
     # A continent's unlock turns on its event flag; Ardra has no locations, so it has no unlock.
     # One name can cover two maps (the Earth Shrine), so a repeat gets its map id.
     counts = collections.Counter(e["name"] for e in tablet_shinies)
@@ -331,7 +352,7 @@ def main() -> None:
         if counts[entry["name"]] > 1:
             entry["name"] = f"{entry['name']} (Map {entry['key'].split(':')[1]})"
     tablet_shinies.sort(key=lambda e: e["id"])
-    used_areas = {e["area"] for e in chests + shinies + crystals + tablet_shinies}
+    used_areas = {e["area"] for e in chests + shinies + crystals + tablet_shinies + bosses}
     unlocks: dict[str, int] = {}
     for name, continent in continents.items():
         if name in used_areas:
@@ -372,7 +393,7 @@ def main() -> None:
     for r in read_tsv("gates.tsv"):
         assert r["location"] in by_key, f"gates.tsv: no location {r['location']}"
         by_key[r["location"]]["needs"] = [int(i) * 1000 + 1 for i in r["needs"].split(",")]
-    location_names = [e["name"] for e in chests + shinies + crystals + tablet_shinies]
+    location_names = [e["name"] for e in chests + shinies + crystals + tablet_shinies + bosses]
     assert len(location_names) == len(set(location_names)), "duplicate location names"
 
     with open(OUT, "w", encoding="utf-8", newline="\n") as f:
@@ -389,6 +410,9 @@ def main() -> None:
         f.write("TABLET_SHINIES = " + pprint.pformat(tablet_shinies, width=110, sort_dicts=True) + "\n\n")
         f.write("# The sanctum crystals; vanilla is None, as their visions are in the pool already\n")
         f.write("CRYSTALS = " + pprint.pformat(crystals, width=110, sort_dicts=True) + "\n\n")
+        f.write("# Boss fights (data/bosses.tsv); fragment marks the ones that hold a locked Crystal Fragment\n")
+        f.write("BOSSES = " + pprint.pformat(bosses, width=110, sort_dicts=True) + "\n\n")
+        f.write(f"FRAGMENT_ITEM = {FRAGMENT_ITEM}\n\n")
         f.write("# Chests and shinies that keep vanilla key items or valuables: not locations\n")
         f.write("KEPT_VANILLA = " + pprint.pformat(sorted(e["key"] for e in kept_chests + kept_shinies), width=110) + "\n\n")
         f.write("# Chest table rows with no box placed on any map: not locations\n")

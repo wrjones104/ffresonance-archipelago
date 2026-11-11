@@ -28,7 +28,7 @@ The world is tested off-line: Archipelago's general tests pass with it, its own 
 2. **World.** Run `python tools/build_apworld.py`, then copy `dist/ff_resonance.apworld` into your Archipelago `custom_worlds` folder. Or, from source, copy `apworld/ff_resonance` into `worlds/`.
 3. **Seed.**
    - Copy `apworld/Final Fantasy Resonance.yaml` into Archipelago's `Players` folder and set a name.
-   - For a short test seed, use `goal: tablet_shards` with a low `tablet_shards_required`, or `goal: final_boss` with low `final_boss_characters` and `final_boss_visions`.
+   - For a short test seed, use `goal: tablet_shards` with a low `tablet_shards_required`, or `goal: final_boss` with low `final_boss_characters`, `final_boss_visions` and `final_boss_fragments`.
    - Run `Generate.py`, then host the seed (`MultiServer.py <zip>`, or the website).
 4. **Play.**
    - In the Launcher, open **Final Fantasy Resonance Client** and connect.
@@ -172,7 +172,7 @@ Both files are append-only and tab-separated, one record per line.
 ```
 seed   <seed name>:<team>:<slot>                  first line; a new value starts the mod's state over
 cfg    blank  <0|1>                               chest blanking
-item   <index>  <kind>  <id>  <count>  <label>    kind: item | gil | vision | unit | flag
+item   <index>  <kind>  <id>  <count>  <label>    kind: item | gil | vision | unit | flag | token (nothing in game)
 scout  <base64(key \t item \t player \t flags \t own)>  what a location holds, for the chest pop-up
 msg    <text>                                     shown on screen
 sync                                              report everything the save says is looted

@@ -73,13 +73,25 @@ async def main():
     lock_lines = lambda: [line for line in open(in_path, encoding="utf-8").read().splitlines() if line.startswith("cfg\tfinalboss")]
     ctx.items_received = []
     ctx.write_lock()
-    check("the starting party counts", lock_lines()[-1] == "cfg\tfinalboss\t2\t4\t0\t2")
+    check("the starting party counts", lock_lines()[-1] == "cfg\tfinalboss\t2\t4\t0\t2\t0\t0")
     ctx.write_lock()
     check("written once while nothing changes", len(lock_lines()) == 1)
     ctx.items_received = [NetworkItem(UNIT_ITEM_BASE + 1003, 1, 1, 0), NetworkItem(UNIT_ITEM_BASE + 1001, 1, 1, 0),
                           NetworkItem(vision_ids[0], 1, 1, 0), NetworkItem(vision_ids[0], 1, 1, 0)]
     ctx.write_lock()
-    check("a starter received again and a repeated vision count once", lock_lines()[-1] == "cfg\tfinalboss\t3\t4\t1\t2")
+    check("a starter received again and a repeated vision count once", lock_lines()[-1] == "cfg\tfinalboss\t3\t4\t1\t2\t0\t0")
+    # Round 59: Crystal Fragments count for the lock, each one, and show their count
+    from worlds.ff_resonance.data import FRAGMENT_ITEM
+    connect(ctx, "G4B", {"goal": "final_boss", "starting_party": [1001, 1002], "include_bosses": 1,
+                         "final_boss_characters": 2, "final_boss_visions": 0, "final_boss_fragments": 2})
+    check("the seed turns boss checks on", "cfg\tbosses\t1" in open(in_path, encoding="utf-8").read())
+    ctx.items_received = [NetworkItem(FRAGMENT_ITEM, 1, 1, 0), NetworkItem(FRAGMENT_ITEM, 2, 1, 0), NetworkItem(FRAGMENT_ITEM, 3, 1, 0)]
+    ctx.write_new_items()
+    ctx.write_lock()
+    check("each fragment counts", lock_lines()[-1] == "cfg\tfinalboss\t2\t2\t0\t0\t3\t2")
+    fragment_lines = [line for line in open(in_path, encoding="utf-8").read().splitlines() if line.startswith("item")]
+    check("a fragment is a token with its count", fragment_lines[0] == "item\t0\ttoken\t0\t1\tCrystal Fragment (1/2)")
+    check("past the need only the count shows", fragment_lines[2].endswith("Crystal Fragment (3)"))
     connect(ctx, "G5", {"goal": "tablet_shards", "tablet_shards_required": 1})
     ctx.items_received = [shard(), shard()]
     ctx.write_new_items()

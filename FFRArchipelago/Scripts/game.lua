@@ -2038,6 +2038,55 @@ function G.CrystalsPatch()
     return written
 end
 
+-- Round 59: boss fights that are locations (data/bosses.tsv, docs/bosses.md). Each still starts
+-- by itself on the open world start, because its trigger tests only its own flag, and the row
+-- run after a win turns that flag on. So the flag is the check.
+G.BOSSES = {
+    { group = 9079, flag = 146 }, { group = 9080, flag = 214 }, { group = 9084, flag = 319 },
+    { group = 9085, flag = 320 }, { group = 9094, flag = 433 }, { group = 9093, flag = 434 },
+    { group = 9109, flag = 548 }, { group = 9110, flag = 549 }, { group = 9111, flag = 550 },
+    { group = 9112, flag = 551 }, { group = 9113, flag = 552 }, { group = 9114, flag = 614 },
+    { group = 9115, flag = 615 }, { group = 9116, flag = 700 }, { group = 9117, flag = 701 },
+    { group = 9138, flag = 1018 }, { group = 7042, flag = 928 }, { group = 7057, flag = 929 },
+    { group = 9083, flag = 215 }, { group = 9075, flag = 608 }, { group = 9074, flag = 609 },
+    { group = 9073, flag = 610 }, { group = 9072, flag = 611 }, { group = 9071, flag = 612 },
+    { group = 9076, flag = 613 },
+}
+-- Win rows whose own reward is the location's item now: the 15 cave masters' Magicite, and
+-- Sephiroth's vision.
+local BOSS_ROWS_NO_REWARD = {
+    StrEne_C01_Orge_Destroy = true, StrEne_C02_Eyemeba_Destroy = true, StrEne_C03_ToteAvis_Destroy = true,
+    StrEne_C03_MindFlayer_Destroy = true, StrEne_C04_HillGigas_Destroy = true, StrEne_C04_FireHydra_Destroy = true,
+    StrEne_C05_Media_Destroy = true, StrEne_C05_IceGigas_Destroy = true, StrEne_C05_Morbol_Destroy = true,
+    StrEne_C05_Tyrannosaurus_Destroy = true, StrEne_C05_SkullDragon_Destroy = true,
+    StrEne_C06_Bloodysaurus_Destroy = true, StrEne_C06_Cooser_Destroy = true,
+    StrEne_C07_Brachioreids_Destroy = true, StrEne_C07_MorbolGreat_Destroy = true,
+    Str_LegendEV_07_Boss_05 = true,
+}
+-- Archaeoaevis's win row writes story 6123, which must not reach a save at story 8000.
+local BOSS_ROWS_NO_STORY = { Dng_08Gro_43_BattleEnd_01 = true }
+
+-- Takes those rewards and that story value out of the win rows. Safe to run again. Returns the
+-- number of rows written.
+function G.BossesPatch()
+    local written = 0
+    for _, dt in ipairs(TableFamily(Find(SHOP_TABLE))) do
+        pcall(function()
+            dt:ForEachRow(function(name, row)
+                local key = ObjText(name)
+                if BOSS_ROWS_NO_REWARD[key] then
+                    row.ObtainItemList:Empty()
+                    written = written + 1
+                elseif BOSS_ROWS_NO_STORY[key] then
+                    row.ProgressList:Empty()
+                    written = written + 1
+                end
+            end)
+        end)
+    end
+    return written
+end
+
 -- Round 46: flag 90 alone did not put Siren in the summon menu. An esper is an ability on both
 -- Finas: the event after her fight has AddAbilities [6, 430980] and AddCommandAbilities [6] for
 -- units 1003 and 1006. 6 is the summon command, 430980 is Siren. Her fight is a story event, so

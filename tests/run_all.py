@@ -79,7 +79,7 @@ def main() -> int:
         for test in sorted((HERE / "client").glob("test_*.py")):
             failed += not run(paths.AP_PYTHON, test)
         paths.install_world()
-        world = subprocess.run([str(paths.AP_PYTHON), "-m", "unittest", "worlds.ff_resonance.test"],
+        world = subprocess.run([str(paths.AP_PYTHON), "-m", "unittest", "worlds.ff_resonance.test.test_generation"],
                                capture_output=True, text=True, encoding="utf-8", errors="replace",
                                cwd=str(paths.APTEST))
         ok = world.returncode == 0

@@ -29,7 +29,7 @@ from CommonClient import (ClientCommandProcessor, CommonContext, get_base_parser
                           logger, server_loop)
 from NetUtils import ClientStatus, NetworkItem
 
-from .data import ITEMS
+from .data import FRAGMENT_ITEM, ITEMS
 from .locations import LOCATION_KEY_TO_ID
 
 LOCATION_ID_TO_KEY = {location_id: key for key, location_id in LOCATION_KEY_TO_ID.items()}
@@ -120,7 +120,7 @@ class FFResonanceContext(CommonContext):
         self.goal_announced = False           # the in-game toast was sent; a reconnect re-sends only the status
         self.scouts_written = False           # scout lines are in ap_in.txt for this session
         self.starting_party: list[int] = []
-        self.lock_needs = (0, 0)              # the final boss lock: characters, visions
+        self.lock_needs = (0, 0, 0)           # the final boss lock: characters, visions, Crystal Fragments
         self.lock_written: tuple | None = None  # the last finalboss line written
 
     # -- files ------------------------------------------------------------------------------------
@@ -178,6 +178,7 @@ class FFResonanceContext(CommonContext):
         wanted.append(("cfg", "shinies", int(bool(slot_data.get("include_shinies")))))
         wanted.append(("cfg", "crystals", int(bool(slot_data.get("include_crystals")))))
         wanted.append(("cfg", "shards", int(bool(slot_data.get("include_tablet_shards")))))
+        wanted.append(("cfg", "bosses", int(bool(slot_data.get("include_bosses")))))
         party = slot_data.get("starting_party") or []
         if party:
             wanted.append(("cfg", "party", ",".join(str(unit) for unit in party)))
@@ -195,6 +196,7 @@ class FFResonanceContext(CommonContext):
             return
         new = self.items_received[self.items_written:]
         shards = sum(1 for item in self.items_received[:self.items_written] if item.item == SHARD_ITEM)
+        fragments = sum(1 for item in self.items_received[:self.items_written] if item.item == FRAGMENT_ITEM)
         for index, item in enumerate(new, start=self.items_written):
             info = ITEMS.get(item.item)
             if info is None:
@@ -207,12 +209,15 @@ class FFResonanceContext(CommonContext):
                 shards += 1
                 # Past the goal only the count is shown (round 56 read "99/20").
                 name = f"{name} ({shards}/{self.shards_needed})" if shards <= self.shards_needed else f"{name} ({shards})"
+            if item.item == FRAGMENT_ITEM:
+                fragments += 1
+                name = f"{name} ({fragments}/{self.lock_needs[2]})" if fragments <= self.lock_needs[2] else f"{name} ({fragments})"
             label = name if item.player == self.slot else f"{name} from {sender}"
             self.write_line("item", index, info["kind"], info["game_id"], info["count"], label)
         self.items_written = len(self.items_received)
 
-    def lock_counts(self) -> tuple[int, int]:
-        """Characters held (the starting party and every member received) and visions received."""
+    def lock_counts(self) -> tuple[int, int, int]:
+        """Characters held (the starting party and every member received), visions and Crystal Fragments received."""
         members = set(self.starting_party)
         visions = set()
         for item in self.items_received:
@@ -221,14 +226,15 @@ class FFResonanceContext(CommonContext):
                 members.add(info["game_id"])
             elif info and info["category"] == "vision":
                 visions.add(info["game_id"])
-        return len(members), len(visions)
+        fragments = sum(1 for item in self.items_received if item.item == FRAGMENT_ITEM)
+        return len(members), len(visions), fragments
 
     def write_lock(self) -> None:
         """Round 58: tells the mod how far the final boss lock is, each time that changes."""
         if self.session_key is None or not os.path.isdir(self.mod_folder):
             return
-        characters, visions = self.lock_counts()
-        line = (characters, self.lock_needs[0], visions, self.lock_needs[1])
+        characters, visions, fragments = self.lock_counts()
+        line = (characters, self.lock_needs[0], visions, self.lock_needs[1], fragments, self.lock_needs[2])
         if line != self.lock_written:
             self.write_line("cfg", "finalboss", *line)
             self.lock_written = line
@@ -332,7 +338,8 @@ class FFResonanceContext(CommonContext):
             self.goal_kind = str(slot_data.get("goal", "story_checkpoint"))    # a seed before world 0.7.0 has no "goal"
             self.shards_needed = int(slot_data.get("tablet_shards_required", 99))
             self.starting_party = [int(unit) for unit in slot_data.get("starting_party") or []]
-            self.lock_needs = (int(slot_data.get("final_boss_characters", 0)), int(slot_data.get("final_boss_visions", 0)))
+            self.lock_needs = (int(slot_data.get("final_boss_characters", 0)), int(slot_data.get("final_boss_visions", 0)),
+                               int(slot_data.get("final_boss_fragments", 0)))
             self.lock_written = None
             # The 0.6.7 release never stores RoomInfo's seed name (seed_name stays None), so it is
             # captured above; later versions also keep it in server_seed_name.

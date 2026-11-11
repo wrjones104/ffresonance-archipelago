@@ -50,7 +50,7 @@
 -- follows the save slots the linked game is saved to. While any other save is loaded, the mod
 -- grants nothing, reports nothing and leaves the chests vanilla.
 
-local VERSION = "0.47.0"
+local VERSION = "0.48.0"
 local PROTOCOL = 2        -- the bridge protocol; the apworld's MOD_PROTOCOL
 
 local MOD_DIR = (debug.getinfo(1, "S").source:gsub("^@", ""):gsub("\\", "/"):match("^(.*/)Scripts/[^/]+$"))
@@ -107,7 +107,7 @@ local openArrival = nil      -- ffrap_openstart dock|air|event, kept once the us
 local continentLocks = nil   -- ffrap_lock on|off, kept once the user picks one; the seed's until then
 -- What the seed says about the start (the client's cfg lines). Not saved: ap_in.txt is read again
 -- at every start, and the seed that wrote it is the only thing that decides these.
-local seedCfg = { openworld = false, party = nil, shinies = false, crystals = false, shards = false }
+local seedCfg = { openworld = false, party = nil, shinies = false, crystals = false, shards = false, bosses = false }
 local function openStartOn() return openStart or seedCfg.openworld end
 -- An `ffrap_lock on|off` from this run wins. Then a seed that asks for locks: a saved "off" from
 -- an old test must not quietly leave a real seed unlocked. Then the saved switch.
@@ -332,6 +332,8 @@ local GRANTS = {
     end,
     flag = function(it) return game.SetFlag(it.id, it.count ~= 0) end,
     gil = function(it) return game.GrantGil(math.max(it.count, 1)) end,
+    -- Round 59: a Crystal Fragment is nothing in the game. The client counts them for the tower.
+    token = function() return "ok", "counted by the client" end,
 }
 
 local function grant(it)
@@ -380,9 +382,13 @@ local function readInbox(initial)
             seedCfg.shards = f[3] == "1"
         elseif f[1] == "cfg" and f[2] == "crystals" then
             seedCfg.crystals = f[3] == "1"
+        elseif f[1] == "cfg" and f[2] == "bosses" then
+            seedCfg.bosses = f[3] == "1"
         elseif f[1] == "cfg" and f[2] == "finalboss" then
+            -- A client before world 0.17.0 sends no fragment counts: none are needed then.
             seedCfg.finalboss = { characters = tonumber(f[3]) or 0, needCharacters = tonumber(f[4]) or 0,
-                                  visions = tonumber(f[5]) or 0, needVisions = tonumber(f[6]) or 0 }
+                                  visions = tonumber(f[5]) or 0, needVisions = tonumber(f[6]) or 0,
+                                  fragments = tonumber(f[7]) or 0, needFragments = tonumber(f[8]) or 0 }
         elseif f[1] == "cfg" and f[2] == "party" then
             local party = {}
             for id in (f[3] or ""):gmatch("%d+") do party[#party + 1] = tonumber(id) end
@@ -1187,6 +1193,10 @@ local function tick()
                     local okCrystals, written = pcall(game.CrystalsPatch)
                     log("crystals: " .. tostring(written) .. " event rows set to skip the scene" .. (okCrystals and "" or " (failed)"))
                 end
+                if newSave and seedCfg.bosses then
+                    local okBosses, written = pcall(game.BossesPatch)
+                    log("bosses: " .. tostring(written) .. " win rows changed" .. (okBosses and "" or " (failed)"))
+                end
                 if newSave and bossTest.group then pcall(bossTest.arm, bossTest.group, bossTest.quiet) end
                 if okShop and blocked ~= nil then
                     log("vision shop " .. (blocked and "closed (no vision yet)" or "open") .. ": " .. tostring(rows) .. " rows")
@@ -1200,6 +1210,14 @@ local function tick()
                 for _, c in ipairs(game.CRYSTALS) do
                     if game.GetFlag(c.flag) == true and report("check", "crystal:" .. c.map) then
                         log("check crystal:" .. c.map)
+                    end
+                end
+            end
+            -- Round 59: a boss's check is the flag its win row sets.
+            if seedCfg.bosses and sessionSave() and state.ticks % CHEST_EVERY == 0 then
+                for _, b in ipairs(game.BOSSES) do
+                    if game.GetFlag(b.flag) == true and report("check", "boss:" .. b.group) then
+                        log("check boss:" .. b.group)
                     end
                 end
             end
@@ -1838,7 +1856,7 @@ end
 local CHOCOBO_SADDLE = 30002
 
 -- Round 58: the final boss lock (Worlds Collide style, the user's choice). The client counts the
--- characters and visions received and writes them in a `cfg finalboss` line; while either count
+-- characters, visions and (round 59) Crystal Fragments received and writes them in a `cfg finalboss` line; while any count
 -- is short, the Crystal Tower's point of no return stays sealed (game.SealTowerTop), and walking
 -- up to it says what is missing, once per approach. A seed with no line (the shard goal, an old
 -- seed) is never sealed.
@@ -1850,10 +1868,14 @@ finalLockTick = function()
         return
     end
     local lock = seedCfg.finalboss
-    local short = lock and sessionSave() and (lock.characters < lock.needCharacters or lock.visions < lock.needVisions)
+    local short = lock and sessionSave() and (lock.characters < lock.needCharacters or lock.visions < lock.needVisions
+        or lock.fragments < lock.needFragments)
     local changed, why = game.SealTowerTop(short and true or false)
     local text = lock and string.format("characters %d/%d, visions %d/%d", lock.characters, lock.needCharacters,
         lock.visions, lock.needVisions) or "no lock for this seed"
+    if lock and lock.needFragments > 0 then
+        text = text .. string.format(", Crystal Fragments %d/%d", lock.fragments, lock.needFragments)
+    end
     if changed == nil then
         -- Round 57: the trigger is loaded only near the last climb, so far from it this is normal.
         -- It comes back with its collision on, and the next tick seals it again.

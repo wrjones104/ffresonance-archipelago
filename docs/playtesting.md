@@ -489,12 +489,31 @@ World-map shinies verified as locations. Multiple crashes observed across differ
 - **Quieter log:** `menu: rows added` showed once, and the tower's "trigger was not found" once per visit.
 - **Mobliz Shipyard:** `ffrap_inspect` showed elevator 75 with `m_GimmickCondition 1` (deactivated). Off-line, the level (`Dng_04Dir_41_02_GD`) has four elevators: 72 and 74 active, 73 and 75 deactivated. A five-lever puzzle (the right lever is D) turns 73 on in chapter 2; its levers start deactivated too. Nothing in the level turns 75 on. A wrong lever starts a fight (`C02_Moburizu_Switch_Fail_Encount`), maybe the boss the user expected there.
 
-## Round 59 test plan (mod 0.47.0, world 0.16.0)
+**Round 59 (mod 0.47.0, world 0.16.0, 2026-11-11): one elevator still cannot be reached; bosses come next.**
+- **Mobliz Shipyard:** the log has `shipyard: 2 stopped elevators turned on`. The middle elevator works once a keypad to its right is touched. That may have worked before the mod's change. The right elevator is on too (a switch above it, reached with the middle elevator), but it stands at the bottom and nothing at the top calls it. So the chests and shards past it are still out of reach. A lead from `ffrap_inspect`: the elevator's Blueprint has `CallSwitch(InArg, Direction)` and `m_IsCallSwitch`. Next: read that Blueprint's code off-line.
+- **FFRS_QoL's map markers:** FFRS_QoL alone showed none. With the TreasureMinimap paks beside it they work: the paks draw the markers, and FFRS_QoL takes a marker away once its chest is found. Both run fine with this mod. Rounds 54 to 58 looked at each one alone, which is why neither seemed to do the whole job.
+- **Cave masters:** all there on the open world start. The fights and their own rewards work.
+- **Liquid Thunder** stands on Mt. Thunderclap and starts its fight (the scratchpad).
+- **A live trigger's events can be read.** `ffrap_inspect CPP_MapGimmick_EventTrigger` on Mt. Thunderclap gave Ramuh's trigger: `m_EventList[0].Condition` is `{progress:12}==0&!{flag:12}|{progress:12}==10&!{flag:12}` and `EventId` is `Summon620_Ramuh_02`. The class has `SetEventList`, `SetEvent`, `GetEventList`, `PlayEvent` and `FindMatchEventByEventList`. This is what bringing the story bosses back needs (docs/bosses.md).
+- **The user's choices for bosses:** a story boss gives a locked Crystal Fragment and no shuffled item. A cave master gives a shuffled item. Espers are open: fragments, their own kind of fragment, or left as they are. The user will ask players.
+- **From the log:** `client: world version 0.15.0`. The 0.16.0 apworld was not the one in use.
+- **Found off-line: the generation tests had not been running.** `python -m unittest worlds.ff_resonance.test` loads only the package, so `run_all.py` ran 6 empty tests and printed ok. 12 tests had gone stale since the location options became on by default. The runner now names `test_generation`, and the tests are fixed.
 
-**Install:** copy `FFRArchipelago/Scripts`, and copy `dist/ff_resonance.apworld` into Archipelago's `custom_worlds`. Generate a new seed. Delete `minimap_chest_icons` from your yaml: the option is gone.
+## Round 60 test plan (mod 0.48.0, world 0.17.0)
 
-**1. Mobliz Shipyard's elevators.** Go into Mobliz Shipyard (map 3060). The log says `shipyard: 2 stopped elevators turned on`. **Do the center and right elevators work now? Can you reach chests 1 and 3 and shards 71 and 79?** If the game crashes on entering, send the crash folder.
+**Install:** copy `FFRArchipelago/Scripts`, and copy `dist/ff_resonance.apworld` into Archipelago's `custom_worlds`. Generate a new seed. For a short test, use `starting_continent: dirnado` and `final_boss_fragments: 1`: Shoggoth Cave and Mt. Thunderclap are both on Dirnado.
 
-**2. A seed with FFRS_QoL**, if you want its map markers: **do its chest and shiny markers work alongside this mod?**
+**New:** 25 boss fights are locations (docs/bosses.md). The 15 cave masters, Sephiroth, Intangir and the Rogue Magitek Weapon hold shuffled items. Liquid Thunder and the six Sanctissimus Shrine fights each hold a Crystal Fragment. The tower's last climb needs `final_boss_fragments` of them (default 4 of 7).
+
+**1. A cave master.** Beat Shoggoth, or any other. The log says `bosses: N win rows changed` after the save loads, then `check boss:9080` after the win. **Does the win scene end well with no Magicite, and does the Archipelago item go out?**
+
+**2. Liquid Thunder.** Beat it on Mt. Thunderclap. The log says `check boss:9083`. **Does the item feed show "Crystal Fragment (1/1)"?**
+
+**3. The tower.** Before the fragment, walk to the last climb. **Does the notice say "Crystal Fragments 0/1", and does the climb open once you have it?**
+
+**4. If you have time: the other places.**
+- Sanctissimus Shrine (Gronoa): **are the six fights there?** After Archaeoaevis, the log must show no `story` line with 6123.
+- Dragon's Maw (Pharm): **are Intangir and the Rogue Magitek Weapon there?**
+- Whirlpool Hollow: **can you get in with only the airship, and does Sephiroth give no vision by himself?** The logic lets a player go there from the start.
 
 Send the `[FFRAP]` lines of the log.

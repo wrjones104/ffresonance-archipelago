@@ -4,13 +4,13 @@ from typing import TYPE_CHECKING
 
 from BaseClasses import ItemClassification, Location, LocationProgressType, Region
 
-from .data import CHESTS, CONTINENT_UNLOCKS, CRYSTALS, FINAL_AREA, ITEMS, OPEN_AREA, SHINIES, TABLET_SHINIES
-from .items import GAME, FFResonanceItem, progression_ids
+from .data import BOSSES, CHESTS, CONTINENT_UNLOCKS, CRYSTALS, FINAL_AREA, ITEMS, OPEN_AREA, SHINIES, TABLET_SHINIES
+from .items import FRAGMENT_NAME, GAME, FFResonanceItem, create_item, progression_ids
 
 if TYPE_CHECKING:
     from .world import FFResonanceWorld
 
-ALL_LOCATIONS = CHESTS + SHINIES + CRYSTALS + TABLET_SHINIES
+ALL_LOCATIONS = CHESTS + SHINIES + CRYSTALS + TABLET_SHINIES + BOSSES
 LOCATION_NAME_TO_ID: dict[str, int] = {loc["name"]: loc["id"] for loc in ALL_LOCATIONS}
 LOCATION_KEY_TO_ID: dict[str, int] = {loc["key"]: loc["id"] for loc in ALL_LOCATIONS}
 
@@ -21,6 +21,7 @@ location_name_groups["Chests"] = {loc["name"] for loc in CHESTS}
 location_name_groups["Shinies"] = {loc["name"] for loc in SHINIES}
 location_name_groups["Crystals"] = {loc["name"] for loc in CRYSTALS}
 location_name_groups["Tablet Shard Shinies"] = {loc["name"] for loc in TABLET_SHINIES}
+location_name_groups["Fragment Bosses"] = {loc["name"] for loc in BOSSES if loc["fragment"]}
 
 GOAL_EVENT = "Story Goal"
 SHARD_GOAL_EVENT = "Tablet Shard Goal"
@@ -63,6 +64,8 @@ def create_regions_and_locations(world: FFResonanceWorld) -> None:
         chosen += CRYSTALS
     if world.options.include_tablet_shards:
         chosen += TABLET_SHINIES
+    if world.options.include_bosses:
+        chosen += BOSSES
     excluded = world.options.excluded_regions.value
     in_pool = set(progression_ids(world))
 
@@ -88,6 +91,9 @@ def create_regions_and_locations(world: FFResonanceWorld) -> None:
             else:
                 location.progress_type = LocationProgressType.EXCLUDED
         region.locations.append(location)
+        # Round 59: a story boss gives a Crystal Fragment, always its own.
+        if loc.get("fragment"):
+            location.place_locked_item(create_item(world, FRAGMENT_NAME))
         if loc["vanilla"] is not None:
             world.vanilla_items.append(loc["vanilla"])
 
@@ -102,8 +108,10 @@ def create_regions_and_locations(world: FFResonanceWorld) -> None:
         # The final boss lock: the starting party counts, so only the members beyond it are items.
         members = max(0, world.final_boss_characters - len(world.starting_party))
         visions = world.final_boss_visions
+        fragments = world.final_boss_fragments
         goal.access_rule = lambda state: (state.has_group("Party Members", player, members) and
-                                          state.has_group("Visions", player, visions))
+                                          state.has_group("Visions", player, visions) and
+                                          state.has(FRAGMENT_NAME, player, fragments))
     goal.place_locked_item(FFResonanceItem(VICTORY, ItemClassification.progression, None, player))
     goal_region.locations.append(goal)
     world.multiworld.completion_condition[player] = lambda state: state.has(VICTORY, player)

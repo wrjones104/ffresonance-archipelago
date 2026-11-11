@@ -1,14 +1,16 @@
 from BaseClasses import LocationProgressType
 
-from ..data import CHESTS, CONTINENT_UNLOCKS, CRYSTALS, ITEMS, NO_BOX, TABLET_SHINIES, PROGRESSION, SHINIES, SHUFFLE_ID_LIMIT, UNIT_ITEM_BASE
-from ..items import CLASSIFICATIONS, FILLER_CATEGORIES, item_name_groups
-from ..locations import GOAL_EVENT, LOCATION_KEY_TO_ID
+from ..data import BOSSES, CHESTS, CONTINENT_UNLOCKS, CRYSTALS, FRAGMENT_ITEM, ITEMS, NO_BOX, TABLET_SHINIES, PROGRESSION, SHINIES, SHUFFLE_ID_LIMIT, UNIT_ITEM_BASE
+from ..items import CLASSIFICATIONS, FILLER_CATEGORIES, FRAGMENT_NAME, item_name_groups
+from ..locations import GOAL_EVENT, LOCATION_KEY_TO_ID, VICTORY
 from ..options import Goal, TabletShardsRequired
 from . import FFResonanceTestBase
 
 ARTIFACT_IDS = (30000, 30018)    # DT_ArtifactItemData's rows
 LAST_PALACE_CHEST = "chest:2031:24"   # Oblivion Palace's 4-Star Chamber: all 99 shards
 PALACE_SHARDS = 99
+MARAUDER, LIQUID_THUNDER = 9079, 9083   # battle groups: a cave master, a story boss
+CAVE_MASTERS, FRAGMENT_BOSSES = 15, 7
 
 
 def chest_location(test, key):
@@ -122,7 +124,74 @@ class TestCrystals(FFResonanceTestBase):
         self.assertEqual(len(pool), len(CHESTS) + len(CRYSTALS))
 
 
-class TestExcludedRegions(FFResonanceTestBase):
+class TestBosses(FFResonanceTestBase):
+    options = {"include_bosses": True, "final_boss_characters": 2, "final_boss_visions": 0, "final_boss_fragments": 3}
+
+    def boss_location(self, group):
+        name = next(b["name"] for b in BOSSES if b["key"] == f"boss:{group}")
+        return self.multiworld.get_location(name, self.player)
+
+    def test_bosses_are_locations(self) -> None:
+        names = {loc.name for loc in self.multiworld.get_locations(self.player) if loc.address is not None}
+        self.assertEqual(names, {loc["name"] for loc in CHESTS + BOSSES})
+
+    def test_a_story_boss_holds_a_fragment_and_the_others_a_shuffled_item(self) -> None:
+        for boss in BOSSES:
+            item = self.multiworld.get_location(boss["name"], self.player).item
+            if boss["fragment"]:
+                self.assertEqual((item.name, item.code, item.advancement), (FRAGMENT_NAME, FRAGMENT_ITEM, True), boss["name"])
+            else:
+                self.assertIsNone(item, boss["name"])
+        pool = [item.code for item in self.multiworld.itempool if item.player == self.player]
+        self.assertNotIn(FRAGMENT_ITEM, pool)
+        self.assertEqual(len(pool), len(CHESTS) + len(BOSSES) - FRAGMENT_BOSSES)
+
+    def test_a_cave_master_gives_its_magicite_to_the_pool(self) -> None:
+        pool = [item.code for item in self.multiworld.itempool if item.player == self.player]
+        for name in ("Magicite Shard", "Magicite", "Magicite Cryst"):
+            ap_id = next(i for i, info in ITEMS.items() if info["name"] == name)
+            from_chests = sum(1 for c in CHESTS if c["vanilla"] == ap_id)
+            from_caves = sum(1 for b in BOSSES if b["vanilla"] == ap_id)
+            self.assertGreater(from_caves, 0, name)
+            self.assertEqual(pool.count(ap_id), from_chests + from_caves, name)
+
+    def test_the_goal_needs_the_fragments(self) -> None:
+        goal = self.multiworld.get_location(GOAL_EVENT, self.player)
+        fragments = [self.multiworld.get_location(b["name"], self.player).item for b in BOSSES if b["fragment"]]
+        # No sweep: a sweep would take the fragments from the bosses it can reach.
+        state = self.multiworld.state
+        for item in self.multiworld.get_items():
+            if item.name not in (VICTORY, FRAGMENT_NAME):
+                state.collect(item, prevent_sweep=True)
+        self.assertFalse(goal.can_reach(state))
+        for fragment in fragments[:2]:
+            state.collect(fragment, prevent_sweep=True)
+        self.assertFalse(goal.can_reach(state))
+        state.collect(fragments[2], prevent_sweep=True)
+        self.assertTrue(goal.can_reach(state))
+
+    def test_a_boss_is_on_its_continent(self) -> None:
+        boss = self.boss_location(LIQUID_THUNDER)
+        self.assertFalse(boss.can_reach(self.multiworld.state))
+        self.collect_by_name(["Dirnado Unlock"])
+        self.assertTrue(boss.can_reach(self.multiworld.state))
+
+    def test_slot_data(self) -> None:
+        slot_data = self.world.fill_slot_data()
+        self.assertEqual((slot_data["include_bosses"], slot_data["final_boss_fragments"]), (1, 3))
+
+
+class TestFragmentsWithoutBosses(FFResonanceTestBase):
+    options = {"include_bosses": False, "final_boss_fragments": 4}
+
+    def test_no_boss_no_fragment(self) -> None:
+        self.assertEqual(self.world.fill_slot_data()["final_boss_fragments"], 0)
+        self.assertFalse([i for i in self.multiworld.get_items() if i.player == self.player and i.name == FRAGMENT_NAME])
+        self.collect_all_but([VICTORY])
+        self.assertTrue(self.multiworld.get_location(GOAL_EVENT, self.player).can_reach(self.multiworld.state))
+
+
+class TestExcludedRegions(FFResonanceTestBase, real_defaults=True):
     options = {"excluded_regions": ["Crystal Tower"]}
 
     def test_excluded_region_locations_are_excluded(self) -> None:
@@ -179,7 +248,7 @@ class TestFinalBossLock(FFResonanceTestBase):
     def test_the_goal_needs_the_characters_and_visions(self) -> None:
         members = [i for i in self.multiworld.itempool if i.player == self.player and i.name in item_name_groups["Party Members"]]
         visions = [i for i in self.multiworld.itempool if i.player == self.player and i.name in item_name_groups["Visions"]]
-        self.collect_all_but(["Party Members", "Visions"] + [i.name for i in members + visions])
+        self.collect_all_but([VICTORY] + [i.name for i in members + visions])
         self.assertBeatable(False)
         self.collect(members[:2])            # the starting two and two more: four
         self.collect(visions[:2])
@@ -221,7 +290,7 @@ class TestKeyCardDoors(FFResonanceTestBase):
         self.assertTrue(level_2.can_reach(self.multiworld.state))
 
 
-class TestLocationOptionsOnByDefault(FFResonanceTestBase):
+class TestLocationOptionsOnByDefault(FFResonanceTestBase, real_defaults=True):
     def test_shinies_crystals_and_shards_are_locations(self) -> None:
         slot_data = self.world.fill_slot_data()
         self.assertEqual((slot_data["include_shinies"], slot_data["include_crystals"], slot_data["include_tablet_shards"]),
@@ -242,9 +311,9 @@ class TestNoArtifacts(FFResonanceTestBase):
         self.assertEqual(artifacts, [])
 
 
-class TestDefaultOptions(FFResonanceTestBase):
+class TestDefaultOptions(FFResonanceTestBase, real_defaults=True):
     def test_the_default_goal(self) -> None:
-        self.assertEqual(Goal.default, Goal.option_tablet_shards)
+        self.assertEqual(Goal.default, Goal.option_final_boss)
         self.assertEqual(TabletShardsRequired.default, 50)
 
     def test_enemy_scaling_is_not_a_yaml_option(self) -> None:
@@ -318,6 +387,13 @@ class TestData(FFResonanceTestBase):
         allowed = set(CONTINENT_UNLOCKS) | {"Crystal Tower", "Open"}
         self.assertTrue({s["area"] for s in TABLET_SHINIES} <= allowed, {s["area"] for s in TABLET_SHINIES})
 
+    def test_bosses(self) -> None:
+        self.assertEqual(sum(1 for b in BOSSES if b["vanilla"] is not None), CAVE_MASTERS)
+        self.assertEqual(sum(1 for b in BOSSES if b["fragment"]), FRAGMENT_BOSSES)
+        areas = {b["key"]: b["area"] for b in BOSSES}
+        self.assertEqual((areas[f"boss:{MARAUDER}"], areas[f"boss:{LIQUID_THUNDER}"]), ("Lanzelt", "Dirnado"))
+        self.assertFalse([b["name"] for b in BOSSES if b["fragment"] and b["vanilla"] is not None])
+
     def test_crystals(self) -> None:
         self.assertEqual(len(CRYSTALS), 16)
         areas = {c["key"]: c["area"] for c in CRYSTALS}
@@ -341,7 +417,8 @@ class TestData(FFResonanceTestBase):
 
     def test_mod_keys_map_to_ids(self) -> None:
         self.assertEqual(LOCATION_KEY_TO_ID["chest:3020:1"], 1_000_000_000 + 3020 * 1000 + 1)
-        self.assertEqual(len(LOCATION_KEY_TO_ID), len(CHESTS) + len(SHINIES) + len(CRYSTALS) + len(TABLET_SHINIES))
+        self.assertEqual(LOCATION_KEY_TO_ID[f"boss:{MARAUDER}"], 4_000_000_000 + MARAUDER)
+        self.assertEqual(len(LOCATION_KEY_TO_ID), len(CHESTS) + len(SHINIES) + len(CRYSTALS) + len(TABLET_SHINIES) + len(BOSSES))
 
 
 class TestNoProgression(FFResonanceTestBase):
@@ -379,7 +456,7 @@ class TestNames(FFResonanceTestBase):
         self.assertIn("Charlotte (Vision)", {ITEMS[i]["name"] for i in PROGRESSION["vision"]})
         keys = {ITEMS[i]["name"] for i in PROGRESSION["key"]}
         self.assertIn("Tunnel Key", keys)
-        self.assertIn("Transporter", keys)
+        self.assertIn("Cabin Key", keys)
         for left_out in ("Magicite", "Tablet Shard", "Magitek Armor Key"):
             self.assertNotIn(left_out, keys)
         self.assertFalse([n for n in keys if n.startswith("[TEMP]") or not n.isascii()])
