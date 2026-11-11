@@ -298,13 +298,29 @@ POTION = 1
 L.execute("""
 bossRows = { StrEne_C01_Orge_Destroy = { ObtainItemList = arr({ { ID = 25000, Num = 3 } }), OnFlagList = arr({ 146, 1231 }) },
   Dng_08Gro_43_BattleEnd_01 = { ProgressList = arr({ { ID = 0, Value = 6123 } }), OnFlagList = arr({ 608 }) },
+  SubEv_BarrierReleased_BattleEnd_01_A = { ProgressList = arr({ { ID = 0, Value = 5110 } }), OnFlagList = arr({ 526 }) },
+  C01_008_02 = { EventType = 0, OnFlagList = arr({ 101 }), OffFlagList = arr({}), ProgressList = arr({ { ID = 0, Value = 1045 } }),
+                 ContinuousEventList = arr({ { Condition = "x", EventId = nameOf("None") } }) },
   StrEne_CompleteTrophyGet = { ObtainItemList = arr({ { ID = 1 } }), ProgressList = arr({ { ID = 0, Value = 1 } }) } }
+bossGroups = { [9004] = { ID = 9004, battleEventId = 10, battleFinishEventId = nameOf("C01_008_02"),
+  battleFinishLoseEventId = nameOf("Lose"), battleFinishEscapeEventId = nameOf("Esc"),
+  isResultSkipOnWin = true, isResultSkipOnLose = true } }
+libs["/Game/Datatable/Encount/DT_BattleGroup.DT_BattleGroup"] = {
+  GetFullName = function() return "bg1" end, IsValid = function() return true end,
+  HasAnyInternalFlags = function() return false end, HasAnyFlags = function() return false end,
+  ForEachRow = function(_, fn) for k, r in pairs(bossGroups) do fn(nameOf(tostring(k)), r) end end }
 shopRows = bossRows""")
-assert lua("G.BossesPatch()") == 2
+assert lua("G.BossesPatch()") == 5
 assert lua("#bossRows.StrEne_C01_Orge_Destroy.ObtainItemList") == 1 and lua("#bossRows.StrEne_C01_Orge_Destroy.OnFlagList") == 2
 assert (lua("bossRows.StrEne_C01_Orge_Destroy.ObtainItemList[1].ID"), lua("bossRows.StrEne_C01_Orge_Destroy.ObtainItemList[1].Num")) == (POTION, 1)
 assert lua("#bossRows.Dng_08Gro_43_BattleEnd_01.ProgressList") == 0 and lua("#bossRows.Dng_08Gro_43_BattleEnd_01.OnFlagList") == 1
+assert lua("#bossRows.SubEv_BarrierReleased_BattleEnd_01_A.ProgressList") == 0
+assert lua("bossRows.C01_008_02.EventType") == 1 and lua("#bossRows.C01_008_02.ProgressList") == 0
+assert lua("bossRows.C01_008_02.ContinuousEventList[1].EventId:ToString()") == "SubEv_C02_SymbolEnemy_Encount"
+assert lua("bossGroups[9004].battleEventId") == -1 and lua("bossGroups[9004].battleFinishEventId:ToString()") == "Gim_EV_Majipot_Delete_02"
+assert lua("bossGroups[9004].isResultSkipOnWin") is False
 assert lua("#bossRows.StrEne_CompleteTrophyGet.ObtainItemList") == 1 and lua("#bossRows.StrEne_CompleteTrophyGet.ProgressList") == 1
+L.execute('libs["/Game/Datatable/Encount/DT_BattleGroup.DT_BattleGroup"] = nil')
 _bosses = [r.split("\t") for r in (paths.REPO / "data/bosses.tsv").read_text(encoding="utf8").splitlines()[1:]]
 _lua = [(b["group"], b["flag"]) for b in L.eval("G.BOSSES").values()]
 assert sorted(_lua) == sorted((int(r[0]), int(r[1])) for r in _bosses), "data/bosses.tsv and G.BOSSES differ"
@@ -437,7 +453,55 @@ L.execute("nearChests = {}")
 ok, detail = L.execute("return G.BossTestArm(9013, say)")
 assert ok is True and "0 chests near you" in detail and lua(fight) == 9013, "the pedestal works with no chest near"
 L.execute("G.BossTestOff(say)")
-L.execute("function FindAllOf() return nil end")
+# Round 62: story boss triggers on maps 3000, 3040 and 2050
+L.execute("""
+talkRows.SubEv_C02_SymbolEnemy_Encount = { EventType = 0, encountGroupId = 9009 }
+storyActors = {
+  BP_MapGimmick_EventTrigger_C = { { IsValid = function() return true end, HasAnyInternalFlags = function() return false end,
+    HasAnyFlags = function() return false end, m_EventList = arr({ { Condition = "{progress:0}==1040", EventId = nameOf("C01_008_02") } }),
+    m_FlagCondition = "", VisibleCondition = "",
+    SetGimmickCondition = function(s, c) s.gimmickCond = c end, SetVisible = function(s, v) s.vis = v end,
+    SetActorEnableCollision = function(s, v) s.col = v end } },
+  BP_MapUnit_NPC_C = { { IsValid = function() return true end, HasAnyInternalFlags = function() return false end,
+    HasAnyFlags = function() return false end, m_MapUnitId = 10003, m_VisiblFlagCondition = "",
+    SetVisible = function(s, v) s.vis = v end, SetActorHiddenInGame = function(s, v) s.bHidden = v end,
+    SetActorEnableCollision = function(s, v) s.col = v end },
+    { IsValid = function() return true end, HasAnyInternalFlags = function() return false end,
+    HasAnyFlags = function() return false end, m_MapUnitId = 10037, m_VisiblFlagCondition = "",
+    m_EventSettings = { EventList = arr({ { Condition = "{progress:0}==2200", EventList = arr({ { Condition = "x", EventId = nameOf("C02_208_01") } }) } }) },
+    SetVisible = function(s, v) s.vis = v end, SetActorHiddenInGame = function(s, v) s.bHidden = v end,
+    SetActorEnableCollision = function(s, v) s.col = v end } },
+  BP_MapTransitionTrigger_C = { { IsValid = function() return true end, HasAnyInternalFlags = function() return false end,
+    HasAnyFlags = function() return false end,
+    mTransitionDataList = arr({ { pointId = 5000, FlagCondition = "{progress:0}==1230", isEventOnly = false,
+                                  EventList = arr({ { Condition = "x", EventId = nameOf("C01_030_01") } }) } }) } } }
+function FindAllOf(c) return storyActors[c] end
+function G.CurrentMap() return mockMap end
+mockMap = 3000""")
+ok, detail = L.execute("return G.SyncStoryBossTrigger(say)")
+assert ok is True and "1 triggers, 0 transitions, 1 npcs" in detail, (ok, detail)
+assert lua("storyActors.BP_MapGimmick_EventTrigger_C[1].m_EventList[1].Condition") == "!{flag:1240}"
+assert lua("storyActors.BP_MapGimmick_EventTrigger_C[1].m_EventList[1].EventId:ToString()") == "SubEv_C02_SymbolEnemy_Encount"
+assert lua("storyActors.BP_MapUnit_NPC_C[1].bHidden") is False and lua("storyActors.BP_MapUnit_NPC_C[1].col") is True
+assert lua(pot) == 1240 and lua("talkRows.SubEv_C02_SymbolEnemy_Encount.encountGroupId") == 9004
+L.execute("sd.Progress.eventFlag[1241] = true")
+ok, detail = L.execute("return G.SyncStoryBossTrigger(say)")
+assert ok is True and "(won true)" in detail
+assert lua("storyActors.BP_MapGimmick_EventTrigger_C[1].gimmickCond") == 1 and lua("storyActors.BP_MapUnit_NPC_C[1].bHidden") is True
+L.execute("mockMap = 3040")
+ok, detail = L.execute("return G.SyncStoryBossTrigger(say)")
+assert ok is True and lua("storyActors.BP_MapTransitionTrigger_C[1].mTransitionDataList[1].FlagCondition") == "!{flag:1241}"
+assert lua("storyActors.BP_MapTransitionTrigger_C[1].mTransitionDataList[1].isEventOnly") is True
+assert lua(pot) == 1241 and lua("talkRows.SubEv_C02_SymbolEnemy_Encount.encountGroupId") == 9012
+L.execute("mockMap = 2050")
+ok, detail = L.execute("return G.SyncStoryBossTrigger(say)")
+assert ok is True and lua("storyActors.BP_MapUnit_NPC_C[2].m_VisiblFlagCondition") == "!{flag:1242}"
+assert lua("storyActors.BP_MapUnit_NPC_C[2].m_EventSettings.EventList[1].EventList[1].EventId:ToString()") == "SubEv_C02_SymbolEnemy_Encount"
+assert lua(pot) == 1242 and lua("talkRows.SubEv_C02_SymbolEnemy_Encount.encountGroupId") == 9014
+L.execute("mockMap = 3060")
+ok, detail = L.execute("return G.SyncStoryBossTrigger(say)")
+assert ok is None and lua(pot) == 915, "off a story boss map, magic pot win row restores flag 915"
+L.execute("G.CurrentMap = function() return mapMgr:GetSameMapId() end; function FindAllOf() return nil end")
 # Round 49: the watch probe takes a class's native functions, not its getters, delegates or Blueprint events
 L.execute("""
 local function fn(name, flags) return { GetFName = function() return { ToString = function() return name end } end,

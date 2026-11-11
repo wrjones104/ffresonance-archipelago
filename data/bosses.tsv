@@ -24,3 +24,8 @@ group	flag	map	kind	name	reward	win_row	round	note
 9072	611	3250	story	Yakhanati			59
 9071	612	3250	story	Arch Gargoyles			59
 9076	613	3250	story	Dragon			59
+9004	1240	3000	story	Belmodar		Gim_EV_Majipot_Delete_02	62	Trigger rewritten from story 1040 to !{flag:1240}
+9012	1241	3040	story	The Hunger		Gim_EV_Majipot_Delete_02	62	Trigger rewritten from story 1190 to !{flag:1241}
+9014	1242	2050	story	Mom Bomb		Gim_EV_Majipot_Delete_02	62	Trigger rewritten from story 2060 to !{flag:1242}
+9088	526	3180	story	Liquid Flame		SubEv_BarrierReleased_BattleEnd_Left	62	Chain sets story 5066 or 5070, which the mod takes out
+9089	527	3180	story	Iron Giant		SubEv_BarrierReleased_BattleEnd_Right	62	Chain sets story 5066 or 5070, which the mod takes out

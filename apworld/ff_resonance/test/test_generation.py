@@ -10,7 +10,7 @@ ARTIFACT_IDS = (30000, 30018)    # DT_ArtifactItemData's rows
 LAST_PALACE_CHEST = "chest:2031:24"   # Oblivion Palace's 4-Star Chamber: all 99 shards
 PALACE_SHARDS = 99
 MARAUDER, LIQUID_THUNDER = 9079, 9083   # battle groups: a cave master, a story boss
-CAVE_MASTERS, FRAGMENT_BOSSES = 15, 7
+CAVE_MASTERS, FRAGMENT_BOSSES = 15, 12
 
 
 def chest_location(test, key):

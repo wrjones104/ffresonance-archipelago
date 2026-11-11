@@ -2022,8 +2022,9 @@ local function EnableOpenWorld(sd)
         #OPEN_WORLD_FEATURES, #OPEN_WORLD_TUTORIALS, #bad > 0 and (" (failed: " .. table.concat(bad, " ") .. ")") or "")
 end
 
--- The talk event table, and the two kinds of row in it (ETalkEventType).
+-- The talk event table, the battle group table, and the two kinds of talk row (ETalkEventType).
 local SHOP_TABLE = "/Game/Datatable/Event/TalkEvent/CDT_TalkEventData_Prod.CDT_TalkEventData_Prod"
+local BATTLE_GROUP_TABLE = "/Game/Datatable/Encount/DT_BattleGroup.DT_BattleGroup"
 local EVENT_SEQUENCE, EVENT_BLUEPRINT = 0, 1
 
 -- The 16 sanctum crystals (round 46; data/crystals.tsv). Walking up to one starts event
@@ -2080,7 +2081,8 @@ G.BOSSES = {
     { group = 9138, flag = 1018 }, { group = 7042, flag = 928 }, { group = 7057, flag = 929 },
     { group = 9083, flag = 215 }, { group = 9075, flag = 608 }, { group = 9074, flag = 609 },
     { group = 9073, flag = 610 }, { group = 9072, flag = 611 }, { group = 9071, flag = 612 },
-    { group = 9076, flag = 613 },
+    { group = 9076, flag = 613 }, { group = 9004, flag = 1240 }, { group = 9012, flag = 1241 },
+    { group = 9014, flag = 1242 }, { group = 9088, flag = 526 }, { group = 9089, flag = 527 },
 }
 -- Win rows whose own reward is the location's item now: the 15 cave masters' Magicite, and
 -- Sephiroth's vision.
@@ -2093,34 +2095,225 @@ local BOSS_ROWS_NO_REWARD = {
     StrEne_C07_Brachioreids_Destroy = true, StrEne_C07_MorbolGreat_Destroy = true,
     Str_LegendEV_07_Boss_05 = true,
 }
--- Archaeoaevis's win row writes story 6123, which must not reach a save at story 8000.
-local BOSS_ROWS_NO_STORY = { Dng_08Gro_43_BattleEnd_01 = true }
+-- Archaeoaevis's win row writes story 6123, and the Nameless Ruins bosses' chain writes 5064,
+-- 5066 and 5070; none must reach a save at story 8000.
+local BOSS_ROWS_NO_STORY = {
+    Dng_08Gro_43_BattleEnd_01 = true,
+    SubEv_BarrierReleased_01 = true,
+    SubEv_BarrierReleased_BattleEnd_01_A = true,
+    SubEv_BarrierReleased_BattleEnd_02_B = true,
+}
+
+-- Round 62: story bosses whose triggers and talk rows test the story counter in the shipped game.
+-- Each map rewrites its trigger condition to !{flag:N}, routes its pre-fight talk row through the
+-- unused encounter row SubEv_C02_SymbolEnemy_Encount, and finishes with the shared post-battle
+-- sequence Gim_EV_Majipot_Delete_02 setting that map's boss flag.
+local STORY_BOSS_FIGHT, STORY_BOSS_WIN, MAJIPOT_FLAG = "SubEv_C02_SymbolEnemy_Encount", "Gim_EV_Majipot_Delete_02", 915
+G.STORY_BOSSES = {
+    [3000] = { group = 9004, flag = 1240, event = "C01_008_02", unit = 10003, kind = "trigger" },
+    [3040] = { group = 9012, flag = 1241, event = "C01_030_01", point = 5000, kind = "transition" },
+    [2050] = { group = 9014, flag = 1242, event = "C02_208_01", unit = 10037, kind = "npc" },
+}
+local STORY_BOSS_EVENTS, STORY_BOSS_GROUPS = {}, {}
+for _, b in pairs(G.STORY_BOSSES) do
+    STORY_BOSS_EVENTS[b.event] = true
+    STORY_BOSS_GROUPS[b.group] = true
+end
+
+local bossTestSaved = nil     -- { talk = {}, group = id, groupFields = {}, chests = { ["map:id"] = {} } }
+
+local function EachTalkRow(fn)
+    for _, dt in ipairs(TableFamily(Find(SHOP_TABLE))) do
+        pcall(function()
+            dt:ForEachRow(function(name, row) pcall(fn, ObjText(name), row) end)
+        end)
+    end
+end
+
+local function EachGroupRow(id, fn)
+    for _, dt in ipairs(TableFamily(Find(BATTLE_GROUP_TABLE))) do
+        pcall(function()
+            dt:ForEachRow(function(_, row)
+                pcall(function() if Int(row.ID) == id then fn(row) end end)
+            end)
+        end)
+    end
+end
+
+-- The story's scenes must not run from here: no scene in the battle, none after it, and a loss
+-- or an escape runs nothing.
+local function BossTestWriteGroup(row, win)
+    row.battleEventId = -1
+    row.battleFinishEventId = FName(win)
+    row.battleFinishLoseEventId = FName("None")
+    row.battleFinishEscapeEventId = FName("None")
+    row.isResultSkipOnWin = false
+    row.isResultSkipOnLose = false
+end
 
 -- Round 60: the user wants the win's reward pop-up kept, to say what the boss held (as a chest's
 -- does). The pop-up needs a reward, so the row gives one Potion in place of its own item, as a
 -- blanked chest gives 1 gil.
 local BOSS_STAND_IN = 1
 
--- Swaps those rewards for the stand-in and takes that story value out of the win rows. Safe to
--- run again. Returns the number of rows written.
+-- Swaps those rewards for the stand-in, takes story values out of win rows, and strips story
+-- cutscenes from G.STORY_BOSSES talk and battle-group rows. Safe to run again. Returns the number
+-- of rows written.
 function G.BossesPatch()
     local written = 0
-    for _, dt in ipairs(TableFamily(Find(SHOP_TABLE))) do
+    EachTalkRow(function(key, row)
+        if BOSS_ROWS_NO_REWARD[key] then
+            local reward = row.ObtainItemList[1]
+            reward.ID, reward.Num = BOSS_STAND_IN, 1
+            written = written + 1
+        elseif BOSS_ROWS_NO_STORY[key] then
+            row.ProgressList:Empty()
+            written = written + 1
+        elseif STORY_BOSS_EVENTS[key] then
+            row.EventType = EVENT_BLUEPRINT
+            row.OnFlagList:Empty()
+            row.OffFlagList:Empty()
+            row.ProgressList:Empty()
+            local list = row.ContinuousEventList
+            if #list < 1 then local _ = list[1] end
+            list[1].Condition = ""
+            list[1].EventId = FName(STORY_BOSS_FIGHT)
+            written = written + 1
+        end
+    end)
+    for _, dt in ipairs(TableFamily(Find(BATTLE_GROUP_TABLE))) do
         pcall(function()
-            dt:ForEachRow(function(name, row)
-                local key = ObjText(name)
-                if BOSS_ROWS_NO_REWARD[key] then
-                    local reward = row.ObtainItemList[1]
-                    reward.ID, reward.Num = BOSS_STAND_IN, 1
-                    written = written + 1
-                elseif BOSS_ROWS_NO_STORY[key] then
-                    row.ProgressList:Empty()
+            dt:ForEachRow(function(_, row)
+                local id = Int(row.ID)
+                if STORY_BOSS_GROUPS[id] and not (bossTestSaved and bossTestSaved.group == id) then
+                    BossTestWriteGroup(row, STORY_BOSS_WIN)
                     written = written + 1
                 end
             end)
         end)
     end
     return written
+end
+
+-- Rewrites the current map's story boss trigger, NPC pawn and shared encounter/win rows so the
+-- boss can be fought at story 8000 until its flag is set. When `say` is given (ffrap_bossfight
+-- trigger), each step is logged before its engine write runs. Returns true and a summary on a
+-- story boss map, or nil and why on any other map.
+function G.SyncStoryBossTrigger(say)
+    local step = say or function() end
+    local mapId = G.CurrentMap()
+    local boss = mapId and G.STORY_BOSSES[mapId]
+    if not boss then
+        if not bossTestSaved then
+            EachTalkRow(function(key, row)
+                if key == STORY_BOSS_WIN and #row.OnFlagList >= 1 and Int(row.OnFlagList[1]) ~= MAJIPOT_FLAG then
+                    row.OnFlagList[1] = MAJIPOT_FLAG
+                end
+            end)
+        end
+        return nil, "no story boss on map " .. tostring(mapId)
+    end
+    local won = G.GetFlag(boss.flag) == true
+    local cond = "!{flag:" .. boss.flag .. "}"
+    local fightRows, winRows, groupRows = 0, 0, 0
+    if not bossTestSaved then
+        step(string.format("story boss: tables for group %d, flag %d (won %s)", boss.group, boss.flag, tostring(won)))
+        EachTalkRow(function(key, row)
+            if key == STORY_BOSS_FIGHT then
+                row.encountGroupId = boss.group
+                fightRows = fightRows + 1
+            elseif key == STORY_BOSS_WIN then
+                for i = 1, #row.OnFlagList do row.OnFlagList[i] = boss.flag end
+                winRows = winRows + 1
+            end
+        end)
+        EachGroupRow(boss.group, function(row)
+            BossTestWriteGroup(row, STORY_BOSS_WIN)
+            groupRows = groupRows + 1
+        end)
+    end
+    local triggers, transitions, npcs = 0, 0, 0
+    if boss.kind == "trigger" then
+        local ok, all = pcall(FindAllOf, "BP_MapGimmick_EventTrigger_C")
+        for _, a in ipairs(ok and all or {}) do
+            if Alive(a) then
+                local match = false
+                pcall(function()
+                    local ev = ObjText(a.m_EventList[1].EventId)
+                    match = (ev == boss.event or ev == STORY_BOSS_FIGHT)
+                end)
+                if match then
+                    step("story boss: trigger m_EventList[1] -> " .. cond .. " / " .. STORY_BOSS_FIGHT)
+                    pcall(function()
+                        a.m_EventList[1].Condition = cond
+                        a.m_EventList[1].EventId = FName(STORY_BOSS_FIGHT)
+                    end)
+                    step("story boss: trigger m_FlagCondition and VisibleCondition -> " .. cond)
+                    pcall(function()
+                        a.m_FlagCondition = cond
+                        a.VisibleCondition = cond
+                    end)
+                    step("story boss: trigger SetGimmickCondition, SetVisible, SetActorEnableCollision")
+                    pcall(function() a:SetGimmickCondition(won and 1 or 0, false) end)
+                    pcall(function() a:SetVisible(not won) end)
+                    pcall(function() a:SetActorEnableCollision(not won) end)
+                    triggers = triggers + 1
+                end
+            end
+        end
+    elseif boss.kind == "transition" then
+        local ok, all = pcall(FindAllOf, "BP_MapTransitionTrigger_C")
+        for _, a in ipairs(ok and all or {}) do
+            if Alive(a) then
+                local d, match = nil, false
+                pcall(function()
+                    d = a.mTransitionDataList[1]
+                    local ev = #d.EventList >= 1 and ObjText(d.EventList[1].EventId) or nil
+                    match = (Int(d.pointId) == boss.point or ev == boss.event or ev == STORY_BOSS_FIGHT)
+                end)
+                if match and d then
+                    step("story boss: transition mTransitionDataList[1] -> " .. cond .. ", isEventOnly true, " .. STORY_BOSS_FIGHT)
+                    pcall(function()
+                        d.FlagCondition = cond
+                        d.isEventOnly = true
+                        d.EventList[1].Condition = ""
+                        d.EventList[1].EventId = FName(STORY_BOSS_FIGHT)
+                    end)
+                    transitions = transitions + 1
+                end
+            end
+        end
+    end
+    if boss.unit then
+        local ok, all = pcall(FindAllOf, "BP_MapUnit_NPC_C")
+        for _, a in ipairs(ok and all or {}) do
+            if Alive(a) then
+                local uid
+                pcall(function() uid = Int(a.m_MapUnitId) end)
+                if uid == boss.unit then
+                    step("story boss: npc " .. boss.unit .. " m_VisiblFlagCondition -> " .. cond)
+                    pcall(function() a.m_VisiblFlagCondition = cond end)
+                    if boss.kind == "npc" then
+                        step("story boss: npc " .. boss.unit .. " m_EventSettings.EventList[1] -> " .. cond .. " / " .. STORY_BOSS_FIGHT)
+                        pcall(function()
+                            local entry = a.m_EventSettings.EventList[1]
+                            entry.Condition = cond
+                            entry.EventList[1].Condition = ""
+                            entry.EventList[1].EventId = FName(STORY_BOSS_FIGHT)
+                        end)
+                    end
+                    step("story boss: npc " .. boss.unit .. " SetVisible, SetActorHiddenInGame, SetActorEnableCollision")
+                    pcall(function() a:SetVisible(not won) end)
+                    pcall(function() a:SetActorHiddenInGame(won) end)
+                    pcall(function() a:SetActorEnableCollision(not won) end)
+                    npcs = npcs + 1
+                end
+            end
+        end
+    end
+    local detail = string.format("map %d group %d flag %d (won %s): %d fight, %d win, %d group rows; %d triggers, %d transitions, %d npcs",
+        mapId, boss.group, boss.flag, tostring(won), fightRows, winRows, groupRows, triggers, transitions, npcs)
+    return true, detail
 end
 
 -- Round 46: flag 90 alone did not put Siren in the summon menu. An esper is an ability on both
@@ -3156,7 +3349,6 @@ end
 local scaleOriginals = {}   -- unit id -> { Level = n, MaxHitPoint = n, ... } as the game last had it
 -- Round 47: MRP is on the battle group, not the enemy, so a rescale left it alone, and a seed that
 -- started on a late continent got far more of it. A group's MRP follows its enemies' average level.
-local BATTLE_GROUP_TABLE = "/Game/Datatable/Encount/DT_BattleGroup.DT_BattleGroup"
 local groupOriginals, groupWrote = {}, {}   -- battle group id -> MRP as shipped, and as last written
 local function ScaleBattleGroups(mode, wanted)
     local changed = 0
@@ -4050,25 +4242,6 @@ end
 G.BOSS_TEST_FLAG = 1440       -- no condition or talk row in the game uses flags 1430 to 1449
 G.BOSS_TEST_SWORD = 10198     -- the Ancient Greatsword, which the sword pedestal checks for
 local BOSS_TEST_FIGHT, BOSS_TEST_VICTORY, BOSS_TEST_QUIET = "12Arms_01Sword_1stAwake_Encount", "12Arms_01Sword_1stAwake_Victory", "Gim_EV_Majipot_Delete_02"
-local bossTestSaved = nil     -- { talk = {}, group = id, groupFields = {}, chests = { ["map:id"] = {} } }
-
-local function EachTalkRow(fn)
-    for _, dt in ipairs(TableFamily(Find(SHOP_TABLE))) do
-        pcall(function()
-            dt:ForEachRow(function(name, row) pcall(fn, ObjText(name), row) end)
-        end)
-    end
-end
-
-local function EachGroupRow(id, fn)
-    for _, dt in ipairs(TableFamily(Find(BATTLE_GROUP_TABLE))) do
-        pcall(function()
-            dt:ForEachRow(function(_, row)
-                pcall(function() if Int(row.ID) == id then fn(row) end end)
-            end)
-        end)
-    end
-end
 
 -- Chest table rows, then the copies held by the closed chests that are loaded.
 local function EachChestData(fn)
@@ -4083,17 +4256,6 @@ local function EachChestData(fn)
 end
 
 local function ChestKey(data) return Int(data.mapId) .. ":" .. Int(data.ID) end
-
--- The story's scenes must not run from here: no scene in the battle, none after it, and a loss
--- or an escape runs nothing.
-local function BossTestWriteGroup(row, win)
-    row.battleEventId = -1
-    row.battleFinishEventId = FName(win)
-    row.battleFinishLoseEventId = FName("None")
-    row.battleFinishEscapeEventId = FName("None")
-    row.isResultSkipOnWin = false
-    row.isResultSkipOnLose = false
-end
 
 function G.BossTestOff(say)
     local saved = bossTestSaved
@@ -4209,6 +4371,7 @@ end
 -- A rate divides the distances, so 2 is twice as many battles. A map's row is read as it loads,
 -- so while encounters are off the player on the current map also gets an encounter distance out
 -- of reach, as FFRS_QoL does.
+do
 local DIFFICULTY_TABLE = "/Game/Datatable/Difficulty/DT_GameDifficultyParam.DT_GameDifficultyParam"
 local SHIPPED_RATES = { Easy = { 1, 1, 1 }, Normal = { 1, 1, 1 }, Expert = { 1, 1, 1.5 } }
 local NO_ENCOUNTER = 1.0e9
@@ -4302,6 +4465,7 @@ function G.ApplyPlayerEncounter(on)
     end
     return changed
 end
+end
 
 -- Round 50: our settings as rows of the game's Options screen, Gameplay tab (ffrap_menu add). The
 -- tab is the rows of DT_OP_GameSetting. Round 50's probe showed the screen draws rows we add. A
@@ -4314,6 +4478,7 @@ end
 -- had no entry under our tags, and the game only updates entries it has. So adding the rows also
 -- adds an entry per tag (OPTION_SAVEDATA_SETTING: Value, IsDisplay, Type: Slider 1, RadioButton 2),
 -- seeded from the current settings, unless the save has one already (the game keeps it on disk).
+do
 local OPTION_GAMEPLAY = "/Game/Datatable/UI/Option/Root/GameSetting/DT_OP_GameSetting.DT_OP_GameSetting"
 local OPTION_SLIDER = "Delegate.UI.System.Option.Root.GameSetting.GamePad.Sensitivity"
 local OPTION_SWITCH = "Delegate.UI.System.Option.Root.GameSetting.EncountSensor"
@@ -4498,6 +4663,7 @@ function G.OptionDump()
         end
     end
     return lines
+end
 end
 
 

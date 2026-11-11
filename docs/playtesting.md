@@ -512,20 +512,31 @@ World-map shinies verified as locations. Multiple crashes observed across differ
 - **The user asks for:** the encounter slider from 0.5 to 3 in steps of 0.5, and a yaml option, on by default, that makes the bosses with shuffled items priority locations.
 - **Also in the log:** `menu: DT_OP_GameSetting could not be loaded`, twice, in battles on map 10218. It came back by itself.
 
-## Round 61 test plan (mod 0.49.0, world 0.18.0)
+**Round 61 (mod 0.49.0, world 0.18.0, 2026-11-11): passed.**
+- Cave master reward pop-up worked with the 1-Potion stand-in and showed the Archipelago item text.
+- Chest pop-up speed is back to immediate on map changes.
+- Rates won over FFRS_QoL.
+- The encounter rate slider (0.5x to 3x in 0.5 steps) worked as intended.
+- Cave masters and Dragon's Maw bosses held priority items (`priority_bosses`).
+- Crystal Tower notice ("Crystal Fragments x/y") was deferred to the next round.
 
-**Install:** copy `FFRArchipelago/Scripts`, and copy `dist/ff_resonance.apworld` into Archipelago's `custom_worlds`. Generate a new seed. Leave FFRS_QoL on with its own rates, to test that ours win.
+## Round 62 test plan (mod 0.50.0, world 0.19.0)
 
-**1. A cave master's pop-up.** Beat one. The win now gives one Potion, so the game's reward pop-up comes up. **Does a pop-up come, and does it say what the boss held for Archipelago?** The log says `check boss:<group>` and then `chest pop-up for boss:<group>: text set`. If the pop-up says "Potion", send that log line.
+**Install:** copy `FFRArchipelago/Scripts`, and copy `dist/ff_resonance.apworld` into Archipelago's `custom_worlds`. Generate a new seed (`final_boss_fragments` can now go up to 12).
 
-**2. The chest pop-up's speed.** Open the first chest or shiny on a few maps. **Is the Archipelago text there at once again?**
+**1. Nameless Ruins bosses (map 3180): Liquid Flame (`9088`) and Iron Giant (`9089`).**
+Walk up to both boss pawns in the Nameless Ruins. Both are already active at story 8000, and the mod clears their story counter writes (`5080`, `5110`). Confirm both fights start, give a Crystal Fragment (`check boss:9088` and `check boss:9089`), and leave the save at story `8000`.
 
-**3. Rates with FFRS_QoL.** Set our EXP rate in the Options screen to a value FFRS_QoL does not have, and win a battle. **Is the EXP ours?** The log says once: `settings: the rates had been changed and were written back`.
+**2. Earth Shrine (map 3000): Belmodar (`9004`, flag `1240`).**
+Go to the boss room in the Earth Shrine. The mod syncs the trigger automatically when the map settles, or you can run `ffrap_bossfight trigger` to log each write step by step. Confirm Belmodar is visible, walking into the trigger starts the fight without story cutscenes, winning sets flag `1240` and sends `check boss:9004` (granting a Crystal Fragment), and the boss is gone afterwards.
 
-**4. The encounter slider.** It is now "AP: Encounter rate (x0.5)", from 1 to 6: 1 is half as often, 2 is normal, 6 is three times. **Does it show, start at 2, and does 6 bring battles quickly?** Keep FFRS_QoL's own encounter rate at 1.
+**3. Kolobos Ruins (map 3040): The Hunger (`9012`, flag `1241`).**
+Walk to the boss exit door (`pointId 5000`) in Kolobos Ruins. Confirm the transition trigger starts The Hunger (`9012`), winning sets flag `1241` and sends `check boss:9012`, and the exit works normally after the win.
 
-**5. Priority bosses.** In the spoiler log, the cave masters and the two Dragon's Maw bosses should mostly hold progression or useful items. Sephiroth is left out.
+**4. Dwarven Forge (map 2050): Mom Bomb (`9014`, flag `1242`).**
+Walk to Mom Bomb's room in Dwarven Forge. Confirm the Mom Bomb NPC pawn (`unit 10037`) is visible, touching/interacting starts group `9014`, winning sets flag `1242` and sends `check boss:9014`, and the pawn hides after the win.
 
-**6. From round 60, not tried yet.** With too few fragments, walk to the tower's last climb. **Does the notice say "Crystal Fragments x/y"?**
+**5. Crystal Tower notice (carried over from Round 60/61).**
+With fewer fragments than `final_boss_fragments`, walk to the Crystal Tower's last climb and confirm the notice includes `Crystal Fragments x/y`.
 
 Send the `[FFRAP]` lines of the log.

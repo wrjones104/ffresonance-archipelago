@@ -25,7 +25,7 @@ Facts here come from the game data dump (`dump/tables`, `dump/maps`, `data/game/
 
 An open world save starts at story 8000. A trigger that tests `{progress:0}==N` for an earlier N never fires again. A trigger that tests only its own flag still works. The user saw this in round 59: Liquid Thunder stands on Mt. Thunderclap and starts its fight.
 
-### Tier 1: work now, with their own flag (25 fights)
+### Tier 1: work now, with their own flag (27 fights)
 
 | Fight | Level | Map | Win flag |
 |---|---|---|---|
@@ -54,12 +54,14 @@ An open world save starts at story 8000. A trigger that tests `{progress:0}==N` 
 | Yakhanati | 40 | 3250 Sanctissimus Shrine | 611 |
 | Arch Gargoyle x2 | 40 | 3250 Sanctissimus Shrine | 612 |
 | Dragon | 42 | 3250 Sanctissimus Shrine | 613 |
+| Liquid Flame | 32 | 3180 Nameless Ruins | 526 |
+| Iron Giant | 32 | 3180 Nameless Ruins | 527 |
 
 The 15 cave masters also turn on flags 1231 and 1232 (shared). The 12 magic pots (flags 914 to 925) work the same way, but they are item puzzles, not bosses.
 
 Left out: the Antlion (world map, Grandshelt, level 20). Its win turns on flag 113 only when flag 10 is on. With flag 10 off the win row sets nothing, so the fight would come back each time.
 
-What a win gives in the game: a cave master gives Magicite (a Shard, a Magicite or a Cryst, by level). Sephiroth gives his vision (13113). The others give nothing. Archaeoaevis's win row also writes story 6123.
+What a win gives in the game: a cave master gives Magicite (a Shard, a Magicite or a Cryst, by level). Sephiroth gives his vision (13113). The others give nothing. Archaeoaevis's win row writes story 6123, and the two Nameless Ruins bosses write story 5080 and 5110; the mod clears those story writes.
 
 Round 59: the user saw the cave masters and their rewards work on the open world start.
 
@@ -83,19 +85,19 @@ These test a side-quest counter (`{progress:N}`, N not 0) or an item. They may w
 | Twelve Arms, 12 at level 50 and 12 at level 75 | the weapon in the bag, at a pedestal in the Chamber of Arms (3290) | the Victory row's flag |
 | Arena, 20 fights up to Shinryu (95) and Omega (99) | the Colosseum's ranks | the rank's proof item (29000 to 29003) |
 
-Siren and Leviathan are story fights (tier 3). Their espers are Archipelago items today.
+Siren and Leviathan are story fights (tier 3). Both will give Crystal Fragments: the player starts with Siren as a summon, and the Leviathan summon comes from a side quest.
 
-### Tier 3: story bosses, gone at 8000 (about 30 fights)
+### Tier 3: story bosses, gone at 8000 (about 28 fights)
 
-Belmodar, The Hunger, Siren, Mom Bomb, Guardian, Epimetheus, Adrastea, Aether (two), Wave Lopros, Water Dragon, Leviathan, Alluvion (two), Ignis (four), the Emperor of Zoldaad, Evan, Lazarov, Slagworm, Byblos, Malboro, Archwitch Fina, Tellus (three), Liquid Flame, Iron Giant, Lux, Elfdrit, Lasswell (two), Gelidus, Umbra (two), Dante, Behemoth.
+Belmodar, The Hunger, Siren, Mom Bomb, Guardian, Epimetheus, Adrastea, Aether (two), Wave Lopros, Water Dragon, Leviathan, Alluvion (two), Ignis (four), the Emperor of Zoldaad, Evan, Lazarov, Slagworm, Byblos, Malboro, Archwitch Fina, Tellus (three), Lux, Elfdrit, Lasswell (two), Gelidus, Umbra (two), Dante, Behemoth.
 
 What they carry:
-- The trigger tests one story value, for example Belmodar's `{progress:0}==1040`.
+- The trigger tests one story value, for example Belmodar's `{progress:0}==1040` (condition 1001).
 - The fight row is a story scene, and the win row is another. Both move the story counter. Neither can run in an open world.
 - 33 groups have a scripted event inside the battle (`battleEventId`), such as tutorial text or a forced loss.
 - Some have no trigger of their own. They start from the row before them (Adrastea after the train scene, Leviathan, Lazarov).
 
-Three triggers showed no condition in the off-line pass: The Hunger (Kolobos Ruins), the Emperor (Zoldaad Castle) and Sol. Sol is the tower's own. The other two need a look in game.
+`BP_MapTransitionTrigger_C` stores its condition and event list in `mTransitionDataList` (each entry has `pointId`, `FlagCondition`, `isEventOnly` and `EventList`). For The Hunger on map 3040 (Kolobos Ruins), `pointId = 5000` runs `C01_030_01` when `FlagCondition = {progress:0}==1230`.
 
 ## 3. Bringing the story bosses back
 
@@ -105,32 +107,26 @@ Three triggers showed no condition in the off-line pass: The Hunger (Kolobos Rui
 - A win row must be a Sequence row with a real sequence. `Gim_EV_Majipot_Delete_02` works and is short.
 - A flag on the win row is a working check (flag 1440).
 
-**Suggestion: put each boss back on its own dead trigger.** On the boss's map, the mod finds the story trigger and writes:
-1. The trigger's condition: our own flag for that boss, off.
-2. The trigger's event: one fight row of ours (a borrowed row with no story scene), with `encountGroupId` set to the boss for this map.
-3. The group: `battleEventId` cleared, `battleFinishEventId` set to the short win row.
-4. After the win, the mod sees flag 1440, turns it off, turns on the boss's own flag and sends the check.
-
-Flags 1430 to 1449 are free in the game's data. Thirty bosses need more room, so the range needs a new search of the dump.
-
-**Round 59:** a live trigger's list can be read from Lua (`m_EventList[0].Condition` and `.EventId`, on Ramuh's trigger). The class has `SetEventList`, `SetEvent`, `GetEventList`, `PlayEvent` and `FindMatchEventByEventList`.
-
-**Not proven:** writing the list on a live actor, and whether a transition trigger can run a fight row without its move to the boss room. Both need a probe behind a test command.
-
-**The fallback is proven:** a trap chest near the boss room. The cost is that the chest's own check and the boss share one spot.
+**Built for the first three tier 3 bosses (world 0.19.0, mod 0.50.0):**
+- Pre-fight talk rows (`C01_008_02`, `C01_030_01`, `C02_208_01`) have their story writes and flag writes cleared and jump to the unused encounter row `SubEv_C02_SymbolEnemy_Encount`, while `G.SyncStoryBossTrigger` sets `SubEv_C02_SymbolEnemy_Encount.encountGroupId` to the current map's boss group and points that group's win event to `Gim_EV_Majipot_Delete_02`.
+- Belmodar (group 9004, flag 1240, map 3000 Earth Shrine): `G.SyncStoryBossTrigger` rewrites `BP_MapGimmick_EventTrigger_C` (`m_EventList[1]` to `!{flag:1240}` / `SubEv_C02_SymbolEnemy_Encount`) and shows `BP_MapUnit_NPC_C` (unit 10003) until flag 1240 is set.
+- The Hunger (group 9012, flag 1241, map 3040 Kolobos Ruins): `G.SyncStoryBossTrigger` rewrites `BP_MapTransitionTrigger_C` (`pointId = 5000`) to `FlagCondition = !{flag:1241}`, `isEventOnly = true`, and `EventList[1].EventId = SubEv_C02_SymbolEnemy_Encount`.
+- Mom Bomb (group 9014, flag 1242, map 2050 Dwarven Forge): `G.SyncStoryBossTrigger` rewrites `BP_MapUnit_NPC_C` (unit 10037) to `m_VisiblFlagCondition = !{flag:1242}` and `m_EventSettings.EventList[1]` to `SubEv_C02_SymbolEnemy_Encount`, and shows the pawn with collision enabled until flag 1242 is set.
+- While on one of those maps, `Gim_EV_Majipot_Delete_02.OnFlagList[1]` is set to that map's boss flag (`1240` to `1242`), and restored to `915` on other maps so the magic pot puzzles keep their own flag.
+- `ffrap_bossfight trigger` runs `G.SyncStoryBossTrigger` with step-by-step pre-write logging.
 
 Scripted fights need care one by one. The first Umbra and the Ignis and Evan duels end by script or use a fixed party. Leave those out of the first pass.
 
 ## 4. The reward and the objective
 
-**Decided (round 59, the user):**
+**Decided (round 59 and round 61, the user):**
 - A story boss holds a locked Crystal Fragment and no shuffled item.
 - A cave master holds a shuffled item. Its own Magicite goes into the pool.
 - The tower's last climb needs `final_boss_fragments` fragments, beside `final_boss_characters` and `final_boss_visions`.
-- Espers are open: Crystal Fragments, a fragment kind of their own, or left as they are (the esper is an item). The user will ask players.
+- Siren and Leviathan both hold Crystal Fragments as story bosses.
 
-**Built (world 0.17.0, mod 0.48.0):**
-- `data/bosses.tsv` lists the fights: battle group, win flag, map, kind. The kind `story` gives a fragment (Liquid Thunder and the six Sanctissimus fights: 7). `cave` and `optional` (Sephiroth, Intangir, the Rogue Magitek Weapon) give a shuffled item.
+**Built (world 0.17.0 to 0.19.0, mod 0.48.0 to 0.50.0):**
+- `data/bosses.tsv` lists 30 fights: battle group, win flag, map, kind. The kind `story` gives a fragment (12 fights: Liquid Thunder, the six Sanctissimus fights, Liquid Flame, Iron Giant, Belmodar, The Hunger and Mom Bomb). `cave` and `optional` (Sephiroth, Intangir, the Rogue Magitek Weapon) give a shuffled item.
 - A location's key is `boss:<battle group>`. Its region is the continent of its map.
 - The mod sends the check when the win flag is on. It empties the cave masters' and Sephiroth's reward lists, and takes story 6123 out of Archaeoaevis's win row.
 - A Crystal Fragment is nothing in the game (item kind `token`). The client counts them and writes the count in the `cfg finalboss` line.

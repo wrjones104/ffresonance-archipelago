@@ -50,7 +50,7 @@
 -- follows the save slots the linked game is saved to. While any other save is loaded, the mod
 -- grants nothing, reports nothing and leaves the chests vanilla.
 
-local VERSION = "0.49.0"
+local VERSION = "0.50.0"
 local PROTOCOL = 2        -- the bridge protocol; the apworld's MOD_PROTOCOL
 
 local MOD_DIR = (debug.getinfo(1, "S").source:gsub("^@", ""):gsub("\\", "/"):match("^(.*/)Scripts/[^/]+$"))
@@ -1918,7 +1918,7 @@ finalLockTick = function()
         lockNoticed = false
     end
 end
-local saddleSave, shipyardLogged = nil, false
+local saddleSave, shipyardLogged, storyBossLogged = nil, false, nil
 seedExtrasTick = function()
     local seedSave = seedCfg.openworld and sessionSave() and (game.StoryCounter() or 0) >= game.OPEN_START.story
     if seedSave and saddleSave ~= save.obj and game.OnField() then
@@ -1935,6 +1935,13 @@ seedExtrasTick = function()
         shipyardLogged = shipyardLogged or woke > 0
     else
         shipyardLogged = false
+    end
+    if seedSave and seedCfg.bosses and game.OnField() and game.SyncStoryBossTrigger then
+        local ok, detail = game.SyncStoryBossTrigger()
+        if ok and detail ~= storyBossLogged then log("story boss: " .. detail) end
+        storyBossLogged = ok and detail or nil
+    else
+        storyBossLogged = nil
     end
 end
 
@@ -2095,6 +2102,7 @@ end
 -- ffrap_bossfight <battle group> [quiet]: the closed chests near you become traps for that fight,
 -- the Chamber of Arms sword pedestal starts it too, and a win is logged (round 49; IDEAS.md, idea
 -- 25). The win plays the sword fight's own victory scene, or nothing with `quiet`.
+-- ffrap_bossfight trigger: rewrites the current map's story boss trigger and logs each step.
 -- ffrap_bossfight sword: gives the Ancient Greatsword the pedestal needs. off: undoes it.
 -- ffrap_bossfight watch [class ...]: round 49 probe. The fight did not start twice, and the game
 -- never asked for a battle. This hooks the native functions of the talk event and encounter
@@ -2204,6 +2212,16 @@ command("ffrap_bossfight", function(p)
         notify("Boss test: " .. text)
         return
     end
+    if first == "trigger" then
+        if not game.InGame() then
+            notify("Boss test: load a save first")
+            return
+        end
+        local ok, detail = game.SyncStoryBossTrigger(log)
+        log("boss test: trigger: " .. tostring(detail))
+        notify("Boss trigger: " .. tostring(detail))
+        return
+    end
     if first == "off" then
         bossTest.group = nil
         log("boss test: off, " .. tostring(game.BossTestOff(log)) .. " rows put back")
@@ -2212,7 +2230,7 @@ command("ffrap_bossfight", function(p)
     end
     local id = tonumber(first)
     if not id then
-        notify("Usage: ffrap_bossfight <battle group> [quiet] | sword | off | watch [class ...] | watch off")
+        notify("Usage: ffrap_bossfight <battle group> [quiet] | trigger | sword | off | watch [class ...] | watch off")
         return
     end
     if not game.InGame() then
