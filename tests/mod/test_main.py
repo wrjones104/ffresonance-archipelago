@@ -123,8 +123,6 @@ function G.ApplyEncounterTables(on, rate) G.encounterTables = { on, rate } retur
 function G.ApplyPlayerEncounter(on) G.playerEncounters = on return 0 end
 function G.ReadOptionValues() return G.menuValues end
 function G.AddOptionRows(say, current) G.menuAdds = (G.menuAdds or 0) + 1; G.menuSeed = current; return true, "rows", 0 end
-G.ARTIFACT_FIRST, G.ARTIFACT_LAST = 30000, 30018
-function G.SyncArtifacts() G.artifactSyncs = (G.artifactSyncs or 0) + 1; return {} end
 function G.UnlockVision() return "ok", "" end
 function G.HasVision(id) return (G.owned or {})[id] == true end
 function G.AddUnit() return "ok", G.unitDetail or "in the active party" end
@@ -1456,7 +1454,7 @@ L.execute('hooks["/Script/mucha.CPP_MapManager:Warp"](nil)')
 assert len([x for x in logs() if "watch: CPP_MapManager:Warp (" in x]) == 1, "off stops the logging"
 print("watch probe: ok")
 
-# Round 49: an artifact from Archipelago is also put in the save's artifact list; other items are not
+# Round 49: items from Archipelago are granted (an old seed can still send an artifact, a plain item now)
 inbox("seed\tS51:0:1\nitem\t0\titem\t30001\t1\tExodus\nitem\t1\titem\t1\t1\tPotion\n", "w")
 L, G = boot5("SD_ART", "0", {})
 G.story = 1000
@@ -1464,8 +1462,7 @@ G.chests = L.table()
 tick = lambda k: [L.execute("tickFn()") for _ in range(k)]
 tick(12)
 assert "item30001x1" in list(G.log.values()) and "item1x1" in list(G.log.values()), list(G.log.values())
-assert (G.artifactSyncs or 0) >= 1, "the artifact list was synced after the grant"
-print("artifact grant: ok")
+print("item grant: ok")
 
 # Round 50: ffrap_set changes the settings, keeps them in settings.txt (only what was set), and
 # they reach the game; scaling off keeps the seed from scaling enemies

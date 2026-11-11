@@ -162,21 +162,11 @@ class ShuffleVisions(DefaultOnToggle):
     display_name = "Shuffle Visions"
 
 
-class StartWithBanditCuffLinks(DefaultOnToggle):
-    """
-    Starts you with the Bandit Cuff Links, the artifact that shows treasure chests on the mini-map,
-    switched on. Turn it off in the Items screen's Artifacts tab. With this off, the Cuff Links are
-    shuffled with the other key items.
-    """
-    display_name = "Start With Bandit Cuff Links"
-
-
 class ShuffleKeyItems(DefaultOnToggle):
     """
-    EXPERIMENTAL. Adds the key items and artifacts to the item pool, one of each (43): keys,
-    quest items, Colosseum proofs and artifacts such as the Transporter. Left out: the DLC items,
-    Magicite, Tablet Shards and the items with no English name. The story still hands out its
-    own. There is no logic for them yet.
+    EXPERIMENTAL. Adds the key items to the item pool, one of each (29): keys, quest items and
+    Colosseum proofs. Left out: artifacts, the DLC items, Magicite, Tablet Shards and the items
+    with no English name. The story still hands out its own. There is no logic for them yet.
     """
     display_name = "Shuffle Key Items"
 
@@ -199,7 +189,6 @@ class FFResonanceOptions(PerGameCommonOptions):
     shuffle_party_members: ShufflePartyMembers
     shuffle_visions: ShuffleVisions
     shuffle_key_items: ShuffleKeyItems
-    start_with_bandit_cuff_links: StartWithBanditCuffLinks
 
 
 option_groups = [
@@ -207,5 +196,5 @@ option_groups = [
     OptionGroup("Start", [StartingContinent, StartingRoster, StartingCharacter1, StartingCharacter2,
                           StartingCharacter3, StartingCharacter4]),
     OptionGroup("Locations", [IncludeShinies, IncludeTabletShards, IncludeCrystals, ExcludedRegions]),
-    OptionGroup("Items", [ShufflePartyMembers, ShuffleVisions, ShuffleKeyItems, StartWithBanditCuffLinks]),
+    OptionGroup("Items", [ShufflePartyMembers, ShuffleVisions, ShuffleKeyItems]),
 ]

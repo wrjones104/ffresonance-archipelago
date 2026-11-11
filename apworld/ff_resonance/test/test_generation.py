@@ -6,6 +6,8 @@ from ..locations import GOAL_EVENT, LOCATION_KEY_TO_ID
 from ..options import Goal, TabletShardsRequired
 from . import FFResonanceTestBase
 
+ARTIFACT_IDS = (30000, 30018)    # DT_ArtifactItemData's rows
+
 
 class TestDefault(FFResonanceTestBase):
     def test_chests_are_the_only_locations(self) -> None:
@@ -16,8 +18,7 @@ class TestDefault(FFResonanceTestBase):
         pool = [item.code for item in self.multiworld.itempool if item.player == self.player]
         starters = {UNIT_ITEM_BASE + 1001, UNIT_ITEM_BASE + 1002}
         unlocks = [ap_id for name, ap_id in CONTINENT_UNLOCKS.items() if name != "Grandshelt"]
-        keys = [i for i in PROGRESSION["key"] if ITEMS[i]["name"] != "Bandit Cuff Links"]    # a starting item by default
-        extra = [i for i in PROGRESSION["party"] if i not in starters] + PROGRESSION["vision"] + keys + unlocks
+        extra = [i for i in PROGRESSION["party"] if i not in starters] + PROGRESSION["vision"] + PROGRESSION["key"] + unlocks
         self.assertEqual(len(pool), len(CHESTS))
         for ap_id in extra:
             self.assertEqual(pool.count(ap_id), 1, ITEMS[ap_id]["name"])
@@ -146,18 +147,11 @@ class TestTabletShardGoal(FFResonanceTestBase):
         self.assertEqual(slot_data["tablet_shards_required"], 10)
 
 
-class TestCuffLinks(FFResonanceTestBase):
-    def test_start_with_the_cuff_links(self) -> None:
-        self.assertIn("Bandit Cuff Links", [i.name for i in self.multiworld.precollected_items[self.player]])
-        self.assertNotIn("Bandit Cuff Links", [i.name for i in self.multiworld.itempool if i.player == self.player])
-
-
-class TestCuffLinksShuffled(FFResonanceTestBase):
-    options = {"start_with_bandit_cuff_links": False}
-
-    def test_the_cuff_links_are_shuffled(self) -> None:
-        self.assertNotIn("Bandit Cuff Links", [i.name for i in self.multiworld.precollected_items[self.player]])
-        self.assertIn("Bandit Cuff Links", [i.name for i in self.multiworld.itempool if i.player == self.player])
+class TestNoArtifacts(FFResonanceTestBase):
+    def test_no_artifact_is_in_the_pool_or_given_at_the_start(self) -> None:
+        held = self.multiworld.itempool + self.multiworld.precollected_items[self.player]
+        artifacts = [i.name for i in held if i.player == self.player and ARTIFACT_IDS[0] <= ITEMS[i.code]["game_id"] <= ARTIFACT_IDS[1]]
+        self.assertEqual(artifacts, [])
 
 
 class TestDefaultOptions(FFResonanceTestBase):

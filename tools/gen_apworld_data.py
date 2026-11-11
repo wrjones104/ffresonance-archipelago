@@ -135,8 +135,10 @@ OPEN_AREA = "Open"
 # of her own: the game can have both Finas at once, though the story swaps them in and out
 # (round 30). The guests (1013, 1014, 1016) never stay.
 PARTY_MEMBER_IDS = [1001, 1002, 1003, 1004, 1005, 1006, 1007, 1008]
-# Valuables and artifacts that are not key items of the US game, or not one-off items:
-# DLC items (29500-29520), and the counted ones (Magicite 25000-25002, Tablet Shards 25004).
+# Valuables that are not key items of the US game, or not one-off items: DLC items
+# (29500-29520), and the counted ones (Magicite 25000-25002, Tablet Shards 25004).
+# Artifacts (DT_ArtifactItemData) are left out since round 55: the game has no screen to switch
+# them, and the Bandit Cuff Links showed no effect when switched on (IDEAS.md, idea 26).
 NOT_KEY_ITEMS = {25000, 25001, 25002, 25004, 29500, 29510, 29520}
 
 
@@ -338,7 +340,7 @@ def main() -> None:
         item_id, name = int(r["id"]), names[int(r["id"])]
         if r["table"] == "vision":
             category, kind = "vision", "vision"
-        elif r["table"] in ("valuable", "artifact"):
+        elif r["table"] == "valuable":
             if item_id in NOT_KEY_ITEMS or name.startswith("[TEMP]") or is_japanese(name):
                 continue
             category, kind = "key", "item"

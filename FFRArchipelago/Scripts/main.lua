@@ -50,7 +50,7 @@
 -- follows the save slots the linked game is saved to. While any other save is loaded, the mod
 -- grants nothing, reports nothing and leaves the chests vanilla.
 
-local VERSION = "0.40.1"
+local VERSION = "0.41.0"
 local PROTOCOL = 2        -- the bridge protocol; the apworld's MOD_PROTOCOL
 
 local MOD_DIR = (debug.getinfo(1, "S").source:gsub("^@", ""):gsub("\\", "/"):match("^(.*/)Scripts/[^/]+$"))
@@ -316,14 +316,7 @@ end
 -- -------------------------------------------------------------------------------------------
 
 local GRANTS = {
-    item = function(it)
-        local code, detail = game.GrantItem(it.id, math.max(it.count, 1))
-        if code == "ok" and it.id >= game.ARTIFACT_FIRST and it.id <= game.ARTIFACT_LAST then
-            local added, why = game.SyncArtifacts()
-            detail = detail .. "; artifact list: " .. (added and (#added .. " added") or tostring(why))
-        end
-        return code, detail
-    end,
+    item = function(it) return game.GrantItem(it.id, math.max(it.count, 1)) end,
     vision = function(it) return game.UnlockVision(it.id) end,
     unit = function(it)
         -- Round 44: in a seed, a new member comes in at the party's average level. Before the
@@ -1177,10 +1170,6 @@ local function tick()
                     log("crystals: " .. tostring(written) .. " event rows set to skip the scene" .. (okCrystals and "" or " (failed)"))
                 end
                 if newSave and bossTest.group then pcall(bossTest.arm, bossTest.group, bossTest.quiet) end
-                if newSave then
-                    local okArt, added = pcall(game.SyncArtifacts)
-                    if okArt and added and #added > 0 then log("artifacts: added to the artifact list: " .. table.concat(added, ", ")) end
-                end
                 if okShop and blocked ~= nil then
                     log("vision shop " .. (blocked and "closed (no vision yet)" or "open") .. ": " .. tostring(rows) .. " rows")
                 end
@@ -1862,49 +1851,6 @@ command("ffrap_menu", function(p)
     local ok, detail = game.AddOptionRows(log, currentSettings())
     log("menu: " .. (ok and "" or "failed: ") .. tostring(detail))
     notify("Menu: " .. tostring(detail) .. ". Open Options, Gameplay now.")
-end)
-
--- ffrap_artifact: the artifact list, on or off. ffrap_artifact <id> <on|off>: switch one (round 50:
--- nothing in the game's menus does, and whether it changes the effect is the question).
-command("ffrap_artifact", function(p)
-    if tostring(p[1] or ""):lower() == "minimap" then
-        local tag, value = p[2] and tostring(p[2]), tostring(p[3] or ""):lower()
-        if tag and value ~= "on" and value ~= "off" then
-            notify("Usage: ffrap_artifact minimap [<tag, e.g. ThiefCuffs> <on|off>]")
-            return
-        end
-        for _, line in ipairs(game.MiniMapArtifacts(tag, value == "on")) do log("artifacts: minimap " .. line) end
-        notify("Artifacts: mini-map states written to the log")
-        return
-    end
-    if tostring(p[1] or ""):lower() == "table" then
-        local ok, detail = game.AddArtifactIds(log)
-        log("artifacts: " .. (ok and "" or "failed: ") .. tostring(detail))
-        notify("Artifacts: " .. tostring(detail))
-        return
-    end
-    if tostring(p[1] or ""):lower() == "menu" then
-        local ok, detail = game.AddArtifactSwitches(log)
-        log("artifacts: " .. (ok and "" or "failed: ") .. tostring(detail))
-        notify("Artifacts: " .. tostring(detail) .. ". Look in the Items screen's All tab.")
-        return
-    end
-    local id, value = tonumber(p[1]), tostring(p[2] or ""):lower()
-    if p[1] and not (id and (value == "on" or value == "off")) then
-        notify("Usage: ffrap_artifact [menu | table | minimap [<tag> <on|off>] | <id> <on|off>]")
-        return
-    end
-    if id then
-        local found, states = game.Artifacts(math.floor(id), value == "on")
-        local line = (found and ("artifact " .. id .. " " .. value) or ("artifact " .. id .. " is not in the list")) .. "; " .. tostring(states)
-        log("artifacts: " .. line)
-        notify("Artifacts: " .. line)
-        return
-    end
-    local states, why = game.Artifacts()
-    local line = states and table.concat(states, ", ") or tostring(why)
-    log("artifacts: " .. line)
-    notify("Artifacts: " .. line)
 end)
 
 -- Round 49: a seed scales its enemies by itself, in place of typing ffrap_scale each time. It

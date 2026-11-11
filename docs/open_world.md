@@ -207,7 +207,7 @@ The story natively awards party members, starter visions, the airship, and key i
 - Party: 8 playable characters (world 0.3.1 places 6 in the pool with Rain and Lasswell starting).
 - Visions: all 26 are randomized in the pool.
 - Airship: unlock mechanism detailed in section 4.
-- Key items: 43 items in the pool.
+- Key items: 29 items in the pool (43 with the artifacts, before world 0.10.0).
 
 ## 9. Order of work
 

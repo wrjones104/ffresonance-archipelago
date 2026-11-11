@@ -59,6 +59,7 @@ An Archipelago implementation for Final Fantasy Resonance (UE 5.6, game module `
   - `ffrap_layout <text>`: the panels around some on-screen text.
   - `ffrap_functions`: function signatures.
   - Off-line, before a probe: `data/game/*.tsv`, or `dotnet run --project tools/dump_game -- assets <path>` for any asset's properties (with `DUMP_BYTECODE=1`, each Blueprint function's code too), `structs <regex>` for any class's or struct's fields, and `raw <path>` for files such as the game's ini files.
+  - What a pak mod changes: hard-link the game's `Paks` files into a scratch folder, copy the mod's `.pak`, `.utoc` and `.ucas` in beside them, dump its assets with `--game <that folder>`, and diff against a dump without it. The asset paths are readable as plain text in the mod's `.utoc` (round 55).
 
 **Shipping risky changes:**
 - **A crash in the engine ends the game before Lua can log.** Ship risky UI work behind a test command, off by default, that logs each step before it runs.

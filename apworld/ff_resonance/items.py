@@ -41,7 +41,6 @@ item_name_groups: dict[str, set[str]] = {
 }
 
 FILLER_NAMES = sorted(item_name_groups["Consumables"])
-CUFF_LINKS = "Bandit Cuff Links"
 FILLER_CATEGORIES = {"consumable", "gil"}
 
 
@@ -68,8 +67,6 @@ def progression_ids(world: FFResonanceWorld) -> list[int]:
         chosen += PROGRESSION["vision"]
     if world.options.shuffle_key_items:
         chosen += PROGRESSION["key"]
-    if world.options.start_with_bandit_cuff_links:
-        chosen = [ap_id for ap_id in chosen if ap_id != ITEM_NAME_TO_ID[CUFF_LINKS]]
     return chosen
 
 
@@ -98,8 +95,6 @@ def create_all_items(world: FFResonanceWorld) -> None:
     world.multiworld.itempool += pool
     # The starting continent's unlock is handed over at the start, through the normal item path.
     world.multiworld.push_precollected(create_item(world, ITEMS[CONTINENT_UNLOCKS[world.starting_continent]]["name"]))
-    if world.options.start_with_bandit_cuff_links:
-        world.multiworld.push_precollected(create_item(world, CUFF_LINKS))
 
 
 def get_filler_item_name(world: FFResonanceWorld) -> str:

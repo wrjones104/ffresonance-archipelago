@@ -449,12 +449,15 @@ World-map shinies verified as locations. Multiple crashes observed across differ
 - **Cuff Links:** with `zzz_TreasureMinimap_P` moved out of `Paks/~mods`, the chest icons went away and did not come back with the Cuff Links on, nor after `ffrap_artifact table` and map changes. So the icons were the pak mod's (IDEAS.md, idea 26).
 - **Passkey:** switching it on changes the airship as soon as the menu closes.
 
-## Round 55 test plan (mod 0.40.1, world 0.9.0)
+**Round 55 (mod 0.40.1, world 0.9.0, 2026-11-11): artifacts are parked.**
+- **Mini-map:** one mini-map view model, its artifact map empty before and after the passkey switch. `ThiefCuffs` set on in it showed no chest icons, also after a map change.
+- **TreasureMinimap:** off-line, the pak changes three mini-map and world-map data assets only, to show chest, exit and "check" icons the game hides (IDEAS.md, ideas 26 and 27).
+- **Decided:** artifacts are left out for now, the passkey too. World 0.10.0 and mod 0.41.0 take them out.
 
-**Install:** copy `FFRArchipelago/Scripts`. Keep the TreasureMinimap files out of `~mods` for this, and tell me where you put them: what that mod changes may be something ours can do too.
+## Round 56 test plan (mod 0.41.0, world 0.10.0)
 
-**1. The mini-map's own artifact states.** In a dungeon with chests, type `ffrap_artifact minimap` and send the lines. Then switch the passkey on and off in the Items screen and type it again: does the list change?
+No round is needed for this alone: it only takes things out. Install it with the next round.
 
-**2. Set the Cuff Links there.** `ffrap_artifact minimap ThiefCuffs on`. **Do chest icons show?** If not, after a map change? Then `ffrap_artifact minimap ThiefCuffs off`.
+**Install:** copy `FFRArchipelago/Scripts`, and copy `dist/ff_resonance.apworld` into Archipelago's `custom_worlds`. Generate a new seed: the old yaml's `start_with_bandit_cuff_links` line can go.
 
-Send the `artifacts:` lines of the log.
+**Check:** no artifact (Exodus, the Cuff Links, the Transporter and so on) arrives from Archipelago, and items still arrive as before.

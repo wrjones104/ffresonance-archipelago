@@ -355,20 +355,6 @@ assert sum(1 for l in lines if l.startswith("FAIL")) == 1, lines
 L.execute("mapMgr.IsValid = function() return false end")
 ok, detail = L.execute("return G.SaveAndReload(2)")
 assert ok is False and "load the slot by hand" in detail, detail
-# Round 49: artifacts in the bag go into the save's artifact list once, on or off as the game ships them
-L.execute("""
-artifacts = { rows = { [30002] = { IsActive = true } } }
-function artifacts:ForEach(fn) for id in pairs(self.rows) do fn({ get = function() return id end }) end end
-function artifacts:Add(id, v) self.rows[id] = v end
-sd.artifactList = artifacts
-libs["/Script/mucha.Default__CPP_BFL_SaveDataInventory"] = { IsValid = function() return true end,
-  FindInventory = function(_, id) return bag[id] or 0 end }
-bag[30001], bag[30006], bag[30002] = 1, 1, 1""")
-added = L.execute("return G.SyncArtifacts()")
-assert sorted(added.values()) == [30001, 30006], list(added.values())
-assert lua("artifacts.rows[30001].IsActive") is False and lua("artifacts.rows[30006].IsActive") is True
-assert len(list(L.execute("return G.SyncArtifacts()").values())) == 0, "nothing twice"
-L.execute("bag[30001], bag[30006], bag[30002] = nil, nil, nil")
 # Round 49: the boss fight test makes the closed chests near you traps for the group, takes the
 # story's scenes off the group, and puts it all back
 L.execute("""
@@ -500,52 +486,7 @@ local prevFFO = FindFirstOf
 function FindFirstOf(c) if c == "CPP_MuchaOptionSaveData" then return optSave end return prevFFO(c) end""")
 values = L.execute("return G.ReadOptionValues()")
 assert dict(values) == {"exp": 3, "encounters": False, "scaling": True}, dict(values)
-# Round 50: an artifact can be switched on or off in the artifact list
-L.execute("""
-artifactRows = { [30010] = { IsActive = false }, [30000] = { IsActive = true } }
-sd.artifactList = { ForEach = function(_, fn) for id, row in pairs(artifactRows) do
-  fn({ get = function() return id end }, { get = function() return row end }) end end }""")
-found, states = L.execute("return G.Artifacts(30010, true)")
-assert found is True and lua("artifactRows[30010].IsActive") is True and states == "30000 on, 30010 on", states
-found, _ = L.execute("return G.Artifacts(30001, true)")
-assert found is False
-# Round 51: artifact switches go into the Items screen's behaviour map, once, beside the game's own
-L.execute("""
-behaviors = { rows = { [29520] = { BehaviorType = 3 } } }
-function behaviors:ForEach(fn) for id in pairs(self.rows) do fn({ get = function() return id end }) end end
-function behaviors:Add(id, v) self.rows[id] = v end
-libs["/Game/UI/MainMenu/Inventory/Data/DA_UI_ItemLayout.DA_UI_ItemLayout"] = { IsValid = function() return true end,
-  HasAnyInternalFlags = function() return false end, HasAnyFlags = function() return false end, ItemBehaviorMap = behaviors }""")
-ok, detail = L.execute("return G.AddArtifactSwitches(say)")
-assert ok is True and detail == "19 switches added", detail
-assert lua("behaviors.rows[30010].BehaviorType") == 3 and lua("behaviors.rows[30010].ExecuteEvent.TagName:ToString()") == "Artifact.ThiefCuffs"
-ok, detail = L.execute("return G.AddArtifactSwitches(say)")
-assert detail == "0 switches added", detail
 # Round 51: the menu dump lists the option save's entries, ours among them
 lines = list(L.execute("return G.OptionDump()").values())
 assert lines[0] == "CPP_MuchaOptionSaveData: 0 found", lines
-# Round 53: every artifact tag goes into the map manager's tag-to-id table, but the two already there
-L.execute("""
-idTable = { rows = { ["Artifact.AirshipSkin"] = 29520, ["Artifact.ChocoboSaddleBike"] = 29500 } }
-function idTable:ForEach(fn) for tag in pairs(self.rows) do fn({ get = function() return { TagName = FName(tag) } end }) end end
-function idTable:Add(k, id) self.rows[k.TagName:ToString()] = id end
-libs["/Game/Datatable/Map/DataAsset/DA_MapManager.DA_MapManager"] = { IsValid = function() return true end,
-  HasAnyInternalFlags = function() return false end, HasAnyFlags = function() return false end, ArtifactIdTable = idTable }""")
-ok, detail = L.execute("return G.AddArtifactIds(say)")
-assert ok is True and detail == "17 tags added", detail
-assert lua('idTable.rows["Artifact.ThiefCuffs"]') == 30010 and lua('idTable.rows["Artifact.AirshipSkin"]') == 29520
-# Round 54: the mini-map view model's artifact states can be listed and one set
-L.execute("""
-miniStates = { rows = { ["Artifact.AirshipSkin"] = false } }
-function miniStates:ForEach(fn) for tag, on in pairs(self.rows) do
-  fn({ get = function() return { TagName = FName(tag) } end }, { get = function() return on end }) end end
-function miniStates:Add(k, on) self.rows[k.TagName:ToString()] = on end
-miniVM = { IsValid = function() return true end, HasAnyInternalFlags = function() return false end,
-  HasAnyFlags = function() return false end, ArtifactActiveMap = miniStates }
-function FindAllOf(c) if c == "CPP_VM_MiniMap" then return { miniVM } end return nil end""")
-lines = list(L.execute("return G.MiniMapArtifacts()").values())
-assert lines == ["1 mini-map view models", "  1: AirshipSkin=false"], lines
-lines = list(L.execute("return G.MiniMapArtifacts('ThiefCuffs', true)").values())
-assert lines[1] == "  1: Artifact.ThiefCuffs set true" and lines[2] == "  1: AirshipSkin=false, ThiefCuffs=true", lines
-L.execute("function FindAllOf() return nil end")
 print("skip: ok")
