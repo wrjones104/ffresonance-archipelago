@@ -1708,3 +1708,16 @@ G.map = 1000
 tick(2)
 assert G.storyBossReady is False, "off away from a story boss map"
 print("bosses: ok")
+
+# Round 62: items received in a battle came out of it at x 0, so items go in only on the field
+RUBY_FRAGMENT = 10513
+L.execute("G.bagAdds = {}; function G.GrantItem(id, n) G.bagAdds[#G.bagAdds + 1] = id; return 'ok', 'held 0 -> 1' end")
+G.onField = False
+inbox(f"item\t1\titem\t{RUBY_FRAGMENT}\t1\tRuby Fragment\n", "a")
+tick(4)
+assert len(G.bagAdds) == 0, "nothing goes in during a battle, a scene or a menu"
+G.onField = True
+tick(2)
+assert list(G.bagAdds.values()) == [RUBY_FRAGMENT], list(G.bagAdds.values())
+assert any("Received Ruby Fragment" in x for x in logs()), logs()
+print("items wait for the field: ok")

@@ -525,15 +525,17 @@ World-map shinies verified as locations. Multiple crashes observed across differ
 - **The fight was easy.** The game files put The Hunger (unit 113) and the cave masters in the Enemy category, not Boss. So the mod scaled them as plain enemies: the enemies' band, below the party's level, at 75% power. `scale.txt` had it at level 6 with 1236 HP. It ships at level 9 with about 2500 HP.
 - **The win gave no EXP.** The Hunger ships with 0 EXP (`scale.txt`: `113 The Hunger ... EXP 0`). Scaling keeps a 0 at 0.
 - **The fight started again after each win, with no way out but loading a save.** Every `story boss` line says `won false`, so flag 1241 never came on. The log has no `story boss` line from 21:23:25 to the reload at 21:25:06, so the field did not come back between the fights. The door's trigger fired again as the party came back from the battle, before the win row could run.
+- **Two items came out of a battle at x 0:** Ruby Fragment (20030) and Hoodwink Garb (11024) were in the bag, each at x 0. The user thinks they came from another player during a battle. The log was lost to a restart. The mod gave items whenever a save was loaded, battles included. The likely cause: the battle keeps its own copy of the bag and writes it back as it ends, so the count went back to 0 and only the entry stayed.
 - The rest of the round 62 plan was not tried yet. It is in the round 63 plan.
 
-**Changed after round 62 (mod 0.51.0, world unchanged):**
+**Changed after round 62 (mod 0.51.0 and 0.51.1, world unchanged):**
+- 0.51.1: received items go in only while the field is on screen. In a battle, a scene or a menu they wait, and the status says `waiting: not on the field`.
 - A unit in a boss location's battle group (`G.BOSSES`) is scaled as a boss, whatever its category. That is the boss band at 100% power. This moves the cave masters to the boss band too.
 - While scaling is on, a boss unit with 0 EXP gets a story boss's EXP for its level. Mom Bomb (level 14) and Liquid Thunder (level 13) both ship with about 1350, so The Hunger gets about 500 at level 6.
 - The three story boss fights (Belmodar, The Hunger, Mom Bomb) also need flag 1441. The mod turns it on after the field has been up for about 2 seconds on a story boss map, and off as soon as the field goes (a battle, a scene, a menu). So the party coming back from the fight cannot set it off again before the win row runs.
 - Scaling "off" now puts boss rows back too. Before, the seed's own "off" left them scaled.
 
-## Round 63 test plan (mod 0.51.0, world 0.19.0)
+## Round 63 test plan (mod 0.51.1, world 0.19.0)
 
 **Install:** copy `FFRArchipelago/Scripts`. The apworld has not changed, so the round 62 seed still works.
 
@@ -552,5 +554,7 @@ World-map shinies verified as locations. Multiple crashes observed across differ
 **5. Dwarven Forge (map 2050): Mom Bomb (`9014`, flag `1242`).** From round 62. The pawn (unit 10037) shows, touching it starts the fight, the win sends `check boss:9014`, and the pawn hides after.
 
 **6. The Crystal Tower notice.** From round 60. With too few fragments, walk to the tower's last climb. **Does the notice say "Crystal Fragments x/y"?**
+
+**7. Items received in a battle.** When another player sends you something during a battle, the `Received` line should come only after the battle, back on the field. **Is the item in the bag with its real count, not x 0?** To get back the two items lost in round 62, type `ffrap_grant item 20030 1` (Ruby Fragment) and `ffrap_grant item 11024 1` (Hoodwink Garb) in the UE4SS console.
 
 Send the `[FFRAP]` lines of the log, and `scale.txt` from the mod folder.

@@ -50,7 +50,7 @@
 -- follows the save slots the linked game is saved to. While any other save is loaded, the mod
 -- grants nothing, reports nothing and leaves the chests vanilla.
 
-local VERSION = "0.51.0"
+local VERSION = "0.51.1"
 local PROTOCOL = 2        -- the bridge protocol; the apworld's MOD_PROTOCOL
 
 local MOD_DIR = (debug.getinfo(1, "S").source:gsub("^@", ""):gsub("\\", "/"):match("^(.*/)Scripts/[^/]+$"))
@@ -478,6 +478,12 @@ local function applyWaiting(names)
 end
 
 local function applyItems()
+    -- Round 62: two items received during a battle were in the bag at x 0 after it. The battle
+    -- seems to write its own copy of the bag back as it ends. Items go in only on the field.
+    if not game.OnField() then
+        state.lastResult = "waiting: not on the field"
+        return
+    end
     local done, names = 0, {}
     applyWaiting(names)
     while done < MAX_GRANTS_PER_TICK do
