@@ -50,7 +50,7 @@
 -- follows the save slots the linked game is saved to. While any other save is loaded, the mod
 -- grants nothing, reports nothing and leaves the chests vanilla.
 
-local VERSION = "0.52.0"
+local VERSION = "0.52.1"
 local PROTOCOL = 2        -- the bridge protocol; the apworld's MOD_PROTOCOL
 
 local MOD_DIR = (debug.getinfo(1, "S").source:gsub("^@", ""):gsub("\\", "/"):match("^(.*/)Scripts/[^/]+$"))
@@ -1768,8 +1768,8 @@ local scaleChecks = 0
 local SETTINGS_FILE = MOD_DIR .. "settings.txt"
 local SETTING_DEFAULTS = { exp = 1, gil = 1, mrp = 1, encounters = true, encounterrate = 1, scaling = true, strength = 1 }
 local SETTING_RANGES = { exp = { 0, 10 }, gil = { 0, 10 }, mrp = { 0, 10 }, encounterrate = { 0.1, 5 }, strength = { 0, 2 } }
--- Round 63: our own names, apart from the game's Casual, Normal and Expert difficulty.
-local STRENGTH_NAMES = { [0] = "easy", [1] = "standard", [2] = "hard" }
+-- The names on our Options row's buttons, which are the game's difficulty labels (round 63).
+local STRENGTH_NAMES = { [0] = "casual", [1] = "normal", [2] = "expert" }
 local settingsSet = {}   -- what the player has set
 local function setting(key)
     if settingsSet[key] ~= nil then return settingsSet[key] end
@@ -1963,7 +1963,7 @@ seedExtrasTick = function()
 end
 
 -- ffrap_set: shows the settings. ffrap_set <exp|gil|mrp|encounterrate> <number>, ffrap_set
--- <encounters|scaling> <on|off>, ffrap_set strength <easy|standard|hard>, ffrap_set reset: all
+-- <encounters|scaling> <on|off>, ffrap_set strength <casual|normal|expert>, ffrap_set reset: all
 -- back to the defaults.
 command("ffrap_set", function(p)
     local key, value = tostring(p[1] or ""):lower(), tostring(p[2] or ""):lower()
@@ -1978,7 +1978,7 @@ command("ffrap_set", function(p)
     elseif key ~= "" then
         local default = SETTING_DEFAULTS[key]
         if default == nil then
-            notify("Usage: ffrap_set [exp|gil|mrp|encounterrate <number>] [encounters|scaling <on|off>] [strength easy|standard|hard] [reset]")
+            notify("Usage: ffrap_set [exp|gil|mrp|encounterrate <number>] [encounters|scaling <on|off>] [strength casual|normal|expert] [reset]")
             return
         end
         if type(default) == "boolean" then
@@ -2031,13 +2031,15 @@ end)
 -- Round 56: the strength row picks one of three. Expert players asked for a hard run (the user's
 -- Discord): the game's Expert multipliers (enemy HP x1.6, damage taken x1.4) apply in battle on
 -- top of these, so the two stack.
--- Round 63: the user found all of it too easy. Each step moved up one: easy is the old normal
--- (the round 49 curve), standard the old expert, and hard one more step of the same size. An
--- easier game is the game's Casual difficulty with easy scaling.
+-- Round 63: the user found all of it too easy. Each step moved up one: casual is the old normal
+-- (the round 49 curve), normal the old expert, and expert one more step of the same size. An
+-- easier game is the game's Casual difficulty with casual scaling. Bosses on normal still melted,
+-- so on normal and expert they ramp too, from 10 points over that (level and power) at party level
+-- 5 to 20 points over at 25. The ramp keeps a seed that starts with little gear playable.
 local SEED_SCALES = {
-    [0] = { at = { 80, 90 }, power = { 75, 100 }, bossAt = 100, bossPower = 100 },
-    [1] = { at = { 90, 100 }, power = { 90, 115 }, bossAt = 105, bossPower = 115 },
-    [2] = { at = { 100, 110 }, power = { 105, 130 }, bossAt = 110, bossPower = 130 },
+    [0] = { at = { 80, 90 }, power = { 75, 100 }, bossAt = { 100, 100 }, bossPower = { 100, 100 } },
+    [1] = { at = { 90, 100 }, power = { 90, 115 }, bossAt = { 115, 125 }, bossPower = { 125, 135 } },
+    [2] = { at = { 100, 110 }, power = { 105, 130 }, bossAt = { 120, 130 }, bossPower = { 140, 150 } },
 }
 local SEED_RAMP = { range = 2, rampFrom = 5, rampTo = 25 }
 
@@ -2055,11 +2057,12 @@ local function seedScaleToParty()
     if not lv then return nil, "party level unknown (" .. tostring(detail) .. ")" end
     local s = seedScale()
     local at, power = ramp(s.at, lv), ramp(s.power, lv)
+    local bossAt, bossPower = ramp(s.bossAt, lv), ramp(s.bossPower, lv)
     local a, b, c = game.LevelBand(lv, SEED_RAMP.range, at)
-    local ba, bb, bc = game.LevelBand(lv, SEED_RAMP.range, s.bossAt)
-    log(string.format("scale: party level %d (%s), strength %s: enemies centre %d (%d%%), power %d%%; bosses centre %d, power %d%%",
-        lv, detail, STRENGTH_NAMES[setting("strength")] or "?", c, at, power, bc, s.bossPower))
-    local bossKnobs = { hp = s.bossPower, attack = s.bossPower, magic = s.bossPower }
+    local ba, bb, bc = game.LevelBand(lv, SEED_RAMP.range, bossAt)
+    log(string.format("scale: party level %d (%s), strength %s: enemies centre %d (%d%%), power %d%%; bosses centre %d (%d%%), power %d%%",
+        lv, detail, STRENGTH_NAMES[setting("strength")] or "?", c, at, power, bc, bossAt, bossPower))
+    local bossKnobs = { hp = bossPower, attack = bossPower, magic = bossPower }
     local n, err = applyScale("clamp", a, b, true, { hp = power, attack = power, magic = power }, { a = ba, b = bb, knobs = bossKnobs })
     return n, err, lv
 end

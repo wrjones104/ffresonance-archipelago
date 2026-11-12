@@ -164,15 +164,15 @@ MP does not correlate with level (r² 0.09) and remains unchanged.
   | Expert | 90% to 100% | 90% to 115% | 105% | 115% |
 
   A first guess, to tune from play.
-- **Round 63: one step harder, with our own names.** The user found all of it too easy on Normal. Each strength moved up one, and a harder one was added. They are called Easy, Standard and Hard, apart from the game's Casual, Normal and Expert. An easier game is the game's Casual with our Easy. Mod 0.52.0:
+- **Round 63: one step harder, and bosses harder still.** The user found all of it too easy on Normal, and bosses melted (with Laevateinn on Sakura early, which an Archipelago seed can give). Each strength moved up one, and a harder one was added (mod 0.52.0). Bosses on Normal still melted, so on Normal and Expert their level and power ramp too, as the enemies' do: from 10 points over at party level 5 to 20 points over at 25 (mod 0.52.1). The ramp keeps a seed that starts with little gear playable. The names stay the game's, as the row copies its Difficulty buttons. An easier game is the game's Casual with our Casual.
 
   | Strength | Enemy level | Enemy power | Boss level | Boss power |
   |---|---|---|---|---|
-  | Easy (round 56's Normal) | 80% to 90% | 75% to 100% | 100% | 100% |
-  | Standard, the default (round 56's Expert) | 90% to 100% | 90% to 115% | 105% | 115% |
-  | Hard | 100% to 110% | 105% to 130% | 110% | 130% |
+  | Casual (round 56's Normal) | 80% to 90% | 75% to 100% | 100% | 100% |
+  | Normal, the default (round 56's Expert for enemies) | 90% to 100% | 90% to 115% | 115% to 125% | 125% to 135% |
+  | Expert | 100% to 110% | 105% to 130% | 120% to 130% | 140% to 150% |
 
-  The Options row is now a slider from 1 to 3 ("AP: Scaling (1 Easy, 2 Standard, 3 Hard)"). A choice row's labels come from a radio button table, and all eight in the game are in use, so a choice row could not have our names without making a new table at run time.
+  Level counts in the damage formula itself as well as in the stats: `DT_UnitParameterCalc` has `sameLevelDamageCalcMagnification` 2.0 and `deffenceIgnoreDamageCalcLevelRate` 4.0. The formula is native code, so how much a level gap counts is not known.
 
 **Round 31 & 32 findings:**
 - The simple exponential growth rate produced excessive attack at low levels. Real enemies follow `log(stat) = a + b log(level) + c level` (r² 0.88 for attack, 0.70 for HP). Using relative level ratios eliminates constant `a`.

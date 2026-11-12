@@ -1362,28 +1362,28 @@ tick(30)
 assert calls() == [], "not before the open world start"
 G.story = 8000
 tick(10)
-# Round 63: standard by default. Party level 10 is a quarter of the way up the ramp: centre 93%
-# (9), power 96%; bosses at 105% (11), 115%
-assert calls() == ["clamp 7 11 true hp96 atk96 mag96; bosses 9 13 hp115"], calls()
+# Round 63: normal by default (the old expert). Party level 10 is a quarter of the way up the
+# ramp: centre 93% (9), power 96%; bosses at 118% (12), 128%
+assert calls() == ["clamp 7 11 true hp96 atk96 mag96; bosses 10 14 hp128"], calls()
 tick(10)
 assert len(calls()) == 1, "once"
 G.partyLv = 30
 tick(10)
-assert calls()[-1] == "clamp 28 32 true hp115 atk115 mag115; bosses 30 34 hp115", "the top of the ramp: centre 100% (30), power 115%"
+assert calls()[-1] == "clamp 28 32 true hp115 atk115 mag115; bosses 36 40 hp135", "the top of the ramp: centre 100% (30), power 115%; bosses 125% (38), 135%"
 G.partyLv = 3
 tick(10)
-assert calls()[-1] == "clamp 1 5 true hp90 atk90 mag90; bosses 1 5 hp115", "below the ramp: centre 90% (3), power 90%"
-# Round 56: a new strength rescales at once. Round 63: hard is centre 100% (3), power 105%;
-# bosses 110%, 130%. Easy is the old normal: centre 80% (2), power 75%; bosses 100%, 100%
-L.execute('commands["ffrap_set"]("ffrap_set", {"strength", "hard"})')
+assert calls()[-1] == "clamp 1 5 true hp90 atk90 mag90; bosses 1 5 hp125", "below the ramp: centre 90% (3), power 90%; bosses 115%, 125%"
+# Round 56: a new strength rescales at once. Round 63: expert is centre 100% (3), power 105%;
+# bosses 120% (4), 140%. Casual is the old normal: centre 80% (2), power 75%; bosses 100%, 100%
+L.execute('commands["ffrap_set"]("ffrap_set", {"strength", "expert"})')
 tick(10)
-assert calls()[-1] == "clamp 1 5 true hp105 atk105 mag105; bosses 1 5 hp130", calls()
-L.execute('commands["ffrap_set"]("ffrap_set", {"strength", "easy"})')
+assert calls()[-1] == "clamp 1 5 true hp105 atk105 mag105; bosses 2 6 hp140", calls()
+L.execute('commands["ffrap_set"]("ffrap_set", {"strength", "casual"})')
 tick(10)
 assert calls()[-1] == "clamp 0 4 true hp75 atk75 mag75; bosses 1 5 hp100", calls()
 L.execute('commands["ffrap_set"]("ffrap_set", {"reset"})')
 tick(10)
-assert calls()[-1] == "clamp 1 5 true hp90 atk90 mag90; bosses 1 5 hp115", "back to standard"
+assert calls()[-1] == "clamp 1 5 true hp90 atk90 mag90; bosses 1 5 hp125", "back to normal"
 G.saveObj, G.saveTicks = "SD_OTHER", "600"     # a save in a slot the seed does not hold
 tick(30)
 assert calls()[-1].startswith("off "), calls()
@@ -1397,7 +1397,7 @@ G.chests = L.table()
 tick(12)
 G.story = 8000
 tick(10)
-assert calls() == ["clamp 7 11 true hp96 atk96 mag96; bosses 9 13 hp115"], calls()
+assert calls() == ["clamp 7 11 true hp96 atk96 mag96; bosses 10 14 hp128"], calls()
 L.execute('commands["ffrap_scale"]("ffrap_scale", {"off"})')
 G.partyLv = 30
 tick(30)
