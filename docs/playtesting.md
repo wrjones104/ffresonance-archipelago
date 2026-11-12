@@ -641,6 +641,14 @@ World-map shinies verified as locations. Multiple crashes observed across differ
 - **One win clears the Antlion's sandpit.** On every open world seed, both branches of the win row go to `_Win_02`, which sets flag 113 (`G.AntlionPatch`, logged as `antlion: 2 win choices set to clear the sandpit`).
 - **The Antlion is a boss location:** "Lanzelt Desert: Antlion" (battle group 9060, flag 113), with a shuffled item, in Lanzelt. Like the other bosses in the mod's list, it is scaled as a boss.
 
+**Round 70 (mod 0.54.1, world 0.21.1, 2026-11-12): passed.**
+- **One win clears the Antlion's sandpit.** The log has `antlion: 2 win choices set to clear the sandpit` on each new game, and `check boss:9060` after the win. The fight did not come back.
+- **"Lanzelt Desert: Antlion" is a location.** On the new world 0.21.1 seed the win sent it, and its item (Pharm Unlock) came a second later. It has no reward pop-up of its own (`chest pop-up for boss:9060: no chest pop-up on screen`): its win row gives nothing, so only the feed shows the item.
+- **The Airship received in a town waited at the start.** It came in Kol (map 2020): `airship: parked at the start (received off the world map), (12470, 14980, 65)`, and it was there on the way out.
+- The round 69 save with the stray airship was an autosave, since overwritten, so `ffrap_airship home` was not tried.
+- Not checked yet: how the Antlion feels with scaling on. The user scaled enemies down by hand to test. A bigger play test comes later.
+- The airship and Chocobo work of rounds 67 to 70 is done. Next on the user's list: the story bosses.
+
 ## Round 70 test plan (mod 0.54.1, world 0.21.1)
 
 **Install:** copy `FFRArchipelago/Scripts` and `dist/ff_resonance.apworld`. Parts 1 and 2 work on the round 69 save. Part 3 needs a new seed.
