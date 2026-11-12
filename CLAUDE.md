@@ -80,6 +80,7 @@ An Archipelago implementation for Final Fantasy Resonance (UE 5.6, game module `
 - `CPP_VM_Party:AddUnit` does not set `JoinStatus`: a unit added only that way gains no EXP and gear on it does not count (round 44).
 - The prologue skip must run after story 1005 and the game's first autosave, or the opening movie's input lock survives the reload (round 9).
 - **A live field item's `m_UniqueId` can differ from the level's.** Tablet Shards in Felicitas read 0 and 1, while the save keeps them as 8 and 9. Ask the save by the seed's own ids too (round 63).
+- **`IsOpenTreasureBox(map, uid)` answers from another map's row when the map has no row for that uid yet.** Four Earth Shrine chests were sent on arrival because shinies with the same uids were open elsewhere. Read the map's own rows, `Map.mapGimmick{map}.treasureBox.treasureBoxList` (`game.SaveOpenRows`), and judge a loaded chest by the chest (rounds 64 and 65).
 - **A door's real destinations are in `mTransitionDataList`**, one per flag condition. Its `m_MapId` can be a leftover: every sanctum door on the world map says 10200 (round 63). `transitions.tsv` has them in `destinations`.
 
 **Tooling:**

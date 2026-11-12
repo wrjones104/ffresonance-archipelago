@@ -104,8 +104,14 @@ function G.StoryCounter() return G.story end
 function G.PartyIds() return {1001} end
 function G.Toast() return false end
 function G.IsChestOpenInSave(m, uid) return G.saveOpen[m .. ":" .. uid] == true end
+function G.SaveOpenRows(m)
+  return setmetatable({}, { __index = function(_, uid) if G.saveOpen[m .. ":" .. uid] == true then return true end end })
+end
 function G.ChestSaveKeys(m, c) return "save keys of " .. tostring(c.uniqueId) end
-function G.GameUniqueId(actor) return actor and actor.gameUid end
+function G.GameUniqueId(actor)
+  if actor and actor.broken then return nil, "no such function" end
+  return actor and actor.gameUid
+end
 G.chests = {
   { uid = 1, open = false, rowMap = 3020, rowId = 1, uniqueId = 7, typeId = 7, itemId = 209, itemNum = 3, money = -1 },
   { uid = 3, open = false, rowMap = 3020, rowId = 3, uniqueId = 63, typeId = 63, itemId = 7, itemNum = 4, money = -1 },
@@ -315,7 +321,9 @@ def boot(before=""):
 # a 0.3.0-style seen.tsv line is read and converted
 open(path("seen.tsv"), "w", encoding="utf-8", newline="\n").write("xchest\t2002\tu52\trowmap -1\t-1\t1\t-1\t\n")
 
-L, G = boot()
+L, G = boot(CAPTURE)
+# Round 65: the first GetUniqueId answer of a session is logged even when the call fails
+G.chests[1].actor = L.table_from({"broken": True})
 tick = lambda n: [L.execute("tickFn()") for _ in range(n)]
 tick(10)
 assert "check" not in read("ap_out.txt"), "nothing may be judged while the map settles"
@@ -327,6 +335,9 @@ assert "chest:3020:1" not in out and "shiny:" not in out
 seen = read("seen.tsv")
 assert "chest\t2002\t7\t3020:1\t209\t3\t-1\t\n" in seen, seen
 assert "xchest\t2002\t54\t\t-1\t1\t-1\t\n" in seen and "spot\t2002\t113\t" in seen and "shiny\t2002\t30\t" in seen
+first = [s for s in L.eval("logged").values() if "(first of the session)" in s]
+assert first == ["[FFRAP] chest 2002:7: GetUniqueId failed: no such function (first of the session)\n"], first
+G.chests[1].actor = None
 
 # Round 64: the save says chest 3020:1 (uid 7 in map 2002) is open while the loaded chest says
 # closed (the Earth Shrine's four). It is not sent, and the log says so once per visit.
@@ -335,7 +346,7 @@ G.saveOpen["2002:7"] = True
 tick(6)
 assert "chest:3020:1" not in read("ap_out.txt")
 disagree = [s for s in L.eval("logged").values() if "chest:3020:1: the save says open" in s]
-assert len(disagree) == 1 and "save keys of 7" in disagree[0], list(L.eval("logged").values())
+assert len(disagree) == 1 and "(row true, IsOpenTreasureBox true)" in disagree[0], list(L.eval("logged").values())
 # then the player opens it: sent
 G.chests[1].open = True
 tick(2)

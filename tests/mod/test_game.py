@@ -673,6 +673,26 @@ assert L.eval('(G.TitleVersionLine("FFRArchipelago 0.8.1"))') is None
 print("probes: ok")
 print("snapshot: ok")
 
+# Round 65: the save's own chest rows for a map. Map 3000 has no row for uid 4 yet, and map 1000
+# has an open shiny row 4: IsOpenTreasureBox answered true from it. SaveOpenRows does not.
+EARTH_SHRINE, WORLD_MAP, SHARED_UID, CHEST_UID = 3000, 1000, 4, 14
+L.execute(f"""
+local function boxRow(id, uid, open) return {{ ID = id, UniqueID = uid, IsOpen = open }} end
+local sd = makeSave({{false}}, {{ {{SaveId=1, JoinStatus=0}} }}, 8000, 1, true)
+sd.Map = {{ mapGimmick = map({{
+  {{ {WORLD_MAP}, {{ treasureBox = {{ treasureBoxList = arr({{ boxRow(-1, {SHARED_UID}, true) }}) }} }} }},
+  {{ {EARTH_SHRINE}, {{ treasureBox = {{ treasureBoxList = arr({{ boxRow(2, {CHEST_UID}, false) }}) }} }} }},
+}}) }}
+mgr.m_pGameSaveData = sd
+""")
+assert L.eval(f"G.SaveOpenRows({WORLD_MAP})[{SHARED_UID}]") is True
+assert L.eval(f"G.SaveOpenRows({EARTH_SHRINE})[{SHARED_UID}]") is None, "no row on this map: not open"
+assert L.eval(f"G.SaveOpenRows({EARTH_SHRINE})[{CHEST_UID}]") is False
+assert L.eval("next(G.SaveOpenRows(9999))") is None
+L.execute("mgr.m_pGameSaveData = nil")
+assert L.eval("next(G.SaveOpenRows(1000))") is None, "no save: no rows"
+print("save rows: ok")
+
 # 0.11.3: experimental custom key items and conditional map gates (ffrap_gate)
 L.execute(r"""
 valuableRows = {

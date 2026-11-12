@@ -50,7 +50,7 @@
 -- follows the save slots the linked game is saved to. While any other save is loaded, the mod
 -- grants nothing, reports nothing and leaves the chests vanilla.
 
-local VERSION = "0.52.4"
+local VERSION = "0.52.5"
 local PROTOCOL = 2        -- the bridge protocol; the apworld's MOD_PROTOCOL
 
 local MOD_DIR = (debug.getinfo(1, "S").source:gsub("^@", ""):gsub("\\", "/"):match("^(.*/)Scripts/[^/]+$"))
@@ -667,19 +667,25 @@ local function chestKey(mapId, c)
 end
 
 -- A loaded chest is reported when the actor says open (round 64, scanChests). ffrap_sync asks
--- the save, by the current map and m_UniqueId (round 3: true for every opened chest, false for
--- every closed one).
+-- the save's rows for the map (game.SaveOpenRows), by m_UniqueId.
 -- Round 64: the game's Blueprints save a chest or shiny under the actor's GetUniqueId(), and the
--- mod reads the m_UniqueId field. A difference is logged once per visit, to learn whether that
--- is why Felicitas's live shards read the wrong id (round 63).
+-- mod reads the m_UniqueId field. The first answer of a session is logged, so a call that fails
+-- shows; after that only a difference is (round 65 had no lines at all).
+local gameUidNoted = false
 local function noteGameUid(kind, mapId, uid, actor)
-    local gameUid = game.GameUniqueId(actor)
-    if gameUid and gameUid ~= uid then
-        log(string.format("%s %s:%s: GetUniqueId says %s", kind, tostring(mapId), tostring(uid), tostring(gameUid)))
+    local gameUid, why = game.GameUniqueId(actor)
+    local where = string.format("%s %s:%s", kind, tostring(mapId), tostring(uid))
+    if not gameUidNoted then
+        gameUidNoted = true
+        log(where .. ": GetUniqueId " .. (gameUid and ("says " .. gameUid) or ("failed: " .. tostring(why)))
+            .. " (first of the session)")
+    elseif gameUid and gameUid ~= uid then
+        log(where .. ": GetUniqueId says " .. gameUid)
     end
 end
 
 local function scanChests(mapId)
+    local rows
     for _, c in ipairs(game.LiveChests()) do
         if c.uniqueId then
             local key = chestKey(mapId, c)
@@ -697,25 +703,29 @@ local function scanChests(mapId)
                 if key then opened(key, fresh) end
             else
                 visit.closed[id] = true   -- seen closed: opening it later is "in front of the player"
-                -- Round 64: on the first visit to the Earth Shrine, the save said four closed
-                -- chests were open, and they were sent with nothing opened. The game let the
-                -- player open them after. So a loaded chest is judged by its own state, and the
-                -- save only by ffrap_sync. Each of the four had the uniqueId of a shiny picked up
-                -- on another map; the log line is there to find out why.
-                if key and not visit.disagreed[id] and game.IsChestOpenInSave(mapId, c.uniqueId) then
-                    visit.disagreed[id] = true
-                    log(string.format("%s: the save says open, the chest says closed; not sent (%s)",
-                        key, game.ChestSaveKeys(mapId, c)))
+                -- Round 64: on the first visit to the Earth Shrine, IsOpenTreasureBox said four
+                -- closed chests were open, and they were sent with nothing opened. So a loaded
+                -- chest is judged by its own state. Round 65's snapshot showed why: map 3000 had
+                -- no rows yet, and the game answered from other maps' rows with the same uid.
+                if key and not visit.disagreed[id] then
+                    rows = rows or game.SaveOpenRows(mapId)
+                    local native = game.IsChestOpenInSave(mapId, c.uniqueId)
+                    if native or rows[c.uniqueId] then
+                        visit.disagreed[id] = true
+                        log(string.format("%s: the save says open (row %s, IsOpenTreasureBox %s), the chest says closed; not sent",
+                            key, tostring(rows[c.uniqueId]), tostring(native)))
+                    end
                 end
             end
         end
     end
 end
 
--- Shinies are reported when the actor's m_IsOpen is set or the save says looted; round 2 showed
--- the save answering true the moment one is picked up. Spots without an item or money are
--- story or quest points, not pick-ups: they are recorded as "spot" but never reported.
+-- Shinies are reported when the actor's m_IsOpen is set or the map's save row says looted;
+-- round 2 showed the save answering true the moment one is picked up. Spots without an item or
+-- money are story or quest points, not pick-ups: they are recorded as "spot" but never reported.
 local function scanShinies(mapId)
+    local rows = game.SaveOpenRows(mapId)
     for _, s in ipairs(game.LiveFieldItems()) do
         if s.uid then
             local hasReward = (s.itemId and s.itemId >= 0) or (s.money and s.money >= 0)
@@ -725,7 +735,7 @@ local function scanShinies(mapId)
                 noteGameUid("shiny", mapId, s.uid, s.actor)
             end
             local id = "s" .. s.uid
-            if hasReward and (s.open or game.IsChestOpenInSave(mapId, s.uid)) then
+            if hasReward and (s.open or rows[s.uid]) then
                 local fresh = visit.closed[id] == true
                 visit.closed[id] = nil
                 opened("shiny:" .. mapId .. ":" .. s.uid, fresh)
@@ -749,7 +759,7 @@ local function scanShinies(mapId)
     end
     for _, uid in ipairs(visit.scoutShinies) do
         local key = "shiny:" .. mapId .. ":" .. uid
-        if not state.reported["check|" .. key] and game.IsChestOpenInSave(mapId, uid) then opened(key, false) end
+        if not state.reported["check|" .. key] and rows[uid] then opened(key, false) end
     end
 end
 
@@ -758,6 +768,7 @@ end
 -- lost. Returns how many were new.
 local function syncFromSave()
     local new = 0
+    local rowsOf = {}
     for _, e in ipairs(seenList) do
         local key
         if e.kind == "chest" and e.row ~= "" then
@@ -765,7 +776,8 @@ local function syncFromSave()
         elseif e.kind == "shiny" then
             key = "shiny:" .. e.map .. ":" .. e.uid
         end
-        if key and game.IsChestOpenInSave(e.map, e.uid) and report("check", key) then
+        if key then rowsOf[e.map] = rowsOf[e.map] or game.SaveOpenRows(e.map) end
+        if key and rowsOf[e.map][e.uid] and report("check", key) then
             log("sync: check " .. key)
             new = new + 1
         end

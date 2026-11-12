@@ -573,16 +573,31 @@ World-map shinies verified as locations. Multiple crashes observed across differ
 - A loaded chest is sent only when the chest itself says open. When the save says open and the chest says closed, the log says `<key>: the save says open, the chest says closed; not sent`, with the save's answer under each key, once per visit. `ffrap_sync` still asks the save.
 - The first time a chest or shiny is seen on a visit, the mod asks it for `GetUniqueId()`. If that differs from `m_UniqueId`, the log says `chest <map>:<uid>: GetUniqueId says <id>` (or `shiny`).
 
-## Round 65 test plan (mod 0.52.4, world 0.19.1)
+**Round 65 (mod 0.52.4, world 0.19.1, 2026-11-12): passed. The snapshot explains round 64.**
+- **The save's rows (`snap_es.tsv`, round 64 save).** Each map's `Map.mapGimmick{map}.treasureBox.treasureBoxList` holds only that map's own chests (`ID` 0 and up) and shinies (`ID` -1). No shiny went into another map's list. 13 maps had rows.
+  - Map 3000 has its six chests. The four sent early (uids 4, 5, 9, 6) are its first four rows. The two `TreasureBox002_C` chests (14, 15) came after.
+  - Other maps had rows with those uids. Open rows had 4, 5, 6 and 9: shinies on the world map (4, 5), Dilmagia 2060 (5, 6), Felicitas 2040 (8, 9, and chests 4 to 7), Gaberada 2150 (9, and chest 4). For 14 and 15, Kolobos Ruins 3040 had closed rows, and the Shipyard 2061 had open ones.
+  - **So `IsOpenTreasureBox(map, uid)` answers from another map's row when the map has no row for that uid yet.** That fits all six. 4, 5, 6 and 9 found an open row. 14 and 15 found 3040's closed rows first. Round 63's `chest:3050:3` (uid 26) fits too: map 3050 has no rows in this save, and shinies 26 were open on maps 3210 and 1000. Before round 64, the mod sent a chest the moment this answered true.
+  - Kolobos Ruins (3040) has all six of its rows closed, though `chest:3040:0`, `3040:1` and `shiny:3040:15` were sent in round 64's first session. Not known why: an older save loaded, or the game reset the dungeon.
+- No chest sent early in round 65 (mod 0.52.4 judges a loaded chest by the chest).
+- **No `GetUniqueId` lines.** Mod 0.52.4 logged only a difference, and logged nothing when the call failed. So it is not known whether the call works.
+- **Starting party (9 seeds from the user's yaml, all 8 members at weight 50 in slots 1 and 2).** The spoilers' rolls: Rain+Rain, Fina+Rain, Rain+Jake, Lasswell+Lasswell (twice), Jake+Jake, Nichol+Rain, Sakura+Lid, Lid+Nichol. The real party is the two members the spoiler never places. The four repeats became Rain+Fina, Lasswell+Lid, Lasswell+Rain and Jake+Nichol. So the swap can pick Fina and Lid, the defaults of slots 3 and 4: with a roster of 2, only slots 1 and 2 are kept out. 8000 rolls of the yaml's weights through `Generate.get_choice` gave a repeat 12.1% of the time (1 in 8 is 12.5%). Four repeats in nine seeds is luck, about 3 in 100. Not a bug.
 
-**Install:** copy `FFRArchipelago/Scripts`. The apworld is unchanged, so the round 64 seed carries on.
+**Changed after round 65 (mod 0.52.5):**
+- The mod reads the save's rows for a map itself (`game.SaveOpenRows`), and a uid with no row is not open. Shinies, the round 63 scouted-shiny check and `ffrap_sync` use the rows. `IsOpenTreasureBox` is only logged.
+- A loaded chest still goes by its own state. When the save disagrees, the log says `the save says open (row <row>, IsOpenTreasureBox <answer>), the chest says closed; not sent`.
+- The first `GetUniqueId` answer of each session is logged, and so is a failure: `chest <map>:<uid>: GetUniqueId says <id> (first of the session)`, or `failed: <why>`.
 
-**1. The save's chest list.** On the round 64 save, anywhere in the game, run `ffrap_snapshot es` and send `snap_es.tsv` from the mod folder. It holds the save's chest and shiny list for each map (`Map.mapGimmick`). It shows whether shinies picked up on other maps are written into map 3000's list.
+## Round 66 test plan (mod 0.52.5, world 0.19.1)
 
-**2. Chests sent too early.** Play as usual, and go into dungeons you have not visited. **Do any chests send without being opened?** Send the log lines with `the save says open`.
+**Install:** copy `FFRArchipelago/Scripts`. The apworld is unchanged, so the round 65 seed carries on.
 
-**3. GetUniqueId.** Visit the Town of Felicitas (2040) and the Research Center Ruins (3220). **Are there lines with `GetUniqueId says`?**
+**1. GetUniqueId.** Load the save and walk into any map with a chest or shiny. **What does the line with `(first of the session)` say?** If it says a number, visit the Town of Felicitas (2040) and the Research Center Ruins (3220) before you take their shards, and look for `GetUniqueId says` lines.
 
-**4. Starting party.** Send the `starting_roster` and `starting_character_1` to `_4` lines of your yaml. For each of the last few seeds, send the starting party: the spoiler log's options, or the log line `skip: ok   party -> [...]`.
+**2. Shards from the save.** On the new seed, pick up the Felicitas shards and the Research Center Ruins shards. **Does each send as you pick it up?** That is now the save's rows, not `IsOpenTreasureBox`.
+
+**3. Sync.** After a few dungeons, run `/resync` in the client. **How many new checks does the log's `sync from save` line say?** It should be 0: everything opened was sent already.
+
+**4. Early sends.** Go into dungeons you have not visited. Send any log lines with `the save says open`. They are expected now and then (IsOpenTreasureBox answering from another map), and nothing should be sent for them.
 
 Send the `[FFRAP]` lines of the log.

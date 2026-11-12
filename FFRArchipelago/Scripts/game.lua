@@ -398,9 +398,9 @@ function G.LiveChests()
     return out
 end
 
--- What the save says about one chest. A map that shares another map's save list needs that
--- map's id here (FFRS_QoL's chest_items.lua lists such aliases), so the actor's map id and the
--- save's answer can disagree. The POC logs both until we know the rule.
+-- The game's own answer about one chest or shiny: CPP_BFL_SaveDataMap:IsOpenTreasureBox.
+-- Round 65: when the map has no row for that uid yet, it answers from another map's row with
+-- the same uid. So the mod judges by G.SaveOpenRows, and this is only logged.
 function G.IsChestOpenInSave(mapId, uid)
     local lib = Lib("CPP_BFL_SaveDataMap")
     if not (lib and lib.IsOpenTreasureBox) then return nil end
@@ -409,13 +409,35 @@ function G.IsChestOpenInSave(mapId, uid)
     return r == true
 end
 
+-- The save's own rows for one map's chests and shinies (Map.mapGimmick{map}.treasureBox), as
+-- uid -> IsOpen. A uid with no row is not open. Empty when no save is loaded.
+function G.SaveOpenRows(mapId)
+    local rows = {}
+    local sd = G.SaveData()
+    if not sd then return rows end
+    pcall(function()
+        sd.Map.mapGimmick:ForEach(function(key, value)
+            if Int(key:get()) ~= mapId then return end
+            value:get().treasureBox.treasureBoxList:ForEach(function(_, element)
+                local row = element:get()
+                local uid = Int(row.UniqueID)
+                if uid then rows[uid] = row.IsOpen == true end
+            end)
+        end)
+    end)
+    return rows
+end
+
 -- The id the game's own Blueprints use for a chest or shiny in the save
 -- (BP_MapGimmick_TreasureBox and BP_MapGimmick_FieldItem call GetUniqueId, round 64).
+-- Returns the id, or nil and why not.
 function G.GameUniqueId(actor)
-    if not Alive(actor) then return nil end
+    if not Alive(actor) then return nil, "not alive" end
     local ok, v = pcall(function() return actor:GetUniqueId() end)
-    if not ok then return nil end
-    return Int(v)
+    if not ok then return nil, tostring(v) end
+    local id = Int(v)
+    if id == nil then return nil, "returned " .. tostring(v) end
+    return id
 end
 
 -- Discovery: what the save says about a chest under each candidate key, as one string, e.g.
