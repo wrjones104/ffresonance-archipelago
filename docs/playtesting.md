@@ -598,29 +598,35 @@ World-map shinies verified as locations. Multiple crashes observed across differ
 - **Walking crossings, marked in game.** `ffrap_gate mark <a> <b> [scale] [dist]` puts a world-map blocker ahead of you between continents `a` and `b`, and saves it in `crossings.txt`. It holds while either continent is locked, and comes back after each map change. Near a closed one, the feed says which unlock is needed. `ffrap_gate unmark` removes the nearest, `ffrap_gate crossings` lists them.
 - **`start_with_chocobo`** (on by default). Off: the save gets no Chocobo at the start, and "Chocobo" (the game's Choboco Saddle) is an item in the pool. No logic needs it yet.
 
-## Round 67 test plan (mod 0.53.0, world 0.20.0)
+**Round 67 (mod 0.53.0, world 0.20.0, 2026-11-12): passed.**
+- **The ferry works.** With Dirnado locked, the ferry at Grandport would not sail there, and it did once Dirnado opened. The log has `ferry: 24 port choices written` at the start, then 6 each time a port's continent opened or closed.
+- **Two walking crossings, and only two:** Grandshelt to Lanzelt over the stone bridge, and Lanzelt to Kolobos over the rope bridge. Both blockers work. They block the way, last through a town visit and a landing, go within a second of `ffrap_lock open lanzelt` (`crossings: 0 placed, 1 opened`), and come back on a close. The feed said "The way is closed. Archipelago needs Lanzelt Unlock" (and "... and Kolobos Unlock" at the second). `crossings.txt`:
+  - `grandshelt lanzelt 13684 16599 87 180.0 3.00`
+  - `lanzelt kolobos 7889 13983 61 180.0 3.00`
+- **Every mark faced north.** On foot the pawn's rotation reads 0 whichever way the player faces, so every cart went 150 units to +x (north on screen) with yaw 180. Both bridges run east to west, so each cart lies along its bridge, not across it. At scale 3 the carts look too big, and the crates float above them (screenshots). The game's own cart (uid 129, Grandshelt, story under 5000) has scale 1.
+- **No door or cave joins two continents.** The user knew of none either. The ferry and the two bridges are all the ways across without the airship.
+- **`start_with_chocobo: false` works.** No Chocobo at the start, and the item gave one.
+- **The Chocobo and the Antlion.** In Lanzelt a sandpit holds the Antlion. Walking in starts the fight. The Chocobo crosses it with no fight, and after a win you walk across. The Antlion is there at story 8000 (the user first thought not, then saw it). The game data agrees: trigger uid 131 on the world map at (10814, 13272), `C01_ArijigokuEncount[!{ride}&!{flag:113}]`. Its win sets flag 113 only when story flag 10 is on (`bosses.md`), which is not checked at story 8000. The Chocobo blocks nothing else.
 
-**Install:** copy `FFRArchipelago/Scripts`. Copy `dist/ff_resonance.apworld` into Archipelago's `custom_worlds`. Parts 1 to 3 work on the round 66 seed. Part 4 needs a new seed.
+**Changed after round 67 (mod 0.53.1):**
+- **The two crossings are in the mod** (`G.CROSSINGS`), so every install has them. `crossings.txt`, when there is one, is used in their place: delete it to go back to the mod's own list.
+- **A mark goes the way you last walked.** The mod follows the player's position about once a second on the world map. `mark` puts the cart 150 ahead in that direction, turned to face you, so it lies across the path. The default scale is 2.
+- **The nearest crossing can be changed where it stands:** `ffrap_gate move <dx> <dy> [dz]` (+x is north), `ffrap_gate turn [degrees]` (90 by default) and `ffrap_gate size <scale>`. Each one writes `crossings.txt` and puts the cart back at once.
 
-**Locks for testing.** `ffrap_lock close <continent>` locks a continent in the loaded save, and `ffrap_lock open <continent>` opens it. Archipelago does not send an unlock again, so **open again every continent you close**, before you play on.
+## Round 68 test plan (mod 0.53.1, world 0.20.0)
 
-**1. The ferry.** Go to Grandport Harbor. Close one port's continent: `ffrap_lock close dirnado`. Talk to the ferry.
-- **Does choosing Dirnado end the talk, with no trip?**
-- **Does an open port (Olderion, Zoldaad) still sail?**
-- Then `ffrap_lock open dirnado`, talk again. **Does Dirnado sail now?**
+**Install:** copy `FFRArchipelago/Scripts`. The apworld is unchanged, so the round 67 seed carries on. **Keep your `crossings.txt` for now:** part 1 changes it.
 
-**2. Grandshelt to Lanzelt on foot.** Stand in Grandshelt and lock the other side: `ffrap_lock close lanzelt`. Walk to where Grandshelt meets Lanzelt. Face across, a few steps short of the narrowest point, and run `ffrap_gate mark grandshelt lanzelt 3`. A blocker appears about 150 units ahead.
-- **Does it close the whole way across?** If not, `ffrap_gate unmark`, then mark again with a larger scale (`... 5`), or a shorter distance as the last number (`... 5 80`). A screenshot helps.
-- **Can you get past it on foot, or on the Chocobo?** Try the edges and the water's edge.
-- Walk off and back. **Does the feed say "The way is closed. Archipelago needs Lanzelt Unlock"?**
-- Fly away, land again, enter a town and come out. **Is the blocker still there?**
-- `ffrap_lock open lanzelt`. **Is the blocker gone within about a second?**
+**1. Fix the two carts.** Lock one side of a bridge (`ffrap_lock close lanzelt`) and stand by the cart. Then:
+- `ffrap_gate turn` turns it 90 degrees. **Does it now lie across the bridge?** If not, `ffrap_gate turn` again, or `turn 45`.
+- `ffrap_gate size 1.5` (or 1, or 2). **What is the smallest size that still closes the bridge?** Walk and ride the Chocobo at both edges.
+- `ffrap_gate move <dx> <dy>` moves it: +x is north, and y is east or west, which is not known yet. Try `ffrap_gate move 0 50` and say **which way it went on screen**. Then move it until it sits on the bridge.
+- Do the same at the other bridge. `ffrap_lock open lanzelt` at the end.
+- **Send `crossings.txt`.** Its two lines go into the mod in place of today's.
 
-**3. Lanzelt to Kolobos, and any other crossing.** The same as part 2, with `mark lanzelt kolobos`. Then walk along the other continents' borders, as far as you like, and mark every place you can cross on foot or on the Chocobo. The continent names are `grandshelt`, `lanzelt`, `kolobos`, `dirnado`, `olderion`, `zoldaad`, `mysidia`, `gronoa`, `pharm` and `ardra`. **Send `crossings.txt`** from the mod folder: those lines go into the mod in round 68.
-
-**4. The Chocobo as an item.** Generate a seed with `start_with_chocobo: false` and start a new game.
-- **Is there no Chocobo at the start?** (No Choboco Saddle in the item lists, and no Chocobo to call.)
-- When "Chocobo" arrives, **can you ride it?**
-- **Which places can you reach only on the Chocobo?** Logic will need them.
+**2. Probe: can the airship be hidden?** For the start without the airship. On the world map, near the airship:
+- `ffrap_airship {flag:1431}` (flag 1431 is off and used by nothing). Go into a town and out again. **Is the airship gone?** Save and reload too.
+- `ffrap_grant flag 1431`, then into a town and out. **Is it back, where you left it?**
+- `ffrap_airship off` puts the game's own condition back. This is not saved: a restart undoes it too.
 
 Send the `[FFRAP]` lines of the log and `crossings.txt`.

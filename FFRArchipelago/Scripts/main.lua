@@ -50,7 +50,7 @@
 -- follows the save slots the linked game is saved to. While any other save is loaded, the mod
 -- grants nothing, reports nothing and leaves the chests vanilla.
 
-local VERSION = "0.53.0"
+local VERSION = "0.53.1"
 local PROTOCOL = 2        -- the bridge protocol; the apworld's MOD_PROTOCOL
 
 local MOD_DIR = (debug.getinfo(1, "S").source:gsub("^@", ""):gsub("\\", "/"):match("^(.*/)Scripts/[^/]+$"))
@@ -1205,18 +1205,28 @@ local seedExtrasTick -- the Chocobo and the chest icons, below
 local finalLockTick  -- the Crystal Tower's last climb, below
 local bossTest = { group = nil }   -- ffrap_bossfight, below: the group armed, and its tick
 
--- Round 67: the walking crossings between continents (game.CrossingSync). The user marks each in
--- game with `ffrap_gate mark`, which adds a line to crossings.txt:
+-- Round 67: the walking crossings between continents (game.CrossingSync): game.CROSSINGS, or
+-- crossings.txt when there is one. `ffrap_gate mark` and the commands that adjust a crossing
+-- write the whole list to that file, one line each:
 --   <continent a> <continent b> <x> <y> <z> <yaw> <scale>
 local CROSSINGS_PATH = MOD_DIR .. "crossings.txt"
 local crossings = {}
 local CROSSING_HINT_NEAR, CROSSING_HINT_AGAIN = 900, 1500
 local crossingHinted, crossingFailed = nil, nil
+-- Round 67: on foot the pawn's rotation stays at 0, so every mark faced north. The way the player
+-- last walked is taken from their position each lock check instead.
+local walk = { x = nil, y = nil, heading = nil }
+local WALK_MIN_STEP = 40
 
 local function readCrossings()
     crossings = {}
     local f = io.open(CROSSINGS_PATH, "r")
-    if not f then return end
+    if not f then
+        for _, c in ipairs(game.CROSSINGS) do
+            crossings[#crossings + 1] = { a = c.a, b = c.b, x = c.x, y = c.y, z = c.z, yaw = c.yaw, scale = c.scale }
+        end
+        return
+    end
     for line in f:lines() do
         local a, b, x, y, z, yaw, scale = line:match("^(%a+)%s+(%a+)%s+(%S+)%s+(%S+)%s+(%S+)%s+(%S+)%s+(%S+)")
         if a and game.IsContinent(a) and game.IsContinent(b) and tonumber(scale) then
@@ -1238,6 +1248,11 @@ local function writeCrossings()
 end
 
 local function crossingsTick()
+    local pose = game.CurrentMap() == game.WORLD_MAP and game.PlayerPose()
+    if pose and walk.x and math.sqrt((pose.x - walk.x) ^ 2 + (pose.y - walk.y) ^ 2) >= WALK_MIN_STEP then
+        walk.heading = math.atan(pose.y - walk.y, pose.x - walk.x)
+    end
+    if pose then walk.x, walk.y = pose.x, pose.y end
     local placed, removed = game.CrossingSync(crossings)
     if not placed then
         if removed ~= "not on the world map" and removed ~= "settling" and removed ~= crossingFailed then
@@ -1584,6 +1599,7 @@ end)
 --   ffrap_gate require <item|unit|flag|off> [id] [count]
 --   ffrap_gate lock | unlock | clear | status
 --   ffrap_gate mark <continent> <continent> [scale] [dist] | unmark | crossings   (round 67)
+--   ffrap_gate move <dx> <dy> [dz] | turn [degrees] | size <scale>: the nearest crossing
 command("ffrap_gate", function(p)
     local what = (p and p[1] and p[1]:lower()) or "status"
     local function traced(fn)
@@ -1640,10 +1656,11 @@ command("ffrap_gate", function(p)
         gateNear = false
         notify("Gate cleared (" .. tostring(n) .. " actor(s) removed)")
     elseif what == "mark" then
-        -- Round 67: a walking crossing, `dist` ahead of the player, facing back at them.
+        -- Round 67: a walking crossing, `dist` ahead of the player in the way they last walked,
+        -- turned to face them, so the cart lies across the path.
         local a, b = p[2] and p[2]:lower(), p[3] and p[3]:lower()
         if not (a and b and a ~= b and game.IsContinent(a) and game.IsContinent(b)) then
-            notify("Usage: ffrap_gate mark <continent> <continent> [scale] [dist]  (e.g. mark grandshelt lanzelt 3)")
+            notify("Usage: ffrap_gate mark <continent> <continent> [scale] [dist]  (e.g. mark grandshelt lanzelt 2)")
             return
         end
         if game.CurrentMap() ~= game.WORLD_MAP then
@@ -1655,16 +1672,19 @@ command("ffrap_gate", function(p)
             notify("Gate mark: " .. tostring(why))
             return
         end
-        local scale, dist = tonumber(p[4]) or 3, tonumber(p[5]) or 150
-        local c = { a = a, b = b, x = pose.x + pose.fx * dist, y = pose.y + pose.fy * dist, z = pose.z,
-                    yaw = (pose.yaw + 180.0) % 360.0, scale = scale }
+        local scale, dist = tonumber(p[4]) or 2, tonumber(p[5]) or 150
+        local heading = walk.heading or math.atan(pose.fy, pose.fx)
+        local c = { a = a, b = b, x = pose.x + math.cos(heading) * dist, y = pose.y + math.sin(heading) * dist, z = pose.z,
+                    yaw = (math.deg(heading) + 180.0) % 360.0, scale = scale }
         crossings[#crossings + 1] = c
         writeCrossings()
         crossingHinted = c
-        log(string.format("gate mark %d: %s %s at (%.0f, %.0f, %.0f) yaw %.1f scale %.2f; player at (%.0f, %.0f, %.0f)",
-            #crossings, a, b, c.x, c.y, c.z, c.yaw, scale, pose.x, pose.y, pose.z))
+        log(string.format("gate mark %d: %s %s at (%.0f, %.0f, %.0f) yaw %.1f scale %.2f; player at (%.0f, %.0f, %.0f)%s",
+            #crossings, a, b, c.x, c.y, c.z, c.yaw, scale, pose.x, pose.y, pose.z,
+            walk.heading and "" or " (no walk seen: facing the pawn's way)"))
         notify(string.format("Crossing %d marked: %s-%s, scale %.1f. It shows while either side is locked.", #crossings, a, b, scale))
-    elseif what == "unmark" then
+    elseif what == "unmark" or what == "move" or what == "turn" or what == "size" then
+        -- Round 67: the nearest crossing, taken away or changed where it stands. +x is north.
         local pose = game.PlayerPose()
         local at, d = nil, 1500
         for i, c in ipairs(crossings) do
@@ -1672,14 +1692,25 @@ command("ffrap_gate", function(p)
             if dc < d then at, d = i, dc end
         end
         if not at then
-            notify("Gate unmark: no crossing within 1500")
+            notify("Gate " .. what .. ": no crossing within 1500")
             return
         end
-        local near = table.remove(crossings, at)
+        local c = crossings[at]
+        if what == "unmark" then
+            table.remove(crossings, at)
+        elseif what == "move" then
+            c.x, c.y, c.z = c.x + (tonumber(p[2]) or 0), c.y + (tonumber(p[3]) or 0), c.z + (tonumber(p[4]) or 0)
+        elseif what == "turn" then
+            c.yaw = (c.yaw + (tonumber(p[2]) or 90)) % 360.0
+        else
+            c.scale = tonumber(p[2]) or c.scale
+        end
         writeCrossings()
         game.CrossingClear()
-        log(string.format("gate unmark: %s %s at (%.0f, %.0f), %.0f away; %d left", near.a, near.b, near.x, near.y, d, #crossings))
-        notify(string.format("Crossing %s-%s removed (%d left)", near.a, near.b, #crossings))
+        local line = string.format("%s %s at (%.0f, %.0f, %.0f) yaw %.1f scale %.2f, %.0f away; %d crossings",
+            c.a, c.b, c.x, c.y, c.z, c.yaw, c.scale, d, #crossings)
+        log("gate " .. what .. ": " .. line)
+        notify("Crossing " .. (what == "unmark" and "removed: " or "changed: ") .. line)
     elseif what == "crossings" then
         local pose = game.PlayerPose()
         for i, c in ipairs(crossings) do

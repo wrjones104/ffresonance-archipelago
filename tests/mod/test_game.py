@@ -1501,6 +1501,9 @@ for _px, _py, _name in ((12460, 20700, "grandshelt"), (12470, 14980, "lanzelt"),
                         (-3920, -17480, "pharm")):
     assert _in(_px, _py) == [_name], (_px, _py, _in(_px, _py))
 assert not _in(-5935, -8305), "the air start is over the sea, in no continent"
+# Round 67: each built-in walking crossing stands in one of the two continents it joins
+for _c in L.eval("G.CROSSINGS").values():
+    assert _in(_c.x, _c.y)[0] in (_c.a, _c.b), (_c.a, _c.b, _in(_c.x, _c.y))
 # the rectangles are one table in two places: the apworld's data and the mod's
 _tsv = {}
 for r in _rows("../continents.tsv"):

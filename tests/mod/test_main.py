@@ -185,6 +185,7 @@ function G.ContinentMapLoaded(world, place) G.hookWorld, G.hookPlace = world, pl
 function G.ContinentStatus() return "open []" end
 function G.SetContinentOpen(name, open) if name == "narnia" then return nil, "no continent" end G.lockOpens[name] = open; return 1 end
 G.WORLD_MAP, G.ferrySyncs, G.crossingLists = 1000, 0, {}
+G.CROSSINGS = { { a = "grandshelt", b = "lanzelt", x = 13684, y = 16599, z = 87, yaw = 180.0, scale = 3.0 } }
 function G.FerrySync() G.ferrySyncs = G.ferrySyncs + 1; return 0 end
 function G.IsContinent(name) return name ~= "narnia" end
 function G.ContinentOpen(name) return (G.openContinents or {})[name] == true end
@@ -1513,7 +1514,7 @@ tick(12)
 assert "item30002x1" not in list(G.log.values()), list(G.log.values())
 print("chocobo and shipyard: ok")
 
-# Round 67: the walking crossings come from crossings.txt, and a bad line is skipped.
+# Round 67: the walking crossings come from crossings.txt when there is one, and a bad line is skipped.
 # `ffrap_gate mark` adds one ahead of the player, `unmark` takes the nearest away again, and the
 # ferry is kept in step on every lock check.
 GRANDSHELT_BRIDGE = "grandshelt\tlanzelt\t14000\t17600\t120\t90.0\t3.00\n"
@@ -1542,7 +1543,32 @@ assert len(read("crossings.txt").splitlines()) == 3, "an unknown continent is re
 L.execute('commands["ffrap_gate"]("ffrap_gate", {"unmark"})')
 assert read("crossings.txt") == GRANDSHELT_BRIDGE + KOLOBOS_PASS, read("crossings.txt")
 assert G.crossingsCleared is True, "the blockers are placed again from the new list"
+# Round 67: on foot the pawn always says it faces north, so a mark goes the way the player last
+# walked: here 200 to the south-west (-y), so the cart is 150 further on, turned back to face them.
+L.execute("G.px, G.py = 9000, 12000; function G.PlayerPose() return { x = G.px, y = G.py, z = 75, yaw = 0.0, fx = 1.0, fy = 0.0 } end")
+tick(4)
+G.py = 11800
+tick(4)
+L.execute('commands["ffrap_gate"]("ffrap_gate", {"mark", "lanzelt", "kolobos"})')
+assert read("crossings.txt").splitlines()[2] == "lanzelt	kolobos	9000	11650	75	90.0	2.00", read("crossings.txt")
+# move, turn and size change the nearest one where it stands
+L.execute('commands["ffrap_gate"]("ffrap_gate", {"move", "-20", "35"})')
+L.execute('commands["ffrap_gate"]("ffrap_gate", {"turn", "45"})')
+L.execute('commands["ffrap_gate"]("ffrap_gate", {"size", "1.5"})')
+assert read("crossings.txt").splitlines()[2] == "lanzelt	kolobos	8980	11685	75	135.0	1.50", read("crossings.txt")
+assert read("crossings.txt").startswith(GRANDSHELT_BRIDGE + KOLOBOS_PASS), "the others are left alone"
 os.remove(path("crossings.txt"))
+# with no crossings.txt, the mod's own list is used
+L, G = boot5("SD_CROSS2", "0", {})
+L.globals().G = G
+L.execute(SCALE_STUB)
+L.execute("function G.HeldCount(id) return 1 end")
+G.chests = L.table()
+G.story = 8000
+tick(12)
+last = L.eval("G.crossingLists[#G.crossingLists]")
+assert len(last) == 1 and last[1].x == 13684 and last[1].b == "lanzelt", len(last)
+assert not os.path.exists(path("crossings.txt")), "nothing is written until a crossing is changed"
 print("crossings: ok")
 
 # Round 58: the tower's last climb stays sealed while the client's counts are short, and says so near it

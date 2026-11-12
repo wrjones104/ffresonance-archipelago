@@ -4301,7 +4301,15 @@ end
 -- The landing locks stop only the airship. On foot, the world map joins some continents (round
 -- 44: Grandshelt and Lanzelt), and no door or cave in the game data joins two. A crossing is a
 -- world-map blocker between continents `a` and `b` that holds while either is locked:
--- { a, b, x, y, z, yaw, scale }. The list comes from main.lua (crossings.txt, marked in game).
+-- { a, b, x, y, z, yaw, scale }. main.lua passes the list: crossings.txt when the user has one
+-- (marked in game with ffrap_gate), else G.CROSSINGS.
+-- Round 67: the only two crossings on foot, marked by the user. +X is north on screen. The stone
+-- bridge (Grandshelt-Lanzelt) is part of the landscape, not an actor, so these places come from
+-- play, not the game data.
+G.CROSSINGS = {
+    { a = "grandshelt", b = "lanzelt", x = 13684, y = 16599, z = 87, yaw = 180.0, scale = 3.0 },
+    { a = "lanzelt", b = "kolobos", x = 7889, y = 13983, z = 61, yaw = 180.0, scale = 3.0 },
+}
 
 -- Places a blocker for every crossing with a locked side and removes the rest. Runs only once the
 -- world map has settled (as the landing locks do). Returns the number placed and removed, or nil
