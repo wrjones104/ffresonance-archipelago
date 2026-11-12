@@ -537,9 +537,16 @@ World-map shinies verified as locations. Multiple crashes observed across differ
 - The three story boss fights (Belmodar, The Hunger, Mom Bomb) also need flag 1441. The mod turns it on after the field has been up for about 2 seconds on a story boss map, and off as soon as the field goes (a battle, a scene, a menu). So the party coming back from the fight cannot set it off again before the win row runs.
 - Scaling "off" now puts boss rows back too. Before, the seed's own "off" left them scaled.
 
-## Round 63 test plan (mod 0.52.1, world 0.19.0)
+## Round 63 test plan (mod 0.52.2, world 0.19.0)
 
 **Install:** copy `FFRArchipelago/Scripts`. The apworld has not changed, so the round 62 seed still works. The user starts that seed's save again.
+
+**Changed during round 63 (mod 0.52.2):**
+- First report: Belmodar with a low-level Rain and Lasswell felt good on the game's Normal with our Normal, and on Expert with Expert. Bosses feel better than in round 62.
+- First report: a level 8 party on Normal met level 5 enemies, "like fighting air". The enemies' band was 2 under and 2 over a centre of 7. It is now 1 under the centre, and 1, 3 or 5 over it on Casual, Normal and Expert. The bosses' band is unchanged. The `scale:` line now gives the enemies' band, for example `enemies centre 7 (92%), 6 to 10`.
+- The Arena's Brawler, Gladiator and Champion fights are scaled as bosses. The Fledgling fights stay plain enemies, as their units are field enemies. The first `scale:` line ends with `N units in boss groups, 24 in the Arena`.
+
+**0b. Arena.** Fight a Brawler battle. **Is it a challenge now?** A Fledgling battle should feel like the field.
 
 **0. Scaling.** Options, Gameplay: "AP: Scaling strength" has Casual, Normal and Expert again, and keeps the choice you made before 0.52.0. The `scale:` line names the strength and gives the bosses' centre and power. **On Normal, do bosses last long enough to matter, without walling a seed that has little gear?** Expert should be harder again.
 

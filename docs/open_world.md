@@ -172,6 +172,9 @@ MP does not correlate with level (r² 0.09) and remains unchanged.
   | Normal, the default (round 56's Expert for enemies) | 90% to 100% | 90% to 115% | 115% to 125% | 125% to 135% |
   | Expert | 100% to 110% | 105% to 130% | 120% to 130% | 140% to 150% |
 
+- **Round 63, later: a narrower floor, a wider top (mod 0.52.2).** A level 8 party on Normal met level 5 enemies, and it was like fighting air. The centre was 7 (92%), and the band went 2 under and 2 over it. The clamp lifts every enemy below the band to its bottom, so the early regions all sit there. The user's numbers: the enemies' band goes 1 under the centre, and 1, 3 or 5 over it on Casual, Normal and Expert. Late regions sit at the top, so a region far ahead is a real danger on Expert. The bosses' band stays 2 each way, as bosses felt right. At party level 8 on Normal, enemies are now 6 to 10.
+- **Round 63: Arena fights are bosses (mod 0.52.2).** The user wants the Arena to be a challenge. Brawler Battle 1 to Champion Battle 5 (groups 9705 to 9720, and 9721, Ochu's Microchus) take the boss band and power. Their units fight nowhere else, and they keep their 0 EXP. Most of the Gladiator and Champion units were already in the Boss category; this adds the Brawler units, Hidon and the Beast of Ruin. The five Fledgling battles (9700 to 9704) are left as plain enemies: they use field units (Wyvern, Coeurl, Balaur and 10 more), and scaling writes the unit's row, so a boss Wyvern would be a boss on the field too.
+
   Level counts in the damage formula itself as well as in the stats: `DT_UnitParameterCalc` has `sameLevelDamageCalcMagnification` 2.0 and `deffenceIgnoreDamageCalcLevelRate` 4.0. The formula is native code, so how much a level gap counts is not known.
 
 **Round 31 & 32 findings:**

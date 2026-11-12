@@ -50,7 +50,7 @@
 -- follows the save slots the linked game is saved to. While any other save is loaded, the mod
 -- grants nothing, reports nothing and leaves the chests vanilla.
 
-local VERSION = "0.52.1"
+local VERSION = "0.52.2"
 local PROTOCOL = 2        -- the bridge protocol; the apworld's MOD_PROTOCOL
 
 local MOD_DIR = (debug.getinfo(1, "S").source:gsub("^@", ""):gsub("\\", "/"):match("^(.*/)Scripts/[^/]+$"))
@@ -2036,12 +2036,17 @@ end)
 -- easier game is the game's Casual difficulty with casual scaling. Bosses on normal still melted,
 -- so on normal and expert they ramp too, from 10 points over that (level and power) at party level
 -- 5 to 20 points over at 25. The ramp keeps a seed that starts with little gear playable.
+-- Round 63, later: a level 8 party on Normal met level 5 enemies, the bottom of a band of 2 under
+-- and over a centre of 7, and it was like fighting air. Early regions sit at the band's bottom,
+-- as the clamp lifts them to it. So the enemies' band goes 1 under the centre and `above` over it
+-- (the user's numbers). Late regions sit at the top, so on Expert a region far ahead is 5 over.
+-- The bosses' band stays 2 each way: bosses felt right, and most sit at its top anyway.
 local SEED_SCALES = {
-    [0] = { at = { 80, 90 }, power = { 75, 100 }, bossAt = { 100, 100 }, bossPower = { 100, 100 } },
-    [1] = { at = { 90, 100 }, power = { 90, 115 }, bossAt = { 115, 125 }, bossPower = { 125, 135 } },
-    [2] = { at = { 100, 110 }, power = { 105, 130 }, bossAt = { 120, 130 }, bossPower = { 140, 150 } },
+    [0] = { at = { 80, 90 }, power = { 75, 100 }, above = 1, bossAt = { 100, 100 }, bossPower = { 100, 100 } },
+    [1] = { at = { 90, 100 }, power = { 90, 115 }, above = 3, bossAt = { 115, 125 }, bossPower = { 125, 135 } },
+    [2] = { at = { 100, 110 }, power = { 105, 130 }, above = 5, bossAt = { 120, 130 }, bossPower = { 140, 150 } },
 }
-local SEED_RAMP = { range = 2, rampFrom = 5, rampTo = 25 }
+local SEED_RAMP = { below = 1, bossRange = 2, rampFrom = 5, rampTo = 25 }
 
 local function seedScale()
     return SEED_SCALES[setting("strength")] or SEED_SCALES[1]
@@ -2058,10 +2063,10 @@ local function seedScaleToParty()
     local s = seedScale()
     local at, power = ramp(s.at, lv), ramp(s.power, lv)
     local bossAt, bossPower = ramp(s.bossAt, lv), ramp(s.bossPower, lv)
-    local a, b, c = game.LevelBand(lv, SEED_RAMP.range, at)
-    local ba, bb, bc = game.LevelBand(lv, SEED_RAMP.range, bossAt)
-    log(string.format("scale: party level %d (%s), strength %s: enemies centre %d (%d%%), power %d%%; bosses centre %d (%d%%), power %d%%",
-        lv, detail, STRENGTH_NAMES[setting("strength")] or "?", c, at, power, bc, bossAt, bossPower))
+    local a, b, c = game.LevelBand(lv, SEED_RAMP.below, at, s.above)
+    local ba, bb, bc = game.LevelBand(lv, SEED_RAMP.bossRange, bossAt)
+    log(string.format("scale: party level %d (%s), strength %s: enemies centre %d (%d%%), %d to %d, power %d%%; bosses centre %d (%d%%), power %d%%",
+        lv, detail, STRENGTH_NAMES[setting("strength")] or "?", c, at, math.max(1, a), b, power, bc, bossAt, bossPower))
     local bossKnobs = { hp = bossPower, attack = bossPower, magic = bossPower }
     local n, err = applyScale("clamp", a, b, true, { hp = power, attack = power, magic = power }, { a = ba, b = bb, knobs = bossKnobs })
     return n, err, lv

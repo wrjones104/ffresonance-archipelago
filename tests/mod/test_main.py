@@ -984,9 +984,9 @@ L.globals().G = G
 L.execute("""
 G.scaleCalls, G.partyLv, G.onField = {}, 40, true
 function G.PartyLevel() return G.partyLv, "1001:" .. G.partyLv end
-function G.LevelBand(lv, range, at)
+function G.LevelBand(lv, range, at, above)
   local c = math.max(1, math.floor(lv * (at or 100) / 100 + 0.5))
-  return c - range, c + range, c
+  return c - range, c + (above or range), c
 end
 function G.OnField() return G.onField end
 G.check = { 0, 0, nil, false }
@@ -1337,9 +1337,9 @@ print("vision screen exit: ok")
 SCALE_STUB = """
 G.scaleCalls, G.partyLv, G.onField = {}, 10, true
 function G.PartyLevel() return G.partyLv, "1001:" .. G.partyLv end
-function G.LevelBand(lv, range, at)
+function G.LevelBand(lv, range, at, above)
   local c = math.max(1, math.floor(lv * (at or 100) / 100 + 0.5))
-  return c - range, c + range, c
+  return c - range, c + (above or range), c
 end
 function G.OnField() return G.onField end
 function G.ScaleCheck() return 0, 0, nil, false end
@@ -1363,27 +1363,29 @@ assert calls() == [], "not before the open world start"
 G.story = 8000
 tick(10)
 # Round 63: normal by default (the old expert). Party level 10 is a quarter of the way up the
-# ramp: centre 93% (9), power 96%; bosses at 118% (12), 128%
-assert calls() == ["clamp 7 11 true hp96 atk96 mag96; bosses 10 14 hp128"], calls()
+# ramp: centre 93% (9), power 96%; bosses at 118% (12), 128%. Round 63, later: the enemies' band
+# is 1 under the centre and 3 over it on normal; the bosses' stays 2 each way
+assert calls() == ["clamp 8 12 true hp96 atk96 mag96; bosses 10 14 hp128"], calls()
 tick(10)
 assert len(calls()) == 1, "once"
 G.partyLv = 30
 tick(10)
-assert calls()[-1] == "clamp 28 32 true hp115 atk115 mag115; bosses 36 40 hp135", "the top of the ramp: centre 100% (30), power 115%; bosses 125% (38), 135%"
+assert calls()[-1] == "clamp 29 33 true hp115 atk115 mag115; bosses 36 40 hp135", "the top of the ramp: centre 100% (30), power 115%; bosses 125% (38), 135%"
 G.partyLv = 3
 tick(10)
-assert calls()[-1] == "clamp 1 5 true hp90 atk90 mag90; bosses 1 5 hp125", "below the ramp: centre 90% (3), power 90%; bosses 115%, 125%"
+assert calls()[-1] == "clamp 2 6 true hp90 atk90 mag90; bosses 1 5 hp125", "below the ramp: centre 90% (3), power 90%; bosses 115%, 125%"
 # Round 56: a new strength rescales at once. Round 63: expert is centre 100% (3), power 105%;
-# bosses 120% (4), 140%. Casual is the old normal: centre 80% (2), power 75%; bosses 100%, 100%
+# bosses 120% (4), 140%. Casual is the old normal: centre 80% (2), power 75%; bosses 100%, 100%.
+# The enemies' band goes 5 over the centre on expert and 1 on casual
 L.execute('commands["ffrap_set"]("ffrap_set", {"strength", "expert"})')
 tick(10)
-assert calls()[-1] == "clamp 1 5 true hp105 atk105 mag105; bosses 2 6 hp140", calls()
+assert calls()[-1] == "clamp 2 8 true hp105 atk105 mag105; bosses 2 6 hp140", calls()
 L.execute('commands["ffrap_set"]("ffrap_set", {"strength", "casual"})')
 tick(10)
-assert calls()[-1] == "clamp 0 4 true hp75 atk75 mag75; bosses 1 5 hp100", calls()
+assert calls()[-1] == "clamp 1 3 true hp75 atk75 mag75; bosses 1 5 hp100", calls()
 L.execute('commands["ffrap_set"]("ffrap_set", {"reset"})')
 tick(10)
-assert calls()[-1] == "clamp 1 5 true hp90 atk90 mag90; bosses 1 5 hp125", "back to normal"
+assert calls()[-1] == "clamp 2 6 true hp90 atk90 mag90; bosses 1 5 hp125", "back to normal"
 G.saveObj, G.saveTicks = "SD_OTHER", "600"     # a save in a slot the seed does not hold
 tick(30)
 assert calls()[-1].startswith("off "), calls()
@@ -1397,7 +1399,7 @@ G.chests = L.table()
 tick(12)
 G.story = 8000
 tick(10)
-assert calls() == ["clamp 7 11 true hp96 atk96 mag96; bosses 10 14 hp128"], calls()
+assert calls() == ["clamp 8 12 true hp96 atk96 mag96; bosses 10 14 hp128"], calls()
 L.execute('commands["ffrap_scale"]("ffrap_scale", {"off"})')
 G.partyLv = 30
 tick(30)

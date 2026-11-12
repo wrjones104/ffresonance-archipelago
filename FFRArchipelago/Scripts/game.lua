@@ -3245,21 +3245,34 @@ local CATEGORY_ENEMY, CATEGORY_BOSS = 2, 3     -- eUnitCategory
 -- EXP for its level: Mom Bomb (level 14) and Liquid Thunder (level 13) both ship with about 1350.
 local BOSS_EXP_LEVEL, BOSS_EXP = 14, 1350
 
+-- Round 63: the Arena's rank battles are scaled as bosses too (the user: the Arena should be a
+-- challenge). Groups 9705 to 9720 are Brawler Battle 1 to Champion Battle 5, and 9721 is the
+-- Microchus Ochu calls in. Their units fight nowhere else. The Fledgling battles (9700 to 9704)
+-- are left out: their units are field enemies (Wyvern, Coeurl, Balaur and more), and scaling
+-- writes the unit's row, so they would be boss-strength on the field too. Arena units ship with
+-- 0 EXP and keep it: the Arena pays in items.
+local ARENA_BOSS_GROUPS = { first = 9705, last = 9721 }
+
+-- The units scaled as bosses whatever their category: those in a boss location's group (they get
+-- a boss's EXP when they ship with none), and those in the Arena's rank battles.
 local function BossUnitIds()
-    local groups, units = {}, {}
+    local groups, units, arena = {}, {}, {}
     for _, b in ipairs(G.BOSSES) do groups[b.group] = true end
     for _, dt in ipairs(TableFamily(Find(BATTLE_GROUP_TABLE))) do
         pcall(function()
             dt:ForEachRow(function(_, row)
                 pcall(function()
-                    if not groups[Int(row.ID)] then return end
+                    local id = Int(row.ID)
+                    local into = (groups[id] and units)
+                        or (id >= ARENA_BOSS_GROUPS.first and id <= ARENA_BOSS_GROUPS.last and arena)
+                    if not into then return end
                     local list = row.UnitIdList
-                    for i = 1, #list do units[Int(list[i])] = true end
+                    for i = 1, #list do into[Int(list[i])] = true end
                 end)
             end)
         end)
     end
-    return units
+    return units, arena
 end
 G.MAX_LEVEL = 99
 
@@ -3301,11 +3314,12 @@ function G.ScaledLevel(own, mode, a, b)
 end
 
 -- The band of enemy levels for a party level: centred on `at` percent of the party's level
--- (100: the party's own level), plus or minus `range`. In the shipped game the party gets well
--- ahead of the enemies from Olderion on (round 32), so `at` below 100 is closer to it.
-function G.LevelBand(partyLevel, range, at)
+-- (100: the party's own level), from `range` below it to `above` over it (`range` when nil). In
+-- the shipped game the party gets well ahead of the enemies from Olderion on (round 32), so `at`
+-- below 100 is closer to it.
+function G.LevelBand(partyLevel, range, at, above)
     local c = math.max(1, math.floor(partyLevel * (at or 100) / 100 + 0.5))
-    return c - range, c + range, c
+    return c - range, c + (above or range), c
 end
 
 -- A party member's level: CPP_BFL_Unit:GetPlayableUnitLevel (FFRSLib's ffrs_unit_level reads
@@ -3447,7 +3461,7 @@ function G.ScaleEnemies(mode, a, b, withBosses, knobs, bossBand)
     if #family == 0 then return nil, "DT_UnitParameter not loaded" end
     local changed, sample, lines, gameChanged = 0, nil, {}, 0
     local wanted = {}
-    local bossUnits = BossUnitIds()
+    local bossUnits, arenaUnits = BossUnitIds()
     local fields = { "Level" }
     for _, k in ipairs(GROWTH_ORDER) do fields[#fields + 1] = k end
     for _, dt in ipairs(family) do
@@ -3456,7 +3470,8 @@ function G.ScaleEnemies(mode, a, b, withBosses, knobs, bossBand)
                 local okRow, err = pcall(function()
                     local cat = Int(row.Category)
                     local id = Int(row.ID)
-                    local isBoss = cat == CATEGORY_BOSS or (cat == CATEGORY_ENEMY and bossUnits[id] == true)
+                    local isBoss = cat == CATEGORY_BOSS
+                        or (cat == CATEGORY_ENEMY and (bossUnits[id] == true or arenaUnits[id] == true))
                     -- "off" puts every row back, bosses too: the seed's own "off" passes no withBosses.
                     if not ((cat == CATEGORY_ENEMY and not isBoss) or ((withBosses or mode == "off") and isBoss)) then return end
                     local now = {}
@@ -3514,9 +3529,10 @@ function G.ScaleEnemies(mode, a, b, withBosses, knobs, bossBand)
     end
     local groups = ScaleBattleGroups(mode, wanted)
     if groups > 0 then sample = (sample and (sample .. "; ") or "") .. "MRP changed in " .. groups .. " battle groups" end
-    local bossCount = 0
+    local bossCount, arenaCount = 0, 0
     for _ in pairs(bossUnits) do bossCount = bossCount + 1 end
-    sample = (sample and (sample .. "; ") or "") .. bossCount .. " units in boss groups"
+    for _ in pairs(arenaUnits) do arenaCount = arenaCount + 1 end
+    sample = (sample and (sample .. "; ") or "") .. bossCount .. " units in boss groups, " .. arenaCount .. " in the Arena"
     if mode == "off" then scaleWanted, scaleTables = nil, nil
     else scaleWanted, scaleTables = wanted, TableKeys(family) end
     return changed, sample, lines, gameChanged

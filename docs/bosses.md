@@ -83,7 +83,7 @@ These test a side-quest counter (`{progress:N}`, N not 0) or an item. They may w
 | Ultima Weapon | a chapter 9 side quest | its win row |
 | Typhon, Adamandelion, Sahagin, Phantom Train, Ashasaur, Blood Dragon | each character's quest counter | the counter |
 | Twelve Arms, 12 at level 50 and 12 at level 75 | the weapon in the bag, at a pedestal in the Chamber of Arms (3290) | the Victory row's flag |
-| Arena, 20 fights up to Shinryu (95) and Omega (99) | the Colosseum's ranks | the rank's proof item (29000 to 29003) |
+| Arena, 20 fights up to Shinryu (95) and Omega (99). From mod 0.52.2 (round 63) the Brawler, Gladiator and Champion fights (groups 9705 to 9721) are scaled as bosses; the Fledgling fights use field enemies and are not | the Colosseum's ranks | the rank's proof item (29000 to 29003) |
 
 Siren and Leviathan are story fights (tier 3). Both will give Crystal Fragments: the player starts with Siren as a summon, and the Leviathan summon comes from a side quest.
 

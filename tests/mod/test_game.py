@@ -951,6 +951,8 @@ a, b, c = L.execute("return G.LevelBand(1, 2, 80)")
 assert (a, b, c) == (-1, 3, 1), (a, b, c)
 a, b, c = L.execute("return G.LevelBand(52, 1)")
 assert (a, b, c) == (51, 53, 52), (a, b, c)
+a, b, c = L.execute("return G.LevelBand(8, 1, 92, 3)")
+assert (a, b, c) == (6, 10, 7), "round 63: 1 under the centre, 3 over"
 same = L.eval("G.ScaledStats({ Level = 7, MaxHitPoint = 300, Attack = 66, Money = 0 }, 7)")
 assert same.MaxHitPoint == 300 and same.Attack == 66 and same.Money == 0, dict(same)
 down = L.eval("G.ScaledStats({ Level = 50, MaxHitPoint = 3, Attack = 2 }, 1)")
@@ -1059,6 +1061,22 @@ assert L.eval("unitRows.hunger.Level") == 6, "without bosses, a boss group's uni
 L.execute("G.ScaleEnemies('off', nil, nil, false, { hp = 100 })")
 assert L.eval("unitRows.hunger.Level") == HUNGER_LEVEL and L.eval("unitRows.hunger.Experience") == 0, "off gives the shipped row back, bosses too"
 assert L.eval("unitRows.boss.Level") == 4
+# Round 63: the Arena's rank battles from Brawler Battle 1 (group 9705) on are scaled as bosses and
+# keep their 0 EXP. Fledgling Battle 1 (9700) holds field enemies, which stay plain enemies.
+DARK_FANG, BRAWLER_1, WYVERN, FLEDGLING_1, ARENA_LEVEL, ARENA_HP = 4001, 9705, 198, 9700, 40, 135000
+L.execute(f"""
+unitRows.fang = {{ ID = {DARK_FANG}, Category = 2, Name = FText("Dark Fang"), Level = {ARENA_LEVEL}, MaxHitPoint = {ARENA_HP},
+  MaxBreakPoint = 80, Attack = 900, Defence = 400, Intelligence = 600, Mind = 400, Agility = 200, Experience = 0, Money = 0 }}
+unitRows.wyvern = {{ ID = {WYVERN}, Category = 2, Name = FText("Wyvern"), Level = 26, MaxHitPoint = 4700,
+  MaxBreakPoint = 80, Attack = 300, Defence = 200, Intelligence = 200, Mind = 200, Agility = 100, Experience = 400, Money = 0 }}
+groupRows.brawler = {{ ID = {BRAWLER_1}, ap = 0, UnitIdList = {{ {DARK_FANG} }} }}
+groupRows.fledgling = {{ ID = {FLEDGLING_1}, ap = 0, UnitIdList = {{ {WYVERN} }} }}""")
+_, sample, _ = L.execute("return G.ScaleEnemies('clamp', 2, 3, true, { hp = 50 }, { a = 6, b = 6, knobs = { hp = 100 } })")[:3]
+assert "1 in the Arena" in sample, sample
+assert L.eval("unitRows.fang.Level") == 6 and L.eval("unitRows.fang.MaxHitPoint") == scaled(ARENA_HP, "MaxHitPoint", ARENA_LEVEL, 6), "the boss band"
+assert L.eval("unitRows.fang.Experience") == 0, "the Arena pays in items"
+assert L.eval("unitRows.wyvern.Level") == 3, "a Fledgling battle's field enemy keeps the enemies' band"
+L.execute("unitRows.fang = nil; unitRows.wyvern = nil; groupRows.brawler = nil; groupRows.fledgling = nil")
 L.execute("unitRows.hunger = nil; groupRows.hunger = nil; G.ScaleEnemies('clamp', 5, 15, true, { hp = 50 })")
 # the rows of one unit, by id or name, in every unit table
 L.execute("""
