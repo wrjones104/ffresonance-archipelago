@@ -2119,6 +2119,17 @@ for _, b in pairs(G.STORY_BOSSES) do
     STORY_BOSS_EVENTS[b.event] = true
     STORY_BOSS_GROUPS[b.group] = true
 end
+-- Round 62: The Hunger's door fired again as the party came back from the fight, before the win
+-- row could run, so the fight looped and flag 1241 never came on. The fight's condition also
+-- needs this flag, which main.lua turns on only after the field has been up for a while. Flags
+-- 1430 to 1449 are free in the game; 1430 is the Chest Radar and 1440 the boss test.
+G.STORY_BOSS_READY_FLAG = 1441
+
+function G.SetStoryBossReady(on)
+    if G.GetFlag(G.STORY_BOSS_READY_FLAG) == on then return false end
+    G.SetFlag(G.STORY_BOSS_READY_FLAG, on)
+    return true
+end
 
 local bossTestSaved = nil     -- { talk = {}, group = id, groupFields = {}, chests = { ["map:id"] = {} } }
 
@@ -2215,6 +2226,7 @@ function G.SyncStoryBossTrigger(say)
     end
     local won = G.GetFlag(boss.flag) == true
     local cond = "!{flag:" .. boss.flag .. "}"
+    local fightCond = cond .. "&{flag:" .. G.STORY_BOSS_READY_FLAG .. "}"
     local fightRows, winRows, groupRows = 0, 0, 0
     if not bossTestSaved then
         step(string.format("story boss: tables for group %d, flag %d (won %s)", boss.group, boss.flag, tostring(won)))
@@ -2243,9 +2255,9 @@ function G.SyncStoryBossTrigger(say)
                     match = (ev == boss.event or ev == STORY_BOSS_FIGHT)
                 end)
                 if match then
-                    step("story boss: trigger m_EventList[1] -> " .. cond .. " / " .. STORY_BOSS_FIGHT)
+                    step("story boss: trigger m_EventList[1] -> " .. fightCond .. " / " .. STORY_BOSS_FIGHT)
                     pcall(function()
-                        a.m_EventList[1].Condition = cond
+                        a.m_EventList[1].Condition = fightCond
                         a.m_EventList[1].EventId = FName(STORY_BOSS_FIGHT)
                     end)
                     step("story boss: trigger m_FlagCondition and VisibleCondition -> " .. cond)
@@ -2272,9 +2284,9 @@ function G.SyncStoryBossTrigger(say)
                     match = (Int(d.pointId) == boss.point or ev == boss.event or ev == STORY_BOSS_FIGHT)
                 end)
                 if match and d then
-                    step("story boss: transition mTransitionDataList[1] -> " .. cond .. ", isEventOnly true, " .. STORY_BOSS_FIGHT)
+                    step("story boss: transition mTransitionDataList[1] -> " .. fightCond .. ", isEventOnly true, " .. STORY_BOSS_FIGHT)
                     pcall(function()
-                        d.FlagCondition = cond
+                        d.FlagCondition = fightCond
                         d.isEventOnly = true
                         d.EventList[1].Condition = ""
                         d.EventList[1].EventId = FName(STORY_BOSS_FIGHT)
@@ -2294,10 +2306,10 @@ function G.SyncStoryBossTrigger(say)
                     step("story boss: npc " .. boss.unit .. " m_VisiblFlagCondition -> " .. cond)
                     pcall(function() a.m_VisiblFlagCondition = cond end)
                     if boss.kind == "npc" then
-                        step("story boss: npc " .. boss.unit .. " m_EventSettings.EventList[1] -> " .. cond .. " / " .. STORY_BOSS_FIGHT)
+                        step("story boss: npc " .. boss.unit .. " m_EventSettings.EventList[1] -> " .. fightCond .. " / " .. STORY_BOSS_FIGHT)
                         pcall(function()
                             local entry = a.m_EventSettings.EventList[1]
-                            entry.Condition = cond
+                            entry.Condition = fightCond
                             entry.EventList[1].Condition = ""
                             entry.EventList[1].EventId = FName(STORY_BOSS_FIGHT)
                         end)
@@ -3227,6 +3239,28 @@ local GROWTH_ORDER = { "MaxHitPoint", "MaxBreakPoint", "Attack", "Defence", "Int
 -- `magic` the magic one (round 33: physical hits were much stronger than spells).
 local KNOB_STATS = { MaxHitPoint = "hp", Attack = "attack", Intelligence = "magic" }
 local CATEGORY_ENEMY, CATEGORY_BOSS = 2, 3     -- eUnitCategory
+-- Round 62: The Hunger (unit 113) and the cave masters are in the Enemy category, so they were
+-- scaled as plain enemies. The Hunger also ships with 0 EXP. A unit in a boss location's battle
+-- group (G.BOSSES) is scaled as a boss. While scaling is on, one with no EXP gets a story boss's
+-- EXP for its level: Mom Bomb (level 14) and Liquid Thunder (level 13) both ship with about 1350.
+local BOSS_EXP_LEVEL, BOSS_EXP = 14, 1350
+
+local function BossUnitIds()
+    local groups, units = {}, {}
+    for _, b in ipairs(G.BOSSES) do groups[b.group] = true end
+    for _, dt in ipairs(TableFamily(Find(BATTLE_GROUP_TABLE))) do
+        pcall(function()
+            dt:ForEachRow(function(_, row)
+                pcall(function()
+                    if not groups[Int(row.ID)] then return end
+                    local list = row.UnitIdList
+                    for i = 1, #list do units[Int(list[i])] = true end
+                end)
+            end)
+        end)
+    end
+    return units
+end
 G.MAX_LEVEL = 99
 
 -- How much a stat grows from level `from` to level `to` (a factor; 1 when they are equal).
@@ -3413,6 +3447,7 @@ function G.ScaleEnemies(mode, a, b, withBosses, knobs, bossBand)
     if #family == 0 then return nil, "DT_UnitParameter not loaded" end
     local changed, sample, lines, gameChanged = 0, nil, {}, 0
     local wanted = {}
+    local bossUnits = BossUnitIds()
     local fields = { "Level" }
     for _, k in ipairs(GROWTH_ORDER) do fields[#fields + 1] = k end
     for _, dt in ipairs(family) do
@@ -3420,8 +3455,10 @@ function G.ScaleEnemies(mode, a, b, withBosses, knobs, bossBand)
             dt:ForEachRow(function(_, row)
                 local okRow, err = pcall(function()
                     local cat = Int(row.Category)
-                    if not (cat == CATEGORY_ENEMY or (withBosses and cat == CATEGORY_BOSS)) then return end
                     local id = Int(row.ID)
+                    local isBoss = cat == CATEGORY_BOSS or (cat == CATEGORY_ENEMY and bossUnits[id] == true)
+                    -- "off" puts every row back, bosses too: the seed's own "off" passes no withBosses.
+                    if not ((cat == CATEGORY_ENEMY and not isBoss) or ((withBosses or mode == "off") and isBoss)) then return end
                     local now = {}
                     for _, k in ipairs(fields) do now[k] = Int(row[k]) or 0 end
                     local orig = scaleOriginals[id]
@@ -3438,8 +3475,14 @@ function G.ScaleEnemies(mode, a, b, withBosses, knobs, bossBand)
                     end
                     local want = orig
                     if mode ~= "off" then
-                        local band = (cat == CATEGORY_BOSS and bossBand) or { a = a, b = b, knobs = knobs }
-                        want = G.ScaledStats(orig, G.ScaledLevel(orig.Level, mode, band.a, band.b), band.knobs)
+                        local base = orig
+                        if bossUnits[id] and orig.Experience == 0 then
+                            base = {}
+                            for k, v in pairs(orig) do base[k] = v end
+                            base.Experience = math.floor(BOSS_EXP * G.CurveRatio("Experience", BOSS_EXP_LEVEL, orig.Level) + 0.5)
+                        end
+                        local band = (isBoss and bossBand) or { a = a, b = b, knobs = knobs }
+                        want = G.ScaledStats(base, G.ScaledLevel(orig.Level, mode, band.a, band.b), band.knobs)
                     end
                     wanted[id] = want.Level
                     local diff = false
@@ -3471,6 +3514,9 @@ function G.ScaleEnemies(mode, a, b, withBosses, knobs, bossBand)
     end
     local groups = ScaleBattleGroups(mode, wanted)
     if groups > 0 then sample = (sample and (sample .. "; ") or "") .. "MRP changed in " .. groups .. " battle groups" end
+    local bossCount = 0
+    for _ in pairs(bossUnits) do bossCount = bossCount + 1 end
+    sample = (sample and (sample .. "; ") or "") .. bossCount .. " units in boss groups"
     if mode == "off" then scaleWanted, scaleTables = nil, nil
     else scaleWanted, scaleTables = wanted, TableKeys(family) end
     return changed, sample, lines, gameChanged

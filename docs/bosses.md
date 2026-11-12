@@ -115,6 +115,10 @@ What they carry:
 - While on one of those maps, `Gim_EV_Majipot_Delete_02.OnFlagList[1]` is set to that map's boss flag (`1240` to `1242`), and restored to `915` on other maps so the magic pot puzzles keep their own flag.
 - `ffrap_bossfight trigger` runs `G.SyncStoryBossTrigger` with step-by-step pre-write logging.
 
+**Round 62: The Hunger looped.** The door started the fight again as the party came back from it, before the win row ran, so flag 1241 never came on. The Hunger also ships with 0 EXP and in the Enemy category, so it was scaled as a plain enemy and gave nothing. Mod 0.51.0:
+- Each fight's condition is `!{flag:N}&{flag:1441}`. The mod turns flag 1441 on after the field has been up for about 2 seconds on a story boss map, and off as soon as the field goes. Visibility conditions stay `!{flag:N}`.
+- A unit in a boss location's battle group is scaled as a boss. While scaling is on, one with 0 EXP gets about 1350 EXP at level 14, moved along the EXP curve to its level.
+
 Scripted fights need care one by one. The first Umbra and the Ignis and Evan duels end by script or use a fixed party. Leave those out of the first pass.
 
 ## 4. The reward and the objective

@@ -1041,6 +1041,25 @@ L.execute("function unitDT:GetAddress() return 4096 end; function unitDT:HasAnyI
 assert L.execute("return G.ScaleCheck()")[3] is True, "a new address is a table loaded again"
 L.execute("G.ScaleEnemies('clamp', 5, 15, true, { hp = 50 })")
 assert L.execute("return G.ScaleCheck()")[1:] == (0, None, False)
+# Round 62: The Hunger is an Enemy-category unit with no EXP. In a boss location's group it is
+# scaled as a boss and gets a story boss's EXP for its level.
+THE_HUNGER, HUNGER_GROUP, HUNGER_LEVEL, HUNGER_HP = 113, 9012, 9, 2500
+L.execute(f"""
+unitRows.hunger = {{ ID = {THE_HUNGER}, Category = 2, Name = FText("The Hunger"), Level = {HUNGER_LEVEL}, MaxHitPoint = {HUNGER_HP},
+  MaxBreakPoint = 80, Attack = 90, Defence = 40, Intelligence = 60, Mind = 40, Agility = 20, Experience = 0, Money = 0 }}
+groupRows.hunger = {{ ID = {HUNGER_GROUP}, ap = 0, UnitIdList = {{ {THE_HUNGER} }} }}""")
+_, sample, _ = L.execute("return G.ScaleEnemies('clamp', 2, 3, true, { hp = 50 }, { a = 6, b = 6, knobs = { hp = 100 } })")[:3]
+assert "units in boss groups" in sample, sample
+assert L.eval("unitRows.hunger.Level") == 6 and L.eval("unitRows.hunger.MaxHitPoint") == scaled(HUNGER_HP, "MaxHitPoint", HUNGER_LEVEL, 6), "the boss band"
+boss_exp = int(1350 * L.eval(f"G.CurveRatio('Experience', 14, {HUNGER_LEVEL})") + 0.5)
+assert L.eval("unitRows.hunger.Experience") == max(1, int(boss_exp * L.eval(f"G.CurveRatio('Experience', {HUNGER_LEVEL}, 6)") + 0.5))
+assert L.eval("unitRows.bat.Level") == 2, "a plain enemy keeps the enemies' band"
+L.execute("G.ScaleEnemies('clamp', 2, 3, false, { hp = 50 })")
+assert L.eval("unitRows.hunger.Level") == 6, "without bosses, a boss group's unit is left alone"
+L.execute("G.ScaleEnemies('off', nil, nil, false, { hp = 100 })")
+assert L.eval("unitRows.hunger.Level") == HUNGER_LEVEL and L.eval("unitRows.hunger.Experience") == 0, "off gives the shipped row back, bosses too"
+assert L.eval("unitRows.boss.Level") == 4
+L.execute("unitRows.hunger = nil; groupRows.hunger = nil; G.ScaleEnemies('clamp', 5, 15, true, { hp = 50 })")
 # the rows of one unit, by id or name, in every unit table
 L.execute("""
 local prevFAO6 = FindAllOf

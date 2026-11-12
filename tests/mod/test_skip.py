@@ -480,7 +480,8 @@ function G.CurrentMap() return mockMap end
 mockMap = 3000""")
 ok, detail = L.execute("return G.SyncStoryBossTrigger(say)")
 assert ok is True and "1 triggers, 0 transitions, 1 npcs" in detail, (ok, detail)
-assert lua("storyActors.BP_MapGimmick_EventTrigger_C[1].m_EventList[1].Condition") == "!{flag:1240}"
+assert lua("storyActors.BP_MapGimmick_EventTrigger_C[1].m_EventList[1].Condition") == "!{flag:1240}&{flag:1441}", "the fight waits for the ready flag"
+assert lua("storyActors.BP_MapGimmick_EventTrigger_C[1].VisibleCondition") == "!{flag:1240}", "but the trigger shows until the win"
 assert lua("storyActors.BP_MapGimmick_EventTrigger_C[1].m_EventList[1].EventId:ToString()") == "SubEv_C02_SymbolEnemy_Encount"
 assert lua("storyActors.BP_MapUnit_NPC_C[1].bHidden") is False and lua("storyActors.BP_MapUnit_NPC_C[1].col") is True
 assert lua(pot) == 1240 and lua("talkRows.SubEv_C02_SymbolEnemy_Encount.encountGroupId") == 9004
@@ -490,17 +491,23 @@ assert ok is True and "(won true)" in detail
 assert lua("storyActors.BP_MapGimmick_EventTrigger_C[1].gimmickCond") == 1 and lua("storyActors.BP_MapUnit_NPC_C[1].bHidden") is True
 L.execute("mockMap = 3040")
 ok, detail = L.execute("return G.SyncStoryBossTrigger(say)")
-assert ok is True and lua("storyActors.BP_MapTransitionTrigger_C[1].mTransitionDataList[1].FlagCondition") == "!{flag:1241}"
+assert ok is True and lua("storyActors.BP_MapTransitionTrigger_C[1].mTransitionDataList[1].FlagCondition") == "!{flag:1241}&{flag:1441}"
 assert lua("storyActors.BP_MapTransitionTrigger_C[1].mTransitionDataList[1].isEventOnly") is True
 assert lua(pot) == 1241 and lua("talkRows.SubEv_C02_SymbolEnemy_Encount.encountGroupId") == 9012
 L.execute("mockMap = 2050")
 ok, detail = L.execute("return G.SyncStoryBossTrigger(say)")
 assert ok is True and lua("storyActors.BP_MapUnit_NPC_C[2].m_VisiblFlagCondition") == "!{flag:1242}"
+assert lua("storyActors.BP_MapUnit_NPC_C[2].m_EventSettings.EventList[1].Condition") == "!{flag:1242}&{flag:1441}"
 assert lua("storyActors.BP_MapUnit_NPC_C[2].m_EventSettings.EventList[1].EventList[1].EventId:ToString()") == "SubEv_C02_SymbolEnemy_Encount"
 assert lua(pot) == 1242 and lua("talkRows.SubEv_C02_SymbolEnemy_Encount.encountGroupId") == 9014
 L.execute("mockMap = 3060")
 ok, detail = L.execute("return G.SyncStoryBossTrigger(say)")
 assert ok is None and lua(pot) == 915, "off a story boss map, magic pot win row restores flag 915"
+# Round 62: the ready flag is written only when it changes
+L.execute("sd.Progress.eventFlag[1442] = false")
+assert L.execute("return G.SetStoryBossReady(true)") is True and lua("sd.Progress.eventFlag[1442]") is True
+assert L.execute("return G.SetStoryBossReady(true)") is False, "already on"
+assert L.execute("return G.SetStoryBossReady(false)") is True and lua("sd.Progress.eventFlag[1442]") is False
 L.execute("G.CurrentMap = function() return mapMgr:GetSameMapId() end; function FindAllOf() return nil end")
 # Round 49: the watch probe takes a class's native functions, not its getters, delegates or Blueprint events
 L.execute("""

@@ -520,23 +520,37 @@ World-map shinies verified as locations. Multiple crashes observed across differ
 - Cave masters and Dragon's Maw bosses held priority items (`priority_bosses`).
 - Crystal Tower notice ("Crystal Fragments x/y") was deferred to the next round.
 
-## Round 62 test plan (mod 0.50.0, world 0.19.0)
+**Round 62 (mod 0.50.0, world 0.19.0, 2026-11-11): first report, The Hunger.**
+- The Hunger's door in Kolobos Ruins (map 3040) starts the fight.
+- **The fight was easy.** The game files put The Hunger (unit 113) and the cave masters in the Enemy category, not Boss. So the mod scaled them as plain enemies: the enemies' band, below the party's level, at 75% power. `scale.txt` had it at level 6 with 1236 HP. It ships at level 9 with about 2500 HP.
+- **The win gave no EXP.** The Hunger ships with 0 EXP (`scale.txt`: `113 The Hunger ... EXP 0`). Scaling keeps a 0 at 0.
+- **The fight started again after each win, with no way out but loading a save.** Every `story boss` line says `won false`, so flag 1241 never came on. The log has no `story boss` line from 21:23:25 to the reload at 21:25:06, so the field did not come back between the fights. The door's trigger fired again as the party came back from the battle, before the win row could run.
+- The rest of the round 62 plan was not tried yet. It is in the round 63 plan.
 
-**Install:** copy `FFRArchipelago/Scripts`, and copy `dist/ff_resonance.apworld` into Archipelago's `custom_worlds`. Generate a new seed (`final_boss_fragments` can now go up to 12).
+**Changed after round 62 (mod 0.51.0, world unchanged):**
+- A unit in a boss location's battle group (`G.BOSSES`) is scaled as a boss, whatever its category. That is the boss band at 100% power. This moves the cave masters to the boss band too.
+- While scaling is on, a boss unit with 0 EXP gets a story boss's EXP for its level. Mom Bomb (level 14) and Liquid Thunder (level 13) both ship with about 1350, so The Hunger gets about 500 at level 6.
+- The three story boss fights (Belmodar, The Hunger, Mom Bomb) also need flag 1441. The mod turns it on after the field has been up for about 2 seconds on a story boss map, and off as soon as the field goes (a battle, a scene, a menu). So the party coming back from the fight cannot set it off again before the win row runs.
+- Scaling "off" now puts boss rows back too. Before, the seed's own "off" left them scaled.
 
-**1. Nameless Ruins bosses (map 3180): Liquid Flame (`9088`) and Iron Giant (`9089`).**
-Walk up to both boss pawns in the Nameless Ruins. Both are already active at story 8000, and the mod clears their story counter writes (`5080`, `5110`). Confirm both fights start, give a Crystal Fragment (`check boss:9088` and `check boss:9089`), and leave the save at story `8000`.
+## Round 63 test plan (mod 0.51.0, world 0.19.0)
 
-**2. Earth Shrine (map 3000): Belmodar (`9004`, flag `1240`).**
-Go to the boss room in the Earth Shrine. The mod syncs the trigger automatically when the map settles, or you can run `ffrap_bossfight trigger` to log each write step by step. Confirm Belmodar is visible, walking into the trigger starts the fight without story cutscenes, winning sets flag `1240` and sends `check boss:9004` (granting a Crystal Fragment), and the boss is gone afterwards.
+**Install:** copy `FFRArchipelago/Scripts`. The apworld has not changed, so the round 62 seed still works.
 
-**3. Kolobos Ruins (map 3040): The Hunger (`9012`, flag `1241`).**
-Walk to the boss exit door (`pointId 5000`) in Kolobos Ruins. Confirm the transition trigger starts The Hunger (`9012`), winning sets flag `1241` and sends `check boss:9012`, and the exit works normally after the win.
+**1. The Hunger again (map 3040).** Load a save from before the win. The first `scale:` line now ends with `N units in boss groups`. Walk into the door.
+- **Is the fight fair now?** It should be about the party's level, with more HP.
+- **Does the win give EXP?**
+- **After the win:** the log says `check boss:9012`, then a `story boss: ... (won true)` line. Walking into the door again does nothing.
+- If it loops again, send the log. Each return to the field should now give a `story boss` line.
 
-**4. Dwarven Forge (map 2050): Mom Bomb (`9014`, flag `1242`).**
-Walk to Mom Bomb's room in Dwarven Forge. Confirm the Mom Bomb NPC pawn (`unit 10037`) is visible, touching/interacting starts group `9014`, winning sets flag `1242` and sends `check boss:9014`, and the pawn hides after the win.
+**2. A cave master.** They are now scaled as bosses. Beat one. **Is it fair, or too hard?**
 
-**5. Crystal Tower notice (carried over from Round 60/61).**
-With fewer fragments than `final_boss_fragments`, walk to the Crystal Tower's last climb and confirm the notice includes `Crystal Fragments x/y`.
+**3. Nameless Ruins (map 3180): Liquid Flame (`9088`) and Iron Giant (`9089`).** From round 62. Walk up to both boss pawns. Both fights start, each gives a Crystal Fragment (`check boss:9088`, `check boss:9089`), and the save stays at story 8000.
 
-Send the `[FFRAP]` lines of the log.
+**4. Earth Shrine (map 3000): Belmodar (`9004`, flag `1240`).** From round 62. Go to the boss room. The fight starts about 2 seconds after the field comes up, so stand still a moment before walking in. Belmodar shows, the trigger starts the fight with no story scenes, the win sends `check boss:9004`, and Belmodar is gone after. `ffrap_bossfight trigger` logs each write.
+
+**5. Dwarven Forge (map 2050): Mom Bomb (`9014`, flag `1242`).** From round 62. The pawn (unit 10037) shows, touching it starts the fight, the win sends `check boss:9014`, and the pawn hides after.
+
+**6. The Crystal Tower notice.** From round 60. With too few fragments, walk to the tower's last climb. **Does the notice say "Crystal Fragments x/y"?**
+
+Send the `[FFRAP]` lines of the log, and `scale.txt` from the mod folder.

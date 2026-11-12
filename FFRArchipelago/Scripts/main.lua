@@ -50,7 +50,7 @@
 -- follows the save slots the linked game is saved to. While any other save is loaded, the mod
 -- grants nothing, reports nothing and leaves the chests vanilla.
 
-local VERSION = "0.50.0"
+local VERSION = "0.51.0"
 local PROTOCOL = 2        -- the bridge protocol; the apworld's MOD_PROTOCOL
 
 local MOD_DIR = (debug.getinfo(1, "S").source:gsub("^@", ""):gsub("\\", "/"):match("^(.*/)Scripts/[^/]+$"))
@@ -1919,6 +1919,8 @@ finalLockTick = function()
     end
 end
 local saddleSave, shipyardLogged, storyBossLogged = nil, false, nil
+local storyBossFieldTicks = 0
+local STORY_BOSS_READY_TICKS = 2   -- seedExtrasTick runs every LOCKS_EVERY ticks: about 2 s
 seedExtrasTick = function()
     local seedSave = seedCfg.openworld and sessionSave() and (game.StoryCounter() or 0) >= game.OPEN_START.story
     if seedSave and saddleSave ~= save.obj and game.OnField() then
@@ -1936,12 +1938,20 @@ seedExtrasTick = function()
     else
         shipyardLogged = false
     end
+    local onBossMap = false
     if seedSave and seedCfg.bosses and game.OnField() and game.SyncStoryBossTrigger then
         local ok, detail = game.SyncStoryBossTrigger()
         if ok and detail ~= storyBossLogged then log("story boss: " .. detail) end
         storyBossLogged = ok and detail or nil
+        onBossMap = ok == true
     else
         storyBossLogged = nil
+    end
+    -- The fight can start only after the field has been up for STORY_BOSS_READY_TICKS, so the
+    -- party coming back from the fight does not set it off again before the win row runs.
+    storyBossFieldTicks = onBossMap and storyBossFieldTicks + 1 or 0
+    if seedSave and seedCfg.bosses then
+        game.SetStoryBossReady(storyBossFieldTicks >= STORY_BOSS_READY_TICKS)
     end
 end
 

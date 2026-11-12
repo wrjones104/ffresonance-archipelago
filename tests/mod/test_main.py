@@ -140,7 +140,12 @@ G.CRYSTALS = { { event = 10, map = 10200, flag = 1000 } }
 function G.CrystalsPatch() G.crystalPatches = (G.crystalPatches or 0) + 1; return 3 end
 G.BOSSES = { { group = 9079, flag = 146 }, { group = 9083, flag = 215 } }
 function G.BossesPatch() G.bossPatches = (G.bossPatches or 0) + 1; return 2 end
-function G.SyncStoryBossTrigger(say) G.storyBossSyncs = (G.storyBossSyncs or 0) + 1; return G.storyBossChanged or 0, "group 9004: 2 triggers" end
+function G.SyncStoryBossTrigger(say)
+  G.storyBossSyncs = (G.storyBossSyncs or 0) + 1
+  if G.map == 3000 then return true, "group 9004: 2 triggers" end
+  return nil, "no story boss on map " .. tostring(G.map)
+end
+function G.SetStoryBossReady(on) G.storyBossReady = on; return true end
 function G.BlankFieldItem(s) G.blanked = (G.blanked or 0) + 1; return true end
 function G.SyncSlotLevel() G.slotSyncs = (G.slotSyncs or 0) + 1; return false end
 function G.SetUnitLevel(id, level) G.leveled = { id = id, level = level }; return true, "level " .. level end
@@ -1683,10 +1688,23 @@ assert len(said) == 1 and "Crystal Fragments 1/2" in said[0], said
 inbox("cfg\tfinalboss\t6\t6\t12\t12\t2\t2\n", "a")
 tick(6)
 assert G.sealed is False, "open with both fragments"
-G.storyBossChanged = 2
 G.map = 3000
 tick(12)
 assert any("story boss: group 9004: 2 triggers" in x for x in logs()), logs()
+# Round 62: the boss's fight waits for the field to be up a while, so coming back from the
+# fight does not start it again before its win row runs
+assert G.storyBossReady is True
+G.onField = False
+tick(2)
+assert G.storyBossReady is False, "off as soon as the field goes (a battle, a scene, a menu)"
+G.onField = True
+tick(2)
+assert G.storyBossReady is False, "not yet: the field has been back for one check only"
+tick(2)
+assert G.storyBossReady is True
 L.execute('commands["ffrap_bossfight"]("ffrap_bossfight", {"trigger"})')
 assert any("boss test: trigger: group 9004: 2 triggers" in x for x in logs()), logs()
+G.map = 1000
+tick(2)
+assert G.storyBossReady is False, "off away from a story boss map"
 print("bosses: ok")
