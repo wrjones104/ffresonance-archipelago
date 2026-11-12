@@ -3,6 +3,8 @@
 ## Logic stuff
 * Airship radars should be progressive? - actually not sure about this one, need to do a bit more research/playtesting
 * Will need to work through logic for side-quests, specifically those that send you to other continents.
+### Seemingly unreachable locations
+* Town of Mitra Chest 3
 
 ## Dungeon notes
 ### Mobliz Shipyard
