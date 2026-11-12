@@ -556,18 +556,33 @@ World-map shinies verified as locations. Multiple crashes observed across differ
 - A scouted shiny on the current map is also asked of the save by its own id, each scan. So a pick-up sends its check even when the live actor reads another id. The pop-up may not show for those, as the check comes from the save.
 - `gen_from_dump.py` writes each door's destination list in a new `destinations` column of `transitions.tsv`. The world uses it for the continents of maps behind the world map, and a sanctum takes the continent of its door. Six sanctums moved: Tidus to Olderion, Terra to Kolobos, Noctis and Zidane to Dirnado, the Warrior of Light and Cloud to Lanzelt. Sephiroth's boss (Whirlpool Hollow) moved from "Open" to Lanzelt, as its door is in the Lanzelt box.
 
-## Round 64 test plan (mod 0.52.3, world 0.19.1)
+**Round 64 (mod 0.52.3, world 0.19.1, 2026-11-12): passed, with one bug.**
+- The Felicitas shards sent on a new seed. The round 63 save was not tried again.
+- Sanctum logic in Universal Tracker is right now.
+- Mitra Chest 3 is in reach. It was where the plan said.
+- The Arena's Brawler fights feel good as bosses.
+- No crashes.
+- **Four Earth Shrine chests were sent with nothing opened.** On the first visit to map 3000, `chest:3000:1`, `3`, `4` and `6` were sent together, 3 seconds after the map loaded. That is when its chests came into view. No pop-up showed. The user then opened them, and nothing was sent, because they were sent already. Universal Tracker no longer listed them, so they looked like they were not in the world. They are: the world has all 8 Earth Shrine chests, and the pool always has one item per location, filled up with filler (`items.create_all_items`). The ninth row, `Dng_01Gra_40_0`, has no box in the level.
+  - The trigger was most likely the mod asking the save (`IsOpenTreasureBox(3000, m_UniqueId)`). The game itself saw the chests as closed, as the user could open them.
+  - All four are `BP_MapGimmick_TreasureBox_C`. The two sent normally (2 and 5) are `TreasureBox002_C`.
+  - Each of the four has the uniqueId (4, 5, 6, 9) of a shiny picked up earlier in the seed, on other maps. Round 63 had one case of the same kind: `chest:3050:3` (uid 26) after shinies 26 on maps 3210 and 1000.
+  - The dump shows how the game's own Blueprints save these things. A chest calls `OpenTreasureBox(GetSameMapId(), GetId(), GetUniqueId())`. A shiny calls `OpenTreasureBoxWithoutId(GetSameMapId(), GetUniqueId())`, and asks `IsOpenTreasureBox` the same way. The mod uses the `m_UniqueId` field, not `GetUniqueId()`. Whether the two differ is not known yet. They may, and that would also explain Felicitas's live ids (round 63).
+- **Starting party.** The user rolls slots 1 and 2 at random and keeps getting Lasswell with Archwitch Fina, or Jake with Sakura, and has never seen Lid or Nichol. The world takes each choice as Archipelago rolls it, and changes only a repeat. 3000 seeds rolled the way `Generate.py` rolls them gave each member between 719 and 793 times out of 6000. So the roll is fair when the yaml says `random`. Not known yet: the user's yaml lines for these options.
 
-**Install:** copy `FFRArchipelago/Scripts`, and copy `dist/ff_resonance.apworld` into Archipelago's `custom_worlds`. Generate a new seed: the sanctum areas are in the seed's logic.
+**Changed after round 64 (mod 0.52.4):**
+- A loaded chest is sent only when the chest itself says open. When the save says open and the chest says closed, the log says `<key>: the save says open, the chest says closed; not sent`, with the save's answer under each key, once per visit. `ffrap_sync` still asks the save.
+- The first time a chest or shiny is seen on a visit, the mod asks it for `GetUniqueId()`. If that differs from `m_UniqueId`, the log says `chest <map>:<uid>: GetUniqueId says <id>` (or `shiny`).
 
-**1. Shards that read the wrong id.** On the round 63 save, go back into the Research Center Ruins (map 3220). The log should say `check shiny:3220:34`, `35` and `36` within a few seconds, if the save has them as taken. On the new seed, pick up the two shards in the Town of Felicitas (2040). **Does each send `check shiny:2040:8` or `9` as you pick it up?**
+## Round 65 test plan (mod 0.52.4, world 0.19.1)
 
-**2. Sanctum logic.** On the new seed, Universal Tracker should show the Warrior of Light's and Cloud's sanctums only with Lanzelt open, and Tidus's only with Olderion open.
+**Install:** copy `FFRArchipelago/Scripts`. The apworld is unchanged, so the round 64 seed carries on.
 
-**3. Mitra Chest 3.** In the Town of Mitra, try the building just inside the entrance from the world map, near Chest 1. The chest should be on the ground floor of a building with three floors. **Is it there, and can you reach it?**
+**1. The save's chest list.** On the round 64 save, anywhere in the game, run `ffrap_snapshot es` and send `snap_es.tsv` from the mod folder. It holds the save's chest and shiny list for each map (`Map.mapGimmick`). It shows whether shinies picked up on other maps are written into map 3000's list.
 
-**4. Arena.** From round 63. Fight a Brawler battle. **Is it a challenge now?** A Fledgling battle should feel like the field.
+**2. Chests sent too early.** Play as usual, and go into dungeons you have not visited. **Do any chests send without being opened?** Send the log lines with `the save says open`.
 
-**5. Crashes.** Play long sessions as before. If the game crashes, send the crash folder and say what you were doing. To test the ModSettings cause, play one long session with ModSettings off (`ModSettings : 0` in `mods.txt`, and remove its `enabled.txt`). The mod's on-screen toasts use ModSettings, so those stop, but the log still has every line.
+**3. GetUniqueId.** Visit the Town of Felicitas (2040) and the Research Center Ruins (3220). **Are there lines with `GetUniqueId says`?**
+
+**4. Starting party.** Send the `starting_roster` and `starting_character_1` to `_4` lines of your yaml. For each of the last few seeds, send the starting party: the spoiler log's options, or the log line `skip: ok   party -> [...]`.
 
 Send the `[FFRAP]` lines of the log.

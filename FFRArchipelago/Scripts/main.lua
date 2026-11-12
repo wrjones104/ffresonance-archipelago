@@ -50,7 +50,7 @@
 -- follows the save slots the linked game is saved to. While any other save is loaded, the mod
 -- grants nothing, reports nothing and leaves the chests vanilla.
 
-local VERSION = "0.52.3"
+local VERSION = "0.52.4"
 local PROTOCOL = 2        -- the bridge protocol; the apworld's MOD_PROTOCOL
 
 local MOD_DIR = (debug.getinfo(1, "S").source:gsub("^@", ""):gsub("\\", "/"):match("^(.*/)Scripts/[^/]+$"))
@@ -590,7 +590,7 @@ end
 
 local function newVisit(mapId)
     -- scoutShinies: the uids of the seed's shiny locations on this map, built at the first scan
-    visit = { mapId = mapId, scans = 0, recorded = {}, closed = {}, scoutShinies = nil }
+    visit = { mapId = mapId, scans = 0, recorded = {}, closed = {}, disagreed = {}, scoutShinies = nil }
 end
 
 -- The chest pop-up (IDEAS.md, idea 13): the pop-up is up while the chest's check is reported,
@@ -666,25 +666,47 @@ local function chestKey(mapId, c)
     return nil
 end
 
--- Chests are reported when the actor says open or the save does. The save's key is the current
--- map and m_UniqueId (round 3: true for every opened chest, false for every closed one).
+-- A loaded chest is reported when the actor says open (round 64, scanChests). ffrap_sync asks
+-- the save, by the current map and m_UniqueId (round 3: true for every opened chest, false for
+-- every closed one).
+-- Round 64: the game's Blueprints save a chest or shiny under the actor's GetUniqueId(), and the
+-- mod reads the m_UniqueId field. A difference is logged once per visit, to learn whether that
+-- is why Felicitas's live shards read the wrong id (round 63).
+local function noteGameUid(kind, mapId, uid, actor)
+    local gameUid = game.GameUniqueId(actor)
+    if gameUid and gameUid ~= uid then
+        log(string.format("%s %s:%s: GetUniqueId says %s", kind, tostring(mapId), tostring(uid), tostring(gameUid)))
+    end
+end
+
 local function scanChests(mapId)
     for _, c in ipairs(game.LiveChests()) do
         if c.uniqueId then
             local key = chestKey(mapId, c)
-            if not visit.recorded["c" .. c.uniqueId] then
-                visit.recorded["c" .. c.uniqueId] = true
+            local id = "c" .. c.uniqueId
+            if not visit.recorded[id] then
+                visit.recorded[id] = true
                 local hasRow = c.rowId and c.rowId >= 0
                 recordSeen(hasRow and "chest" or "xchest", mapId, c.uniqueId,
                     hasRow and (c.rowMap .. ":" .. c.rowId) or "", c.itemId, c.itemNum, c.money, "")
+                noteGameUid("chest", mapId, c.uniqueId, c.actor)
             end
-            local id = "c" .. c.uniqueId
-            if c.open or game.IsChestOpenInSave(mapId, c.uniqueId) then
+            if c.open then
                 local fresh = visit.closed[id] == true
                 visit.closed[id] = nil
                 if key then opened(key, fresh) end
             else
                 visit.closed[id] = true   -- seen closed: opening it later is "in front of the player"
+                -- Round 64: on the first visit to the Earth Shrine, the save said four closed
+                -- chests were open, and they were sent with nothing opened. The game let the
+                -- player open them after. So a loaded chest is judged by its own state, and the
+                -- save only by ffrap_sync. Each of the four had the uniqueId of a shiny picked up
+                -- on another map; the log line is there to find out why.
+                if key and not visit.disagreed[id] and game.IsChestOpenInSave(mapId, c.uniqueId) then
+                    visit.disagreed[id] = true
+                    log(string.format("%s: the save says open, the chest says closed; not sent (%s)",
+                        key, game.ChestSaveKeys(mapId, c)))
+                end
             end
         end
     end
@@ -700,6 +722,7 @@ local function scanShinies(mapId)
             if not visit.recorded["s" .. s.uid] then
                 visit.recorded["s" .. s.uid] = true
                 recordSeen(hasReward and "shiny" or "spot", mapId, s.uid, s.class, s.itemId, s.itemNum, s.money, s.visible)
+                noteGameUid("shiny", mapId, s.uid, s.actor)
             end
             local id = "s" .. s.uid
             if hasReward and (s.open or game.IsChestOpenInSave(mapId, s.uid)) then

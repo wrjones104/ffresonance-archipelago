@@ -409,6 +409,15 @@ function G.IsChestOpenInSave(mapId, uid)
     return r == true
 end
 
+-- The id the game's own Blueprints use for a chest or shiny in the save
+-- (BP_MapGimmick_TreasureBox and BP_MapGimmick_FieldItem call GetUniqueId, round 64).
+function G.GameUniqueId(actor)
+    if not Alive(actor) then return nil end
+    local ok, v = pcall(function() return actor:GetUniqueId() end)
+    if not ok then return nil end
+    return Int(v)
+end
+
 -- Discovery: what the save says about a chest under each candidate key, as one string, e.g.
 -- "map 3020 / row map 2001: m_Id 3 false, m_UniqueId 17 true, TypeData.ID 17 true".
 -- Round 2: IsOpenTreasureBox(map, m_Id) was false for every chest, opened or not.

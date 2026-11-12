@@ -104,7 +104,8 @@ function G.StoryCounter() return G.story end
 function G.PartyIds() return {1001} end
 function G.Toast() return false end
 function G.IsChestOpenInSave(m, uid) return G.saveOpen[m .. ":" .. uid] == true end
-function G.ChestSaveKeys(m, c) return "" end
+function G.ChestSaveKeys(m, c) return "save keys of " .. tostring(c.uniqueId) end
+function G.GameUniqueId(actor) return actor and actor.gameUid end
 G.chests = {
   { uid = 1, open = false, rowMap = 3020, rowId = 1, uniqueId = 7, typeId = 7, itemId = 209, itemNum = 3, money = -1 },
   { uid = 3, open = false, rowMap = 3020, rowId = 3, uniqueId = 63, typeId = 63, itemId = 7, itemNum = 4, money = -1 },
@@ -327,10 +328,28 @@ seen = read("seen.tsv")
 assert "chest\t2002\t7\t3020:1\t209\t3\t-1\t\n" in seen, seen
 assert "xchest\t2002\t54\t\t-1\t1\t-1\t\n" in seen and "spot\t2002\t113\t" in seen and "shiny\t2002\t30\t" in seen
 
-# the save says chest 3020:1 (uid 7 in map 2002) is open while the actor does not: reported
+# Round 64: the save says chest 3020:1 (uid 7 in map 2002) is open while the loaded chest says
+# closed (the Earth Shrine's four). It is not sent, and the log says so once per visit.
+L.execute("logged = {}; print = function(s) logged[#logged + 1] = tostring(s) end")
 G.saveOpen["2002:7"] = True
+tick(6)
+assert "chest:3020:1" not in read("ap_out.txt")
+disagree = [s for s in L.eval("logged").values() if "chest:3020:1: the save says open" in s]
+assert len(disagree) == 1 and "save keys of 7" in disagree[0], list(L.eval("logged").values())
+# then the player opens it: sent
+G.chests[1].open = True
 tick(2)
 assert "check\tchest:3020:1\n" in read("ap_out.txt")
+G.chests[1].open = False
+# a chest or shiny whose GetUniqueId differs from m_UniqueId is logged, on the next visit
+LEVEL_UID = 80
+G.chests[2].actor = L.table_from({"gameUid": LEVEL_UID})
+G.map = 2003
+tick(2)
+G.map = 2002
+tick(14)
+assert any(f"chest 2002:63: GetUniqueId says {LEVEL_UID}" in s for s in L.eval("logged").values())
+G.chests[2].actor = None
 
 # sync from the save, from another map, after ap_out.txt was lost
 G.map = 1000
