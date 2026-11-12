@@ -452,6 +452,7 @@ ITEMS = {1001: {'category': 'consumable', 'count': 1, 'game_id': 1, 'kind': 'ite
  700001426: {'category': 'continent', 'count': 1, 'game_id': 1426, 'kind': 'flag', 'name': 'Mysidia Unlock'},
  700001427: {'category': 'continent', 'count': 1, 'game_id': 1427, 'kind': 'flag', 'name': 'Gronoa Unlock'},
  700001428: {'category': 'continent', 'count': 1, 'game_id': 1428, 'kind': 'flag', 'name': 'Pharm Unlock'},
+ 700001431: {'category': 'vehicle', 'count': 1, 'game_id': 1431, 'kind': 'flag', 'name': 'Airship'},
  800001001: {'category': 'party', 'count': 1, 'game_id': 1001, 'kind': 'unit', 'name': 'Rain'},
  800001002: {'category': 'party', 'count': 1, 'game_id': 1002, 'kind': 'unit', 'name': 'Lasswell'},
  800001003: {'category': 'party', 'count': 1, 'game_id': 1003, 'kind': 'unit', 'name': 'Fina'},
@@ -4334,6 +4335,8 @@ BOSSES = [{'area': 'Pharm',
 FRAGMENT_ITEM = 600000001
 
 CHOCOBO_ITEM = 30002001
+
+AIRSHIP_ITEM = 700001431
 
 # Chests and shinies that keep vanilla key items or valuables: not locations
 KEPT_VANILLA = ['chest:2031:20',

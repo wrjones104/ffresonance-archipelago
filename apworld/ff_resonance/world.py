@@ -111,7 +111,7 @@ class FFResonanceWorld(World):
         return {
             **self.options.as_dict("tablet_shards_required", "include_shinies", "include_crystals",
                                    "include_tablet_shards", "include_bosses",
-                                   "start_with_chocobo"),
+                                   "start_with_chocobo", "start_with_airship"),
             "goal": self.options.goal.current_key,
             "mod_protocol": MOD_PROTOCOL,
             "open_world": True,

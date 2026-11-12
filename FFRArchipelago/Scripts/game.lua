@@ -1871,6 +1871,26 @@ G.OPEN_STARTS = {
     event = { name = "event", story = 7090, map = 3280, x = -2830.0, y = -171140.0, z = 3000.0, direction = 2 },
 }
 G.OPEN_START = G.OPEN_STARTS.air
+-- Round 69: a seed with start_with_airship off starts on foot on its starting continent, at the
+-- airship landing point beside the continent's main town (gimmicks.tsv). The airship is parked
+-- there too, hidden: its spawn condition is flag 1431 (G.AIRSHIP_FLAG), the Archipelago item.
+-- Round 68 showed that condition hides it and brings it back at the next map change.
+G.FOOT_STARTS = {
+    grandshelt = { x = 12460.0, y = 20700.0, z = 170.0 },   -- the Royal Capital
+    lanzelt = { x = 12470.0, y = 14980.0, z = 65.0 },       -- Village of Kol
+    kolobos = { x = 5540.0, y = 14600.0, z = 65.0 },        -- Town of Felicitas
+    dirnado = { x = 13190.0, y = 3210.0, z = -12.0 },       -- Dilmagia
+    olderion = { x = -90.0, y = 2680.0, z = 16.0 },         -- Olderion
+    zoldaad = { x = -7200.0, y = 7200.0, z = 64.0 },        -- Zoldaad
+    mysidia = { x = -17515.0, y = -8365.0, z = 96.0 },      -- Mysidia
+    gronoa = { x = 15895.0, y = -14150.0, z = 299.0 },      -- Gaberada
+    pharm = { x = -3920.0, y = -17480.0, z = 90.0 },        -- Town of Sian
+}
+for name, a in pairs(G.FOOT_STARTS) do
+    a.name, a.story, a.map, a.direction, a.parked = "foot " .. name, 8000, 1000, 2, true
+end
+G.AIRSHIP_FLAG = 1431
+G.AIRSHIP_ITEM_CONDITION = "{flag:1431}"
 
 -- The unitParameterList entry for a unit id, or nil.
 local function UnitEntry(sd, unitId)
@@ -1919,7 +1939,8 @@ end
 
 -- The map and point a reload starts the player at, as FFRSLib's ffrs_travel writes them. An
 -- arrival with `airship` also puts the airship there with the player riding it, and `flags`
--- are turned on (what boarding the airship wrote in round 36). Returns ok and a report line.
+-- are turned on (what boarding the airship wrote in round 36). One with `parked` puts the airship
+-- there with the player on foot. Returns ok and a report line.
 local function WriteArrival(sd, a)
     local ok = pcall(function()
         sd.Map.mapId = a.map
@@ -1937,9 +1958,17 @@ local function WriteArrival(sd, a)
             -- game has not placed its airship yet, and its first placement (DT_MapAirShip's
             -- initSpawnPointId 9000) names a point that is in no map or landing table.
             sd.Map.IsAlreadySpawnAirship = true
+        elseif a.parked then
+            sd.Map.airShipLocation.X = a.x
+            sd.Map.airShipLocation.Y = a.y
+            sd.Map.airShipLocation.Z = a.z
+            sd.Map.airShipDirection = a.direction
+            sd.Map.IsRidingAirShip = false
+            sd.Map.IsAlreadySpawnAirship = true
         end
     end)
     local line = "arrival: map " .. a.map .. " at " .. a.x .. ", " .. a.y .. ", " .. a.z
+    if a.parked then line = line .. ", on foot, the airship parked there" end
     if a.airship then
         local riding
         pcall(function() riding = sd.Map.IsRidingAirShip end)
@@ -2453,12 +2482,13 @@ end
 -- opts.inventory = false leaves the inventory alone. Its changes are relative, so that an
 -- Archipelago item granted before the skip with the same id as a starter item is kept, and they
 -- must be made once per save. Every other step sets an absolute value and can run again.
--- opts.openStart = true writes the open world start (G.OPEN_START) in place of story 1030 and
--- the Earth Shrine.
+-- opts.openStart = true writes the open world start (opts.arrival, else G.OPEN_START) in place
+-- of story 1030 and the Earth Shrine.
 function G.SkipPrologue(opts)
     local doInventory = not (opts and opts.inventory == false)
-    local storyTo = (opts and opts.openStart) and G.OPEN_START.story or G.SKIP_STORY
-    local a = (opts and opts.openStart) and G.OPEN_START or G.SKIP_ARRIVAL
+    local open = (opts and opts.openStart) and (opts.arrival or G.OPEN_START) or nil
+    local storyTo = open and open.story or G.SKIP_STORY
+    local a = open or G.SKIP_ARRIVAL
     -- The starting party: Rain and Lasswell, or what the seed says (round 44). Nothing in the save
     -- needs either of them: the game's hard-coded uses are story events, which this start skips.
     local party = (opts and opts.party) or SKIP_PARTY
@@ -3671,6 +3701,31 @@ function G.AirshipCondition(cond)
     return now
 end
 
+-- Round 69: for a seed with the airship as an item, its spawn condition is the item's flag. The
+-- table can be loaded again, so main.lua calls this often. Off, it puts back the game's own only
+-- over ours, so an ffrap_airship test stays. Returns the condition written, or nil.
+function G.AirshipItemSync(asItem)
+    local want = asItem and G.AIRSHIP_ITEM_CONDITION or G.AIRSHIP_CONDITION
+    local now = G.AirshipCondition()
+    if now == nil or now == want or (not asItem and now ~= G.AIRSHIP_ITEM_CONDITION) then return nil end
+    return G.AirshipCondition(want)
+end
+
+-- Moves the save's parked airship. While it is hidden, the game places it from here at the next
+-- map change. Returns true when the place reads back.
+function G.ParkAirship(x, y, z)
+    local sd = G.SaveData()
+    if not sd then return false end
+    pcall(function()
+        sd.Map.airShipLocation.X, sd.Map.airShipLocation.Y, sd.Map.airShipLocation.Z = x, y, z
+        sd.Map.IsRidingAirShip = false
+        sd.Map.IsAlreadySpawnAirship = true
+    end)
+    local readX
+    pcall(function() readX = sd.Map.airShipLocation.X end)
+    return readX == x
+end
+
 -- No-landing boxes (round 32). The world map has 111 BP_MapNonLandingArea_C actors.
 -- Each is a box (a CPP_MapAirShipCanNeverLandingBox component) with an m_Condition string;
 -- while the condition holds (or when it is empty), the airship cannot land in the box. Before
@@ -4305,10 +4360,10 @@ end
 -- (marked in game with ffrap_gate), else G.CROSSINGS.
 -- Round 67: the only two crossings on foot, marked by the user. +X is north on screen. The stone
 -- bridge (Grandshelt-Lanzelt) is part of the landscape, not an actor, so these places come from
--- play, not the game data.
+-- play, not the game data. Round 68: turned, sized and moved by the user to sit on each bridge.
 G.CROSSINGS = {
-    { a = "grandshelt", b = "lanzelt", x = 13684, y = 16599, z = 87, yaw = 180.0, scale = 3.0 },
-    { a = "lanzelt", b = "kolobos", x = 7889, y = 13983, z = 61, yaw = 180.0, scale = 3.0 },
+    { a = "grandshelt", b = "lanzelt", x = 13684, y = 16599, z = 87, yaw = 90.0, scale = 1.5 },
+    { a = "lanzelt", b = "kolobos", x = 7834, y = 13928, z = 61, yaw = 90.0, scale = 1.5 },
 }
 
 -- Places a blocker for every crossing with a locked side and removes the rest. Runs only once the

@@ -50,7 +50,7 @@
 -- follows the save slots the linked game is saved to. While any other save is loaded, the mod
 -- grants nothing, reports nothing and leaves the chests vanilla.
 
-local VERSION = "0.53.1"
+local VERSION = "0.54.0"
 local PROTOCOL = 2        -- the bridge protocol; the apworld's MOD_PROTOCOL
 
 local MOD_DIR = (debug.getinfo(1, "S").source:gsub("^@", ""):gsub("\\", "/"):match("^(.*/)Scripts/[^/]+$"))
@@ -110,6 +110,12 @@ local continentLocks = nil   -- ffrap_lock on|off, kept once the user picks one;
 -- at every start, and the seed that wrote it is the only thing that decides these.
 local seedCfg = { openworld = false, party = nil, shinies = false, crystals = false, shards = false, bosses = false }
 local function openStartOn() return openStart or seedCfg.openworld end
+-- Round 69: a seed with the airship as an item (`cfg airship 0`) starts on foot on its starting
+-- continent (`cfg continent`), else in the airship by the tower.
+local function seedArrival()
+    if seedCfg.airship == false then return game.FOOT_STARTS[seedCfg.continent or ""] or game.OPEN_START end
+    return game.OPEN_START
+end
 -- An `ffrap_lock on|off` from this run wins. Then a seed that asks for locks: a saved "off" from
 -- an old test must not quietly leave a real seed unlocked. Then the saved switch.
 local lockChoice = nil
@@ -354,7 +360,7 @@ local function newSession(key)
     state.syncPending = true
     state.slots, state.slotItems, state.bindPending, state.live = {}, {}, false, nil
     state.scouts = {}
-    seedCfg.finalboss, seedCfg.chocobo = nil, nil
+    seedCfg.finalboss, seedCfg.chocobo, seedCfg.airship, seedCfg.continent = nil, nil, nil, nil
     save.obj = nil     -- judge the loaded save again for this session
     saveState()
     local f = io.open(bridge.outPath, "w")
@@ -387,6 +393,10 @@ local function readInbox(initial)
             seedCfg.bosses = f[3] == "1"
         elseif f[1] == "cfg" and f[2] == "chocobo" then
             seedCfg.chocobo = f[3] == "1"
+        elseif f[1] == "cfg" and f[2] == "airship" then
+            seedCfg.airship = f[3] == "1"
+        elseif f[1] == "cfg" and f[2] == "continent" then
+            seedCfg.continent = f[3] and f[3]:lower()
         elseif f[1] == "cfg" and f[2] == "finalboss" then
             -- A client before world 0.17.0 sends no fragment counts: none are needed then.
             seedCfg.finalboss = { characters = tonumber(f[3]) or 0, needCharacters = tonumber(f[4]) or 0,
@@ -1071,7 +1081,8 @@ local function runSkip(slot, why, force)
         return false
     end
     local again = skipped == obj
-    local okRun, ok, report = pcall(game.SkipPrologue, { inventory = not again, openStart = openStartOn(), party = seedCfg.party })
+    local okRun, ok, report = pcall(game.SkipPrologue, { inventory = not again, openStart = openStartOn(), party = seedCfg.party,
+                                                         arrival = seedArrival() })
     if not okRun then
         notify("Prologue skip raised an error: " .. tostring(ok))
         return false
@@ -1091,8 +1102,9 @@ local function runSkip(slot, why, force)
         saveState()
         log("skip: slot " .. slot .. " linked before the reload: session slots [" .. slotsText(true) .. "]")
     end
-    local saved, detail = game.SaveAndReload(slot, (openStartOn() and game.OPEN_START or game.SKIP_ARRIVAL).map)
-    if openStartOn() then detail = detail .. "; open world start (" .. game.OPEN_START.name .. ", story " .. game.OPEN_START.story .. ")" end
+    local arrival = openStartOn() and seedArrival() or game.SKIP_ARRIVAL
+    local saved, detail = game.SaveAndReload(slot, arrival.map)
+    if openStartOn() then detail = detail .. "; open world start (" .. arrival.name .. ", story " .. arrival.story .. ")" end
     log("skip (" .. why .. "): " .. detail)
     -- The automatic skip is part of starting an Archipelago game, so it is only logged when it
     -- works (round 24); a failure, or a skip by command, is shown.
@@ -1202,6 +1214,7 @@ local scaleTick   -- set with the ffrap_scale command, below
 local settingsTick   -- the player's settings (ffrap_set), below
 local menuTick       -- our rows in the Options screen, below
 local seedExtrasTick -- the Chocobo and the chest icons, below
+local airshipItemTick -- the airship as an item, below
 local finalLockTick  -- the Crystal Tower's last climb, below
 local bossTest = { group = nil }   -- ffrap_bossfight, below: the group armed, and its tick
 
@@ -1309,6 +1322,12 @@ local function tick()
         pcall(game.FeedTick, feedClock)
     end
     if titleReady or game.InGame() then pcall(menuTick) end
+    -- Round 69: the airship's spawn condition follows the seed before any map loads, so a new
+    -- game's first load already hides it.
+    if state.ticks % LOCKS_EVERY == 0 then
+        local okSync, wrote = pcall(game.AirshipItemSync, seedCfg.airship == false)
+        if okSync and wrote then log("airship: spawn condition " .. wrote) end
+    end
     if not game.InGame() then
         if state.inGameTicks > 0 then log("left the game (title screen or loading)") end
         state.inGameTicks = 0
@@ -2126,6 +2145,24 @@ end
 local saddleSave, shipyardLogged, storyBossLogged = nil, false, nil
 local storyBossFieldTicks = 0
 local STORY_BOSS_READY_TICKS = 2   -- seedExtrasTick runs every LOCKS_EVERY ticks: about 2 s
+-- Round 69: the airship as an item. Its flag turns on when the item comes. The game then places
+-- the hidden airship at the next map change, from the save's parked place, so it is parked where
+-- the player stands on the world map, now or as soon as they are back on it.
+local airshipCall = { save = nil, was = false, pending = false }
+airshipItemTick = function()
+    local on = game.GetFlag(game.AIRSHIP_FLAG) == true
+    if airshipCall.save ~= save.obj then airshipCall.save, airshipCall.was, airshipCall.pending = save.obj, on, false end
+    if on and not airshipCall.was then airshipCall.pending = true end
+    airshipCall.was = on
+    if not (airshipCall.pending and game.CurrentMap() == game.WORLD_MAP and game.OnField()) then return end
+    local pose = game.PlayerPose()
+    if pose and game.ParkAirship(pose.x, pose.y, pose.z) then
+        airshipCall.pending = false
+        log(string.format("airship: parked at (%.0f, %.0f, %.0f) for the next map change", pose.x, pose.y, pose.z))
+        notify("The airship is yours. It lands here after your next map change (a town, a cave).")
+    end
+end
+
 seedExtrasTick = function()
     local seedSave = seedCfg.openworld and sessionSave() and (game.StoryCounter() or 0) >= game.OPEN_START.story
     if seedSave and seedCfg.chocobo ~= false and saddleSave ~= save.obj and game.OnField() then
@@ -2136,6 +2173,7 @@ seedExtrasTick = function()
         end
     end
     pcall(finalLockTick)
+    if seedSave and seedCfg.airship == false then pcall(airshipItemTick) end
     if seedSave and game.CurrentMap() == game.SHIPYARD_MAP then
         local woke = game.WakeShipyardElevators()
         if woke > 0 and not shipyardLogged then log("shipyard: " .. woke .. " stopped elevators turned on") end

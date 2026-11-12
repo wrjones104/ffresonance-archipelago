@@ -1,6 +1,6 @@
 from BaseClasses import LocationProgressType
 
-from ..data import BOSSES, CHESTS, CHOCOBO_ITEM, CONTINENT_UNLOCKS, CRYSTALS, FRAGMENT_ITEM, ITEMS, NO_BOX, TABLET_SHINIES, PROGRESSION, SHINIES, SHUFFLE_ID_LIMIT, UNIT_ITEM_BASE
+from ..data import AIRSHIP_ITEM, BOSSES, CHESTS, CHOCOBO_ITEM, CONTINENT_UNLOCKS, CRYSTALS, FRAGMENT_ITEM, ITEMS, NO_BOX, TABLET_SHINIES, PROGRESSION, SHINIES, SHUFFLE_ID_LIMIT, UNIT_ITEM_BASE
 from ..items import CLASSIFICATIONS, FILLER_CATEGORIES, FRAGMENT_NAME, item_name_groups
 from ..locations import GOAL_EVENT, LOCATION_KEY_TO_ID, SEPHIROTH, VICTORY
 from ..options import Goal, TabletShardsRequired
@@ -79,6 +79,7 @@ class TestDefault(FFResonanceTestBase):
         self.assertEqual(slot_data["starting_continent"], "Grandshelt")
         self.assertIs(slot_data["open_world"], True)
         self.assertEqual(slot_data["start_with_chocobo"], 1)
+        self.assertEqual(slot_data["start_with_airship"], 1)
 
     def test_the_chocobo_is_not_in_the_pool(self) -> None:
         self.assertNotIn(CHOCOBO_ITEM, [i.code for i in self.multiworld.itempool if i.player == self.player])
@@ -97,6 +98,55 @@ class TestChocoboItem(FFResonanceTestBase):
 
     def test_slot_data(self) -> None:
         self.assertEqual(self.world.fill_slot_data()["start_with_chocobo"], 0)
+
+
+class TestAirshipItem(FFResonanceTestBase):
+    """Round 69: on foot from Grandshelt. The bridges and the ferry need only the far side's unlock."""
+    options = {"start_with_airship": False}
+
+    def test_the_airship_is_a_progression_item(self) -> None:
+        airships = [i for i in self.multiworld.itempool if i.player == self.player and i.code == AIRSHIP_ITEM]
+        self.assertEqual(len(airships), 1)
+        self.assertTrue(airships[0].advancement)
+        self.assertEqual(self.world.fill_slot_data()["start_with_airship"], 0)
+
+    def test_walk_and_sail_without_the_airship(self) -> None:
+        state = self.multiworld.state
+        self.collect_by_name(["Lanzelt Unlock", "Kolobos Unlock", "Dirnado Unlock", "Mysidia Unlock"])
+        for continent in ("Grandshelt", "Lanzelt", "Kolobos", "Dirnado"):
+            self.assertTrue(state.can_reach_region(continent, self.player), continent)
+        self.assertFalse(state.can_reach_region("Mysidia", self.player), "Mysidia has no port and no bridge")
+        self.assertFalse(state.can_reach_region("Olderion", self.player), "no Olderion Unlock")
+        self.collect_by_name(["Airship"])
+        self.assertTrue(state.can_reach_region("Mysidia", self.player))
+
+    def test_a_bridge_needs_the_far_side(self) -> None:
+        self.collect_by_name(["Kolobos Unlock"])
+        self.assertFalse(self.multiworld.state.can_reach_region("Kolobos", self.player), "Lanzelt is between")
+
+    def test_the_tower_needs_the_airship(self) -> None:
+        self.collect_all_but(["Airship"])
+        self.assertFalse(self.multiworld.state.can_reach_region("Crystal Tower", self.player))
+        self.assertFalse(self.multiworld.get_location(GOAL_EVENT, self.player).can_reach(self.multiworld.state))
+
+
+class TestAirshipItemFromMysidia(FFResonanceTestBase):
+    """Round 69: a start with no port and no bridge still generates: the Airship is found there."""
+    options = {"start_with_airship": False, "starting_continent": "mysidia"}
+
+    def test_only_mysidia_at_first(self) -> None:
+        state = self.multiworld.state
+        self.assertTrue(state.can_reach_region("Mysidia", self.player))
+        self.collect_by_name(["Lanzelt Unlock"])
+        self.assertFalse(state.can_reach_region("Lanzelt", self.player))
+
+
+class TestAirshipItemRealDefaults(FFResonanceTestBase, real_defaults=True):
+    """Round 69: the full pool (shinies, crystals, bosses) fills with the airship off, from Pharm."""
+    options = {"start_with_airship": False, "starting_continent": "pharm"}
+
+    def test_the_airship_is_in_the_pool(self) -> None:
+        self.assertIn(AIRSHIP_ITEM, [i.code for i in self.multiworld.itempool if i.player == self.player])
 
 
 class TestShinies(FFResonanceTestBase):

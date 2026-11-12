@@ -224,6 +224,15 @@ L.execute("G.OPEN_START = G.OPEN_STARTS.event")
 ok, report = L.execute("return G.OpenStart()")
 assert ok is True and lua("G.StoryCounter()") == EVENT_STORY and lua("sd.Map.mapId") == TOWER_MAP
 L.execute("G.OPEN_START = G.OPEN_STARTS.dock; sd.Map.IsRidingAirShip = false")
+# Round 69: a start on foot by Kol, with the airship parked there for when its item comes
+L.execute("G.OPEN_START = G.FOOT_STARTS.lanzelt; sd.Map.IsAlreadySpawnAirship = false; sd.Map.IsRidingAirShip = true")
+ok, report = L.execute("return G.OpenStart()")
+assert ok is True and list(report.values())[1] == (
+    f"ok   arrival: map {WORLD_MAP} at 12470.0, 14980.0, 65.0, on foot, the airship parked there"), list(report.values())
+assert lua("sd.Map.IsRidingAirShip") is False and lua("sd.Map.IsAlreadySpawnAirship") is True
+assert (lua("sd.Map.airShipLocation.X"), lua("sd.Map.airShipLocation.Y")) == (12470.0, 14980.0)
+assert lua("G.ParkAirship(300, 400, 5)") is True and lua("sd.Map.airShipLocation.Y") == 400
+L.execute("G.OPEN_START = G.OPEN_STARTS.dock")
 
 # Round 44: a seed's own starting party, here Jake leading Archwitch Fina. They join, Rain and
 # Lasswell do not, Fina stays usable with her first ability, and the bag holds the starters' gear.

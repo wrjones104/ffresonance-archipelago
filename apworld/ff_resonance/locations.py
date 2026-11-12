@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING
 
 from BaseClasses import ItemClassification, Location, LocationProgressType, Region
 
-from .data import BOSSES, CHESTS, CONTINENT_UNLOCKS, CRYSTALS, FINAL_AREA, ITEMS, OPEN_AREA, SHINIES, TABLET_SHINIES
+from .data import AIRSHIP_ITEM, BOSSES, CHESTS, CONTINENT_UNLOCKS, CRYSTALS, FINAL_AREA, ITEMS, OPEN_AREA, SHINIES, TABLET_SHINIES
 from .items import FRAGMENT_NAME, GAME, FFResonanceItem, create_item, progression_ids
 
 if TYPE_CHECKING:
@@ -32,6 +32,12 @@ SHARD_GOAL_EVENT = "Tablet Shard Goal"
 VICTORY = "Victory"
 
 UNLOCK_NAMES = {continent: ITEMS[ap_id]["name"] for continent, ap_id in CONTINENT_UNLOCKS.items()}
+AIRSHIP = ITEMS[AIRSHIP_ITEM]["name"]
+
+# Round 67: the ways between continents without the airship (open_world.md, section 4). No door
+# or cave joins two. Each way opens with the far continent's unlock, as the mod's gates do.
+BRIDGES = [("Grandshelt", "Lanzelt"), ("Lanzelt", "Kolobos")]
+FERRY_PORTS = ["Lanzelt", "Dirnado", "Olderion", "Zoldaad"]
 
 
 class FFResonanceLocation(Location):
@@ -56,10 +62,22 @@ def create_regions_and_locations(world: FFResonanceWorld) -> None:
         menu.connect(region, f"To {name}", rule)
         regions[name] = region
 
+    # Round 69: with the Airship an item, the airship lands only once it comes. Until then the
+    # player walks from the starting continent, over the bridges and by the ferry.
+    on_foot = not world.options.start_with_airship
     for continent, unlock in UNLOCK_NAMES.items():
-        add_region(continent, lambda state, unlock=unlock: state.has(unlock, player))
-    every_unlock = list(UNLOCK_NAMES.values())
+        if on_foot and continent != world.starting_continent:
+            add_region(continent, lambda state, unlock=unlock: state.has_all((unlock, AIRSHIP), player))
+        else:
+            add_region(continent, lambda state, unlock=unlock: state.has(unlock, player))
+    every_unlock = list(UNLOCK_NAMES.values()) + ([AIRSHIP] if on_foot else [])
     add_region(FINAL_AREA, lambda state: state.has_all(every_unlock, player))
+    if on_foot:
+        ways = BRIDGES + [(a, b) for i, a in enumerate(FERRY_PORTS) for b in FERRY_PORTS[i + 1:]]
+        for a, b in ways:
+            for here, there in ((a, b), (b, a)):
+                regions[here].connect(regions[there], f"{here} to {there} on foot",
+                                      lambda state, unlock=UNLOCK_NAMES[there]: state.has(unlock, player))
 
     chosen = list(CHESTS)
     if world.options.include_shinies:

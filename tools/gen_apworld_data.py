@@ -55,6 +55,9 @@ FRAGMENT_NAME = "Crystal Fragment"
 # Round 67: the Chocobo, the game's Choboco Saddle (an artifact, 30002), which the game checks.
 CHOCOBO_GAME_ID = 30002
 CHOCOBO_ITEM = CHOCOBO_GAME_ID * 1000 + 1
+# Round 69: the airship as an item is an event flag the mod gives the airship's spawn condition.
+# Its AP id is numbered like the continent unlocks, which are flags too.
+AIRSHIP_FLAG = 1431
 
 CHEST_LOCATION_BASE = 1_000_000_000
 SHINY_LOCATION_BASE = 2_000_000_000
@@ -358,6 +361,8 @@ def main() -> None:
     bosses.sort(key=lambda e: e["id"])
     items[FRAGMENT_ITEM] = {"name": FRAGMENT_NAME, "kind": "token", "game_id": 0, "count": 1, "category": "fragment"}
     items[CHOCOBO_ITEM] = {"name": "Chocobo", "kind": "item", "game_id": CHOCOBO_GAME_ID, "count": 1, "category": "vehicle"}
+    items[CONTINENT_ITEM_BASE + AIRSHIP_FLAG] = {"name": "Airship", "kind": "flag", "game_id": AIRSHIP_FLAG, "count": 1,
+                                                 "category": "vehicle"}
     # A continent's unlock turns on its event flag; Ardra has no locations, so it has no unlock.
     # One name can cover two maps (the Earth Shrine), so a repeat gets its map id.
     counts = collections.Counter(e["name"] for e in tablet_shinies)
@@ -427,6 +432,7 @@ def main() -> None:
         f.write("BOSSES = " + pprint.pformat(bosses, width=110, sort_dicts=True) + "\n\n")
         f.write(f"FRAGMENT_ITEM = {FRAGMENT_ITEM}\n\n")
         f.write(f"CHOCOBO_ITEM = {CHOCOBO_ITEM}\n\n")
+        f.write(f"AIRSHIP_ITEM = {CONTINENT_ITEM_BASE + AIRSHIP_FLAG}\n\n")
         f.write("# Chests and shinies that keep vanilla key items or valuables: not locations\n")
         f.write("KEPT_VANILLA = " + pprint.pformat(sorted(e["key"] for e in kept_chests + kept_shinies), width=110) + "\n\n")
         f.write("# Chest table rows with no box placed on any map: not locations\n")

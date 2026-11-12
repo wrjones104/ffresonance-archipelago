@@ -1138,6 +1138,13 @@ assert L.eval("unitRows.bat.Level") == 47 and L.eval("unitRows.bat.MaxHitPoint")
 assert L.eval("G.AirshipCondition()") == "{progress:0}>=4250"
 assert L.eval("G.AirshipCondition('{progress:0}>=0')") == "{progress:0}>=0"
 assert L.eval("airRow.spawnCondition") == "{progress:0}>=0"
+# Round 69: a seed with the airship as an item hides it behind flag 1431; a seed without puts the
+# game's condition back over that one only, so an ffrap_airship test stays.
+L.execute("airRow.spawnCondition = '{progress:0}>=4250'")
+assert L.eval("G.AirshipItemSync(true)") == "{flag:1431}" and L.eval("G.AirshipItemSync(true)") is None
+assert L.eval("G.AirshipItemSync(false)") == "{progress:0}>=4250"
+L.execute("airRow.spawnCondition = '{progress:0}>=0'")
+assert L.eval("G.AirshipItemSync(false)") is None and L.eval("airRow.spawnCondition") == "{progress:0}>=0"
 L.execute("airDT = nil")
 now, err = L.execute("return G.AirshipCondition('x')")
 assert now is None and "not loaded" in err, (now, err)
@@ -1501,6 +1508,10 @@ for _px, _py, _name in ((12460, 20700, "grandshelt"), (12470, 14980, "lanzelt"),
                         (-3920, -17480, "pharm")):
     assert _in(_px, _py) == [_name], (_px, _py, _in(_px, _py))
 assert not _in(-5935, -8305), "the air start is over the sea, in no continent"
+# Round 69: each start on foot is on its own continent
+for _name, _a in L.eval("G.FOOT_STARTS").items():
+    assert _in(_a.x, _a.y) == [_name], (_name, _in(_a.x, _a.y))
+assert len(list(L.eval("G.FOOT_STARTS").items())) == 9
 # Round 67: each built-in walking crossing stands in one of the two continents it joins
 for _c in L.eval("G.CROSSINGS").values():
     assert _in(_c.x, _c.y)[0] in (_c.a, _c.b), (_c.a, _c.b, _in(_c.x, _c.y))

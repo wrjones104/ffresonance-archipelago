@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 from BaseClasses import Item, ItemClassification
 from Options import OptionError
 
-from .data import CHESTS, CHOCOBO_ITEM, CONTINENT_UNLOCKS, FRAGMENT_ITEM, ITEMS, PROGRESSION, UNIT_ITEM_BASE
+from .data import AIRSHIP_ITEM, CHESTS, CHOCOBO_ITEM, CONTINENT_UNLOCKS, FRAGMENT_ITEM, ITEMS, PROGRESSION, UNIT_ITEM_BASE
 
 if TYPE_CHECKING:
     from .world import FFResonanceWorld
@@ -61,7 +61,7 @@ def progression_ids(world: FFResonanceWorld) -> list[int]:
     """
     The progression items the options put in the pool, one of each: every continent's unlock but
     the starting continent's, every party member but those the player starts with, and the
-    Chocobo when the player does not start with it.
+    Chocobo and the Airship when the player does not start with them.
     """
     start = world.starting_continent
     chosen = [ap_id for name, ap_id in CONTINENT_UNLOCKS.items() if name != start]
@@ -74,6 +74,8 @@ def progression_ids(world: FFResonanceWorld) -> list[int]:
         chosen += PROGRESSION["key"]
     if not world.options.start_with_chocobo:
         chosen.append(CHOCOBO_ITEM)
+    if not world.options.start_with_airship:
+        chosen.append(AIRSHIP_ITEM)
     return chosen
 
 

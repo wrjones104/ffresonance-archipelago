@@ -207,6 +207,15 @@ class StartWithChocobo(DefaultOnToggle):
     display_name = "Start With Chocobo"
 
 
+class StartWithAirship(DefaultOnToggle):
+    """
+    You start in the airship. With this off, you start on foot on your starting continent, and the
+    Airship is an item you find. Until then the ferry and two bridges are the only ways between
+    continents, and Mysidia, Gronoa, Pharm and the Crystal Tower need the Airship.
+    """
+    display_name = "Start With Airship"
+
+
 @dataclass
 class FFResonanceOptions(PerGameCommonOptions):
     goal: Goal
@@ -221,6 +230,7 @@ class FFResonanceOptions(PerGameCommonOptions):
     starting_character_3: StartingCharacter3
     starting_character_4: StartingCharacter4
     start_with_chocobo: StartWithChocobo
+    start_with_airship: StartWithAirship
     include_shinies: IncludeShinies
     include_crystals: IncludeCrystals
     include_tablet_shards: IncludeTabletShards
@@ -235,7 +245,8 @@ class FFResonanceOptions(PerGameCommonOptions):
 option_groups = [
     OptionGroup("Goal", [Goal, TabletShardsRequired, FinalBossCharacters, FinalBossVisions, FinalBossFragments]),
     OptionGroup("Start", [StartingContinent, StartingRoster, StartingCharacter1, StartingCharacter2,
-                          StartingCharacter3, StartingCharacter4, StartWithChocobo]),
+                          StartingCharacter3, StartingCharacter4, StartWithChocobo,
+                          StartWithAirship]),
     OptionGroup("Locations", [PriorityBosses, ExcludedRegions]),
     OptionGroup("Items", [ShufflePartyMembers, ShuffleVisions, ShuffleKeyItems]),
 ]

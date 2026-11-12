@@ -65,7 +65,7 @@ The story counter is `Progress[0]`. Every story gate is a condition such as `{pr
 
 | Gate | How | State |
 |---|---|---|
-| The airship | Free from the start (decided, round 31) | No item |
+| The airship | Free from the start (decided, round 31). From world 0.21.0, `start_with_airship` (on by default) decides: off starts on foot and makes "Airship" an item (below) | Item: flag 1431, the airship's spawn condition |
 | Continents | No landing on a continent until its item arrives (idea 17), with the game's own no-landing boxes (below) | Round 32 probe: `ffrap_noland` |
 | Ships and the Chocobo | The Chocobo is item 30002, and the game checks the item (round 5). The ferry is a talk menu at four ports (round 67, below) | Chocobo: given on every seed's open world save from mod 0.43.0. From world 0.20.0, `start_with_chocobo` (on by default) decides: off makes it an item, "Chocobo". Ferry: gated by the continent unlocks from mod 0.53.0 |
 | Dungeons and choke points | Our own blockers (idea 16), which work everywhere (mod 0.11.3). Or the game's own exits, with their condition rewritten | Blockers: work. Rewriting a live exit's condition: not tried |
@@ -104,6 +104,13 @@ Still to decide: whether the Crystal Tower needs a lock (it is open in game, and
 **Gates on those routes (mod 0.53.0).** A route opens with the continent unlock items, the same items that let the airship land:
 - **The ferry:** `G.FerrySync` points each menu choice at its trip when the port's continent is open, and at the menu's own cancel row when it is locked. So choosing a locked port ends the talk as "no" does. It runs with the landing locks, about once a second, and writes only what differs.
 - **Walking crossings:** a crossing is a world-map blocker (`BP_MapGimmick_BlockingBase_Wld01Gra_01`, scaled) between two continents. It holds while either side is locked. `G.CrossingSync` places them after the world map settles, as the landing boxes are placed. Near a closed one, the feed says which unlock is needed. The places come from play: `ffrap_gate mark <a> <b> [scale] [dist]` puts one `dist` ahead of the player and saves it in `crossings.txt` in the mod folder. `ffrap_gate unmark` removes the nearest, and `ffrap_gate crossings` lists them. From 0.53.1 the two found in round 67 are in the mod, `crossings.txt` replaces them when present, and `move`, `turn` and `size` change the nearest one where it stands.
+
+**The start without the airship (mod 0.54.0, world 0.21.0).**
+- Round 68 probe: with `DT_MapAirShip`'s `spawnCondition` set to `{flag:1431}`, the airship was gone after a map change, and turning the flag on brought it back at the next one. The condition is a table value, not saved, so the mod writes it again about once a second while the seed asks for it, from the moment the client sends `cfg airship 0`.
+- The new game arrives on foot at the airship landing point beside the starting continent's main town (`G.FOOT_STARTS`). The save's airship is parked at the same point with `IsAlreadySpawnAirship` on, so the game has a place for it when the flag turns on. Flag 31, which boarding writes, is left off.
+- The "Airship" item turns on flag 1431 (kind `flag`). The mod then parks the airship where the player stands on the world map, so it lands beside them at the next map change.
+- Logic (`locations.py`): the starting continent needs its unlock only. Every other continent needs its unlock and the Airship, or a way on foot from a continent already reached: the two bridges and the ferry between the four ports, each opened by the far continent's unlock. Mysidia, Gronoa and Pharm have neither, and the Crystal Tower needs the Airship too.
+- Not in logic yet: the Antlion's sandpit in Lanzelt. On foot it is a boss fight. Whether a win lasts at story 8000, and which side of it Grandport and the rope bridge are on, is round 69's question.
 
 **Continent bounds (the first estimate, from landing points; superseded by `G.CONTINENTS`):**
 

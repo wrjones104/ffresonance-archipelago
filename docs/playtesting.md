@@ -613,20 +613,42 @@ World-map shinies verified as locations. Multiple crashes observed across differ
 - **A mark goes the way you last walked.** The mod follows the player's position about once a second on the world map. `mark` puts the cart 150 ahead in that direction, turned to face you, so it lies across the path. The default scale is 2.
 - **The nearest crossing can be changed where it stands:** `ffrap_gate move <dx> <dy> [dz]` (+x is north), `ffrap_gate turn [degrees]` (90 by default) and `ffrap_gate size <scale>`. Each one writes `crossings.txt` and puts the cart back at once.
 
-## Round 68 test plan (mod 0.53.1, world 0.20.0)
+**Round 68 (mod 0.53.1, world 0.20.0, 2026-11-12): passed.**
+- **Both carts sit across their bridges** (screenshots). The user turned, sized and moved them. `crossings.txt`:
+  - `grandshelt lanzelt 13684 16599 87 90.0 1.50`
+  - `lanzelt kolobos 7834 13928 61 90.0 1.50`
+  - Scale 1.5 closes both bridges. Yaw 90 lies across both, though one bridge runs east to west and the other south-west to north-east on screen. Which way +y moves on screen was not reported.
+- **The airship can be hidden.** With `ffrap_airship {flag:1431}`, the airship was gone after a visit to a town. `ffrap_grant flag 1431` brought it back at the next map change. It did not go away again, as the flag stayed on (`ffrap_grant` only turns flags on). The condition is not saved: the log shows it written again after each reload.
 
-**Install:** copy `FFRArchipelago/Scripts`. The apworld is unchanged, so the round 67 seed carries on. **Keep your `crossings.txt` for now:** part 1 changes it.
+**Changed after round 68 (mod 0.54.0, world 0.21.0):**
+- **The two carts are in the mod** at the round 68 places. Delete `crossings.txt` to use them.
+- **`start_with_airship`** (on by default). Off:
+  - The new game starts on foot on the starting continent, at the airship landing point beside its main town: the Royal Capital, Village of Kol, Felicitas, Dilmagia, Olderion, Zoldaad, Mysidia, Gaberada or Sian (`G.FOOT_STARTS`). The airship is parked there and hidden.
+  - "Airship" is an item. It turns on flag 1431, which is the airship's spawn condition for that seed. The mod writes the condition about once a second from the moment the client sends `cfg airship 0`, before the game loads a map.
+  - When the item comes, the mod parks the airship where you stand on the world map (or as soon as you are back on it) and says so. It lands there at your next map change.
+  - Logic: a continent other than the starting one needs its unlock and the Airship, or a way on foot. The ways on foot are the two bridges and the ferry, each opened by the far continent's unlock. Mysidia, Gronoa, Pharm and the Crystal Tower need the Airship. The Antlion's sandpit is not in logic yet (part 4).
 
-**1. Fix the two carts.** Lock one side of a bridge (`ffrap_lock close lanzelt`) and stand by the cart. Then:
-- `ffrap_gate turn` turns it 90 degrees. **Does it now lie across the bridge?** If not, `ffrap_gate turn` again, or `turn 45`.
-- `ffrap_gate size 1.5` (or 1, or 2). **What is the smallest size that still closes the bridge?** Walk and ride the Chocobo at both edges.
-- `ffrap_gate move <dx> <dy>` moves it: +x is north, and y is east or west, which is not known yet. Try `ffrap_gate move 0 50` and say **which way it went on screen**. Then move it until it sits on the bridge.
-- Do the same at the other bridge. `ffrap_lock open lanzelt` at the end.
-- **Send `crossings.txt`.** Its two lines go into the mod in place of today's.
+## Round 69 test plan (mod 0.54.0, world 0.21.0)
 
-**2. Probe: can the airship be hidden?** For the start without the airship. On the world map, near the airship:
-- `ffrap_airship {flag:1431}` (flag 1431 is off and used by nothing). Go into a town and out again. **Is the airship gone?** Save and reload too.
-- `ffrap_grant flag 1431`, then into a town and out. **Is it back, where you left it?**
-- `ffrap_airship off` puts the game's own condition back. This is not saved: a restart undoes it too.
+**Install:** copy `FFRArchipelago/Scripts` and `dist/ff_resonance.apworld`. Delete `crossings.txt` from the mod folder, so the mod's own carts are used. Generate a new seed with `start_with_airship: false` and `starting_continent: lanzelt`.
 
-Send the `[FFRAP]` lines of the log and `crossings.txt`.
+**1. The start on foot.** Start a new Archipelago game.
+- **Do you arrive on foot by the Village of Kol, with no airship in sight?**
+- Go into Kol and out, then save and reload. **Is the airship still gone?** The log should have `airship: spawn condition {flag:1431}`.
+
+**2. Walking and sailing.** With what the seed has given you:
+- The stone bridge to Grandshelt and the rope bridge to Kolobos: **closed until their unlocks come?**
+- The ferry at Grandport: **does it sail only to ports whose continents are open?**
+- **Can you land anywhere?** You should not have an airship to land with yet.
+
+**3. The Airship arrives.** When "Airship" comes (or, to try it early, `ffrap_grant flag 1431` on the world map):
+- **Does the feed say "The airship is yours. It lands here after your next map change"?**
+- Go into a town or cave and back out. **Is the airship where you stood? Can you board it and fly?**
+- **Can you land only on open continents,** as before?
+
+**4. The Antlion's sandpit.** On foot, not on the Chocobo:
+- **Where is the sandpit, from Kol?** Is it between Kol and Grandport Harbor, or between Kol and the rope bridge to Kolobos?
+- Walk in and win the fight. **Can you walk across now?** **Does the fight come back** when you walk in again, or after a map change? The log may show it in a `story boss` or battle line.
+- If you lose or flee, where do you end up?
+
+Send the `[FFRAP]` lines of the log.

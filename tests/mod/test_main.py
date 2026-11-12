@@ -192,6 +192,10 @@ function G.ContinentOpen(name) return (G.openContinents or {})[name] == true end
 function G.CrossingSync(list) G.crossingLists[#G.crossingLists + 1] = list; return 0, 0 end
 function G.CrossingNear(list, range) return nil end
 function G.CrossingClear() G.crossingsCleared = true end
+G.AIRSHIP_FLAG, G.airshipSyncs, G.parks = 1431, {}, {}
+G.FOOT_STARTS = { lanzelt = { name = "foot lanzelt", story = 8000, map = 1000, x = 12470, y = 14980, z = 65 } }
+function G.AirshipItemSync(asItem) G.airshipSyncs[#G.airshipSyncs + 1] = asItem; return nil end
+function G.ParkAirship(x, y, z) G.parks[#G.parks + 1] = x .. " " .. y .. " " .. z; return true end
 function G.AirshipState() return "placed true" end
 function G.AirshipCondition(c) G.airshipWrote = c; return c end
 function G.NoLandShadow() return 0, 1, { "box" } end
@@ -229,7 +233,7 @@ end
 function G.TitleLogo(path, line) G.logos[#G.logos + 1] = path; return "added", "20x21" end
 function G.DescribeWidget(w) G.describes = G.describes + 1; return "widget TextBlock" end
 function G.SkipPrologue(opts)
-  G.skipParty = opts.party
+  G.skipParty, G.skipArrival = opts.party, opts.arrival
   G.skipRuns = G.skipRuns + 1; G.skipOpen = opts.openStart; G.story = opts.openStart and 7090 or 1030
   return true, { "ok   stub" }
 end
@@ -1570,6 +1574,42 @@ last = L.eval("G.crossingLists[#G.crossingLists]")
 assert len(last) == 1 and last[1].x == 13684 and last[1].b == "lanzelt", len(last)
 assert not os.path.exists(path("crossings.txt")), "nothing is written until a crossing is changed"
 print("crossings: ok")
+
+# Round 69: `cfg airship 0` starts the seed on foot on its starting continent, hides the airship
+# behind its item's flag from the first ticks, and parks it where the player stands on the world
+# map once the flag turns on, once.
+FOOT_START_MAP = 1000
+inbox("seed\tS69:0:1\ncfg\topenworld\t1\ncfg\tairship\t0\ncfg\tcontinent\tLanzelt\n", "w")
+L, G = boot()
+L.execute("tickFn()")
+G.story = 1005
+load(G, "SD_FOOT", "0")
+L.execute('commands["ffrap_skip"]("ffrap_skip", {"0"})')
+assert G.skipArrival.name == "foot lanzelt" and G.reloadMap == FOOT_START_MAP, (G.skipArrival, G.reloadMap)
+assert list(G.airshipSyncs.values())[-1] is True, "hidden before any map loads"
+inbox("seed\tS69b:0:1\ncfg\topenworld\t1\ncfg\tairship\t0\ncfg\tcontinent\tlanzelt\n", "w")
+L, G = boot5("SD_AIR", "0", {})
+L.globals().G = G
+L.execute(SCALE_STUB)
+L.execute("function G.HeldCount(id) return 1 end")
+L.execute("G.map = 1000; function G.CurrentMap() return G.map end")
+L.execute("function G.PlayerPose() return { x = 500, y = 600, z = 7, yaw = 0, fx = 1, fy = 0 } end")
+L.execute("G.airshipFlag = false; local old = G.GetFlag; G.GetFlag = function(i) if i == G.AIRSHIP_FLAG then return G.airshipFlag end return old and old(i) end")
+G.chests = L.table()
+G.story = 8000
+tick(12)
+assert len(G.parks) == 0, "no airship yet"
+G.airshipFlag = True
+tick(12)
+assert list(G.parks.values()) == ["500 600 7"], list(G.parks.values())
+tick(12)
+assert len(G.parks) == 1, "parked once"
+# a seed that starts in the airship puts the game's condition back over ours
+inbox("seed\tS69c:0:1\ncfg\topenworld\t1\n", "w")
+L, G = boot()
+tick(4)
+assert list(G.airshipSyncs.values())[-1] is False
+print("airship as an item: ok")
 
 # Round 58: the tower's last climb stays sealed while the client's counts are short, and says so near it
 inbox("seed\tS58:0:1\ncfg\topenworld\t1\ncfg\tfinalboss\t2\t6\t3\t12\n", "w")

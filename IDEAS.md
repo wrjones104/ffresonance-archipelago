@@ -143,7 +143,7 @@ The chapter-by-chapter progression (party, vehicles, gates, Visions, Espers) is 
 - 41 blocking bases, 12 of them magic pots.
 - To find out: whether the mod can change a blocker's condition (or its flag) at run time. If it can, an item can open one of the game's own gates, and we may not need to add new blockers.
 
-**Round 67 (mod 0.53.0): the first real use.** No door or cave joins two continents. The routes without the airship are the ferry and walking on the world map (`open_world.md`, section 4, "Routes between continents"). The ferry is gated by rewriting its menu rows. Walking crossings are this idea's blockers, placed from `crossings.txt`, which the user fills in game with `ffrap_gate mark`. Next: move the marked crossings into the mod, then the start without the airship (an on-foot arrival on the starting continent, and the airship as an item).
+**Round 67 (mod 0.53.0): the first real use.** No door or cave joins two continents. The routes without the airship are the ferry and walking on the world map (`open_world.md`, section 4, "Routes between continents"). The ferry is gated by rewriting its menu rows. Walking crossings are this idea's blockers, placed from `crossings.txt`, which the user fills in game with `ffrap_gate mark`. Round 68: the carts are in the mod, sized and turned by the user. Mod 0.54.0 and world 0.21.0 add the start without the airship (`open_world.md`, section 4).
 
 ## 20. Trap items, banked until the next battle
 
