@@ -79,6 +79,8 @@ An Archipelago implementation for Final Fantasy Resonance (UE 5.6, game module `
 - A story `NoEntry` zone holds until its event's flag is on (the Earth Shrine's exit needs flag 102, round 44). `gimmicks.tsv` has the conditions.
 - `CPP_VM_Party:AddUnit` does not set `JoinStatus`: a unit added only that way gains no EXP and gear on it does not count (round 44).
 - The prologue skip must run after story 1005 and the game's first autosave, or the opening movie's input lock survives the reload (round 9).
+- **A live field item's `m_UniqueId` can differ from the level's.** Tablet Shards in Felicitas read 0 and 1, while the save keeps them as 8 and 9. Ask the save by the seed's own ids too (round 63).
+- **A door's real destinations are in `mTransitionDataList`**, one per flag condition. Its `m_MapId` can be a leftover: every sanctum door on the world map says 10200 (round 63). `transitions.tsv` has them in `destinations`.
 
 **Tooling:**
 - **The Bash tool can collapse backslashes** in heredocs and inline Python (`\\n` arrives as a line break). Write edit scripts and test patches as files with the Write tool, then run them.

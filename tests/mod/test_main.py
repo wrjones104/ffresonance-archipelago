@@ -879,6 +879,22 @@ L.execute("fastFn()")
 assert f"check\tshiny:{G.map}:77" in read("ap_out.txt"), "reported by the fast check"
 assert list(G.popups.values())[n:] == ["You found the following for Rat2:\nLongshot"], list(G.popups.values())[n:]
 G.shinies = L.table()
+# Round 63: in Felicitas the live shard read id 1, and the save had the level's id 8. A scouted
+# shiny on the map is asked of the save by its own id, and one the seed does not hold is not.
+FELICITAS, SHARD_UID, LIVE_UID, NOT_A_LOCATION = 2040, 8, 1, 9
+inbox(f"scout\tshiny:{FELICITAS}:{SHARD_UID}\tLongshot\tRat2\t1\t0\n")
+tick(1)
+G.map = FELICITAS
+G.shinies = L.table_from({1: L.table_from({"uid": LIVE_UID, "open": False, "itemId": -1, "itemNum": 1, "money": 1})})
+tick(4)
+assert f"check\tshiny:{FELICITAS}:{SHARD_UID}" not in read("ap_out.txt"), "not before the save says so"
+G.saveOpen[f"{FELICITAS}:{SHARD_UID}"] = True
+G.saveOpen[f"{FELICITAS}:{NOT_A_LOCATION}"] = True
+tick(4)
+out = read("ap_out.txt")
+assert out.count(f"check\tshiny:{FELICITAS}:{SHARD_UID}\n") == 1, out
+assert f"shiny:{FELICITAS}:{NOT_A_LOCATION}" not in out
+G.shinies = L.table()
 print("chest pop-up: ok")
 
 # 13. experimental gate and custom key-item probe (0.11.3): works standalone even on unlinked saves

@@ -537,35 +537,37 @@ World-map shinies verified as locations. Multiple crashes observed across differ
 - The three story boss fights (Belmodar, The Hunger, Mom Bomb) also need flag 1441. The mod turns it on after the field has been up for about 2 seconds on a story boss map, and off as soon as the field goes (a battle, a scene, a menu). So the party coming back from the fight cannot set it off again before the win row runs.
 - Scaling "off" now puts boss rows back too. Before, the seed's own "off" left them scaled.
 
-## Round 63 test plan (mod 0.52.2, world 0.19.0)
+**Round 63 (mod 0.52.1 to 0.52.2, world 0.19.0, 2026-11-12): passed, with three bugs and two crashes.**
+- During the round, mod 0.52.2: Belmodar with a low-level Rain and Lasswell felt good on the game's Normal with our Normal, and on Expert with Expert. A level 8 party on Normal met level 5 enemies, "like fighting air". The enemies' band was 2 under and 2 over a centre of 7. It is now 1 under the centre, and 1, 3 or 5 over it on Casual, Normal and Expert. The bosses' band is unchanged. The Arena's Brawler, Gladiator and Champion fights are scaled as bosses.
+- **Scaling (0.52.2) feels better.** It pushes the player to need the right members and visions for a boss, which is the natural gate the user wants. Bosses need logic of their own now (IDEAS.md, idea 29).
+- The Hunger worked. Cave masters worked, and their scaling feels good.
+- Nameless Ruins (Liquid Flame, Iron Giant) and Mom Bomb worked, but were too hard for the party and gear the seed had given. The user raised the party's level by hand to finish them. Belmodar worked and felt good.
+- The Crystal Tower notice worked. Items received in a battle came after it, with the right counts.
+- **Universal Tracker showed fights in logic that could not be won** without more members, visions or gear. Cave masters are priority locations, so progression can sit behind them. IDEAS.md, idea 29.
+- **Town of Felicitas Shards 8 and 9 did not send when picked up.** The log has `check shiny:2040:1` on the first visit, which is no location: the live shard read id 1, not the level's 8 or 9. `seen.tsv` has Felicitas medals with ids 0 and 1, and so have the Research Center Ruins and map 3260. On the next visit both `shiny:2040:8` and `shiny:2040:9` came at once, 3 seconds in: the save had them as taken under their real ids. Why the live ids differ is not known.
+- **The Research Center Ruins' Tablet Shards (34 to 36) never sent.** Same cause: the log has `check shiny:3220:1`, and 34 to 36 never came.
+- **Town of Mitra Chest 3 (`chest:2000:2`) may be out of reach.** The box is at (-657, 13160), far from the town's other four. It is near the same-map doors 9 and 17 (ground floor) and 6 and 21 (upper floors). Those are the exits of an inside room with 3 floors. By the door points, its ground floor door in town is door 22 at (345, 2412) or door 8 at (800, 2462). This is a guess from door ids. It is not seen in game.
+- **The Warrior of Light's, Cloud's and Tidus's sanctums were in logic on the wrong continents.** The world took a sanctum's continent from the airship landing point with the sanctum's id, and those ids do not match the sanctums. The door on the world map has the real destinations in `mTransitionDataList`. By the doors: the Warrior of Light (10203) and Cloud (10208) are on Lanzelt, Tidus (10200) on Olderion, Terra (10201) on Kolobos, Noctis (10202) and Zidane (10206) on Dirnado. The log agrees: with only Dirnado newly open, the user entered 10207, 10202 and 10206 within two minutes, and 10201 just after Felicitas.
+- **Two crashes, both about 1 h 48 min into a session.** Both are an access violation in UE4SS's handling of a UObject from Lua: an object the engine had already freed.
+  - Fast travel to Gaberada with the Iron Splitter quest on (`UECC-...7BC458BB`, 10:08). The Lua ran from a game-thread timer (`LoopInGameThreadWithDelay`), three `pcall`s deep. Our tick (`tick`, `pcall(locksTick)`, `Alive`) has that shape, and so do FFRS_QoL's ticks. The log ends 7 seconds after the world map came back up. Not known which mod it was.
+  - Going to the airship's deck (`UECC-...D8B3077E`, 11:57). This Lua ran from an `ExecuteInGameThread` callback, one `pcall` deep, 1 to 2 seconds after map 20002 loaded. This mod does not use `ExecuteInGameThread`. ModSettings does: on each new `WBP_ModSettingsHint`, it queues callbacks at 50, 200, 800 and 2000 ms that call `hint:IsValid()` in a `pcall`. A map load in that time frees the hint, and `IsValid` on a freed object crashes (this mod's round 49 lesson). So the deck crash is most likely ModSettings.
 
-**Install:** copy `FFRArchipelago/Scripts`. The apworld has not changed, so the round 62 seed still works. The user starts that seed's save again.
+**Changed after round 63 (mod 0.52.3, world 0.19.1):**
+- A scouted shiny on the current map is also asked of the save by its own id, each scan. So a pick-up sends its check even when the live actor reads another id. The pop-up may not show for those, as the check comes from the save.
+- `gen_from_dump.py` writes each door's destination list in a new `destinations` column of `transitions.tsv`. The world uses it for the continents of maps behind the world map, and a sanctum takes the continent of its door. Six sanctums moved: Tidus to Olderion, Terra to Kolobos, Noctis and Zidane to Dirnado, the Warrior of Light and Cloud to Lanzelt. Sephiroth's boss (Whirlpool Hollow) moved from "Open" to Lanzelt, as its door is in the Lanzelt box.
 
-**Changed during round 63 (mod 0.52.2):**
-- First report: Belmodar with a low-level Rain and Lasswell felt good on the game's Normal with our Normal, and on Expert with Expert. Bosses feel better than in round 62.
-- First report: a level 8 party on Normal met level 5 enemies, "like fighting air". The enemies' band was 2 under and 2 over a centre of 7. It is now 1 under the centre, and 1, 3 or 5 over it on Casual, Normal and Expert. The bosses' band is unchanged. The `scale:` line now gives the enemies' band, for example `enemies centre 7 (92%), 6 to 10`.
-- The Arena's Brawler, Gladiator and Champion fights are scaled as bosses. The Fledgling fights stay plain enemies, as their units are field enemies. The first `scale:` line ends with `N units in boss groups, 24 in the Arena`.
+## Round 64 test plan (mod 0.52.3, world 0.19.1)
 
-**0b. Arena.** Fight a Brawler battle. **Is it a challenge now?** A Fledgling battle should feel like the field.
+**Install:** copy `FFRArchipelago/Scripts`, and copy `dist/ff_resonance.apworld` into Archipelago's `custom_worlds`. Generate a new seed: the sanctum areas are in the seed's logic.
 
-**0. Scaling.** Options, Gameplay: "AP: Scaling strength" has Casual, Normal and Expert again, and keeps the choice you made before 0.52.0. The `scale:` line names the strength and gives the bosses' centre and power. **On Normal, do bosses last long enough to matter, without walling a seed that has little gear?** Expert should be harder again.
+**1. Shards that read the wrong id.** On the round 63 save, go back into the Research Center Ruins (map 3220). The log should say `check shiny:3220:34`, `35` and `36` within a few seconds, if the save has them as taken. On the new seed, pick up the two shards in the Town of Felicitas (2040). **Does each send `check shiny:2040:8` or `9` as you pick it up?**
 
-**1. The Hunger again (map 3040).** Load a save from before the win. The first `scale:` line now ends with `N units in boss groups`. Walk into the door.
-- **Is the fight fair now?** It should be about the party's level, with more HP.
-- **Does the win give EXP?**
-- **After the win:** the log says `check boss:9012`, then a `story boss: ... (won true)` line. Walking into the door again does nothing.
-- If it loops again, send the log. Each return to the field should now give a `story boss` line.
+**2. Sanctum logic.** On the new seed, Universal Tracker should show the Warrior of Light's and Cloud's sanctums only with Lanzelt open, and Tidus's only with Olderion open.
 
-**2. A cave master.** They are now scaled as bosses. Beat one. **Is it fair, or too hard?**
+**3. Mitra Chest 3.** In the Town of Mitra, try the building just inside the entrance from the world map, near Chest 1. The chest should be on the ground floor of a building with three floors. **Is it there, and can you reach it?**
 
-**3. Nameless Ruins (map 3180): Liquid Flame (`9088`) and Iron Giant (`9089`).** From round 62. Walk up to both boss pawns. Both fights start, each gives a Crystal Fragment (`check boss:9088`, `check boss:9089`), and the save stays at story 8000.
+**4. Arena.** From round 63. Fight a Brawler battle. **Is it a challenge now?** A Fledgling battle should feel like the field.
 
-**4. Earth Shrine (map 3000): Belmodar (`9004`, flag `1240`).** From round 62. Go to the boss room. The fight starts about 2 seconds after the field comes up, so stand still a moment before walking in. Belmodar shows, the trigger starts the fight with no story scenes, the win sends `check boss:9004`, and Belmodar is gone after. `ffrap_bossfight trigger` logs each write.
+**5. Crashes.** Play long sessions as before. If the game crashes, send the crash folder and say what you were doing. To test the ModSettings cause, play one long session with ModSettings off (`ModSettings : 0` in `mods.txt`, and remove its `enabled.txt`). The mod's on-screen toasts use ModSettings, so those stop, but the log still has every line.
 
-**5. Dwarven Forge (map 2050): Mom Bomb (`9014`, flag `1242`).** From round 62. The pawn (unit 10037) shows, touching it starts the fight, the win sends `check boss:9014`, and the pawn hides after.
-
-**6. The Crystal Tower notice.** From round 60. With too few fragments, walk to the tower's last climb. **Does the notice say "Crystal Fragments x/y"?**
-
-**7. Items received in a battle.** When another player sends you something during a battle, the `Received` line should come only after the battle, back on the field. **Is the item in the bag with its real count, not x 0?** To get back the two items lost in round 62, type `ffrap_grant item 20030 1` (Ruby Fragment) and `ffrap_grant item 11024 1` (Hoodwink Garb) in the UE4SS console.
-
-Send the `[FFRAP]` lines of the log, and `scale.txt` from the mod folder.
+Send the `[FFRAP]` lines of the log.

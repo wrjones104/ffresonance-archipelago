@@ -901,3 +901,26 @@ The "Back" prompt that menus and the chest pop-up show at the bottom right also 
 **Round 58: the Chest Radar (world 0.15.0, mod 0.46.0), at the user's request.** `minimap_chest_icons` is now `start_with` (the default, as before), `item` or `off`. With `item`, a Chest Radar takes the place of one filler item in the pool (classed useful). It is a flag item: it turns on event flag 1430, which nothing in the game uses (1430 to 1449 are free; the boss test uses 1440). The mod shows the icons once the flag is on, so it stays with the save. The name keeps it apart from the airship's Treasure Radar quest.
 
 **Round 57: built as a yaml option.** `minimap_chest_icons` (on by default) goes to the mod in slot data. On the seed's save, mod 0.43.0 writes the Treasure entry as the pak has it (shown, the `TreasureBox` icon, also at the low zoom state) and the icon binding; on any other save it puts back what the assets held. Chests only: the pak also shows `Check` spots and map exits, which may be shinies and doors. Not seen in game yet.
+
+## 28. Character abilities as checks
+
+**Idea:** party member abilities (Fire, Provoke, etc.) are locked until found in the multiworld. When characters level up and would normal get one or more abilities on that level, instead we would send checks to the server.
+
+## 29. What a boss fight needs, in logic
+
+**Idea (round 63, the user):** with scaling, a boss is a real gate. The right party and visions matter more than levels. So a boss location should need, in logic, the tools to win. For example, Salome could need at least one member or vision with wind skills, and one with healing magic.
+
+**Why it matters now:**
+- Round 63: on Normal, the Nameless Ruins bosses and Mom Bomb could not be won with what the seed had given by then. The user raised the party's level by hand to finish them.
+- Universal Tracker showed many fights in logic that were not winnable without more members, visions or gear.
+- Cave masters are priority locations (`priority_bosses`), so a progression item is likely to sit at a fight like that.
+
+**What is known:**
+- Each unit row in `DT_UnitParameter` has `ElementResistanceList` (element to resistance) and `StatusConditionResistanceList`, so weaknesses are in the off-line data. It also has an `IsBoss` field.
+- The skills are under `Datatable/Skill`. Which member and which vision gives which element or healing is not tabled yet.
+
+**What to find out:**
+- A table: each member's and each vision's elements, healing and buffs, by level or by vision rank.
+- A table: each boss's weaknesses and a rough tier (from its scaled level band).
+- The rule shape. One choice: a boss needs N members plus visions (N by tier), at least one of them hits a weakness, and one can heal. Another: count "power" items (members, visions, weapons over some tier) in place of exact skills.
+- Whether a cave master should stop being a priority location until this logic exists.

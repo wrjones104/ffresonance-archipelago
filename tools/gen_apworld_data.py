@@ -188,16 +188,20 @@ def map_continents(continents: dict[str, dict]) -> dict[int, set[str]]:
     edges: dict[int, set[int]] = collections.defaultdict(set)
     frontier: list[int] = []
     for r in read_tsv("game/transitions.tsv"):
-        if not r["toMap"]:
-            continue
-        source, target = int(r["map"]), int(r["toMap"])
-        if source == WORLD_MAP and target != WORLD_MAP and r["x"]:
-            place = continent_at(continents, float(r["x"]), float(r["y"]))
-            if place:
-                reach[target].add(place)
-                frontier.append(target)
-        elif source != WORLD_MAP and target != WORLD_MAP:
-            edges[source].add(target)
+        # Round 63: a door with a destination list goes to those maps, not to its toMap (the
+        # sanctum doors on the world map all said 10200).
+        targets = [int(m) for m in re.findall(r"(?:^|; )(\d+)", r.get("destinations") or "")]
+        if not targets and r["toMap"]:
+            targets = [int(r["toMap"])]
+        source = int(r["map"])
+        for target in targets:
+            if source == WORLD_MAP and target != WORLD_MAP and r["x"]:
+                place = continent_at(continents, float(r["x"]), float(r["y"]))
+                if place:
+                    reach[target].add(place)
+                    frontier.append(target)
+            elif source != WORLD_MAP and target != WORLD_MAP:
+                edges[source].add(target)
     while frontier:
         source = frontier.pop()
         for target in edges[source]:
@@ -318,14 +322,19 @@ def main() -> None:
                         "category": "party"}
         progression["party"].append(ap_id)
     # The sanctum crystals (data/crystals.tsv): a location each, with no vanilla item of their own
-    # to add, since their visions are already in the pool. Position decides the continent.
+    # to add, since their visions are already in the pool. The door into the sanctum decides the
+    # continent. Round 63: the airship landing points did before, and their ids do not match the
+    # sanctums (the Warrior of Light's and Cloud's are on Lanzelt, not Kolobos and Dirnado).
     landing = {r["id"]: r for r in read_tsv("game/gimmicks.tsv") if r["class"] == "BP_MapAirShipLandingPoint_C"}
     island_names = {"MagiNationMysidia": "Mysidia"}
     crystals = []
     for r in read_tsv("crystals.tsv"):
         map_id = int(r["map"])
         point = landing.get(r["map"])
-        area = continent_at(continents, float(point["x"]), float(point["y"])) if point else None
+        doors = reach.get(map_id, set())
+        area = next(iter(doors)) if len(doors) == 1 else None
+        if area is None and point:
+            area = continent_at(continents, float(point["x"]), float(point["y"]))
         if area is None:
             island = maps[map_id]["island"]
             area = island_names.get(island, island)

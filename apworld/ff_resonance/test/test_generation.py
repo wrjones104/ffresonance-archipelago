@@ -123,6 +123,13 @@ class TestCrystals(FFResonanceTestBase):
         pool = [item for item in self.multiworld.itempool if item.player == self.player]
         self.assertEqual(len(pool), len(CHESTS) + len(CRYSTALS))
 
+    def test_a_sanctum_is_on_the_continent_of_its_door(self) -> None:
+        # Round 63: the Warrior of Light's and Cloud's doors are on Lanzelt, Terra's on Kolobos
+        # (the airship landing points had said Kolobos, Dirnado and Lanzelt)
+        area = {c["key"]: c["area"] for c in CRYSTALS}
+        self.assertEqual((area["crystal:10203"], area["crystal:10208"], area["crystal:10201"]),
+                         ("Lanzelt", "Lanzelt", "Kolobos"))
+
 
 class TestBosses(FFResonanceTestBase):
     options = {"include_bosses": True, "final_boss_characters": 2, "final_boss_visions": 0, "final_boss_fragments": 3}
@@ -420,7 +427,7 @@ class TestData(FFResonanceTestBase):
     def test_crystals(self) -> None:
         self.assertEqual(len(CRYSTALS), 16)
         areas = {c["key"]: c["area"] for c in CRYSTALS}
-        self.assertEqual(areas["crystal:10200"], "Grandshelt")
+        self.assertEqual(areas["crystal:10200"], "Olderion")   # round 63: its door is in Wld_05Old
         self.assertEqual(areas["crystal:10214"], "Mysidia")
         self.assertTrue(set(areas.values()) <= set(CONTINENT_UNLOCKS), set(areas.values()))
 

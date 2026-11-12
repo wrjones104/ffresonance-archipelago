@@ -275,11 +275,16 @@ def actors(by_key):
                 boxes.append([mid, props.get("m_Id", -1), uid, cls, condition(props), stem] + where
                              + [f"{data.get('mapId', 0)}:{data.get('ID', 0)}"])
             elif TRANSITION.search(cls):
+                # Round 63: a sanctum's door on the world map keeps its real destinations in
+                # mTransitionDataList, one per flag condition; m_MapId there is a leftover.
+                destinations = "; ".join(
+                    f"{d['mapId']}" + (f"[{d['FlagCondition']}]" if d.get("FlagCondition") else "")
+                    for d in props.get("mTransitionDataList") or [] if isinstance(d, dict) and d.get("mapId") is not None)
                 transitions.append([mid, stem, uid, props.get("m_MapId", ""), props.get("m_PointID", ""),
                                     str(props.get("m_IsAutoTransition", "")).lower(),
                                     enum(props.get("m_TransitionMovementType", "")),
                                     condition(props) if props.get("m_IsUseCondion") or props.get("m_Condition") else "",
-                                    events(props)] + where)
+                                    events(props)] + where + [destinations])
             elif GIMMICK_CLASSES.search(cls):
                 gimmicks.append([mid, stem, uid, cls, props.get("m_Id", ""), props.get("m_Description", ""),
                                  condition(props), events(props)] + where)
@@ -289,7 +294,8 @@ def actors(by_key):
               sorted(fields, key=lambda r: (str(r[1]), int(r[2]) if str(r[2]).isdigit() else 0)))
     write_tsv("treasure_actors.tsv", ["map", "ID", "uid", "class", "visible", "level"] + xyz + ["editorData"],
               sorted(boxes, key=lambda r: (str(r[0]), r[1], r[5])))
-    write_tsv("transitions.tsv", ["map", "level", "uid", "toMap", "toPoint", "auto", "movement", "condition", "events"] + xyz,
+    write_tsv("transitions.tsv", ["map", "level", "uid", "toMap", "toPoint", "auto", "movement", "condition", "events"] + xyz
+              + ["destinations"],
               sorted(transitions, key=sort))
     write_tsv("gimmicks.tsv", ["map", "level", "uid", "class", "id", "description", "condition", "events"] + xyz,
               sorted(gimmicks, key=sort))

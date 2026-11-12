@@ -109,6 +109,10 @@ def make_dump(root):
         {"Type": "BP_MapGimmick_FieldItem_Medal_C", "Properties": {"m_UniqueId": 4}},
         {"Type": "BP_MapGimmick_FieldItem_C", "Properties": {"VisibleCondition": "{progress:8}==30"}},
         {"Type": "BP_MapAirShipLandingPoint_C", "Properties": {"m_Id": 10200, "m_Description": "landing"}},
+        # Round 63: a sanctum door keeps its destinations in mTransitionDataList
+        {"Type": "BP_MapTransitionTrigger_C", "Properties": {"m_UniqueId": 68, "m_MapId": 10200, "mTransitionDataList": [
+            {"FlagCondition": "{progress:0}>=1095 & {flag:1003}", "mapId": 10223},
+            {"FlagCondition": "{progress:0}>=1095 & !{flag:1003}", "mapId": 10203}]}},
     ])
     write(root, "maps/classes.json", {
         "BP_MapGimmick_FieldItem_Medal_C": {"super": "BP_MapGimmick_FieldItem_C", "defaults": {"m_ItemId": 25004}},
@@ -190,6 +194,9 @@ def main():
 
         trans = tsv(game / "transitions.tsv")
         assert trans[0]["map"] == "3000" and trans[0]["toMap"] == "1000" and trans[0]["condition"] == "{progress:0}>=4000"
+        door = next(r for r in trans if r["uid"] == "68")
+        assert door["destinations"] == ("10223[{progress:0}>=1095 & {flag:1003}]; 10203[{progress:0}>=1095 & !{flag:1003}]"), door
+        assert trans[0]["destinations"] == ""
 
         gimmicks = {r["class"]: r for r in tsv(game / "gimmicks.tsv")}
         assert gimmicks["BP_MapGimmick_BlockingBox_C"]["condition"] == "!{flag:928}"

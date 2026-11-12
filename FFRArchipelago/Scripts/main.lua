@@ -50,7 +50,7 @@
 -- follows the save slots the linked game is saved to. While any other save is loaded, the mod
 -- grants nothing, reports nothing and leaves the chests vanilla.
 
-local VERSION = "0.52.2"
+local VERSION = "0.52.3"
 local PROTOCOL = 2        -- the bridge protocol; the apworld's MOD_PROTOCOL
 
 local MOD_DIR = (debug.getinfo(1, "S").source:gsub("^@", ""):gsub("\\", "/"):match("^(.*/)Scripts/[^/]+$"))
@@ -589,7 +589,8 @@ local function recordSeen(kind, mapId, uid, row, itemId, itemNum, money, visible
 end
 
 local function newVisit(mapId)
-    visit = { mapId = mapId, scans = 0, recorded = {}, closed = {} }
+    -- scoutShinies: the uids of the seed's shiny locations on this map, built at the first scan
+    visit = { mapId = mapId, scans = 0, recorded = {}, closed = {}, scoutShinies = nil }
 end
 
 -- The chest pop-up (IDEAS.md, idea 13): the pop-up is up while the chest's check is reported,
@@ -709,6 +710,23 @@ local function scanShinies(mapId)
                 visit.closed[id] = true   -- seen closed: picking it up later is "in front of the player"
             end
         end
+    end
+    -- Round 63: in the Town of Felicitas the live Tablet Shards read ids 0 and 1, not the level's
+    -- 8 and 9, so a pick-up was reported under a key that is no location. The save had 8 and 9
+    -- (they were reported on the next visit). The Research Center Ruins' 34 to 36 never came.
+    -- Why the ids differ is not known. So each of the seed's shinies on this map is also asked
+    -- of the save by its own id.
+    if not visit.scoutShinies then
+        visit.scoutShinies = {}
+        local prefix = "shiny:" .. mapId .. ":"
+        for key in pairs(state.scouts) do
+            local uid = key:sub(1, #prefix) == prefix and tonumber(key:sub(#prefix + 1))
+            if uid then visit.scoutShinies[#visit.scoutShinies + 1] = uid end
+        end
+    end
+    for _, uid in ipairs(visit.scoutShinies) do
+        local key = "shiny:" .. mapId .. ":" .. uid
+        if not state.reported["check|" .. key] and game.IsChestOpenInSave(mapId, uid) then opened(key, false) end
     end
 end
 
