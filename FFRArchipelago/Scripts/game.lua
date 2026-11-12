@@ -4528,10 +4528,6 @@ do
 local OPTION_GAMEPLAY = "/Game/Datatable/UI/Option/Root/GameSetting/DT_OP_GameSetting.DT_OP_GameSetting"
 local OPTION_SLIDER = "Delegate.UI.System.Option.Root.GameSetting.GamePad.Sensitivity"
 local OPTION_SWITCH = "Delegate.UI.System.Option.Root.GameSetting.EncountSensor"
--- Round 56: the Difficulty row's choices (DT_OP_RadioButton_Difficulty) read Casual, Normal and
--- Expert, which is what our scaling strength needs. A copy has our tag, so it does not change the
--- game's own difficulty.
-local OPTION_CHOICE = "Delegate.UI.System.Option.Root.GameSetting.Difficulty"
 local OPTION_TAG = "Delegate.UI.System.Option.Root.GameSetting.FFRAP."
 G.OPTION_ROWS = {
     { key = "exp", row = "FFRAP_Exp", copy = OPTION_SLIDER, min = 1, max = 10, default = 1,
@@ -4549,8 +4545,14 @@ G.OPTION_ROWS = {
       label = "AP: Encounter rate (x0.5)", help = "How often random battles come, in halves: 1 is half as often, 2 is normal, 6 is three times as often." },
     { key = "scaling", row = "FFRAP_Scaling", copy = OPTION_SWITCH, default = 0,
       label = "AP: Enemy scaling", help = "Enemies follow your party's level. Off: the game's own levels." },
-    { key = "strength", row = "FFRAP_ScalingStrength", copy = OPTION_CHOICE, choices = 3, default = 1,
-      label = "AP: Scaling strength", help = "How strong scaled enemies and bosses are. It stacks with the game's own difficulty." },
+    -- Round 56 copied the game's Difficulty row, whose choices read Casual, Normal and Expert.
+    -- Round 63: the user wants our own names. A choice row's labels are a radio button table
+    -- (DT_RadioButton), and every such table is in use, so this is a slider whose value is the
+    -- strength plus `offset`. The new row name keeps a choice saved under the old row from being
+    -- read as a slider value.
+    { key = "strength", row = "FFRAP_ScalingLevel", copy = OPTION_SLIDER, min = 1, max = 3, default = 2, offset = 1,
+      label = "AP: Scaling (1 Easy, 2 Standard, 3 Hard)",
+      help = "How strong scaled enemies and bosses are: 1 Easy, 2 Standard, 3 Hard. It stacks with the game's own difficulty." },
 }
 
 local ENTRY_SLIDER, ENTRY_RADIO = 1, 2
@@ -4573,9 +4575,8 @@ local function SeedOptionEntries(current)
             local v = current[o.key]
             local value
             if o.min then
-                local steps = tonumber(v) and math.floor(tonumber(v) / (o.step or 1) + 0.5) or o.default
+                local steps = tonumber(v) and math.floor((tonumber(v) + (o.offset or 0)) / (o.step or 1) + 0.5) or o.default
                 value = math.min(o.max, math.max(o.min, steps))
-            elseif o.choices then value = math.min(o.choices - 1, math.max(0, math.floor(tonumber(v) or o.default)))
             else value = (v == false) and 1 or 0 end
             if pcall(function()
                 save.m_EntrySaveDataList:Add({ TagName = FName(tag) }, { Value = value, IsDisplay = true, Type = o.min and ENTRY_SLIDER or ENTRY_RADIO })
@@ -4665,8 +4666,7 @@ function G.ReadOptionValues()
                 local o = byTag[ObjText(k:get().TagName)]
                 if not o then return end
                 local value = v:get().Value
-                if o.min then out[o.key] = value * (o.step or 1)
-                elseif o.choices then out[o.key] = math.floor(value + 0.5)
+                if o.min then out[o.key] = value * (o.step or 1) - (o.offset or 0)
                 else out[o.key] = math.floor(value + 0.5) == 0 end
             end)
         end)

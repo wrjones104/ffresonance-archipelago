@@ -164,6 +164,15 @@ MP does not correlate with level (r² 0.09) and remains unchanged.
   | Expert | 90% to 100% | 90% to 115% | 105% | 115% |
 
   A first guess, to tune from play.
+- **Round 63: one step harder, with our own names.** The user found all of it too easy on Normal. Each strength moved up one, and a harder one was added. They are called Easy, Standard and Hard, apart from the game's Casual, Normal and Expert. An easier game is the game's Casual with our Easy. Mod 0.52.0:
+
+  | Strength | Enemy level | Enemy power | Boss level | Boss power |
+  |---|---|---|---|---|
+  | Easy (round 56's Normal) | 80% to 90% | 75% to 100% | 100% | 100% |
+  | Standard, the default (round 56's Expert) | 90% to 100% | 90% to 115% | 105% | 115% |
+  | Hard | 100% to 110% | 105% to 130% | 110% | 130% |
+
+  The Options row is now a slider from 1 to 3 ("AP: Scaling (1 Easy, 2 Standard, 3 Hard)"). A choice row's labels come from a radio button table, and all eight in the game are in use, so a choice row could not have our names without making a new table at run time.
 
 **Round 31 & 32 findings:**
 - The simple exponential growth rate produced excessive attack at low levels. Real enemies follow `log(stat) = a + b log(level) + c level` (r² 0.88 for attack, 0.70 for HP). Using relative level ratios eliminates constant `a`.

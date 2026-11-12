@@ -50,7 +50,7 @@
 -- follows the save slots the linked game is saved to. While any other save is loaded, the mod
 -- grants nothing, reports nothing and leaves the chests vanilla.
 
-local VERSION = "0.51.1"
+local VERSION = "0.52.0"
 local PROTOCOL = 2        -- the bridge protocol; the apworld's MOD_PROTOCOL
 
 local MOD_DIR = (debug.getinfo(1, "S").source:gsub("^@", ""):gsub("\\", "/"):match("^(.*/)Scripts/[^/]+$"))
@@ -1768,7 +1768,8 @@ local scaleChecks = 0
 local SETTINGS_FILE = MOD_DIR .. "settings.txt"
 local SETTING_DEFAULTS = { exp = 1, gil = 1, mrp = 1, encounters = true, encounterrate = 1, scaling = true, strength = 1 }
 local SETTING_RANGES = { exp = { 0, 10 }, gil = { 0, 10 }, mrp = { 0, 10 }, encounterrate = { 0.1, 5 }, strength = { 0, 2 } }
-local STRENGTH_NAMES = { [0] = "casual", [1] = "normal", [2] = "expert" }
+-- Round 63: our own names, apart from the game's Casual, Normal and Expert difficulty.
+local STRENGTH_NAMES = { [0] = "easy", [1] = "standard", [2] = "hard" }
 local settingsSet = {}   -- what the player has set
 local function setting(key)
     if settingsSet[key] ~= nil then return settingsSet[key] end
@@ -1962,7 +1963,7 @@ seedExtrasTick = function()
 end
 
 -- ffrap_set: shows the settings. ffrap_set <exp|gil|mrp|encounterrate> <number>, ffrap_set
--- <encounters|scaling> <on|off>, ffrap_set strength <casual|normal|expert>, ffrap_set reset: all
+-- <encounters|scaling> <on|off>, ffrap_set strength <easy|standard|hard>, ffrap_set reset: all
 -- back to the defaults.
 command("ffrap_set", function(p)
     local key, value = tostring(p[1] or ""):lower(), tostring(p[2] or ""):lower()
@@ -1977,7 +1978,7 @@ command("ffrap_set", function(p)
     elseif key ~= "" then
         local default = SETTING_DEFAULTS[key]
         if default == nil then
-            notify("Usage: ffrap_set [exp|gil|mrp|encounterrate <number>] [encounters|scaling <on|off>] [strength casual|normal|expert] [reset]")
+            notify("Usage: ffrap_set [exp|gil|mrp|encounterrate <number>] [encounters|scaling <on|off>] [strength easy|standard|hard] [reset]")
             return
         end
         if type(default) == "boolean" then
@@ -2027,13 +2028,16 @@ end)
 -- bosses were too easy all along. So enemies ramp from 75% power at 80% of the party's level
 -- (party level 5) to 100% power at 90% (party level 25), and bosses stay at 100% power and the
 -- party's own level.
--- Round 56: the strength row picks one of three. Normal is the round 49 curve. Expert players
--- asked for a hard run (the user's Discord): the game's Expert multipliers (enemy HP x1.6, damage
--- taken x1.4) apply in battle on top of these, so the two stack.
+-- Round 56: the strength row picks one of three. Expert players asked for a hard run (the user's
+-- Discord): the game's Expert multipliers (enemy HP x1.6, damage taken x1.4) apply in battle on
+-- top of these, so the two stack.
+-- Round 63: the user found all of it too easy. Each step moved up one: easy is the old normal
+-- (the round 49 curve), standard the old expert, and hard one more step of the same size. An
+-- easier game is the game's Casual difficulty with easy scaling.
 local SEED_SCALES = {
-    [0] = { at = { 75, 85 }, power = { 65, 85 }, bossAt = 95, bossPower = 85 },
-    [1] = { at = { 80, 90 }, power = { 75, 100 }, bossAt = 100, bossPower = 100 },
-    [2] = { at = { 90, 100 }, power = { 90, 115 }, bossAt = 105, bossPower = 115 },
+    [0] = { at = { 80, 90 }, power = { 75, 100 }, bossAt = 100, bossPower = 100 },
+    [1] = { at = { 90, 100 }, power = { 90, 115 }, bossAt = 105, bossPower = 115 },
+    [2] = { at = { 100, 110 }, power = { 105, 130 }, bossAt = 110, bossPower = 130 },
 }
 local SEED_RAMP = { range = 2, rampFrom = 5, rampTo = 25 }
 

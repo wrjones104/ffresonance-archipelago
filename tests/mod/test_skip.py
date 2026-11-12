@@ -556,15 +556,15 @@ assert lua(tag("FFRAP_Exp") + ".Value") == 4 and lua(tag("FFRAP_Exp") + ".Type")
 assert lua(tag("FFRAP_Gil") + ".Value") == 7, "a value the player set is kept"
 assert lua(tag("FFRAP_Encounters") + ".Value") == 1 and lua(tag("FFRAP_Encounters") + ".Type") == 2, "off is index 1"
 assert lua(tag("FFRAP_EncounterHalves") + ".Value") == 6 and lua(tag("FFRAP_Scaling") + ".Value") == 0, "held to the slider"
-assert lua(tag("FFRAP_ScalingStrength") + ".Value") == 2 and lua(tag("FFRAP_ScalingStrength") + ".Type") == 2, "a choice is its index"
+assert lua(tag("FFRAP_ScalingLevel") + ".Value") == 3 and lua(tag("FFRAP_ScalingLevel") + ".Type") == 1, "strength 2 (hard) is slider 3"
 L.execute("FindFirstOf = prevFFOseed; G.ForgetObjects()")
 assert lua("optRows.FFRAP_Exp.EntryTag.TagName:ToString()") == "Delegate.UI.System.Option.Root.GameSetting.FFRAP.FFRAP_Exp"
 assert lua("optRows.FFRAP_Exp.Type") == 2 and lua("optRows.FFRAP_Exp.SliderInfo.MaxValue") == 10
 assert lua("optRows.FFRAP_EncounterHalves.SliderInfo.MaxValue") == 6 and lua("optRows.FFRAP_Scaling.Type") == 1
 assert lua("optRows.FFRAP_Exp.DisplayText:ToString()") == "AP: EXP rate"
 assert lua("optRows.b.EntryTag.TagName:ToString()").endswith("GamePad.Sensitivity"), "the game's own row is left alone"
-assert lua("optRows.FFRAP_ScalingStrength.DefaultRadioButtonIndex") == 1 and lua("optRows.c.EntryTag.TagName:ToString()").endswith(".Difficulty"), \
-    "a copy of the Difficulty row, with the game's own left alone"
+assert lua("optRows.FFRAP_ScalingLevel.SliderInfo.MinValue") == 1 and lua("optRows.FFRAP_ScalingLevel.SliderInfo.MaxValue") == 3
+assert lua("optRows.FFRAP_ScalingLevel.SliderInfo.DefaultValue") == 2, "standard by default"
 ok, detail, added = L.execute("return G.AddOptionRows(say)")
 assert "10 rows before" in detail and added == 0, "a second run adds nothing"
 L.execute("""
@@ -577,16 +577,18 @@ optSave = { IsValid = function() return true end, HasAnyInternalFlags = function
     fn(entry("Delegate.UI.System.Option.Root.GameSetting.FFRAP.FFRAP_EncounterRate", 4))
     fn(entry("Delegate.UI.System.Option.Root.GameSetting.FFRAP.FFRAP_Scaling", 0))
     fn(entry("Delegate.UI.System.Option.Root.GameSetting.FFRAP.FFRAP_ScalingStrength", 2))
+    fn(entry("Delegate.UI.System.Option.Root.GameSetting.FFRAP.FFRAP_ScalingLevel", 1))
     fn(entry("Delegate.UI.System.Option.Root.GameSetting.EncountSensor", 1)) end } }
 local prevFFO = FindFirstOf
 function FindFirstOf(c) if c == "CPP_MuchaOptionSaveData" then return optSave end return prevFFO(c) end""")
 values = L.execute("return G.ReadOptionValues()")
-# Round 60: the encounter slider counts in halves, and the old row's saved value is not read
-assert dict(values) == {"exp": 3, "encounters": False, "encounterrate": 2.5, "scaling": True, "strength": 2}, dict(values)
+# Round 60: the encounter slider counts in halves, and the old row's saved value is not read.
+# Round 63: the same for the old strength row; slider 1 is strength 0 (easy)
+assert dict(values) == {"exp": 3, "encounters": False, "encounterrate": 2.5, "scaling": True, "strength": 0}, dict(values)
 # Round 57: the rows are put back when the game's table has lost them, and left alone when there
 added = L.execute("return (G.EnsureOptionRows({}))")
 assert added == 0, "the rows are there"
-for name in ("FFRAP_Exp", "FFRAP_Gil", "FFRAP_Mrp", "FFRAP_Encounters", "FFRAP_EncounterHalves", "FFRAP_Scaling", "FFRAP_ScalingStrength"):
+for name in ("FFRAP_Exp", "FFRAP_Gil", "FFRAP_Mrp", "FFRAP_Encounters", "FFRAP_EncounterHalves", "FFRAP_Scaling", "FFRAP_ScalingLevel"):
     L.execute('optRows["%s"] = nil' % name)
 added = L.execute("return (G.EnsureOptionRows({}))")
 assert added == 7 and lua("optRows.FFRAP_Exp.DisplayText:ToString()") == "AP: EXP rate", added

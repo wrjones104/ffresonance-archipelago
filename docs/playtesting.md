@@ -528,16 +528,19 @@ World-map shinies verified as locations. Multiple crashes observed across differ
 - **Two items came out of a battle at x 0:** Ruby Fragment (20030) and Hoodwink Garb (11024) were in the bag, each at x 0. The user thinks they came from another player during a battle. The log was lost to a restart. The mod gave items whenever a save was loaded, battles included. The likely cause: the battle keeps its own copy of the bag and writes it back as it ends, so the count went back to 0 and only the entry stayed.
 - The rest of the round 62 plan was not tried yet. It is in the round 63 plan.
 
-**Changed after round 62 (mod 0.51.0 and 0.51.1, world unchanged):**
+**Changed after round 62 (mod 0.51.0 to 0.52.0, world unchanged):**
+- 0.52.0: the user found scaling too easy all round. Each strength moved up one step, and a harder one was added: Easy (the old Normal), Standard (the old Expert, now the default) and Hard (a step past Expert). The Options row is now "AP: Scaling (1 Easy, 2 Standard, 3 Hard)", a slider, as every radio button table in the game is in use. `ffrap_set strength easy|standard|hard`. Numbers in docs/open_world.md, section 5.
 - 0.51.1: received items go in only while the field is on screen. In a battle, a scene or a menu they wait, and the status says `waiting: not on the field`.
 - A unit in a boss location's battle group (`G.BOSSES`) is scaled as a boss, whatever its category. That is the boss band at 100% power. This moves the cave masters to the boss band too.
 - While scaling is on, a boss unit with 0 EXP gets a story boss's EXP for its level. Mom Bomb (level 14) and Liquid Thunder (level 13) both ship with about 1350, so The Hunger gets about 500 at level 6.
 - The three story boss fights (Belmodar, The Hunger, Mom Bomb) also need flag 1441. The mod turns it on after the field has been up for about 2 seconds on a story boss map, and off as soon as the field goes (a battle, a scene, a menu). So the party coming back from the fight cannot set it off again before the win row runs.
 - Scaling "off" now puts boss rows back too. Before, the seed's own "off" left them scaled.
 
-## Round 63 test plan (mod 0.51.1, world 0.19.0)
+## Round 63 test plan (mod 0.52.0, world 0.19.0)
 
-**Install:** copy `FFRArchipelago/Scripts`. The apworld has not changed, so the round 62 seed still works.
+**Install:** copy `FFRArchipelago/Scripts`. The apworld has not changed, so the round 62 seed still works. The user starts that seed's save again.
+
+**0. The scaling row.** Options, Gameplay: **is there "AP: Scaling (1 Easy, 2 Standard, 3 Hard)", a slider at 2?** A choice set on the old row is not carried over. The log's `scale:` line says `strength standard`. Move it to 3 and back: each move rescales at once (`strength hard`). **Does Standard feel right, and Hard harder?**
 
 **1. The Hunger again (map 3040).** Load a save from before the win. The first `scale:` line now ends with `N units in boss groups`. Walk into the door.
 - **Is the fight fair now?** It should be about the party's level, with more HP.
