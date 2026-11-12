@@ -130,7 +130,7 @@ python tools/gen_from_dump.py --check
 | `gimmicks.tsv` | Blockers, no-entry zones, doors, event triggers, save points and airship landing points, with their conditions |
 | `shops.tsv` | Every shop's stock, one row per item |
 
-At run time the mod writes these files into its own folder: `ap_out.txt`, `ap_state.txt`, `ap_status.txt`, `ffrap_dump.txt`, `chests.tsv` and `seen.tsv`. The fake server writes `ap_in.txt`.
+At run time the mod writes these files into its own folder: `ap_out.txt`, `ap_state.txt`, `ap_status.txt`, `ffrap_dump.txt`, `chests.tsv`, `seen.tsv` and (from 0.53.0, by `ffrap_gate mark`) `crossings.txt`. The fake server writes `ap_in.txt`.
 
 ## Console commands
 
@@ -163,7 +163,7 @@ At run time the mod writes these files into its own folder: `ap_out.txt`, `ap_st
 | `ffrap_bossfight <battle group> [quiet]\|sword\|off` | Test (round 49, IDEAS.md idea 25): the closed chests near you become traps for that battle group, the Chamber of Arms sword pedestal starts it too, and a win is logged. The win plays the sword fight's victory scene, or nothing with `quiet`. `sword` gives the Ancient Greatsword the pedestal needs. `off` undoes it. `watch [class ...]` hooks the talk event and encounter classes and logs their calls; `watch off` stops the logging. |
 | `ffrap_set [exp\|gil\|mrp\|encounterrate <number>] [encounters\|scaling <on\|off>] [strength casual\|normal\|expert] [reset]` | The player's settings (round 50): EXP, gil and MRP rates, random encounters and their rate, the seed's enemy scaling and its strength (round 56; each one step harder since round 63). Kept in `settings.txt`. They apply to any save (round 56 kept them to the seed's save; round 57 undid that). Our mod owns these: turn FFRS_QoL's multipliers and encounter settings off, or the two undo each other. |
 | `ffrap_menu add\|dump` | Our settings as rows at the end of the Options screen's Gameplay tab, put back by themselves whenever the game's table has lost them, at the title too, from mod 0.43.0 (`add` does it by hand). A value set there wins over `ffrap_set`. `dump` logs the option save's entries and the screen's pending changes. |
-| `ffrap_gate <subcommand>` | Experimental gate and custom key-item probe (IDEAS.md, idea 16): `spawn [combo\|box\|rock\|pot\|gate\|world] [dist] [scale]`, `item [id] [count]`, `require <item\|unit\|flag\|off> [id] [count]`, `lock`, `unlock`, `clear`, `status`. |
+| `ffrap_gate <subcommand>` | Experimental gate and custom key-item probe (IDEAS.md, idea 16): `spawn [combo\|box\|rock\|pot\|gate\|world] [dist] [scale]`, `item [id] [count]`, `require <item\|unit\|flag\|off> [id] [count]`, `lock`, `unlock`, `clear`, `status`. From mod 0.53.0, the walking crossings between continents: `mark <continent> <continent> [scale] [dist]` puts a blocker `dist` (default 150) ahead of you at `scale` (default 3) and saves it in `crossings.txt`. It holds while either continent is locked. `unmark` removes the nearest one within 1500, and `crossings` lists them all in the log. |
 
 ## Bridge format
 
@@ -211,7 +211,7 @@ kind  map  uid  row  item  count  money  visible-condition
 
 ## Playtesting and test plans
 
-In-game playtesting results (Rounds 1-66) and the current test plan (Round 66) are documented in [docs/playtesting.md](docs/playtesting.md).
+In-game playtesting results (Rounds 1-66) and the current test plan (Round 67) are documented in [docs/playtesting.md](docs/playtesting.md).
 Automated regression tests are documented in [tests/README.md](tests/README.md).
 
 ## Project status and open questions

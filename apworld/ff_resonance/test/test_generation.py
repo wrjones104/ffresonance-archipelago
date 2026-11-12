@@ -1,6 +1,6 @@
 from BaseClasses import LocationProgressType
 
-from ..data import BOSSES, CHESTS, CONTINENT_UNLOCKS, CRYSTALS, FRAGMENT_ITEM, ITEMS, NO_BOX, TABLET_SHINIES, PROGRESSION, SHINIES, SHUFFLE_ID_LIMIT, UNIT_ITEM_BASE
+from ..data import BOSSES, CHESTS, CHOCOBO_ITEM, CONTINENT_UNLOCKS, CRYSTALS, FRAGMENT_ITEM, ITEMS, NO_BOX, TABLET_SHINIES, PROGRESSION, SHINIES, SHUFFLE_ID_LIMIT, UNIT_ITEM_BASE
 from ..items import CLASSIFICATIONS, FILLER_CATEGORIES, FRAGMENT_NAME, item_name_groups
 from ..locations import GOAL_EVENT, LOCATION_KEY_TO_ID, SEPHIROTH, VICTORY
 from ..options import Goal, TabletShardsRequired
@@ -78,6 +78,25 @@ class TestDefault(FFResonanceTestBase):
         self.assertEqual(slot_data["starting_party"], [1001, 1002])
         self.assertEqual(slot_data["starting_continent"], "Grandshelt")
         self.assertIs(slot_data["open_world"], True)
+        self.assertEqual(slot_data["start_with_chocobo"], 1)
+
+    def test_the_chocobo_is_not_in_the_pool(self) -> None:
+        self.assertNotIn(CHOCOBO_ITEM, [i.code for i in self.multiworld.itempool if i.player == self.player])
+
+
+class TestChocoboItem(FFResonanceTestBase):
+    options = {"start_with_chocobo": False}
+
+    def test_the_chocobo_takes_a_filler_place(self) -> None:
+        pool = [i for i in self.multiworld.itempool if i.player == self.player]
+        self.assertEqual(len(pool), len(CHESTS))
+        chocobos = [i for i in pool if i.code == CHOCOBO_ITEM]
+        self.assertEqual(len(chocobos), 1)
+        self.assertTrue(chocobos[0].advancement)
+        self.assertEqual(ITEMS[CHOCOBO_ITEM]["game_id"], 30002, "the game's Choboco Saddle")
+
+    def test_slot_data(self) -> None:
+        self.assertEqual(self.world.fill_slot_data()["start_with_chocobo"], 0)
 
 
 class TestShinies(FFResonanceTestBase):

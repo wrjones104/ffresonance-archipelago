@@ -143,6 +143,8 @@ The chapter-by-chapter progression (party, vehicles, gates, Visions, Espers) is 
 - 41 blocking bases, 12 of them magic pots.
 - To find out: whether the mod can change a blocker's condition (or its flag) at run time. If it can, an item can open one of the game's own gates, and we may not need to add new blockers.
 
+**Round 67 (mod 0.53.0): the first real use.** No door or cave joins two continents. The routes without the airship are the ferry and walking on the world map (`open_world.md`, section 4, "Routes between continents"). The ferry is gated by rewriting its menu rows. Walking crossings are this idea's blockers, placed from `crossings.txt`, which the user fills in game with `ffrap_gate mark`. Next: move the marked crossings into the mod, then the start without the airship (an on-foot arrival on the starting continent, and the airship as an item).
+
 ## 20. Trap items, banked until the next battle
 
 **Idea:** trap items that hit the party: "Bad Breath" (random status ailments), and stat downs such as Deprotect (defence down) and Deshell (magic defence down). Status ailments end with the battle. So a trap that arrives on a map or in a menu is banked by the mod and fires at the start of the next battle.

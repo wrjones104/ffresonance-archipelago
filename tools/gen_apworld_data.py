@@ -52,6 +52,9 @@ CONSUMABLE_LIMIT = 1000
 BOSS_LOCATION_BASE = 4_000_000_000       # + the battle group
 FRAGMENT_ITEM = 600_000_001
 FRAGMENT_NAME = "Crystal Fragment"
+# Round 67: the Chocobo, the game's Choboco Saddle (an artifact, 30002), which the game checks.
+CHOCOBO_GAME_ID = 30002
+CHOCOBO_ITEM = CHOCOBO_GAME_ID * 1000 + 1
 
 CHEST_LOCATION_BASE = 1_000_000_000
 SHINY_LOCATION_BASE = 2_000_000_000
@@ -354,6 +357,7 @@ def main() -> None:
                        "fragment": r["kind"] == "story"})
     bosses.sort(key=lambda e: e["id"])
     items[FRAGMENT_ITEM] = {"name": FRAGMENT_NAME, "kind": "token", "game_id": 0, "count": 1, "category": "fragment"}
+    items[CHOCOBO_ITEM] = {"name": "Chocobo", "kind": "item", "game_id": CHOCOBO_GAME_ID, "count": 1, "category": "vehicle"}
     # A continent's unlock turns on its event flag; Ardra has no locations, so it has no unlock.
     # One name can cover two maps (the Earth Shrine), so a repeat gets its map id.
     counts = collections.Counter(e["name"] for e in tablet_shinies)
@@ -422,6 +426,7 @@ def main() -> None:
         f.write("# Boss fights (data/bosses.tsv); fragment marks the ones that hold a locked Crystal Fragment\n")
         f.write("BOSSES = " + pprint.pformat(bosses, width=110, sort_dicts=True) + "\n\n")
         f.write(f"FRAGMENT_ITEM = {FRAGMENT_ITEM}\n\n")
+        f.write(f"CHOCOBO_ITEM = {CHOCOBO_ITEM}\n\n")
         f.write("# Chests and shinies that keep vanilla key items or valuables: not locations\n")
         f.write("KEPT_VANILLA = " + pprint.pformat(sorted(e["key"] for e in kept_chests + kept_shinies), width=110) + "\n\n")
         f.write("# Chest table rows with no box placed on any map: not locations\n")

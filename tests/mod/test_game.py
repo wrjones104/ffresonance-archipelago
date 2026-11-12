@@ -1433,6 +1433,33 @@ assert len(placed) == 9 and L.eval("spawnCount") == before + BOXES - 3, (len(pla
 placed, removed, line = sync()
 assert len(placed) == 0 and L.eval("spawnCount") == before + BOXES - 3, "the sync adopts the hook's boxes"
 assert line and "18 boxes" in line, line
+# Round 67: a walking crossing holds while either side is locked and goes once both are open.
+# A map load forgets it, and the next sync places it again.
+L.execute("""crossingList = { { a = 'grandshelt', b = 'lanzelt', x = 14000, y = 17600, z = 120, yaw = 90, scale = 3 },
+                              { a = 'pharm', b = 'mysidia', x = -9000, y = -9000, z = 50, yaw = 0, scale = 2 } }""")
+GRANDSHELT, LANZELT = 1420, 1421
+def crossings():
+    return L.execute("return G.CrossingSync(crossingList)")
+before = L.eval("spawnCount")
+assert crossings() == (2, 0) and L.eval("spawnCount") == before + 2, "Pharm is open, Mysidia is not"
+last = L.eval("spawnedActors[#spawnedActors - 1]")
+assert (last.x, last.y, last.yaw, last.scale, last.cls) == (14000, 17600, 90, 3, "BP_MapGimmick_BlockingBase_Wld01Gra_01_C")
+assert crossings() == (0, 0), "placed once"
+L.execute(f"continentFlags[{GRANDSHELT}] = true")
+assert crossings() == (0, 0), "Lanzelt is still locked"
+near, locked, _ = L.execute("fakePawn.x, fakePawn.y = 14100, 17500; return G.CrossingNear(crossingList, 900)")
+assert near.a == "grandshelt" and list(locked.values()) == ["lanzelt"], list(locked.values())
+L.execute(f"continentFlags[{LANZELT}] = true")
+assert crossings() == (0, 1) and last.dead, "both open: the blocker goes"
+assert L.execute("return G.CrossingNear(crossingList, 900)") is None
+L.execute("""for _, list in ipairs({ spawnedActors, nolandActors }) do
+  for _, a in ipairs(list) do if a.nm and a.nm:find("lock", 1, true) or a.cls then a.dead = true end end
+end
+G.ContinentMapLoaded(hookWorld, false)""")
+assert crossings() == (1, 0), "a map load forgets them: the closed one is placed again"
+L.execute(f"continentFlags[{GRANDSHELT}], continentFlags[{LANZELT}] = nil, nil")
+L.execute("fakePawn.x, fakePawn.y = 100.0, 200.0; G.CrossingClear()")
+assert L.eval("spawnedActors[#spawnedActors].dead"), "CrossingClear removes them"
 # another map, or the switch off: the old boxes are forgotten and nothing is placed
 L.execute("hookWorld.GetFName = function() return fname('Town_02Lan') end")
 before = L.eval("spawnCount")
@@ -1639,3 +1666,58 @@ assert L.eval("G.ApplyPlayerEncounter(true)") == 1 and L.eval("walker.m_EncountT
 L.execute("G.ApplyEncounterTables(true, 1); G.ApplyRates(1, 1, 1)")
 assert L.eval("mapRow.encountMaxMovementLength") == 1600 and L.eval("diffRows.Expert.MRPointRate") == 1.5
 print("settings: ok")
+
+# Round 67: the ferry. Each port's menu (from story 3210) offers the other three ports; a port on a
+# locked continent runs the menu's cancel row instead of the trip. The rows are written in every
+# table of the talk family, and only when they differ.
+L.execute(r"""
+local function menu(ports, cancel)
+  local branches = {}
+  for i, p in ipairs(ports) do branches[i] = { EventList = { { EventId = FName(string.format("Gim_EV_ShipMovement_%02d_Cushion", p)) } } } end
+  branches[#branches + 1] = { EventList = { { EventId = FName(cancel) } } }
+  return { ChoicesBranchEventList = branches }
+end
+local function talkTable(name, parents)
+  local t = { rows = {
+      Gim_EV_ShipMovement_01_03_Choice = menu({ 2, 3, 4 }, "Gim_EV_ShipMovement_Cancel_Gra"),
+      Gim_EV_ShipMovement_02_03_Choice = menu({ 1, 3, 4 }, "Gim_EV_ShipMovement_Cancel"),
+      Gim_EV_ShipMovement_03_02_Choice = menu({ 1, 2, 4 }, "Gim_EV_ShipMovement_Cancel"),
+      Gim_EV_ShipMovement_04_01_Choice = menu({ 1, 2, 3 }, "Gim_EV_ShipMovement_Cancel") },
+    ParentTables = parents or {} }
+  function t:IsValid() return true end
+  function t:HasAnyInternalFlags() return false end
+  function t:HasAnyFlags() return false end
+  function t:GetFullName() return "DataTable " .. name end
+  function t:FindRow(n) return self.rows[n] end
+  return t
+end
+gimTalk = talkTable("DT_TalkEventData_GimEV_Prod")
+cdtTalk = talkTable("CDT_TalkEventData_Prod", { gimTalk })
+local prevSFOf = StaticFindObject
+function StaticFindObject(p)
+  if p == "/Game/Datatable/Event/TalkEvent/CDT_TalkEventData_Prod.CDT_TalkEventData_Prod" then return cdtTalk end
+  return prevSFOf(p)
+end
+ferryFlags = { [1421] = true, [1424] = true }   -- Lanzelt and Olderion open
+ferrySavedGetFlag = G.GetFlag
+G.GetFlag = function(i) return ferryFlags[i] == true end
+function ferryChoice(t, row, i) return t.rows[row].ChoicesBranchEventList[i].EventList[1].EventId:ToString() end
+""")
+# Dirnado and Zoldaad are each in the other three ports' menus, and there are two tables
+CLOSED_CHOICES = 2 * 3 * 2
+written = L.eval("G.FerrySync()")
+assert written == CLOSED_CHOICES, written
+for table in ("cdtTalk", "gimTalk"):
+    choice = lambda row, i: L.eval(f"ferryChoice({table}, '{row}', {i})")
+    assert choice("Gim_EV_ShipMovement_01_03_Choice", 1) == "Gim_EV_ShipMovement_Cancel_Gra", "Grandport to Dirnado"
+    assert choice("Gim_EV_ShipMovement_01_03_Choice", 2) == "Gim_EV_ShipMovement_03_Cushion", "Grandport to Olderion"
+    assert choice("Gim_EV_ShipMovement_01_03_Choice", 4) == "Gim_EV_ShipMovement_Cancel_Gra", "no stays no"
+    assert choice("Gim_EV_ShipMovement_03_02_Choice", 1) == "Gim_EV_ShipMovement_01_Cushion", "Olderion to Grandport"
+    assert choice("Gim_EV_ShipMovement_03_02_Choice", 3) == "Gim_EV_ShipMovement_Cancel", "Olderion to Zoldaad"
+assert L.eval("G.FerrySync()") == 0, "nothing to write the second time"
+L.execute("ferryFlags[1423], ferryFlags[1425] = true, true")
+assert L.eval("G.FerrySync()") == CLOSED_CHOICES
+assert L.eval("ferryChoice(gimTalk, 'Gim_EV_ShipMovement_02_03_Choice', 3)") == "Gim_EV_ShipMovement_04_Cushion"
+assert L.eval("ferryChoice(cdtTalk, 'Gim_EV_ShipMovement_01_03_Choice', 1)") == "Gim_EV_ShipMovement_02_Cushion"
+L.execute("G.GetFlag = ferrySavedGetFlag")
+print("ferry: ok")

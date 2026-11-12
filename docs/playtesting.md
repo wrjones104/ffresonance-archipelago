@@ -592,16 +592,35 @@ World-map shinies verified as locations. Multiple crashes observed across differ
 - The user reports that everything worked as expected: the shards sent on pick-up, and nothing was sent early. No log was sent, so the `GetUniqueId` answer and the `/resync` count are not recorded.
 - The chest and shiny work of rounds 63 to 66 is closed. Next: the story bosses, map blockers at the crossings between continents, and options to start without the airship or the Chocobo.
 
-## Round 66 test plan (mod 0.52.5, world 0.19.1)
+**Changed after round 66 (mod 0.53.0, world 0.20.0):**
+- **Routes between continents, off-line.** No door or cave joins two continents. The ways across without the airship are the ferry and walking on the world map (`open_world.md`, section 4).
+- **The ferry is gated.** Grandport Harbor (Lanzelt), Dirnado, Olderion and Zoldaad each offer the other three ports. Choosing a port on a locked continent now ends the talk, as "no" does. Open ports work as before.
+- **Walking crossings, marked in game.** `ffrap_gate mark <a> <b> [scale] [dist]` puts a world-map blocker ahead of you between continents `a` and `b`, and saves it in `crossings.txt`. It holds while either continent is locked, and comes back after each map change. Near a closed one, the feed says which unlock is needed. `ffrap_gate unmark` removes the nearest, `ffrap_gate crossings` lists them.
+- **`start_with_chocobo`** (on by default). Off: the save gets no Chocobo at the start, and "Chocobo" (the game's Choboco Saddle) is an item in the pool. No logic needs it yet.
 
-**Install:** copy `FFRArchipelago/Scripts`. The apworld is unchanged, so the round 65 seed carries on.
+## Round 67 test plan (mod 0.53.0, world 0.20.0)
 
-**1. GetUniqueId.** Load the save and walk into any map with a chest or shiny. **What does the line with `(first of the session)` say?** If it says a number, visit the Town of Felicitas (2040) and the Research Center Ruins (3220) before you take their shards, and look for `GetUniqueId says` lines.
+**Install:** copy `FFRArchipelago/Scripts`. Copy `dist/ff_resonance.apworld` into Archipelago's `custom_worlds`. Parts 1 to 3 work on the round 66 seed. Part 4 needs a new seed.
 
-**2. Shards from the save.** On the new seed, pick up the Felicitas shards and the Research Center Ruins shards. **Does each send as you pick it up?** That is now the save's rows, not `IsOpenTreasureBox`.
+**Locks for testing.** `ffrap_lock close <continent>` locks a continent in the loaded save, and `ffrap_lock open <continent>` opens it. Archipelago does not send an unlock again, so **open again every continent you close**, before you play on.
 
-**3. Sync.** After a few dungeons, run `/resync` in the client. **How many new checks does the log's `sync from save` line say?** It should be 0: everything opened was sent already.
+**1. The ferry.** Go to Grandport Harbor. Close one port's continent: `ffrap_lock close dirnado`. Talk to the ferry.
+- **Does choosing Dirnado end the talk, with no trip?**
+- **Does an open port (Olderion, Zoldaad) still sail?**
+- Then `ffrap_lock open dirnado`, talk again. **Does Dirnado sail now?**
 
-**4. Early sends.** Go into dungeons you have not visited. Send any log lines with `the save says open`. They are expected now and then (IsOpenTreasureBox answering from another map), and nothing should be sent for them.
+**2. Grandshelt to Lanzelt on foot.** Stand in Grandshelt and lock the other side: `ffrap_lock close lanzelt`. Walk to where Grandshelt meets Lanzelt. Face across, a few steps short of the narrowest point, and run `ffrap_gate mark grandshelt lanzelt 3`. A blocker appears about 150 units ahead.
+- **Does it close the whole way across?** If not, `ffrap_gate unmark`, then mark again with a larger scale (`... 5`), or a shorter distance as the last number (`... 5 80`). A screenshot helps.
+- **Can you get past it on foot, or on the Chocobo?** Try the edges and the water's edge.
+- Walk off and back. **Does the feed say "The way is closed. Archipelago needs Lanzelt Unlock"?**
+- Fly away, land again, enter a town and come out. **Is the blocker still there?**
+- `ffrap_lock open lanzelt`. **Is the blocker gone within about a second?**
 
-Send the `[FFRAP]` lines of the log.
+**3. Lanzelt to Kolobos, and any other crossing.** The same as part 2, with `mark lanzelt kolobos`. Then walk along the other continents' borders, as far as you like, and mark every place you can cross on foot or on the Chocobo. The continent names are `grandshelt`, `lanzelt`, `kolobos`, `dirnado`, `olderion`, `zoldaad`, `mysidia`, `gronoa`, `pharm` and `ardra`. **Send `crossings.txt`** from the mod folder: those lines go into the mod in round 68.
+
+**4. The Chocobo as an item.** Generate a seed with `start_with_chocobo: false` and start a new game.
+- **Is there no Chocobo at the start?** (No Choboco Saddle in the item lists, and no Chocobo to call.)
+- When "Chocobo" arrives, **can you ride it?**
+- **Which places can you reach only on the Chocobo?** Logic will need them.
+
+Send the `[FFRAP]` lines of the log and `crossings.txt`.

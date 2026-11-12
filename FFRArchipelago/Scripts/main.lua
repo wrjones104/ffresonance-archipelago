@@ -35,7 +35,7 @@
 --   ffrap_sync                   report every known location the save says is looted
 --   ffrap_bind                   link the loaded save to the client's session (also /bind in the client)
 --   ffrap_reset                  set the loaded save's applied-item count to 0 (re-grants everything to it!)
---   ffrap_gate <subcommand>      experimental: spawn conditional blockers and custom key items
+--   ffrap_gate <subcommand>      blockers: test gates, and the walking crossings between continents (mark)
 --   ffrap_scale <level|low high|party n|off> [at %] [hp %] [attack %] [magic %] [power %] [boss] [follow]
 --                                probe: rewrite every enemy's level and stats
 --   ffrap_scale [show <id|name>] probe: the rescale in force, or one enemy's rows in every unit table
@@ -50,7 +50,7 @@
 -- follows the save slots the linked game is saved to. While any other save is loaded, the mod
 -- grants nothing, reports nothing and leaves the chests vanilla.
 
-local VERSION = "0.52.5"
+local VERSION = "0.53.0"
 local PROTOCOL = 2        -- the bridge protocol; the apworld's MOD_PROTOCOL
 
 local MOD_DIR = (debug.getinfo(1, "S").source:gsub("^@", ""):gsub("\\", "/"):match("^(.*/)Scripts/[^/]+$"))
@@ -354,7 +354,7 @@ local function newSession(key)
     state.syncPending = true
     state.slots, state.slotItems, state.bindPending, state.live = {}, {}, false, nil
     state.scouts = {}
-    seedCfg.finalboss = nil
+    seedCfg.finalboss, seedCfg.chocobo = nil, nil
     save.obj = nil     -- judge the loaded save again for this session
     saveState()
     local f = io.open(bridge.outPath, "w")
@@ -385,6 +385,8 @@ local function readInbox(initial)
             seedCfg.crystals = f[3] == "1"
         elseif f[1] == "cfg" and f[2] == "bosses" then
             seedCfg.bosses = f[3] == "1"
+        elseif f[1] == "cfg" and f[2] == "chocobo" then
+            seedCfg.chocobo = f[3] == "1"
         elseif f[1] == "cfg" and f[2] == "finalboss" then
             -- A client before world 0.17.0 sends no fragment counts: none are needed then.
             seedCfg.finalboss = { characters = tonumber(f[3]) or 0, needCharacters = tonumber(f[4]) or 0,
@@ -1203,11 +1205,69 @@ local seedExtrasTick -- the Chocobo and the chest icons, below
 local finalLockTick  -- the Crystal Tower's last climb, below
 local bossTest = { group = nil }   -- ffrap_bossfight, below: the group armed, and its tick
 
+-- Round 67: the walking crossings between continents (game.CrossingSync). The user marks each in
+-- game with `ffrap_gate mark`, which adds a line to crossings.txt:
+--   <continent a> <continent b> <x> <y> <z> <yaw> <scale>
+local CROSSINGS_PATH = MOD_DIR .. "crossings.txt"
+local crossings = {}
+local CROSSING_HINT_NEAR, CROSSING_HINT_AGAIN = 900, 1500
+local crossingHinted, crossingFailed = nil, nil
+
+local function readCrossings()
+    crossings = {}
+    local f = io.open(CROSSINGS_PATH, "r")
+    if not f then return end
+    for line in f:lines() do
+        local a, b, x, y, z, yaw, scale = line:match("^(%a+)%s+(%a+)%s+(%S+)%s+(%S+)%s+(%S+)%s+(%S+)%s+(%S+)")
+        if a and game.IsContinent(a) and game.IsContinent(b) and tonumber(scale) then
+            crossings[#crossings + 1] = { a = a, b = b, x = tonumber(x), y = tonumber(y), z = tonumber(z),
+                                          yaw = tonumber(yaw), scale = tonumber(scale) }
+        elseif line:match("%S") then
+            log("crossings.txt: line ignored: " .. line)
+        end
+    end
+    f:close()
+end
+
+local function writeCrossings()
+    local f = assert(io.open(CROSSINGS_PATH, "w"))
+    for _, c in ipairs(crossings) do
+        f:write(string.format("%s\t%s\t%.0f\t%.0f\t%.0f\t%.1f\t%.2f\n", c.a, c.b, c.x, c.y, c.z, c.yaw, c.scale))
+    end
+    f:close()
+end
+
+local function crossingsTick()
+    local placed, removed = game.CrossingSync(crossings)
+    if not placed then
+        if removed ~= "not on the world map" and removed ~= "settling" and removed ~= crossingFailed then
+            log("crossings: " .. tostring(removed))
+            crossingFailed = removed
+        end
+        return
+    end
+    crossingFailed = nil
+    if placed > 0 or removed > 0 then
+        log(string.format("crossings: %d placed, %d opened (%d marked)", placed, removed, #crossings))
+    end
+    local near, locked, d = game.CrossingNear(crossings, CROSSING_HINT_AGAIN)
+    if near and d < CROSSING_HINT_NEAR and crossingHinted ~= near then
+        crossingHinted = near
+        local names = {}
+        for _, side in ipairs(locked) do names[#names + 1] = side:sub(1, 1):upper() .. side:sub(2) .. " Unlock" end
+        notify("The way is closed. Archipelago needs " .. table.concat(names, " and "))
+    elseif not near then
+        crossingHinted = nil
+    end
+end
+
 -- Continent locks (game.ContinentSync): while the switch is on, the world map keeps its lock
 -- boxes in step with the save's flags. Round 40: the boxes go with each map change, so this puts
 -- them back. Only on the field: a battle is no time to spawn actors.
 local function locksTick()
     if not locksOn() or not game.OnField() then return end
+    local ferry = game.FerrySync()
+    if ferry > 0 then log("ferry: " .. ferry .. " port choices written") end
     local placed, removed, listed = game.ContinentSync()
     if not placed then
         -- `removed` holds why. Not being on the world map is the normal case.
@@ -1221,6 +1281,7 @@ local function locksTick()
     if #placed > 0 then log("locks: boxes placed for " .. table.concat(placed, ", ")) end
     if #removed > 0 then log("locks: opened " .. table.concat(removed, ", ")) end
     if listed then log("locks: " .. listed) end
+    crossingsTick()
 end
 
 local function tick()
@@ -1522,6 +1583,7 @@ end)
 --   ffrap_gate item [id] [count]
 --   ffrap_gate require <item|unit|flag|off> [id] [count]
 --   ffrap_gate lock | unlock | clear | status
+--   ffrap_gate mark <continent> <continent> [scale] [dist] | unmark | crossings   (round 67)
 command("ffrap_gate", function(p)
     local what = (p and p[1] and p[1]:lower()) or "status"
     local function traced(fn)
@@ -1577,6 +1639,56 @@ command("ffrap_gate", function(p)
         local n = traced(function() return game.ClearGate() end)
         gateNear = false
         notify("Gate cleared (" .. tostring(n) .. " actor(s) removed)")
+    elseif what == "mark" then
+        -- Round 67: a walking crossing, `dist` ahead of the player, facing back at them.
+        local a, b = p[2] and p[2]:lower(), p[3] and p[3]:lower()
+        if not (a and b and a ~= b and game.IsContinent(a) and game.IsContinent(b)) then
+            notify("Usage: ffrap_gate mark <continent> <continent> [scale] [dist]  (e.g. mark grandshelt lanzelt 3)")
+            return
+        end
+        if game.CurrentMap() ~= game.WORLD_MAP then
+            notify("Gate mark: only on the world map")
+            return
+        end
+        local pose, why = game.PlayerPose()
+        if not pose then
+            notify("Gate mark: " .. tostring(why))
+            return
+        end
+        local scale, dist = tonumber(p[4]) or 3, tonumber(p[5]) or 150
+        local c = { a = a, b = b, x = pose.x + pose.fx * dist, y = pose.y + pose.fy * dist, z = pose.z,
+                    yaw = (pose.yaw + 180.0) % 360.0, scale = scale }
+        crossings[#crossings + 1] = c
+        writeCrossings()
+        crossingHinted = c
+        log(string.format("gate mark %d: %s %s at (%.0f, %.0f, %.0f) yaw %.1f scale %.2f; player at (%.0f, %.0f, %.0f)",
+            #crossings, a, b, c.x, c.y, c.z, c.yaw, scale, pose.x, pose.y, pose.z))
+        notify(string.format("Crossing %d marked: %s-%s, scale %.1f. It shows while either side is locked.", #crossings, a, b, scale))
+    elseif what == "unmark" then
+        local pose = game.PlayerPose()
+        local at, d = nil, 1500
+        for i, c in ipairs(crossings) do
+            local dc = pose and math.sqrt((pose.x - c.x) ^ 2 + (pose.y - c.y) ^ 2) or math.huge
+            if dc < d then at, d = i, dc end
+        end
+        if not at then
+            notify("Gate unmark: no crossing within 1500")
+            return
+        end
+        local near = table.remove(crossings, at)
+        writeCrossings()
+        game.CrossingClear()
+        log(string.format("gate unmark: %s %s at (%.0f, %.0f), %.0f away; %d left", near.a, near.b, near.x, near.y, d, #crossings))
+        notify(string.format("Crossing %s-%s removed (%d left)", near.a, near.b, #crossings))
+    elseif what == "crossings" then
+        local pose = game.PlayerPose()
+        for i, c in ipairs(crossings) do
+            local d = pose and math.sqrt((pose.x - c.x) ^ 2 + (pose.y - c.y) ^ 2) or -1
+            log(string.format("crossing %d: %s %s at (%.0f, %.0f, %.0f) yaw %.1f scale %.2f, %.0f away, %s",
+                i, c.a, c.b, c.x, c.y, c.z, c.yaw, c.scale, d,
+                (game.ContinentOpen(c.a) and game.ContinentOpen(c.b)) and "open" or "closed"))
+        end
+        notify(#crossings .. " crossings marked (listed in the log)")
     else
         local pose, why = game.PlayerPose()
         if pose then
@@ -1934,6 +2046,8 @@ end
 -- Round 57: what every seed's open world save gets, the user's wish: the Chocobo (the Choboco
 -- Saddle, 30002, which the game checks: round 5) next to the free airship, once per save loaded.
 -- Round 58: and the Mobliz Shipyard's two stopped elevators, turned on at each visit.
+-- Round 67: `cfg chocobo 0` (world 0.20.0, start_with_chocobo off) makes the saddle an
+-- Archipelago item, which comes by the item path. A seed with no line is an older one: it gets it.
 local CHOCOBO_SADDLE = 30002
 
 -- Round 58: the final boss lock (Worlds Collide style, the user's choice). The client counts the
@@ -1983,7 +2097,7 @@ local storyBossFieldTicks = 0
 local STORY_BOSS_READY_TICKS = 2   -- seedExtrasTick runs every LOCKS_EVERY ticks: about 2 s
 seedExtrasTick = function()
     local seedSave = seedCfg.openworld and sessionSave() and (game.StoryCounter() or 0) >= game.OPEN_START.story
-    if seedSave and saddleSave ~= save.obj and game.OnField() then
+    if seedSave and seedCfg.chocobo ~= false and saddleSave ~= save.obj and game.OnField() then
         saddleSave = save.obj
         if (game.HeldCount(CHOCOBO_SADDLE) or 0) == 0 then
             local code, detail = game.GrantItem(CHOCOBO_SADDLE, 1)
@@ -2600,6 +2714,7 @@ end)
 bridge.init(MOD_DIR)
 loadState()
 loadSeen()
+readCrossings()
 for _, f in ipairs(bridge.readOut()) do
     if f[1] == "check" or f[1] == "story" then state.reported[f[1] .. "|" .. tostring(f[2])] = true end
 end

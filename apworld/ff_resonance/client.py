@@ -179,6 +179,8 @@ class FFResonanceContext(CommonContext):
         wanted.append(("cfg", "crystals", int(bool(slot_data.get("include_crystals")))))
         wanted.append(("cfg", "shards", int(bool(slot_data.get("include_tablet_shards")))))
         wanted.append(("cfg", "bosses", int(bool(slot_data.get("include_bosses")))))
+        # A seed from before world 0.20.0 has no such option: it gave the Chocobo at the start.
+        wanted.append(("cfg", "chocobo", int(bool(slot_data.get("start_with_chocobo", True)))))
         party = slot_data.get("starting_party") or []
         if party:
             wanted.append(("cfg", "party", ",".join(str(unit) for unit in party)))

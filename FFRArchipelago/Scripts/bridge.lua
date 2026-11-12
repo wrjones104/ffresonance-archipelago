@@ -15,6 +15,7 @@
 --     cfg crystals <0|1>                          sanctum crystals are locations (0.29.0)
 --     cfg shards <0|1>                            Tablet Shard shinies are locations (0.30.0)
 --     cfg bosses <0|1>                            boss fights are locations (0.48.0)
+--     cfg chocobo <0|1>                           1: the open world save gets the Chocobo; 0: it is an item (0.53.0)
 --     cfg finalboss <have> <need> ...             the tower lock: characters, visions, Crystal Fragments (0.44.0, 0.48.0)
 --     scout <base64>                              what a location holds: key, item, player, flags, own (0.11.0)
 --

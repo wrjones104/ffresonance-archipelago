@@ -199,6 +199,14 @@ class ShuffleKeyItems(DefaultOnToggle):
     display_name = "Shuffle Key Items"
 
 
+class StartWithChocobo(DefaultOnToggle):
+    """
+    Your open world save has the Chocobo from the start. With this off, the Chocobo is an item
+    you find.
+    """
+    display_name = "Start With Chocobo"
+
+
 @dataclass
 class FFResonanceOptions(PerGameCommonOptions):
     goal: Goal
@@ -212,6 +220,7 @@ class FFResonanceOptions(PerGameCommonOptions):
     starting_character_2: StartingCharacter2
     starting_character_3: StartingCharacter3
     starting_character_4: StartingCharacter4
+    start_with_chocobo: StartWithChocobo
     include_shinies: IncludeShinies
     include_crystals: IncludeCrystals
     include_tablet_shards: IncludeTabletShards
@@ -226,7 +235,7 @@ class FFResonanceOptions(PerGameCommonOptions):
 option_groups = [
     OptionGroup("Goal", [Goal, TabletShardsRequired, FinalBossCharacters, FinalBossVisions, FinalBossFragments]),
     OptionGroup("Start", [StartingContinent, StartingRoster, StartingCharacter1, StartingCharacter2,
-                          StartingCharacter3, StartingCharacter4]),
+                          StartingCharacter3, StartingCharacter4, StartWithChocobo]),
     OptionGroup("Locations", [PriorityBosses, ExcludedRegions]),
     OptionGroup("Items", [ShufflePartyMembers, ShuffleVisions, ShuffleKeyItems]),
 ]

@@ -184,6 +184,13 @@ function G.ContinentClear() G.lockCleared = true end
 function G.ContinentMapLoaded(world, place) G.hookWorld, G.hookPlace = world, place; return place and {"pharm"} or nil, "locks off" end
 function G.ContinentStatus() return "open []" end
 function G.SetContinentOpen(name, open) if name == "narnia" then return nil, "no continent" end G.lockOpens[name] = open; return 1 end
+G.WORLD_MAP, G.ferrySyncs, G.crossingLists = 1000, 0, {}
+function G.FerrySync() G.ferrySyncs = G.ferrySyncs + 1; return 0 end
+function G.IsContinent(name) return name ~= "narnia" end
+function G.ContinentOpen(name) return (G.openContinents or {})[name] == true end
+function G.CrossingSync(list) G.crossingLists[#G.crossingLists + 1] = list; return 0, 0 end
+function G.CrossingNear(list, range) return nil end
+function G.CrossingClear() G.crossingsCleared = true end
 function G.AirshipState() return "placed true" end
 function G.AirshipCondition(c) G.airshipWrote = c; return c end
 function G.NoLandShadow() return 0, 1, { "box" } end
@@ -1493,7 +1500,50 @@ G.chests = L.table()
 G.story = 8000
 tick(12)
 assert "item30002x1" not in list(G.log.values()), "a save that holds the saddle gets none"
+
+# Round 67: `cfg chocobo 0` (start_with_chocobo off) makes the saddle an item, so none at the start
+inbox("seed\tS67:0:1\ncfg\topenworld\t1\ncfg\tchocobo\t0\n", "w")
+L, G = boot5("SD_CHOCOBO3", "0", {})
+L.globals().G = G
+L.execute(SCALE_STUB)
+L.execute("function G.HeldCount(id) return 0 end")
+G.chests = L.table()
+G.story = 8000
+tick(12)
+assert "item30002x1" not in list(G.log.values()), list(G.log.values())
 print("chocobo and shipyard: ok")
+
+# Round 67: the walking crossings come from crossings.txt, and a bad line is skipped.
+# `ffrap_gate mark` adds one ahead of the player, `unmark` takes the nearest away again, and the
+# ferry is kept in step on every lock check.
+GRANDSHELT_BRIDGE = "grandshelt\tlanzelt\t14000\t17600\t120\t90.0\t3.00\n"
+KOLOBOS_PASS = "lanzelt\tkolobos\t8300\t12000\t80\t0.0\t2.50\n"
+with open(path("crossings.txt"), "w", encoding="utf-8", newline="\n") as f:
+    f.write(GRANDSHELT_BRIDGE + KOLOBOS_PASS + "narnia\tlanzelt\t0\t0\t0\t0\t1\n")
+inbox("seed\tS67b:0:1\ncfg\topenworld\t1\n", "w")
+L, G = boot5("SD_CROSS", "0", {})
+L.globals().G = G
+L.execute(SCALE_STUB)
+L.execute("function G.HeldCount(id) return 1 end")
+G.chests = L.table()
+G.story = 8000
+tick(12)
+assert G.ferrySyncs > 0, "the ferry is synced with the locks"
+last = L.eval("G.crossingLists[#G.crossingLists]")
+assert len(last) == 2 and last[1].a == "grandshelt" and last[2].b == "kolobos" and last[2].scale == 2.5, len(last)
+G.map = 1000
+L.execute("function G.CurrentMap() return G.map end")
+L.execute("function G.PlayerPose() return { x = 9000, y = 12000, z = 75, yaw = 90.0, fx = 0.0, fy = 1.0 } end")
+L.execute('commands["ffrap_gate"]("ffrap_gate", {"mark", "Lanzelt", "kolobos", "4"})')
+lines = read("crossings.txt").splitlines()
+assert len(lines) == 2 + 1 and lines[2] == "lanzelt\tkolobos\t9000\t12150\t75\t270.0\t4.00", lines
+L.execute('commands["ffrap_gate"]("ffrap_gate", {"mark", "lanzelt", "narnia"})')
+assert len(read("crossings.txt").splitlines()) == 3, "an unknown continent is refused"
+L.execute('commands["ffrap_gate"]("ffrap_gate", {"unmark"})')
+assert read("crossings.txt") == GRANDSHELT_BRIDGE + KOLOBOS_PASS, read("crossings.txt")
+assert G.crossingsCleared is True, "the blockers are placed again from the new list"
+os.remove(path("crossings.txt"))
+print("crossings: ok")
 
 # Round 58: the tower's last climb stays sealed while the client's counts are short, and says so near it
 inbox("seed\tS58:0:1\ncfg\topenworld\t1\ncfg\tfinalboss\t2\t6\t3\t12\n", "w")

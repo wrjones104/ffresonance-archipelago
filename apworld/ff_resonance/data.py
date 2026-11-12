@@ -437,6 +437,7 @@ ITEMS = {1001: {'category': 'consumable', 'count': 1, 'game_id': 1, 'kind': 'ite
             'game_id': 29003,
             'kind': 'item',
             'name': "Champion's Proof of Victory"},
+ 30002001: {'category': 'vehicle', 'count': 1, 'game_id': 30002, 'kind': 'item', 'name': 'Chocobo'},
  600000001: {'category': 'fragment', 'count': 1, 'game_id': 0, 'kind': 'token', 'name': 'Crystal Fragment'},
  700001420: {'category': 'continent',
              'count': 1,
@@ -4331,6 +4332,8 @@ BOSSES = [{'area': 'Pharm',
   'vanilla': None}]
 
 FRAGMENT_ITEM = 600000001
+
+CHOCOBO_ITEM = 30002001
 
 # Chests and shinies that keep vanilla key items or valuables: not locations
 KEPT_VANILLA = ['chest:2031:20',

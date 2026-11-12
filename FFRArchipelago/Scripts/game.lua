@@ -3067,6 +3067,41 @@ function G.ClearGate()
     return n
 end
 
+-- Spawns one blocker Blueprint (a GATE_SPECS entry) at `loc` facing `rot`, visible and solid.
+-- Returns the actor, or nil and why. A field of G, not a local: the main chunk is at Lua's limit
+-- of 200 locals.
+function G.SpawnBlocker(world, spec, loc, rot, scale)
+    local cls = LoadBlueprintClass(spec.pkg, spec.name)
+    if not cls then return nil, "could not load class " .. spec.pkg .. "." .. spec.name .. "_C" end
+    gateStep("SpawnActor " .. spec.name)
+    local actor
+    local okSpawn = pcall(function() actor = world:SpawnActor(cls, loc, rot) end)
+    if not (okSpawn and actor and actor:IsValid()) then
+        gateStep("SpawnActor empty-transform fallback " .. spec.name)
+        pcall(function() actor = world:SpawnActor(cls, {}, {}) end)
+    end
+    if not (actor and actor:IsValid()) then return nil, "SpawnActor failed for " .. spec.name end
+    -- SpawnActor can ignore the transform table, so the place is set again when it did.
+    local ax, ay
+    pcall(function()
+        local aloc = actor:K2_GetActorLocation()
+        if aloc then ax, ay = aloc.X, aloc.Y end
+    end)
+    if not ax or math.abs(ax - loc.X) + math.abs(ay - loc.Y) > 1.0 then
+        gateStep("K2_SetActorLocation " .. spec.name)
+        pcall(function() actor:K2_SetActorLocation(loc, false, {}, true) end)
+        pcall(function() actor:K2_SetActorRotation(rot, true) end)
+    end
+    if scale then
+        gateStep("SetActorScale3D " .. spec.name)
+        pcall(function() actor:SetActorScale3D({ X = scale, Y = scale, Z = scale }) end)
+    end
+    gateStep("enable visibility and collision " .. spec.name)
+    pcall(function() actor:SetActorHiddenInGame(false) end)
+    pcall(function() actor:SetActorEnableCollision(true) end)
+    return actor
+end
+
 -- Spawns a test gate `dist` units ahead of the player. `kind` is combo (BlockingBox + MagicPot),
 -- box, rock, pot, gate or world. Raw NPC pawns crash or self-destruct without MapManager setup,
 -- so `npc` is refused. Replaces any previous test gate.
@@ -3097,42 +3132,12 @@ function G.SpawnGate(kind, dist, scale)
 
     local spawned, names = {}, {}
     for _, spec in ipairs(specs) do
-        local cls = LoadBlueprintClass(spec.pkg, spec.name)
-        if not cls then
+        local actor, why = G.SpawnBlocker(pose.world, spec, locArg, rotArg, sc)
+        if not actor then
             gateState = { actors = spawned }
             G.ClearGate()
-            return false, "could not load class " .. spec.pkg .. "." .. spec.name .. "_C"
+            return false, why
         end
-        gateStep("SpawnActor " .. spec.name)
-        local actor
-        local okSpawn = pcall(function() actor = pose.world:SpawnActor(cls, locArg, rotArg) end)
-        if not (okSpawn and actor and actor:IsValid()) then
-            gateStep("SpawnActor empty-transform fallback " .. spec.name)
-            pcall(function() actor = pose.world:SpawnActor(cls, {}, {}) end)
-        end
-        if not (actor and actor:IsValid()) then
-            gateState = { actors = spawned }
-            G.ClearGate()
-            return false, "SpawnActor failed for " .. spec.name
-        end
-        -- Ensure the actor sits at (tx, ty, tz) even when SpawnActor ignored the transform table.
-        local ax, ay, az
-        pcall(function()
-            local aloc = actor:K2_GetActorLocation()
-            if aloc then ax, ay, az = aloc.X, aloc.Y, aloc.Z end
-        end)
-        if not ax or math.abs(ax - tx) + math.abs(ay - ty) > 1.0 then
-            gateStep("K2_SetActorLocation " .. spec.name)
-            pcall(function() actor:K2_SetActorLocation(locArg, false, {}, true) end)
-            pcall(function() actor:K2_SetActorRotation(rotArg, true) end)
-        end
-        if sc then
-            gateStep("SetActorScale3D " .. spec.name)
-            pcall(function() actor:SetActorScale3D({ X = sc, Y = sc, Z = sc }) end)
-        end
-        gateStep("enable visibility and collision " .. spec.name)
-        pcall(function() actor:SetActorHiddenInGame(false) end)
-        pcall(function() actor:SetActorEnableCollision(true) end)
         spawned[#spawned + 1] = actor
         names[#names + 1] = spec.name
     end
@@ -4111,6 +4116,9 @@ G.CONTINENTS = {
 -- touched, so a new name means forgetting them all without asking them anything.
 local continentActors, continentWorld, continentListed = {}, nil, nil
 local continentListedLength, continentSeen, continentFresh = nil, 0, false
+-- The walking crossings' blockers (G.CrossingSync), by index in the list given, and the world
+-- they were placed in. One table, as the main chunk is at Lua's limit of 200 locals.
+local crossing = { actors = {}, world = nil }
 -- Syncs that must see one controller before boxes go in. Round 41: on the way back from a town
 -- the boxes were placed once while the world map was still arriving, and again 3 seconds later.
 G.CONTINENT_SETTLE = 3
@@ -4185,6 +4193,7 @@ end
 G.WORLD_LEVEL = "Wld_PL"
 function G.ContinentMapLoaded(world, place)
     continentActors, continentListed, continentListedLength = {}, nil, nil
+    crossing.actors, crossing.world = {}, nil
     continentFresh, continentSeen = true, G.CONTINENT_SETTLE
     if not place then return nil, "locks off" end
     if ObjText(world) ~= G.WORLD_LEVEL then return nil, "not the world map" end
@@ -4236,6 +4245,15 @@ end
 function G.ContinentClear()
     for name in pairs(continentActors) do DestroyContinent(name) end
     continentActors, continentListed = {}, nil
+    G.CrossingClear()
+end
+
+-- Removes every crossing blocker; the next CrossingSync places them again from its list.
+function G.CrossingClear()
+    for _, a in pairs(crossing.actors) do
+        if Alive(a) then pcall(function() a:K2_DestroyActor() end) end
+    end
+    crossing.actors = {}
 end
 
 -- Opens or closes one continent, or "all", in the loaded save. Returns how many, or nil and why.
@@ -4266,6 +4284,111 @@ function G.ContinentStatus()
         boxes = boxes + #(continentActors[c.name] or {})
     end
     return string.format("open [%s]; locked [%s]; %d boxes placed", table.concat(opened, ", "), table.concat(locked, ", "), boxes)
+end
+
+function G.ContinentOpen(name)
+    local c = ContinentNamed(name)
+    return c ~= nil and G.GetFlag(c.flag) == true
+end
+
+function G.IsContinent(name)
+    return ContinentNamed(name) ~= nil
+end
+
+-- -------------------------------------------------------------------------------------------
+-- Walking crossings and the ferry (round 67, docs/open_world.md section 4)
+-- -------------------------------------------------------------------------------------------
+-- The landing locks stop only the airship. On foot, the world map joins some continents (round
+-- 44: Grandshelt and Lanzelt), and no door or cave in the game data joins two. A crossing is a
+-- world-map blocker between continents `a` and `b` that holds while either is locked:
+-- { a, b, x, y, z, yaw, scale }. The list comes from main.lua (crossings.txt, marked in game).
+
+-- Places a blocker for every crossing with a locked side and removes the rest. Runs only once the
+-- world map has settled (as the landing locks do). Returns the number placed and removed, or nil
+-- and why.
+function G.CrossingSync(list)
+    if G.CurrentMap() ~= G.WORLD_MAP then return nil, "not on the world map" end
+    if continentSeen < G.CONTINENT_SETTLE or not continentWorld then return nil, "settling" end
+    if crossing.world ~= continentWorld then crossing.actors, crossing.world = {}, continentWorld end
+    local pose, why = G.PlayerPose()
+    if not pose then return nil, why end
+    local placed, removed = 0, 0
+    for i, c in ipairs(list) do
+        local open = G.ContinentOpen(c.a) and G.ContinentOpen(c.b)
+        local actor = crossing.actors[i]
+        if actor and not Alive(actor) then actor = nil end
+        if open and actor then
+            gateStep("crossing: destroy " .. c.a .. "-" .. c.b)
+            pcall(function() actor:K2_DestroyActor() end)
+            actor = nil
+            removed = removed + 1
+        elseif not open and not actor then
+            local spawned, whySpawn = G.SpawnBlocker(pose.world, GATE_SPECS.world[1], { X = c.x, Y = c.y, Z = c.z },
+                { Pitch = 0.0, Yaw = c.yaw, Roll = 0.0 }, c.scale)
+            if not spawned then return nil, "crossing " .. c.a .. "-" .. c.b .. ": " .. tostring(whySpawn) end
+            actor = spawned
+            placed = placed + 1
+        end
+        crossing.actors[i] = actor
+    end
+    return placed, removed
+end
+
+-- The nearest crossing with a locked side within `range` of the player, and the names of its
+-- locked sides; or nil.
+function G.CrossingNear(list, range)
+    local pose = G.PlayerPose()
+    if not pose or G.CurrentMap() ~= G.WORLD_MAP then return nil end
+    local best, bestD = nil, range
+    for _, c in ipairs(list) do
+        local d = math.sqrt((pose.x - c.x) ^ 2 + (pose.y - c.y) ^ 2)
+        if d < bestD and not (G.ContinentOpen(c.a) and G.ContinentOpen(c.b)) then best, bestD = c, d end
+    end
+    if not best then return nil end
+    local locked = {}
+    for _, side in ipairs({ best.a, best.b }) do
+        if not G.ContinentOpen(side) then locked[#locked + 1] = side end
+    end
+    return best, locked, bestD
+end
+
+-- The ferry joins Grandport Harbor (Lanzelt), Dirnado, Olderion and Zoldaad. Past story 3210
+-- each port's menu offers the other three. Choosing a port runs Gim_EV_ShipMovement_0N_Cushion,
+-- which chains to the trip (the menu sets flag 84 to 87 for where you are, the cushion 80 to 83
+-- for where you go). A port whose continent is locked gets the menu's own cancel row instead,
+-- so choosing it ends the talk as "no" does.
+G.FERRY_PORTS = { "lanzelt", "dirnado", "olderion", "zoldaad" }
+G.FERRY_MENUS = {
+    Gim_EV_ShipMovement_01_03_Choice = { ports = { 2, 3, 4 }, cancel = "Gim_EV_ShipMovement_Cancel_Gra" },
+    Gim_EV_ShipMovement_02_03_Choice = { ports = { 1, 3, 4 }, cancel = "Gim_EV_ShipMovement_Cancel" },
+    Gim_EV_ShipMovement_03_02_Choice = { ports = { 1, 2, 4 }, cancel = "Gim_EV_ShipMovement_Cancel" },
+    Gim_EV_ShipMovement_04_01_Choice = { ports = { 1, 2, 3 }, cancel = "Gim_EV_ShipMovement_Cancel" },
+}
+
+-- Points each menu choice at its trip or at the cancel row, by the ports' continents. Safe to
+-- call often: it writes only what differs. Returns the number of choices written.
+function G.FerrySync()
+    local written = 0
+    for _, dt in ipairs(TableFamily(Find(SHOP_TABLE))) do
+        for rowName, menu in pairs(G.FERRY_MENUS) do
+            local row
+            pcall(function() row = dt:FindRow(rowName) end)
+            if row then
+                for i, port in ipairs(menu.ports) do
+                    local want = G.ContinentOpen(G.FERRY_PORTS[port])
+                        and string.format("Gim_EV_ShipMovement_%02d_Cushion", port) or menu.cancel
+                    pcall(function()
+                        local entry = row.ChoicesBranchEventList[i].EventList[1]
+                        if ObjText(entry.EventId) ~= want then
+                            entry.EventId = FName(want)
+                            written = written + 1
+                        end
+                    end)
+                end
+            end
+        end
+    end
+    return written
 end
 
 -- Removes the spawned boxes, puts the moved one back and gives the story boxes their own
