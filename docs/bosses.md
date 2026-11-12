@@ -155,6 +155,37 @@ A third way is fragments shuffled into the whole pool, with bosses as plain chec
 
 Boss MRP is `ap` in the battle group, which the mod already scales. A large boss MRP makes bosses pay for growth (idea 25).
 
+## 4a. The story boss survey (round 71, off-line)
+
+Every battle group with a Boss-category unit (155), walked back from its fight row to the map actor that starts it: through talk rows, transition event lists, and earlier fights' win rows. For the story fights (groups 9000 to 9099) not yet in the mod:
+
+| Group | Boss | Map | Starts from | Built in mod 0.55.0? |
+|---|---|---|---|---|
+| 9013 | Siren | 3030 Siren's Tower | door `m_EventList`, story 1230 | yes, flag 1243 |
+| 9017 | Aether | 3070 Wind Shrine | door `m_EventList`, story 2130 | yes, flag 1244 |
+| 9031 | Tellus | 3180 Nameless Ruins | door transition point 5000 | yes, flag 1245 |
+| 9038 | Tellus | 3200 Tower of Mysidia | zone `m_EventList`, story 5290 (and an NPC) | yes, flag 1246 |
+| 9039 | Lux | 3230 Rugged Mountain Path | zone `m_EventList`, story 6080 | yes, flag 1247 |
+| 9040 | Elfdrit | 3240 Gronoa Shrine | native zone `m_EventList`, story 6110 | yes, flag 1248 |
+| 9044 | Gelidus | 3250 Sanctissimus Shrine | automatic door `m_EventList2`, story 6160 | yes, flag 1249 |
+| 9046 | Ignis | 3260 Mt. Reizan | zone `m_EventList`, story 7030 | yes, flag 1250 |
+| 9048 | Tellus | 3270 and 3271 Wandering Lands | zone `m_EventList`, story 7060 and 7050 | yes, flag 1251 |
+| 9051 | Behemoth | 3280 Crystal Tower | automatic door `m_EventList2`, story 8020 | yes, flag 1252 |
+| 9001 | Umbra | 3020 | door, story 1110 | no: a scripted loss (win and loss run the same row) |
+| 9024, 9025 | Ignis | 3130 | native zone, story 4140 | no: 9024 is a scripted loss, and 9025 follows it |
+| 9016 | Adrastea | 3060 | after battle 9905, in a chain with flags 210 and 211 | not yet |
+| 9021, 9023, 9028, 9029, 9045 | Leviathan, Ignis, Evan, Lazarov, Aether | | no actor found: they run inside longer story scenes | not yet |
+| 9027 | Emperor of Zoldaad | 3160 | door with no condition | not yet: to look at |
+| 9035 | Byblos | 3190 Arcane Library | a bookshelf (`InteractEventTrigger`), story 5108, hidden otherwise | not yet: the shelf is hidden |
+| 9037 | Archwitch Fina | 10041, 10042 | native zone, story 5270 | no: event-only maps |
+| 9042, 9043 | Lasswell | 3250 | door, story 6140 | not yet: a party member's duel |
+| 9047 | Alluvion | 3260 | runs after a door into map 2180 | not yet: shares map 3260 with Ignis |
+| 9049 | Umbra | 3272 Wandering Lands | after a door, which itself tests `{progress:0}<7090` | not yet: the door is off at 8000 |
+| 9054 to 9056 | Chaotic Darkness, Sol | 3281 | the tower top's chain | no: the final battle |
+| 9061 | Alluvion | 3110 Water Shrine | a door's `eventList2` and an after-arrival list | not yet |
+
+**Built (mod 0.55.0, world 0.22.0):** the ten marked "yes". Each is a story boss with a locked Crystal Fragment (22 fragment bosses in all). The mod's new kind `list` rewrites the entry in the named event list (`m_EventList` or `m_EventList2`) on every actor of the named class, the entry that names the boss's own row, to `!{flag:N}&{flag:1441}` and the shared fight row. Nothing else on the actor changes, so a door is a door again after the win. The NPCs that showed some bosses before their fights stay hidden: the fight starts at the zone or door alone.
+
 ## 5. Order of work
 
 1. **Tier 1 as checks.** Built in world 0.17.0 and mod 0.48.0 (section 4). Round 60 tests it.

@@ -649,20 +649,30 @@ World-map shinies verified as locations. Multiple crashes observed across differ
 - Not checked yet: how the Antlion feels with scaling on. The user scaled enemies down by hand to test. A bigger play test comes later.
 - The airship and Chocobo work of rounds 67 to 70 is done. Next on the user's list: the story bosses.
 
-## Round 70 test plan (mod 0.54.1, world 0.21.1)
+**Changed after round 70 (mod 0.55.0, world 0.22.0):**
+- **Ten more story bosses** (`bosses.md`, section 4a): Siren (Siren's Tower), Aether (Wind Shrine), Tellus (Nameless Ruins, Tower of Mysidia and Wandering Lands), Lux (Rugged Mountain Path), Elfdrit (Gronoa Shrine), Gelidus (Sanctissimus Shrine), Ignis (Mt. Reizan) and Behemoth (Crystal Tower). Each starts where its story fight did, at a zone or a door, and holds a Crystal Fragment. There are now 22 fragment bosses.
+- None of them is seen yet: each trigger is a little different, and each may be gone or moved at story 8000.
 
-**Install:** copy `FFRArchipelago/Scripts` and `dist/ff_resonance.apworld`. Parts 1 and 2 work on the round 69 save. Part 3 needs a new seed.
+## Round 71 test plan (mod 0.55.0, world 0.22.0)
 
-**1. The stray airship.** Load the round 69 save, where the airship sits in Olderion. Run `ffrap_airship home`, then go into Kol and back out. **Is the airship by Kol now?**
+**Install:** copy `FFRArchipelago/Scripts` and `dist/ff_resonance.apworld`. Generate a new seed with bosses on (the default). To reach them fast, use `ffrap_lock open all`, and `ffrap_scale` to make the fights quick if you only want to see them start.
 
-**2. The Antlion, on the round 69 save.** On foot, walk into the sandpit and win.
-- **What does the party say after the win?** It should be "We should be able to cross without riding chocobos now."
-- Walk across and back, and go into a town and out. **Does the fight stay gone?**
-- The log should have `check boss:9060` (the round 69 seed has no such location, so nothing is sent for it).
+**For each boss you visit:** go where the story fought it.
+- On entering the map, the log says `story boss: map <map> group <group> flag <flag> (won false): ...; N triggers, ...`. **Is N 1 or more?** 0 means the trigger is not on the map at story 8000.
+- **Does the fight start, at the zone or door?**
+- After the win: **`check boss:<group>` in the log, a Crystal Fragment, and no second fight?** For a door: **does it work as a door afterwards?**
 
-**3. A new seed** with `start_with_airship: false`, `start_with_chocobo: false` and `starting_continent: lanzelt`.
-- Go into a town (Kol is closest) and stay there until "Airship" arrives. To test it early, `ffrap_grant flag 1431` in the town. **Does the feed say "It waits where you started this seed"? Is the airship by Kol when you come out?**
-- **Is "Lanzelt Desert: Antlion" a location in the tracker,** and does a win send it?
-- How the Antlion feels at your level with scaling on.
+| Boss | Map | Where the story fought it |
+|---|---|---|
+| Siren | Siren's Tower (Lanzelt) | the top, at the jump spot |
+| Aether | Wind Shrine (Dirnado) | a door near the end |
+| Tellus | Nameless Ruins (Mysidia) | a door (transition point 5000) |
+| Tellus | Tower of Mysidia (Mysidia) | a zone near the top |
+| Lux | Rugged Mountain Path (Gronoa) | a zone on the path |
+| Elfdrit | Gronoa Shrine (Gronoa) | a zone inside |
+| Gelidus | Sanctissimus Shrine (Gronoa) | an automatic door |
+| Ignis | Mt. Reizan (Pharm) | a zone on the mountain |
+| Tellus | Wandering Lands (Pharm) | a zone, on either of two maps |
+| Behemoth | Crystal Tower | an automatic door |
 
-Send the `[FFRAP]` lines of the log.
+Any number of them is useful: start with the ones closest to you. Send the `[FFRAP]` lines of the log.

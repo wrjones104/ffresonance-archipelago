@@ -509,6 +509,21 @@ assert ok is True and lua("storyActors.BP_MapUnit_NPC_C[2].m_VisiblFlagCondition
 assert lua("storyActors.BP_MapUnit_NPC_C[2].m_EventSettings.EventList[1].Condition") == "!{flag:1242}&{flag:1441}"
 assert lua("storyActors.BP_MapUnit_NPC_C[2].m_EventSettings.EventList[1].EventList[1].EventId:ToString()") == "SubEv_C02_SymbolEnemy_Encount"
 assert lua(pot) == 1242 and lua("talkRows.SubEv_C02_SymbolEnemy_Encount.encountGroupId") == 9014
+# Round 71: kind "list" rewrites the one entry that names the boss's row, here Gelidus's automatic
+# door, and nothing else on the door, so it works as a door once the boss is won
+L.execute("""storyActors.BP_MapTransitionTrigger_C[2] = { IsValid = function() return true end,
+  HasAnyInternalFlags = function() return false end, HasAnyFlags = function() return false end,
+  m_EventList2 = arr({ { Condition = "{progress:0}==1", EventId = nameOf("Other") },
+                       { Condition = "{progress:0}==6160", EventId = nameOf("C06_627_01") } }) }
+mockMap = 3250""")
+ok, detail = L.execute("return G.SyncStoryBossTrigger(say)")
+gelidus = "storyActors.BP_MapTransitionTrigger_C[2].m_EventList2"
+assert ok is True and "1 triggers" in detail, detail
+assert lua(gelidus + "[2].Condition") == "!{flag:1249}&{flag:1441}" and lua(gelidus + "[2].EventId:ToString()") == "SubEv_C02_SymbolEnemy_Encount"
+assert lua(gelidus + "[1].Condition") == "{progress:0}==1", "other entries stay"
+assert lua(pot) == 1249 and lua("talkRows.SubEv_C02_SymbolEnemy_Encount.encountGroupId") == 9044
+ok, detail = L.execute("return G.SyncStoryBossTrigger(say)")
+assert "1 triggers" in detail, "found again by the fight row's name"
 L.execute("mockMap = 3060")
 ok, detail = L.execute("return G.SyncStoryBossTrigger(say)")
 assert ok is None and lua(pot) == 915, "off a story boss map, magic pot win row restores flag 915"

@@ -50,7 +50,7 @@
 -- follows the save slots the linked game is saved to. While any other save is loaded, the mod
 -- grants nothing, reports nothing and leaves the chests vanilla.
 
-local VERSION = "0.54.1"
+local VERSION = "0.55.0"
 local PROTOCOL = 2        -- the bridge protocol; the apworld's MOD_PROTOCOL
 
 local MOD_DIR = (debug.getinfo(1, "S").source:gsub("^@", ""):gsub("\\", "/"):match("^(.*/)Scripts/[^/]+$"))

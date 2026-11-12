@@ -30,3 +30,13 @@ group	flag	map	kind	name	reward	win_row	round	note	area
 9088	526	3180	story	Liquid Flame		SubEv_BarrierReleased_BattleEnd_Left	62	Chain sets story 5066 or 5070, which the mod takes out	
 9089	527	3180	story	Iron Giant		SubEv_BarrierReleased_BattleEnd_Right	62	Chain sets story 5066 or 5070, which the mod takes out	
 9060	113	1000	optional	Antlion		C01_ArijigokuWin_02	69	In Lanzelt's sandpit, between Kol and Grandport. The mod makes a win always set flag 113	Lanzelt
+9013	1243	3030	story	Siren		Gim_EV_Majipot_Delete_02	71	Trigger row C01_036_01 rewritten from its story value to !{flag:1243}	
+9017	1244	3070	story	Aether		Gim_EV_Majipot_Delete_02	71	Trigger row C02_221_01 rewritten from its story value to !{flag:1244}	
+9031	1245	3180	story	Tellus		Gim_EV_Majipot_Delete_02	71	Trigger row C05_510_01 rewritten from its story value to !{flag:1245}	
+9038	1246	3200	story	Tellus		Gim_EV_Majipot_Delete_02	71	Trigger row C05_540_Retry rewritten from its story value to !{flag:1246}	
+9039	1247	3230	story	Lux		Gim_EV_Majipot_Delete_02	71	Trigger row C06_611_01 rewritten from its story value to !{flag:1247}	
+9040	1248	3240	story	Elfdrit		Gim_EV_Majipot_Delete_02	71	Trigger row C06_616_01 rewritten from its story value to !{flag:1248}	
+9044	1249	3250	story	Gelidus		Gim_EV_Majipot_Delete_02	71	Trigger row C06_627_01 rewritten from its story value to !{flag:1249}	
+9046	1250	3260	story	Ignis		Gim_EV_Majipot_Delete_02	71	Trigger row C07_707_01 rewritten from its story value to !{flag:1250}	
+9048	1251	3270	story	Tellus		Gim_EV_Majipot_Delete_02	71	Trigger row C07_713_01 rewritten from its story value to !{flag:1251}	
+9051	1252	3280	story	Behemoth		Gim_EV_Majipot_Delete_02	71	Trigger row C08_807_01 rewritten from its story value to !{flag:1252}	

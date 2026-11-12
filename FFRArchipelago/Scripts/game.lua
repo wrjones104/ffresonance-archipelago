@@ -2144,6 +2144,11 @@ G.BOSSES = {
     { group = 9076, flag = 613 }, { group = 9004, flag = 1240 }, { group = 9012, flag = 1241 },
     { group = 9014, flag = 1242 }, { group = 9088, flag = 526 }, { group = 9089, flag = 527 },
     { group = 9060, flag = 113 },   -- round 69: the Antlion (G.AntlionPatch)
+    -- Round 71: story bosses through G.STORY_BOSSES
+    { group = 9013, flag = 1243 }, { group = 9017, flag = 1244 }, { group = 9031, flag = 1245 },
+    { group = 9038, flag = 1246 }, { group = 9039, flag = 1247 }, { group = 9040, flag = 1248 },
+    { group = 9044, flag = 1249 }, { group = 9046, flag = 1250 }, { group = 9048, flag = 1251 },
+    { group = 9051, flag = 1252 },
 }
 -- Win rows whose own reward is the location's item now: the 15 cave masters' Magicite, and
 -- Sephiroth's vision.
@@ -2170,10 +2175,34 @@ local BOSS_ROWS_NO_STORY = {
 -- unused encounter row SubEv_C02_SymbolEnemy_Encount, and finishes with the shared post-battle
 -- sequence Gim_EV_Majipot_Delete_02 setting that map's boss flag.
 local STORY_BOSS_FIGHT, STORY_BOSS_WIN, MAJIPOT_FLAG = "SubEv_C02_SymbolEnemy_Encount", "Gim_EV_Majipot_Delete_02", 915
+-- Round 71: kind "list" rewrites one entry of an event list (`field`) on every actor of `class` on
+-- the map, the entry that names the boss's own row. It leaves the actor alone otherwise, so a door
+-- works as a door again once the boss is won. Flags 1240 to 1260 are used nowhere in the game.
 G.STORY_BOSSES = {
     [3000] = { group = 9004, flag = 1240, event = "C01_008_02", unit = 10003, kind = "trigger" },
     [3040] = { group = 9012, flag = 1241, event = "C01_030_01", point = 5000, kind = "transition" },
     [2050] = { group = 9014, flag = 1242, event = "C02_208_01", unit = 10037, kind = "npc" },
+    -- Siren, at the top of Siren's Tower: the jump spot's door
+    [3030] = { group = 9013, flag = 1243, event = "C01_036_01", kind = "list", class = "BP_MapTransitionTrigger_C", field = "m_EventList" },
+    -- Aether, Wind Shrine
+    [3070] = { group = 9017, flag = 1244, event = "C02_221_01", kind = "list", class = "BP_MapTransitionTrigger_C", field = "m_EventList" },
+    -- Tellus, Nameless Ruins: a door like The Hunger's
+    [3180] = { group = 9031, flag = 1245, event = "C05_510_01", point = 5000, kind = "transition" },
+    -- Tellus, Tower of Mysidia
+    [3200] = { group = 9038, flag = 1246, event = "C05_540_Retry", kind = "list", class = "BP_MapGimmick_EventTrigger_C", field = "m_EventList" },
+    -- Lux, Rugged Mountain Path
+    [3230] = { group = 9039, flag = 1247, event = "C06_611_01", kind = "list", class = "BP_MapGimmick_EventTrigger_C", field = "m_EventList" },
+    -- Elfdrit, Gronoa Shrine
+    [3240] = { group = 9040, flag = 1248, event = "C06_616_01", kind = "list", class = "CPP_MapGimmick_EventTrigger", field = "m_EventList" },
+    -- Gelidus, Sanctissimus Shrine: an automatic door
+    [3250] = { group = 9044, flag = 1249, event = "C06_627_01", kind = "list", class = "BP_MapTransitionTrigger_C", field = "m_EventList2" },
+    -- Ignis, Mt. Reizan
+    [3260] = { group = 9046, flag = 1250, event = "C07_707_01", kind = "list", class = "BP_MapGimmick_EventTrigger_C", field = "m_EventList" },
+    -- Tellus, Wandering Lands: the same zone on two maps
+    [3270] = { group = 9048, flag = 1251, event = "C07_713_01", kind = "list", class = "BP_MapGimmick_EventTrigger_C", field = "m_EventList" },
+    [3271] = { group = 9048, flag = 1251, event = "C07_713_01", kind = "list", class = "BP_MapGimmick_EventTrigger_C", field = "m_EventList" },
+    -- Behemoth, Crystal Tower: an automatic door
+    [3280] = { group = 9051, flag = 1252, event = "C08_807_01", kind = "list", class = "BP_MapTransitionTrigger_C", field = "m_EventList2" },
 }
 local STORY_BOSS_EVENTS, STORY_BOSS_GROUPS = {}, {}
 for _, b in pairs(G.STORY_BOSSES) do
@@ -2401,6 +2430,25 @@ function G.SyncStoryBossTrigger(say)
                     pcall(function() a:SetActorEnableCollision(not won) end)
                     npcs = npcs + 1
                 end
+            end
+        end
+    end
+    if boss.kind == "list" then
+        local ok, all = pcall(FindAllOf, boss.class)
+        for _, a in ipairs(ok and all or {}) do
+            if Alive(a) then
+                pcall(function()
+                    local list = a[boss.field]
+                    for i = 1, #list do
+                        local ev = ObjText(list[i].EventId)
+                        if ev == boss.event or ev == STORY_BOSS_FIGHT then
+                            step("story boss: " .. boss.class .. " " .. boss.field .. "[" .. i .. "] -> " .. fightCond .. " / " .. STORY_BOSS_FIGHT)
+                            list[i].Condition = fightCond
+                            list[i].EventId = FName(STORY_BOSS_FIGHT)
+                            triggers = triggers + 1
+                        end
+                    end
+                end)
             end
         end
     end
