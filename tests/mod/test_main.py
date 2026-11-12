@@ -1593,7 +1593,8 @@ L.globals().G = G
 L.execute(SCALE_STUB)
 L.execute("function G.HeldCount(id) return 1 end")
 L.execute("G.map = 1000; function G.CurrentMap() return G.map end")
-L.execute("function G.PlayerPose() return { x = 500, y = 600, z = 7, yaw = 0, fx = 1, fy = 0 } end")
+L.execute("G.pawn = 'BP_MapUnit_Player_Field_C'")
+L.execute("function G.PlayerPose() return { class = G.pawn, x = 500, y = 600, z = 7, yaw = 0, fx = 1, fy = 0 } end")
 L.execute("G.airshipFlag = false; local old = G.GetFlag; G.GetFlag = function(i) if i == G.AIRSHIP_FLAG then return G.airshipFlag end return old and old(i) end")
 G.chests = L.table()
 G.story = 8000
@@ -1604,6 +1605,17 @@ tick(12)
 assert list(G.parks.values()) == ["500 600 7"], list(G.parks.values())
 tick(12)
 assert len(G.parks) == 1, "parked once"
+# Round 69: received in a town, it waits at the seed's start. The world map's id can come before
+# the town's pawn is gone (Grandport's own coordinates put it in Olderion), so only the world
+# map's pawn counts.
+L.execute("G.airshipFlag = false")
+tick(12)
+L.execute("G.pawn = 'BP_MapUnit_Player_C'")
+G.airshipFlag = True
+tick(12)
+assert list(G.parks.values())[-1] == "12470 14980 65", list(G.parks.values())
+L.execute('commands["ffrap_airship"]("ffrap_airship", {"home"})')
+assert len(G.parks) == 3 and list(G.parks.values())[-1] == "12470 14980 65", "home parks it at the start"
 # a seed that starts in the airship puts the game's condition back over ours
 inbox("seed\tS69c:0:1\ncfg\topenworld\t1\n", "w")
 L, G = boot()

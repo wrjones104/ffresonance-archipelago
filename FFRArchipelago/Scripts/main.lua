@@ -42,7 +42,7 @@
 --   ffrap_noland <list|here|show|hide|lock|unlock|refresh|spawn|move|channel|shadow|cond|off>
 --                                probe: the airship's no-landing boxes
 --   ffrap_story <value>          probe: set the loaded save's story counter (any value; save and reload)
---   ffrap_airship [condition|off|state]  probe: the airship's spawn condition (shipped {progress:0}>=4250); state logs its save fields
+--   ffrap_airship [condition|off|state|home]  probe: the airship's spawn condition (shipped {progress:0}>=4250); state logs its save fields; home parks a seed's airship at its start
 --
 -- Each client session belongs to its saves. A new game started from the Archipelago entry on
 -- the title menu is linked to it at once and skips the prologue by itself (plain New Game stays
@@ -50,7 +50,7 @@
 -- follows the save slots the linked game is saved to. While any other save is loaded, the mod
 -- grants nothing, reports nothing and leaves the chests vanilla.
 
-local VERSION = "0.54.0"
+local VERSION = "0.54.1"
 local PROTOCOL = 2        -- the bridge protocol; the apworld's MOD_PROTOCOL
 
 local MOD_DIR = (debug.getinfo(1, "S").source:gsub("^@", ""):gsub("\\", "/"):match("^(.*/)Scripts/[^/]+$"))
@@ -1369,6 +1369,12 @@ local function tick()
                     local okBosses, written = pcall(game.BossesPatch)
                     log("bosses: " .. tostring(written) .. " win rows changed" .. (okBosses and "" or " (failed)"))
                 end
+                -- Round 69: one win over the Antlion clears its sandpit for good, on every open
+                -- world seed, so the way between Kol and Grandport is never shut for long.
+                if newSave then
+                    local okAntlion, written = pcall(game.AntlionPatch)
+                    log("antlion: " .. tostring(written) .. " win choices set to clear the sandpit" .. (okAntlion and "" or " (failed)"))
+                end
                 if newSave and bossTest.group then pcall(bossTest.arm, bossTest.group, bossTest.quiet) end
                 if okShop and blocked ~= nil then
                     log("vision shop " .. (blocked and "closed (no vision yet)" or "open") .. ": " .. tostring(rows) .. " rows")
@@ -2146,20 +2152,32 @@ local saddleSave, shipyardLogged, storyBossLogged = nil, false, nil
 local storyBossFieldTicks = 0
 local STORY_BOSS_READY_TICKS = 2   -- seedExtrasTick runs every LOCKS_EVERY ticks: about 2 s
 -- Round 69: the airship as an item. Its flag turns on when the item comes. The game then places
--- the hidden airship at the next map change, from the save's parked place, so it is parked where
--- the player stands on the world map, now or as soon as they are back on it.
-local airshipCall = { save = nil, was = false, pending = false }
+-- the hidden airship at the next map change, from the save's parked place. On the world map it is
+-- parked where the player stands. Anywhere else it stays at the seed's start, which the player can
+-- always walk back to.
+-- Round 69: an Airship received in Grandport was parked at the town's own coordinates, read as
+-- the map changed to the world map, which put it in Olderion. So a place counts only from the
+-- world map's own pawn.
+local airshipCall = { save = nil, was = false }
+local function parkAirshipAtStart(why)
+    local home = game.FOOT_STARTS[seedCfg.continent or ""]
+    if not (home and game.ParkAirship(home.x, home.y, home.z)) then return false end
+    log(string.format("airship: parked at the start (%s), (%.0f, %.0f, %.0f)", why, home.x, home.y, home.z))
+    return true
+end
+
 airshipItemTick = function()
     local on = game.GetFlag(game.AIRSHIP_FLAG) == true
-    if airshipCall.save ~= save.obj then airshipCall.save, airshipCall.was, airshipCall.pending = save.obj, on, false end
-    if on and not airshipCall.was then airshipCall.pending = true end
+    if airshipCall.save ~= save.obj then airshipCall.save, airshipCall.was = save.obj, on end
+    local came = on and not airshipCall.was
     airshipCall.was = on
-    if not (airshipCall.pending and game.CurrentMap() == game.WORLD_MAP and game.OnField()) then return end
-    local pose = game.PlayerPose()
-    if pose and game.ParkAirship(pose.x, pose.y, pose.z) then
-        airshipCall.pending = false
+    if not came then return end
+    local pose = game.CurrentMap() == game.WORLD_MAP and game.OnField() and game.PlayerPose()
+    if pose and tostring(pose.class):find("Field", 1, true) and game.ParkAirship(pose.x, pose.y, pose.z) then
         log(string.format("airship: parked at (%.0f, %.0f, %.0f) for the next map change", pose.x, pose.y, pose.z))
         notify("The airship is yours. It lands here after your next map change (a town, a cave).")
+    elseif parkAirshipAtStart("received off the world map") then
+        notify("The airship is yours. It waits where you started this seed.")
     end
 end
 
@@ -2639,6 +2657,12 @@ end)
 -- ffrap_airship off: the shipped condition. The text is one word, with no spaces.
 command("ffrap_airship", function(p)
     local want = p[1]
+    if want and want:lower() == "home" then
+        -- Round 69: puts a seed's airship back at its start, after one went astray.
+        notify(parkAirshipAtStart("ffrap_airship home") and "Airship: parked at the start; it lands there at the next map change"
+            or "Airship: no start on foot for this seed")
+        return
+    end
     if want and want:lower() == "state" then
         local text = game.AirshipState()
         log("airship: " .. text)

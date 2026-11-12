@@ -1,31 +1,32 @@
-group	flag	map	kind	name	reward	win_row	round	note
-9079	146	10051	cave	Marauder	25000	StrEne_C01_Orge_Destroy	59	Cave master
-9080	214	10052	cave	Shoggoth	25000	StrEne_C02_Eyemeba_Destroy	59	Cave master
-9084	319	10053	cave	Rukh	25000	StrEne_C03_ToteAvis_Destroy	59	Cave master
-9085	320	10054	cave	Mindflayer	25001	StrEne_C03_MindFlayer_Destroy	59	Cave master
-9094	433	10055	cave	Gogmagog	25001	StrEne_C04_HillGigas_Destroy	59	Cave master
-9093	434	10056	cave	Pyroviper	25001	StrEne_C04_FireHydra_Destroy	59	Cave master
-9109	548	10057	cave	Salome	25001	StrEne_C05_Media_Destroy	59	Cave master
-9110	549	10058	cave	Jotunn	25001	StrEne_C05_IceGigas_Destroy	59	Cave master
-9111	550	10059	cave	Malboro Varietas	25001	StrEne_C05_Morbol_Destroy	59	Cave master
-9112	551	10061	cave	Tartarosaurus	25002	StrEne_C05_Tyrannosaurus_Destroy	59	Cave master
-9113	552	10062	cave	Catacumba	25002	StrEne_C05_SkullDragon_Destroy	59	Cave master
-9114	614	10063	cave	Necromonarch	25002	StrEne_C06_Bloodysaurus_Destroy	59	Cave master
-9115	615	10064	cave	Humbaba	25002	StrEne_C06_Cooser_Destroy	59	Cave master
-9116	700	10065	cave	Titanoraidos	25002	StrEne_C07_Brachioreids_Destroy	59	Cave master
-9117	701	10066	cave	Malboro Menace	25002	StrEne_C07_MorbolGreat_Destroy	59	Cave master
-9138	1018	10218	optional	Sephiroth		Str_LegendEV_07_Boss_05	59	Its win row gives the Sephiroth vision (13113), which is in the pool
-7042	928	3010	optional	Intangir			59	No reward of its own
-7057	929	3010	optional	Rogue Magitek Weapon			59	No reward of its own
-9083	215	3050	story	Liquid Thunder			59	Seen in the open world in round 59
-9075	608	3250	story	Archaeoaevis		Dng_08Gro_43_BattleEnd_01	59	Its win row sets story 6123, which the mod takes out
-9074	609	3250	story	Dad Bomb			59
-9073	610	3250	story	Test Rider			59
-9072	611	3250	story	Yakhanati			59
-9071	612	3250	story	Arch Gargoyles			59
-9076	613	3250	story	Dragon			59
-9004	1240	3000	story	Belmodar		Gim_EV_Majipot_Delete_02	62	Trigger rewritten from story 1040 to !{flag:1240}
-9012	1241	3040	story	The Hunger		Gim_EV_Majipot_Delete_02	62	Trigger rewritten from story 1190 to !{flag:1241}
-9014	1242	2050	story	Mom Bomb		Gim_EV_Majipot_Delete_02	62	Trigger rewritten from story 2060 to !{flag:1242}
-9088	526	3180	story	Liquid Flame		SubEv_BarrierReleased_BattleEnd_Left	62	Chain sets story 5066 or 5070, which the mod takes out
-9089	527	3180	story	Iron Giant		SubEv_BarrierReleased_BattleEnd_Right	62	Chain sets story 5066 or 5070, which the mod takes out
+group	flag	map	kind	name	reward	win_row	round	note	area
+9079	146	10051	cave	Marauder	25000	StrEne_C01_Orge_Destroy	59	Cave master	
+9080	214	10052	cave	Shoggoth	25000	StrEne_C02_Eyemeba_Destroy	59	Cave master	
+9084	319	10053	cave	Rukh	25000	StrEne_C03_ToteAvis_Destroy	59	Cave master	
+9085	320	10054	cave	Mindflayer	25001	StrEne_C03_MindFlayer_Destroy	59	Cave master	
+9094	433	10055	cave	Gogmagog	25001	StrEne_C04_HillGigas_Destroy	59	Cave master	
+9093	434	10056	cave	Pyroviper	25001	StrEne_C04_FireHydra_Destroy	59	Cave master	
+9109	548	10057	cave	Salome	25001	StrEne_C05_Media_Destroy	59	Cave master	
+9110	549	10058	cave	Jotunn	25001	StrEne_C05_IceGigas_Destroy	59	Cave master	
+9111	550	10059	cave	Malboro Varietas	25001	StrEne_C05_Morbol_Destroy	59	Cave master	
+9112	551	10061	cave	Tartarosaurus	25002	StrEne_C05_Tyrannosaurus_Destroy	59	Cave master	
+9113	552	10062	cave	Catacumba	25002	StrEne_C05_SkullDragon_Destroy	59	Cave master	
+9114	614	10063	cave	Necromonarch	25002	StrEne_C06_Bloodysaurus_Destroy	59	Cave master	
+9115	615	10064	cave	Humbaba	25002	StrEne_C06_Cooser_Destroy	59	Cave master	
+9116	700	10065	cave	Titanoraidos	25002	StrEne_C07_Brachioreids_Destroy	59	Cave master	
+9117	701	10066	cave	Malboro Menace	25002	StrEne_C07_MorbolGreat_Destroy	59	Cave master	
+9138	1018	10218	optional	Sephiroth		Str_LegendEV_07_Boss_05	59	Its win row gives the Sephiroth vision (13113), which is in the pool	
+7042	928	3010	optional	Intangir			59	No reward of its own	
+7057	929	3010	optional	Rogue Magitek Weapon			59	No reward of its own	
+9083	215	3050	story	Liquid Thunder			59	Seen in the open world in round 59	
+9075	608	3250	story	Archaeoaevis		Dng_08Gro_43_BattleEnd_01	59	Its win row sets story 6123, which the mod takes out	
+9074	609	3250	story	Dad Bomb			59	
+9073	610	3250	story	Test Rider			59	
+9072	611	3250	story	Yakhanati			59	
+9071	612	3250	story	Arch Gargoyles			59	
+9076	613	3250	story	Dragon			59	
+9004	1240	3000	story	Belmodar		Gim_EV_Majipot_Delete_02	62	Trigger rewritten from story 1040 to !{flag:1240}	
+9012	1241	3040	story	The Hunger		Gim_EV_Majipot_Delete_02	62	Trigger rewritten from story 1190 to !{flag:1241}	
+9014	1242	2050	story	Mom Bomb		Gim_EV_Majipot_Delete_02	62	Trigger rewritten from story 2060 to !{flag:1242}	
+9088	526	3180	story	Liquid Flame		SubEv_BarrierReleased_BattleEnd_Left	62	Chain sets story 5066 or 5070, which the mod takes out	
+9089	527	3180	story	Iron Giant		SubEv_BarrierReleased_BattleEnd_Right	62	Chain sets story 5066 or 5070, which the mod takes out	
+9060	113	1000	optional	Antlion		C01_ArijigokuWin_02	69	In Lanzelt's sandpit, between Kol and Grandport. The mod makes a win always set flag 113	Lanzelt

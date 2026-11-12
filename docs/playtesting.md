@@ -628,27 +628,33 @@ World-map shinies verified as locations. Multiple crashes observed across differ
   - When the item comes, the mod parks the airship where you stand on the world map (or as soon as you are back on it) and says so. It lands there at your next map change.
   - Logic: a continent other than the starting one needs its unlock and the Airship, or a way on foot. The ways on foot are the two bridges and the ferry, each opened by the far continent's unlock. Mysidia, Gronoa, Pharm and the Crystal Tower need the Airship. The Antlion's sandpit is not in logic yet (part 4).
 
-## Round 69 test plan (mod 0.54.0, world 0.21.0)
+**Round 69 (mod 0.54.0, world 0.21.0, 2026-11-12): passed, with one bug.**
+- **The start on foot works.** The new game arrived by Kol on foot (`arrival: map 1000 at 12470.0, 14980.0, 65.0, on foot, the airship parked there`), with no airship through town visits and a reload. The condition went in at the title screen, before any map loaded (`airship: spawn condition {flag:1431}`).
+- **The gates hold on foot.** The stone bridge said "Archipelago needs Grandshelt Unlock", and the ferry only sailed to open ports.
+- **The Airship received on the world map** landed where the player stood after the next map change (`parked at (12672, 15192, 39)`).
+- **Bug: the Airship received in a town landed in Olderion.** It came in Grandport (map 2030). The mod parked it 14 seconds later at `(498, -777, 502)`, as the map changed to 1000. Those are Grandport's own coordinates: the world map's id was already in, but the pawn was still the town's. Read on the world map, (498, -777) is Olderion. Fast travel could not reach it, as fast travel needs a visit inside the airship first.
+- **The Antlion's sandpit is between Kol and Grandport Harbor** (screenshot). A win does not end it: "We managed to fight it off, but it probably won't be long until it attacks us again", and walking in starts the fight again, with or without the Chocobo first. In the user's own cleared save it is gone. The game data says why: the win row `C01_ArijigokuWin` runs `_Win_02` (sets flag 113, "We should be able to cross without riding chocobos now") only when story flag 10 is on, and `_Win_01` (sets nothing) otherwise. Flag 10 is off at the open world start.
+  - The user's concern: from the west, the fight puts you on the east side, and with no Chocobo you cannot get back. With a Lanzelt start and no Chocobo or Airship, that leaves about 6 checks for a long time. The user wants a win to clear the sandpit.
 
-**Install:** copy `FFRArchipelago/Scripts` and `dist/ff_resonance.apworld`. Delete `crossings.txt` from the mod folder, so the mod's own carts are used. Generate a new seed with `start_with_airship: false` and `starting_continent: lanzelt`.
+**Changed after round 69 (mod 0.54.1, world 0.21.1):**
+- **Where the Airship lands.** Received on the world map, it lands where you stand, read only from the world map's own pawn. Received anywhere else, it waits at the seed's start point, which you can always walk back to. `ffrap_airship home` parks it at the start by hand, for a save where it went astray.
+- **One win clears the Antlion's sandpit.** On every open world seed, both branches of the win row go to `_Win_02`, which sets flag 113 (`G.AntlionPatch`, logged as `antlion: 2 win choices set to clear the sandpit`).
+- **The Antlion is a boss location:** "Lanzelt Desert: Antlion" (battle group 9060, flag 113), with a shuffled item, in Lanzelt. Like the other bosses in the mod's list, it is scaled as a boss.
 
-**1. The start on foot.** Start a new Archipelago game.
-- **Do you arrive on foot by the Village of Kol, with no airship in sight?**
-- Go into Kol and out, then save and reload. **Is the airship still gone?** The log should have `airship: spawn condition {flag:1431}`.
+## Round 70 test plan (mod 0.54.1, world 0.21.1)
 
-**2. Walking and sailing.** With what the seed has given you:
-- The stone bridge to Grandshelt and the rope bridge to Kolobos: **closed until their unlocks come?**
-- The ferry at Grandport: **does it sail only to ports whose continents are open?**
-- **Can you land anywhere?** You should not have an airship to land with yet.
+**Install:** copy `FFRArchipelago/Scripts` and `dist/ff_resonance.apworld`. Parts 1 and 2 work on the round 69 save. Part 3 needs a new seed.
 
-**3. The Airship arrives.** When "Airship" comes (or, to try it early, `ffrap_grant flag 1431` on the world map):
-- **Does the feed say "The airship is yours. It lands here after your next map change"?**
-- Go into a town or cave and back out. **Is the airship where you stood? Can you board it and fly?**
-- **Can you land only on open continents,** as before?
+**1. The stray airship.** Load the round 69 save, where the airship sits in Olderion. Run `ffrap_airship home`, then go into Kol and back out. **Is the airship by Kol now?**
 
-**4. The Antlion's sandpit.** On foot, not on the Chocobo:
-- **Where is the sandpit, from Kol?** Is it between Kol and Grandport Harbor, or between Kol and the rope bridge to Kolobos?
-- Walk in and win the fight. **Can you walk across now?** **Does the fight come back** when you walk in again, or after a map change? The log may show it in a `story boss` or battle line.
-- If you lose or flee, where do you end up?
+**2. The Antlion, on the round 69 save.** On foot, walk into the sandpit and win.
+- **What does the party say after the win?** It should be "We should be able to cross without riding chocobos now."
+- Walk across and back, and go into a town and out. **Does the fight stay gone?**
+- The log should have `check boss:9060` (the round 69 seed has no such location, so nothing is sent for it).
+
+**3. A new seed** with `start_with_airship: false`, `start_with_chocobo: false` and `starting_continent: lanzelt`.
+- Go into a town (Kol is closest) and stay there until "Airship" arrives. To test it early, `ffrap_grant flag 1431` in the town. **Does the feed say "It waits where you started this seed"? Is the airship by Kol when you come out?**
+- **Is "Lanzelt Desert: Antlion" a location in the tracker,** and does a win send it?
+- How the Antlion feels at your level with scaling on.
 
 Send the `[FFRAP]` lines of the log.

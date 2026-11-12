@@ -1696,13 +1696,17 @@ local function talkTable(name, parents)
       Gim_EV_ShipMovement_01_03_Choice = menu({ 2, 3, 4 }, "Gim_EV_ShipMovement_Cancel_Gra"),
       Gim_EV_ShipMovement_02_03_Choice = menu({ 1, 3, 4 }, "Gim_EV_ShipMovement_Cancel"),
       Gim_EV_ShipMovement_03_02_Choice = menu({ 1, 2, 4 }, "Gim_EV_ShipMovement_Cancel"),
-      Gim_EV_ShipMovement_04_01_Choice = menu({ 1, 2, 3 }, "Gim_EV_ShipMovement_Cancel") },
+      Gim_EV_ShipMovement_04_01_Choice = menu({ 1, 2, 3 }, "Gim_EV_ShipMovement_Cancel"),
+      C01_ArijigokuWin = { ContinuousEventList = {
+        { Condition = "!{flag:10}", EventId = FName("C01_ArijigokuWin_01") },
+        { Condition = "{flag:10}", EventId = FName("C01_ArijigokuWin_02") } } } },
     ParentTables = parents or {} }
   function t:IsValid() return true end
   function t:HasAnyInternalFlags() return false end
   function t:HasAnyFlags() return false end
   function t:GetFullName() return "DataTable " .. name end
   function t:FindRow(n) return self.rows[n] end
+  function t:ForEachRow(fn) for k, r in pairs(self.rows) do fn(fname(k), r) end end
   return t
 end
 gimTalk = talkTable("DT_TalkEventData_GimEV_Prod")
@@ -1735,3 +1739,13 @@ assert L.eval("ferryChoice(gimTalk, 'Gim_EV_ShipMovement_02_03_Choice', 3)") == 
 assert L.eval("ferryChoice(cdtTalk, 'Gim_EV_ShipMovement_01_03_Choice', 1)") == "Gim_EV_ShipMovement_02_Cushion"
 L.execute("G.GetFlag = ferrySavedGetFlag")
 print("ferry: ok")
+
+# Round 69: a win over the Antlion always runs the row that sets flag 113, so the sandpit clears
+# for good with or without story flag 10. One choice to change in each of the two tables.
+ANTLION_CHOICES_TO_CHANGE = 2
+assert L.eval("G.AntlionPatch()") == ANTLION_CHOICES_TO_CHANGE
+for table in ("cdtTalk", "gimTalk"):
+    for i in (1, 2):
+        assert L.eval(f"{table}.rows.C01_ArijigokuWin.ContinuousEventList[{i}].EventId:ToString()") == "C01_ArijigokuWin_02"
+assert L.eval("G.AntlionPatch()") == 0, "nothing to write the second time"
+print("antlion: ok")

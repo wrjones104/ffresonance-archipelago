@@ -59,7 +59,7 @@ An open world save starts at story 8000. A trigger that tests `{progress:0}==N` 
 
 The 15 cave masters also turn on flags 1231 and 1232 (shared). The 12 magic pots (flags 914 to 925) work the same way, but they are item puzzles, not bosses.
 
-Left out: the Antlion (world map, Grandshelt, level 20). Its win turns on flag 113 only when flag 10 is on. With flag 10 off the win row sets nothing, so the fight would come back each time. Round 67: the Antlion's sandpit is in Lanzelt, at (10814, 13272), not Grandshelt. It is there at story 8000. The Chocobo crosses the sandpit with no fight (`!{ride}` in its trigger), so the Antlion is a gate for a start without the airship (`open_world.md`, section 4).
+Left out: the Antlion (world map, Grandshelt, level 20). Its win turns on flag 113 only when flag 10 is on. With flag 10 off the win row sets nothing, so the fight would come back each time. Round 69: the Antlion is a location from world 0.21.1 ("Lanzelt Desert: Antlion", kind `optional`, area Lanzelt), and the mod makes every win take the branch that sets flag 113. Round 67: the Antlion's sandpit is in Lanzelt, at (10814, 13272), not Grandshelt. It is there at story 8000. The Chocobo crosses the sandpit with no fight (`!{ride}` in its trigger), so the Antlion is a gate for a start without the airship (`open_world.md`, section 4).
 
 What a win gives in the game: a cave master gives Magicite (a Shard, a Magicite or a Cryst, by level). Sephiroth gives his vision (13113). The others give nothing. Archaeoaevis's win row writes story 6123, and the two Nameless Ruins bosses write story 5080 and 5110; the mod clears those story writes.
 

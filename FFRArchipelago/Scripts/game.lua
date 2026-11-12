@@ -2143,6 +2143,7 @@ G.BOSSES = {
     { group = 9073, flag = 610 }, { group = 9072, flag = 611 }, { group = 9071, flag = 612 },
     { group = 9076, flag = 613 }, { group = 9004, flag = 1240 }, { group = 9012, flag = 1241 },
     { group = 9014, flag = 1242 }, { group = 9088, flag = 526 }, { group = 9089, flag = 527 },
+    { group = 9060, flag = 113 },   -- round 69: the Antlion (G.AntlionPatch)
 }
 -- Win rows whose own reward is the location's item now: the 15 cave masters' Magicite, and
 -- Sephiroth's vision.
@@ -2263,6 +2264,26 @@ function G.BossesPatch()
             end)
         end)
     end
+    return written
+end
+
+-- Round 69: the Antlion (battle group 9060) in Lanzelt's sandpit, between Kol and Grandport. A win
+-- runs C01_ArijigokuWin, which goes on to _Win_02 (sets flag 113, so the fight is gone for good)
+-- only when story flag 10 is on, and to _Win_01 (sets nothing, "it will attack us again")
+-- otherwise. Both now go to _Win_02. Returns the number of rows written.
+G.ANTLION_WIN, G.ANTLION_WIN_FOR_GOOD = "C01_ArijigokuWin", "C01_ArijigokuWin_02"
+function G.AntlionPatch()
+    local written = 0
+    EachTalkRow(function(key, row)
+        if key ~= G.ANTLION_WIN then return end
+        local list = row.ContinuousEventList
+        for i = 1, #list do
+            if ObjText(list[i].EventId) ~= G.ANTLION_WIN_FOR_GOOD then
+                list[i].EventId = FName(G.ANTLION_WIN_FOR_GOOD)
+                written = written + 1
+            end
+        end
+    end)
     return written
 end
 

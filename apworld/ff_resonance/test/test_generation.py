@@ -9,7 +9,7 @@ from . import FFResonanceTestBase
 ARTIFACT_IDS = (30000, 30018)    # DT_ArtifactItemData's rows
 LAST_PALACE_CHEST = "chest:2031:24"   # Oblivion Palace's 4-Star Chamber: all 99 shards
 PALACE_SHARDS = 99
-MARAUDER, LIQUID_THUNDER = 9079, 9083   # battle groups: a cave master, a story boss
+MARAUDER, LIQUID_THUNDER, ANTLION = 9079, 9083, 9060   # battle groups: a cave master, a story boss, an optional boss
 CAVE_MASTERS, FRAGMENT_BOSSES = 15, 12
 
 
@@ -251,6 +251,11 @@ class TestBosses(FFResonanceTestBase):
             plain = boss["fragment"] or boss["key"] == SEPHIROTH
             wanted = LocationProgressType.DEFAULT if plain else LocationProgressType.PRIORITY
             self.assertEqual(self.multiworld.get_location(boss["name"], self.player).progress_type, wanted, boss["name"])
+
+    def test_the_antlion_is_in_lanzelt(self) -> None:
+        antlion = self.boss_location(ANTLION)
+        self.assertEqual(antlion.parent_region.name, "Lanzelt")
+        self.assertFalse(antlion.locked, "a shuffled item, not a Crystal Fragment")
 
     def test_a_boss_is_on_its_continent(self) -> None:
         boss = self.boss_location(LIQUID_THUNDER)

@@ -352,10 +352,11 @@ def main() -> None:
     bosses = []
     for r in read_tsv("bosses.tsv"):
         group, map_id = int(r["group"]), int(r["map"])
-        place = ascii_name(maps[map_id]["name"])
+        # Round 69: a boss on the world map (the Antlion) names its place and continent itself.
+        place = "Lanzelt Desert" if map_id == WORLD_MAP else ascii_name(maps[map_id]["name"])
         name = place if r["kind"] == "cave" else f"{place}: {r['name']}"
         vanilla = item_for(int(r["reward"]), 1, 0, in_chest=True) if r["kind"] == "cave" else None
-        bosses.append({"key": f"boss:{group}", "name": name, "region": "Bosses", "area": map_area(map_id),
+        bosses.append({"key": f"boss:{group}", "name": name, "region": "Bosses", "area": r.get("area") or map_area(map_id),
                        "open_world": True, "id": BOSS_LOCATION_BASE + group, "vanilla": vanilla,
                        "fragment": r["kind"] == "story"})
     bosses.sort(key=lambda e: e["id"])
