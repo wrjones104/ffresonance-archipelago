@@ -588,6 +588,10 @@ World-map shinies verified as locations. Multiple crashes observed across differ
 - A loaded chest still goes by its own state. When the save disagrees, the log says `the save says open (row <row>, IsOpenTreasureBox <answer>), the chest says closed; not sent`.
 - The first `GetUniqueId` answer of each session is logged, and so is a failure: `chest <map>:<uid>: GetUniqueId says <id> (first of the session)`, or `failed: <why>`.
 
+**Round 66 (mod 0.52.5, world 0.19.1, 2026-11-12): passed.**
+- The user reports that everything worked as expected: the shards sent on pick-up, and nothing was sent early. No log was sent, so the `GetUniqueId` answer and the `/resync` count are not recorded.
+- The chest and shiny work of rounds 63 to 66 is closed. Next: the story bosses, map blockers at the crossings between continents, and options to start without the airship or the Chocobo.
+
 ## Round 66 test plan (mod 0.52.5, world 0.19.1)
 
 **Install:** copy `FFRArchipelago/Scripts`. The apworld is unchanged, so the round 65 seed carries on.
