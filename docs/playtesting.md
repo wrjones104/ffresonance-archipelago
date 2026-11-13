@@ -680,9 +680,13 @@ World-map shinies verified as locations. Multiple crashes observed across differ
 
 **Changed (world 0.23.1):** the world takes the seed's own continent, party and options from its slot data when Universal Tracker builds it (`interpret_slot_data`, `ut_can_gen_without_yaml`). The slot data now also sends `shuffle_party_members`, `shuffle_visions` and `shuffle_key_items`. A seed made with 0.23.0 lacks those three, so the tracker takes their defaults (all on).
 
-## Round 72 test plan (mod 0.56.0, world 0.23.1)
+**Also before play:** Universal Tracker showed Grandshelt Castle Chests 8 to 16 grayed out. Those are excluded locations, on map 3020: the castle burning in the prologue, which has no way in at story 8000. The user: they should not count at all. And the Imperial Residences (2113), on the same no-route list, are reachable: the user went there in the round 71 seed, by the Zoldaad streetcar.
 
-**Install:** copy `FFRArchipelago/Scripts` (it has a new file, `field_items.lua`) and `dist/ff_resonance.apworld` (0.23.1, for the tracker fix). A new seed is needed for the logic and fast travel changes. The crash fix, the shard fix and the boss changes also work on the round 71 save.
+**Changed (world 0.23.2):** map 3020's nine chests are no locations (`NO_ROUTE` in `data.py`), so a seed has 9 fewer. The Imperial Residences' chest and shard are in logic, in Zoldaad. The no-route list now holds map 3020 only.
+
+## Round 72 test plan (mod 0.56.0, world 0.23.2)
+
+**Install:** copy `FFRArchipelago/Scripts` (it has a new file, `field_items.lua`) and `dist/ff_resonance.apworld` (0.23.2). A new seed is needed for the logic and fast travel changes. The crash fix, the shard fix and the boss changes also work on the round 71 save.
 
 **1. Play long.** The crash came about 2 hours in, on leaving the world map. **Does it still happen?** If it does, send the crash folder.
 

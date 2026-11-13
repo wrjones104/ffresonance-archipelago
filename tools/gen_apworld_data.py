@@ -137,12 +137,13 @@ GENERIC_PLACE_NAMES = {"Dungeon", "Shipyard", "Slums"}
 # Progression items (world 0.3.0).
 UNIT_ITEM_BASE = 800_000_000       # AP id of a party member: base + unit id
 CONTINENT_ITEM_BASE = 700_000_000  # AP id of a continent's unlock: base + its event flag
-# Maps with no route on the open world start, so their chests may only hold filler (world 0.4.0).
-# Each is entered only from a story event, or lies behind a map that is: the burning Grandshelt
-# Castle (3020), the Imperial Residences (2113) and Fina's Psyche (3211, 3212). From
-# data/game/transitions.tsv and the talk event table, not from play. The Earth Shrine's inner part
-# (3000) was on this list until round 44 walked into it and opened its chests.
-NO_OPEN_WORLD_ROUTE = {3020, 2113}
+# Maps with no route on the open world start (world 0.4.0, from data/game/transitions.tsv and the
+# talk event table). Their chests held filler only, until play showed most of them open: the
+# Earth Shrine's inner part (3000, round 44), Fina's Psyche (3211, 3212, behind Tellus, round 71)
+# and the Imperial Residences (2113, by the Zoldaad streetcar, round 72). The burning Grandshelt
+# Castle (3020) is the prologue's and cannot be entered at story 8000. Round 72: its chests are
+# no locations at all, as a location no one can open only inflates the count (the user).
+NO_ROUTE_MAPS = {3020}
 # Round 71 (the user): Fina's Psyche (maps 3210 to 3212) is reached past Tellus in the Tower of
 # Mysidia, so its locations need what that boss needs.
 AFTER_BOSS = {3210: 9038, 3211: 9038, 3212: 9038}
@@ -284,17 +285,20 @@ def main() -> None:
         return ap_id
 
     shards_for = {(int(r["map"]), int(r["chest"])): int(r["shards"]) for r in read_tsv("game/shard_chests.tsv")}
-    chests, kept_chests, no_box = [], [], []
+    chests, kept_chests, no_box, no_route = [], [], [], []
     for r in read_tsv("game/chests.tsv"):
         map_id, chest_id = int(r["mapId"]), int(r["ID"])
         if not r["boxes"]:
             no_box.append(f"chest:{map_id}:{chest_id}")
             continue
+        if map_id in NO_ROUTE_MAPS:
+            no_route.append(f"chest:{map_id}:{chest_id}")
+            continue
         item_id, count, money = int(r["ItemId"]), int(r["ItemNum"]), int(r["Money"])
         ap_item = item_for(item_id, count, money, in_chest=True)
         entry = {"key": f"chest:{map_id}:{chest_id}", "place": chest_place(r["row"], map_id, maps),
                  "region": chest_region(r["row"]), "area": chest_area(map_id, r["row"]),
-                 "open_world": map_id not in NO_OPEN_WORLD_ROUTE, "row": r["row"],
+                 "open_world": True, "row": r["row"],
                  "id": CHEST_LOCATION_BASE + map_id * 1000 + chest_id, "vanilla": ap_item}
         if map_id in AFTER_BOSS:
             entry["after_boss"] = AFTER_BOSS[map_id]
@@ -337,7 +341,7 @@ def main() -> None:
         if ap_item is not None and int(r["item"]) == TABLET_SHARD:
             place = ascii_name((maps.get(map_id) or {}).get("name") or f"Map {map_id}")
             entry.update({"name": f"{place} Shard {uid}", "region": "Tablet Shards", "area": map_area(map_id),
-                          "open_world": map_id not in NO_OPEN_WORLD_ROUTE and holds_at_open_start(r.get("visible") or "")})
+                          "open_world": map_id not in NO_ROUTE_MAPS and holds_at_open_start(r.get("visible") or "")})
             if map_id in AFTER_BOSS:
                 entry["after_boss"] = AFTER_BOSS[map_id]
             tablet_shinies.append(entry)
@@ -473,6 +477,8 @@ def main() -> None:
         f.write("KEPT_VANILLA = " + pprint.pformat(sorted(e["key"] for e in kept_chests + kept_shinies), width=110) + "\n\n")
         f.write("# Chest table rows with no box placed on any map: not locations\n")
         f.write("NO_BOX = " + pprint.pformat(sorted(no_box), width=110) + "\n\n")
+        f.write("# Chest rows on a map with no route at story 8000 (the burning castle): not locations\n")
+        f.write("NO_ROUTE = " + pprint.pformat(sorted(no_route), width=110) + "\n\n")
         f.write("# Progression items by group (AP ids): party members, visions, key items. One of each goes\n"
                 "# in the pool when its option is on, except the party members a player starts with.\n")
         f.write("PROGRESSION = " + pprint.pformat(progression, width=110, sort_dicts=True) + "\n\n")

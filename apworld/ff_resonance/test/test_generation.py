@@ -5,7 +5,7 @@ from worlds import AutoWorld
 from worlds.AutoWorld import call_all
 from test.general import gen_steps
 
-from ..data import AIRSHIP_ITEM, BOSSES, CHESTS, CHOCOBO_ITEM, CONTINENT_UNLOCKS, CRYSTALS, FRAGMENT_ITEM, ITEMS, NO_BOX, TABLET_SHINIES, PROGRESSION, SHINIES, SHUFFLE_ID_LIMIT, UNIT_ITEM_BASE
+from ..data import AIRSHIP_ITEM, BOSSES, CHESTS, CHOCOBO_ITEM, NO_ROUTE, CONTINENT_UNLOCKS, CRYSTALS, FRAGMENT_ITEM, ITEMS, NO_BOX, TABLET_SHINIES, PROGRESSION, SHINIES, SHUFFLE_ID_LIMIT, UNIT_ITEM_BASE
 from ..items import CLASSIFICATIONS, FILLER_CATEGORIES, FRAGMENT_NAME, item_name_groups
 from ..locations import GOAL_EVENT, LOCATION_KEY_TO_ID, SEPHIROTH, VICTORY
 from ..options import Goal, TabletShardsRequired
@@ -70,9 +70,15 @@ class TestDefault(FFResonanceTestBase):
         self.assertTrue(self.multiworld.get_location("Dragon's Maw Chest 1", self.player).can_reach(self.multiworld.state))
         self.assertFalse(self.multiworld.state.can_reach_region("Gronoa", self.player))
 
-    def test_places_with_no_route_hold_only_filler(self) -> None:
-        for name in ("Grandshelt Castle Chest 8",):
-            self.assertEqual(self.multiworld.get_location(name, self.player).progress_type, LocationProgressType.EXCLUDED)
+    def test_places_with_no_route_are_not_locations(self) -> None:
+        """Round 72: the burning Grandshelt Castle (3020) is the prologue's: its chests are not
+        locations. The Imperial Residences (2113) are reached by the Zoldaad streetcar."""
+        self.assertTrue(NO_ROUTE and all(key.startswith("chest:3020:") for key in NO_ROUTE))
+        names = {loc.name for loc in self.multiworld.get_locations(self.player)}
+        self.assertNotIn("Grandshelt Castle Chest 8", names)
+        residences = self.multiworld.get_location("Imperial Residences Chest 1", self.player)
+        self.assertEqual(residences.progress_type, LocationProgressType.DEFAULT)
+        self.assertEqual(residences.parent_region.name, "Zoldaad")
         # Round 44 walked into the Earth Shrine's inner part and opened its chests.
         self.assertNotEqual(self.multiworld.get_location("Earth Shrine Chest 1", self.player).progress_type,
                             LocationProgressType.EXCLUDED)
@@ -622,7 +628,7 @@ class TestData(FFResonanceTestBase):
         self.assertEqual(unseen, [70, 71, 84, 85, 86, 87, 88, 89, 91])
 
     def test_mod_keys_map_to_ids(self) -> None:
-        self.assertEqual(LOCATION_KEY_TO_ID["chest:3020:1"], 1_000_000_000 + 3020 * 1000 + 1)
+        self.assertEqual(LOCATION_KEY_TO_ID["chest:2012:1"], 1_000_000_000 + 2012 * 1000 + 1)
         self.assertEqual(LOCATION_KEY_TO_ID[f"boss:{MARAUDER}"], 4_000_000_000 + MARAUDER)
         self.assertEqual(len(LOCATION_KEY_TO_ID), len(CHESTS) + len(SHINIES) + len(CRYSTALS) + len(TABLET_SHINIES) + len(BOSSES))
 
