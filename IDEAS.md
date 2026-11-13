@@ -264,3 +264,15 @@ The chapter-by-chapter progression (party, vehicles, gates, Visions, Espers) is 
 - A table: each boss's weaknesses and a rough tier (from its scaled level band).
 - The rule shape. One choice: a boss needs N members plus visions (N by tier), at least one of them hits a weakness, and one can heal. Another: count "power" items (members, visions, weapons over some tier) in place of exact skills.
 - Whether a cave master should stop being a priority location until this logic exists.
+
+## 30. Libra options
+
+**Idea(s):** Users have expressed interest in a "Librasanity" option, which basically means there's a check in the multiworld for scanning each enemy. This would introduce a bunch of extra locations, which would need lots of filler to be populated (gil, consumables, magicite, etc.). To help this out, I would want to introduce some supporting stuff:
+- start with all characters knowing Libra
+- all characters can learn Libra, either naturally or via AP items
+
+Along the same lines, I would also want an option for players to start with all enemies already scanned. If this option is enabled, it would need to disable Librasanity though, otherwise the player would send out hundreds of checks immediately - unless we could set it up where the game needed to "see" the enemy to trigger the check. That's probably more work, but probably doable. Eventually I think I would also want an Enemysanity option, very similar where you get a check for each time you defeat a unique enemy.
+
+## 31. Shopsanity
+
+**Idea:** Each shop slot becomes an Archipelago location (see: Crystal Project, Cross-Code, ALttP, etc.) - you have to buy the item to trigger the send, afterwards that shop slot is removed (or replaced with its original vanilla item).
