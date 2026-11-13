@@ -3,6 +3,7 @@
 ## Logic stuff
 * Airship radars should be progressive? - actually not sure about this one, need to do a bit more research/playtesting
 * Will need to work through logic for side-quests, specifically those that send you to other continents.
+* Sephiroth should not be in logic right away - goes along with other boss logic stuff
 
 ## Artifacts - OUT FOR NOW, WILL REVISIT LATER
 * We're able to obtain them via AP items but they don't seem to work - do we need to enable them somehow? Are they even an enabled thing in the vanilla game?

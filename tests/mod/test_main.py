@@ -937,6 +937,23 @@ out = read("ap_out.txt")
 assert out.count(f"check\tshiny:{FELICITAS}:{SHARD_UID}\n") == 1, out
 assert f"shiny:{FELICITAS}:{NOT_A_LOCATION}" not in out
 G.shinies = L.table()
+# Round 72: a live shiny is known by where it stands. Zoldaad Castle's shard 11, taken, came
+# back on a later visit reading id 10 and open (round 71), so 10 was sent with nothing picked up.
+ZOLDAAD_CASTLE, SHARD_10_PLACE, SHARD_11_PLACE = 3160, (29089, -1073), (30460, 3846)
+inbox(f"scout\tshiny:{ZOLDAAD_CASTLE}:10\tLongshot\tRat2\t1\t0\n"
+      f"scout\tshiny:{ZOLDAAD_CASTLE}:11\tLongshot\tRat2\t1\t0\n")
+G.map = ZOLDAAD_CASTLE
+tick(2)
+G.shinies = L.table_from({1: L.table_from({"uid": 10, "open": True, "itemId": 25004, "itemNum": 1, "money": -1,
+                                            "x": SHARD_11_PLACE[0] + 20, "y": SHARD_11_PLACE[1] - 30})})
+tick(10)
+out = read("ap_out.txt")
+assert f"check\tshiny:{ZOLDAAD_CASTLE}:11\n" in out and f"shiny:{ZOLDAAD_CASTLE}:10" not in out, out[-300:]
+# one far from any level shiny keeps the id it reads
+G.shinies = L.table_from({1: L.table_from({"uid": 10, "open": False, "itemId": 25004, "itemNum": 1, "money": -1,
+                                            "x": SHARD_10_PLACE[0] + 5000, "y": SHARD_10_PLACE[1]})})
+tick(2)
+G.shinies = L.table()
 print("chest pop-up: ok")
 
 # 13. experimental gate and custom key-item probe (0.11.3): works standalone even on unlinked saves
@@ -1421,29 +1438,31 @@ assert calls() == [], "not before the open world start"
 G.story = 8000
 tick(10)
 # Round 63: normal by default (the old expert). Party level 10 is a quarter of the way up the
-# ramp: centre 93% (9), power 96%; bosses at 118% (12), 128%. Round 63, later: the enemies' band
-# is 1 under the centre and 3 over it on normal; the bosses' stays 2 each way
-assert calls() == ["clamp 8 12 true hp96 atk96 mag96; bosses 10 14 hp128"], calls()
+# ramp: centre 93% (9), power 96%. Round 63, later: the enemies' band is 1 under the centre and 3
+# over it on normal; the bosses' stays 2 each way. Round 72: normal's bosses came in, to 111%
+# (11) and 116% here
+assert calls() == ["clamp 8 12 true hp96 atk96 mag96; bosses 9 13 hp116"], calls()
 tick(10)
 assert len(calls()) == 1, "once"
 G.partyLv = 30
 tick(10)
-assert calls()[-1] == "clamp 29 33 true hp115 atk115 mag115; bosses 36 40 hp135", "the top of the ramp: centre 100% (30), power 115%; bosses 125% (38), 135%"
+assert calls()[-1] == "clamp 29 33 true hp115 atk115 mag115; bosses 33 37 hp120", "the top of the ramp: centre 100% (30), power 115%; bosses 115% (35), 120%"
 G.partyLv = 3
 tick(10)
-assert calls()[-1] == "clamp 2 6 true hp90 atk90 mag90; bosses 1 5 hp125", "below the ramp: centre 90% (3), power 90%; bosses 115%, 125%"
-# Round 56: a new strength rescales at once. Round 63: expert is centre 100% (3), power 105%;
-# bosses 120% (4), 140%. Casual is the old normal: centre 80% (2), power 75%; bosses 100%, 100%.
+assert calls()[-1] == "clamp 2 6 true hp90 atk90 mag90; bosses 1 5 hp115", "below the ramp: centre 90% (3), power 90%; bosses 110%, 115%"
+# Round 56: a new strength rescales at once. Round 63: expert is centre 100% (3), power 105%.
+# Round 72: expert's bosses are normal's old ones, 115% (3), 125%. Casual is the old normal:
+# centre 80% (2), power 75%; bosses 100%, 100%.
 # The enemies' band goes 5 over the centre on expert and 1 on casual
 L.execute('commands["ffrap_set"]("ffrap_set", {"strength", "expert"})')
 tick(10)
-assert calls()[-1] == "clamp 2 8 true hp105 atk105 mag105; bosses 2 6 hp140", calls()
+assert calls()[-1] == "clamp 2 8 true hp105 atk105 mag105; bosses 1 5 hp125", calls()
 L.execute('commands["ffrap_set"]("ffrap_set", {"strength", "casual"})')
 tick(10)
 assert calls()[-1] == "clamp 1 3 true hp75 atk75 mag75; bosses 1 5 hp100", calls()
 L.execute('commands["ffrap_set"]("ffrap_set", {"reset"})')
 tick(10)
-assert calls()[-1] == "clamp 2 6 true hp90 atk90 mag90; bosses 1 5 hp125", "back to normal"
+assert calls()[-1] == "clamp 2 6 true hp90 atk90 mag90; bosses 1 5 hp115", "back to normal"
 G.saveObj, G.saveTicks = "SD_OTHER", "600"     # a save in a slot the seed does not hold
 tick(30)
 assert calls()[-1].startswith("off "), calls()
@@ -1457,7 +1476,7 @@ G.chests = L.table()
 tick(12)
 G.story = 8000
 tick(10)
-assert calls() == ["clamp 8 12 true hp96 atk96 mag96; bosses 10 14 hp128"], calls()
+assert calls() == ["clamp 8 12 true hp96 atk96 mag96; bosses 9 13 hp116"], calls()
 L.execute('commands["ffrap_scale"]("ffrap_scale", {"off"})')
 G.partyLv = 30
 tick(30)

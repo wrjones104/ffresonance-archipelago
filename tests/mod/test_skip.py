@@ -94,8 +94,19 @@ function FindFirstOf(c)
   if c == "CPP_MuchaSaveDataManager" then return mgr end
   if c == "CPP_MapManager" then return mapMgr end
 end
+-- Round 72: game.lua keeps objects between ticks as paths (G.PathOf) and finds them again with
+-- StaticFindObject, which in the engine finds only objects that still exist. Fakes get a path here.
+fakePaths = {}
+function fakePathLookup(path)
+  local o = fakePaths[path]
+  if o and (not o.IsValid or o:IsValid()) then return o end
+  return nil
+end
+local sfoBeforePaths = StaticFindObject
+function StaticFindObject(p) return fakePathLookup(p) or (sfoBeforePaths and sfoBeforePaths(p)) end
 function FindAllOf() return nil end
 G = (require("game"))
+G.PathOf = function(o) if not o then return nil end local k = "fake:" .. tostring(o); fakePaths[k] = o; return k end
 ''')
 lua = L.eval
 
@@ -246,6 +257,9 @@ ok, report = L.execute("return G.SkipPrologue({ openStart = true, party = { 1007
 lines = list(report.values())
 assert ok is True, lines
 assert "ok   party -> [1007, 1006]" in lines and "ok   join status: Jake, Archwitch Fina 0" in lines, lines
+# Round 72: fast travel showed Grandshelt Castle (2013) and the Earth Shrine (3001) from the start,
+# past the continent locks. An open start in the airship marks only the battlefield and its deck.
+assert "ok   maps known and visited: 5010, 20000" in lines, lines
 assert lua("unitAt(1007).JoinStatus") == 0 and lua("unitAt(1006).JoinStatus") == 0 and lua("unitAt(1001).JoinStatus") == 1
 assert lua("unitAt(1006).activeSkillIdList[1]") == 408010 and lua("unitAt(1006).EquipWeaponId") == 10600
 assert lua("bag[10700]") == 1 and lua("bag[12022]") == 1 and lua("bag[10600]") == 1, "Jake's and her gear"

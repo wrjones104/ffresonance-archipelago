@@ -39,6 +39,28 @@ AIRSHIP = ITEMS[AIRSHIP_ITEM]["name"]
 BRIDGES = [("Grandshelt", "Lanzelt"), ("Lanzelt", "Kolobos")]
 FERRY_PORTS = ["Lanzelt", "Dirnado", "Olderion", "Zoldaad"]
 
+# Round 72: what a boss needs, by its tier in data/bosses.tsv (docs/boss_logic.md, section 2): party
+# members in all, continents unlocked, and the Airship. In round 71 bosses near level 20 felt out
+# of reach without a full party, and beatable at level 30 with one. The capability rules per boss
+# (healing, elements) in boss_logic.md are not built yet.
+TIER_NEEDS = {"A": (0, 0, False), "B": (3, 2, False), "C": (4, 4, False), "D": (5, 6, True)}
+BOSS_TIER = {int(b["key"].split(":")[1]): b["tier"] for b in BOSSES}
+
+
+def boss_rule(world: FFResonanceWorld, tier: str):
+    """The rule for a boss of `tier`, or None when it needs nothing. Party sizes above what the
+    seed can give (party members not shuffled) count as the most it can."""
+    members, continents, wants_airship = TIER_NEEDS[tier]
+    player = world.player
+    most = 8 if world.options.shuffle_party_members else len(world.starting_party)
+    extra = max(0, min(members, most) - len(world.starting_party))
+    airship = wants_airship and not world.options.start_with_airship
+    if not (extra or continents or airship):
+        return None
+    return lambda state: (state.has_group("Party Members", player, extra)
+                          and state.has_group("Continent Unlocks", player, continents)
+                          and (not airship or state.has(AIRSHIP, player)))
+
 
 class FFResonanceLocation(Location):
     game = GAME
@@ -94,6 +116,7 @@ def create_regions_and_locations(world: FFResonanceWorld) -> None:
     for loc in chosen:
         region = regions[loc["area"]]
         location = FFResonanceLocation(player, loc["name"], loc["id"], region)
+        rules = []
         # A place with no route on the open world start may only hold filler.
         if loc["region"] in excluded or not loc["open_world"]:
             location.progress_type = LocationProgressType.EXCLUDED
@@ -101,7 +124,7 @@ def create_regions_and_locations(world: FFResonanceWorld) -> None:
         # the last). With the shards not in the pool, logic cannot count them: filler only.
         if "shards" in loc:
             if world.options.include_tablet_shards:
-                location.access_rule = lambda state, n=loc["shards"]: state.has("Tablet Shard", player, n)
+                rules.append(lambda state, n=loc["shards"]: state.has("Tablet Shard", player, n))
             else:
                 location.progress_type = LocationProgressType.EXCLUDED
         # Doors that test a key item (data/gates.tsv). With the item not in the pool, logic
@@ -109,9 +132,19 @@ def create_regions_and_locations(world: FFResonanceWorld) -> None:
         if "needs" in loc:
             if in_pool.issuperset(loc["needs"]):
                 names = [ITEMS[ap_id]["name"] for ap_id in loc["needs"]]
-                location.access_rule = lambda state, names=names: state.has_all(names, player)
+                rules.append(lambda state, names=names: state.has_all(names, player))
             else:
                 location.progress_type = LocationProgressType.EXCLUDED
+        # Round 72: a boss, or a place behind one (Fina's Psyche, behind Tellus), needs what the
+        # boss's tier needs. A place only the airship reaches (data/airship_only.tsv) needs it.
+        tier = loc.get("tier") or BOSS_TIER.get(loc.get("after_boss"))
+        tier_rule = boss_rule(world, tier) if tier else None
+        if tier_rule:
+            rules.append(tier_rule)
+        if loc.get("airship") and on_foot:
+            rules.append(lambda state: state.has(AIRSHIP, player))
+        if rules:
+            location.access_rule = lambda state, rules=rules: all(rule(state) for rule in rules)
         if (world.options.priority_bosses and loc.get("fragment") is False and loc["key"] != SEPHIROTH
                 and location.progress_type == LocationProgressType.DEFAULT):
             location.progress_type = LocationProgressType.PRIORITY
@@ -119,6 +152,8 @@ def create_regions_and_locations(world: FFResonanceWorld) -> None:
         # Round 59: a story boss gives a Crystal Fragment, always its own.
         if loc.get("fragment"):
             location.place_locked_item(create_item(world, FRAGMENT_NAME))
+        elif "vision" in loc and not world.options.shuffle_visions:
+            location.place_locked_item(create_item(world, ITEMS[loc["vision"]]["name"]))
         if loc["vanilla"] is not None:
             world.vanilla_items.append(loc["vanilla"])
 

@@ -51,7 +51,7 @@ An Archipelago implementation for Final Fantasy Resonance (UE 5.6, game module `
 - **Crash reports:** `%LOCALAPPDATA%\FFRS\Saved\Crashes\*\CrashContext.runtime-xml` holds the stack as module offsets. `python tools/crashstack.py <folder>` names the UE4SS frames with `UE4SS.pdb`.
 - **`pcall` does not catch an access violation.** A null object from an array crashes the game when asked for its name. Ask `IsValid` first (round 41).
 - **Actors far from the player may not be loaded.** `FindAllOf` finds the tower's trigger only near it, and it comes back as the game made it (round 57). Act on it every tick, not once per map.
-- **A map load frees the old map's objects, and a cached handle to one can crash even on `IsValid`.** `G.ForgetObjects` clears the caches in the `LoadMap` post hook. Anything new that keeps an object across ticks must be cleared there too (round 49).
+- **A map load frees the old map's objects, and a cached handle to one can crash even on `IsValid`.** `G.ForgetObjects` clears the caches in the `LoadMap` post hook (round 49). That was not enough: an object can be freed with no map load the mod sees (round 71, two crashes). **Never keep a game object from one tick to the next. Keep its path (`G.PathOf`) and find it again with `Find(path)`**, which uses `StaticFindObject` and never touches a freed object.
 
 **Hooks and probes:**
 - **Native functions called from Blueprints can be hooked** with `RegisterHook`, and a pre-hook can change their arguments (the title menu's `ExecuteEntry`). A post hook's return value replaces the function's (round 48).
@@ -79,7 +79,7 @@ An Archipelago implementation for Final Fantasy Resonance (UE 5.6, game module `
 - A story `NoEntry` zone holds until its event's flag is on (the Earth Shrine's exit needs flag 102, round 44). `gimmicks.tsv` has the conditions.
 - `CPP_VM_Party:AddUnit` does not set `JoinStatus`: a unit added only that way gains no EXP and gear on it does not count (round 44).
 - The prologue skip must run after story 1005 and the game's first autosave, or the opening movie's input lock survives the reload (round 9).
-- **A live field item's `m_UniqueId` can differ from the level's.** Tablet Shards in Felicitas read 0 and 1, while the save keeps them as 8 and 9. Ask the save by the seed's own ids too (round 63).
+- **A live field item's `m_UniqueId` can differ from the level's.** Tablet Shards in Felicitas read 0 and 1, while the save keeps them as 8 and 9 (round 63). In Zoldaad Castle a taken shard came back reading another shard's id (round 71). The mod takes a shiny's id from the level's shiny at the same place (`Scripts/field_items.lua`, round 72).
 - **`IsOpenTreasureBox(map, uid)` answers from another map's row when the map has no row for that uid yet.** Four Earth Shrine chests were sent on arrival because shinies with the same uids were open elsewhere. Read the map's own rows, `Map.mapGimmick{map}.treasureBox.treasureBoxList` (`game.SaveOpenRows`), and judge a loaded chest by the chest (rounds 64 and 65).
 - **The world map's id can come in before the town's pawn is gone.** A position read as the map changed was Grandport's own, and put the airship in Olderion. Check the pawn's class (`BP_MapUnit_Player_Field_C` on the world map) before trusting a world-map position (round 69).
 - **On foot, the pawn's rotation reads 0 whichever way the player faces.** Every `ffrap_gate mark` cart went north. Take a direction from the player's movement (round 67).

@@ -46,6 +46,7 @@ item_name_groups: dict[str, set[str]] = {
 FILLER_NAMES = sorted(item_name_groups["Consumables"])
 FILLER_CATEGORIES = {"consumable", "gil"}
 SHARDS_FOR_CHESTS = max(c.get("shards", 0) for c in CHESTS)
+STARTER_VISIONS = (13024001, 13045001)      # Tronn and Leah (Mitra story C01_014_03)
 
 
 class FFResonanceItem(Item):
@@ -107,6 +108,9 @@ def create_all_items(world: FFResonanceWorld) -> None:
     world.multiworld.itempool += pool
     # The starting continent's unlock is handed over at the start, through the normal item path.
     world.multiworld.push_precollected(create_item(world, ITEMS[CONTINENT_UNLOCKS[world.starting_continent]]["name"]))
+    if not world.options.shuffle_visions:
+        for ap_id in STARTER_VISIONS:
+            world.multiworld.push_precollected(create_item(world, ITEMS[ap_id]["name"]))
 
 
 def get_filler_item_name(world: FFResonanceWorld) -> str:

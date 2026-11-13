@@ -653,26 +653,45 @@ World-map shinies verified as locations. Multiple crashes observed across differ
 - **Ten more story bosses** (`bosses.md`, section 4a): Siren (Siren's Tower), Aether (Wind Shrine), Tellus (Nameless Ruins, Tower of Mysidia and Wandering Lands), Lux (Rugged Mountain Path), Elfdrit (Gronoa Shrine), Gelidus (Sanctissimus Shrine), Ignis (Mt. Reizan) and Behemoth (Crystal Tower). Each starts where its story fight did, at a zone or a door, and holds a Crystal Fragment. There are now 22 fragment bosses.
 - None of them is seen yet: each trigger is a little different, and each may be gone or moved at story 8000.
 
-## Round 71 test plan (mod 0.55.0, world 0.22.0)
+**Round 71 (mod 0.55.0, world 0.22.0, 2026-11-13): passed for most bosses, with bugs and two crashes.** A long solo seed on the game's Normal with our Normal (`.reference/2026-11-13_playtest ue4ss logs.txt`).
+- **Most of the ten story bosses work**: their triggers were found (`1 triggers`), the fights started, and the wins sent their checks.
+- **Tellus in the Wandering Lands did not start.** The trigger was found on map 3270 (`1 triggers`), but the user could not find the spot. Its zone is at (235, 102590), past where the way from map 3272 comes in.
+- **Elfdrit started only on one square**: the zone is small.
+- **Behemoth:** in the story the Sworn Six weaken it first. It sits right before the final boss, and a player should not have to go there before they are ready. The user's call: leave it to the game.
+- **Fast travel offered Grandshelt Castle and the Earth Shrine** on a start without the airship. The prologue skip marks maps 2013 and 3001 as visited, so they are fast travel points from the first minute, past the continent locks.
+- **Zoldaad Castle Shard 10 was sent with nothing picked up.** The log: `check shiny:3160:11` with its pop-up at 12:02:31, then a trip to map 5100 (an event copy of the castle) and back, then `check shiny:3160:10` at 12:03:46 with `no chest pop-up on screen`. So the shard taken as 11 most likely came back on the next visit reading 10, already taken (the round 63 Felicitas pattern).
+- **Grandshelt Castle Chest 2 not found.** The game data: map 2012, box uid 63 at (-30195, 8095, 92). The hall by the castle's west exit to the town (around x -32600) has two doors facing each other, at (-29980, -6000) and (-29980, 6000). The chest is about 2,100 past the second, and much lower (z 92, the doors at 832). The doors are plain doors with no condition.
+- **Bosses felt too hard on Normal.** Near level 20 without a full party, some felt unbeatable. At level 30 with a full party, tough but beatable, "a tad too tough for normal". Party size matters more than thought.
+- **Two crashes, with no other mods in.** Both in a mod tick, one Lua `pcall` deep, reading a field on a freed object (`UECC-...0E0874F5`: `FFieldClassVariant::GetFName`, reading 0xffffffffffffffff; `UECC-...F767683F`: `FName::ToString`, reading 0x100). Both about a second after leaving the world map: into Mitra (12:53:09) and into a cave (14:44:57). Round 63's two crashes were also near 1 h 50 into a session.
+- **Logic, from the user:** Zoldaad Dungeon Chests 1 to 4 and Dungeon Shards 2 and 3 need the Dungeon Key. All of Fina's Psyche is behind Tellus in the Tower of Mysidia. These are only reachable by the airship: World Map Shiny 68, 104 and 105, the Sanctum of Light (Clive), and Malboro Varietas Cave. The user offers to find the rest.
+- **Ideas from the user:** merchant ships on the ocean that the airship can visit (`GimEv_MerchantShip_*`, IDEAS.md idea 31), shuffled in, needing the Airship.
 
-**Install:** copy `FFRArchipelago/Scripts` and `dist/ff_resonance.apworld`. Generate a new seed with bosses on (the default). To reach them fast, use `ffrap_lock open all`, and `ffrap_scale` to make the fights quick if you only want to see them start.
+**Changed after round 71 (mod 0.56.0, world 0.23.0):**
+- **The crash.** The mod kept some game objects from one tick to the next: the map and save managers (`Live`), the chest pop-up's widgets and the item feed's. A kept object can be freed by the garbage collector with no map load the mod sees, and then even `IsValid` on it reads freed memory, which `pcall` cannot catch. The tick that crashed calls `game.InGame()` with no `pcall`, and the only one on the stack was `Alive`'s own. So these are now kept as the object's path, and found again each time with `StaticFindObject`, which looks in the engine's own table and never touches a freed object.
+- **Shinies are known by where they stand.** `Scripts/field_items.lua` (generated from the level data) holds every shiny's id and place. A live shiny takes the id of the level's shiny within 150 of it, and the log says so when that differs.
+- **Bosses:** Behemoth is out (21 fragment bosses). Elfdrit's zone and both Wandering Lands zones are made 4 times bigger while their boss stands.
+- **Fast travel:** an open start marks only the battlefield (5010) as visited, and the airship's deck (20000) when it starts in the airship. Saves already made keep their marks.
+- **Boss strength:** Normal's bosses come in to 110 to 115% of the party's level and 115 to 120% power (from 115 to 125% and 125 to 135%). Expert's take Normal's old numbers. Plain enemies are unchanged.
+- **Boss logic (first step of `docs/boss_logic.md`).** Each boss has a tier in `data/bosses.tsv`, from its level: A (to 20) needs nothing more, B (21 to 39) 3 party members and 2 continents, C (40 to 49) 4 and 4, D (50 and up, and the optional superbosses) 5 and 6 and the Airship. Party counts above what the seed can give are lowered to it. The per-boss capability rules are not built yet.
+- **Logic from the user's notes:** the Dungeon Key for Zoldaad's dungeon (`data/gates.tsv`); Fina's Psyche in logic, behind Tellus's tier; `data/airship_only.tsv` for places only the airship reaches.
+- **The user's own changes, reviewed:** unshuffled visions (Tronn and Leah at the start, each sanctum and Sephiroth holding its own vision) work and have a test now. `docs/boss_logic.md` is the plan for boss logic. Its battle group numbers differ from `data/bosses.tsv` in places (Marauder 9969 there, 9079 here; the Antlion 9015 there, 9060 here), so the tiers were set by boss name and level.
 
-**For each boss you visit:** go where the story fought it.
-- On entering the map, the log says `story boss: map <map> group <group> flag <flag> (won false): ...; N triggers, ...`. **Is N 1 or more?** 0 means the trigger is not on the map at story 8000.
-- **Does the fight start, at the zone or door?**
-- After the win: **`check boss:<group>` in the log, a Crystal Fragment, and no second fight?** For a door: **does it work as a door afterwards?**
+## Round 72 test plan (mod 0.56.0, world 0.23.0)
 
-| Boss | Map | Where the story fought it |
-|---|---|---|
-| Siren | Siren's Tower (Lanzelt) | the top, at the jump spot |
-| Aether | Wind Shrine (Dirnado) | a door near the end |
-| Tellus | Nameless Ruins (Mysidia) | a door (transition point 5000) |
-| Tellus | Tower of Mysidia (Mysidia) | a zone near the top |
-| Lux | Rugged Mountain Path (Gronoa) | a zone on the path |
-| Elfdrit | Gronoa Shrine (Gronoa) | a zone inside |
-| Gelidus | Sanctissimus Shrine (Gronoa) | an automatic door |
-| Ignis | Mt. Reizan (Pharm) | a zone on the mountain |
-| Tellus | Wandering Lands (Pharm) | a zone, on either of two maps |
-| Behemoth | Crystal Tower | an automatic door |
+**Install:** copy `FFRArchipelago/Scripts` (it has a new file, `field_items.lua`) and `dist/ff_resonance.apworld`. A new seed is needed for the logic and fast travel changes. The crash fix, the shard fix and the boss changes also work on the round 71 save.
 
-Any number of them is useful: start with the ones closest to you. Send the `[FFRAP]` lines of the log.
+**1. Play long.** The crash came about 2 hours in, on leaving the world map. **Does it still happen?** If it does, send the crash folder.
+
+**2. Elfdrit and the Wandering Lands' Tellus.** On a save where they are not beaten, walk up to where the story fought them. **Do they start more easily now?** The Wandering Lands' zone is past where the way from map 3272 comes in.
+
+**3. Behemoth** should not start at the Crystal Tower door any more. **Does it?**
+
+**4. Shards and shinies.** Pick up some shards and shinies, especially in Zoldaad Castle and Felicitas, then leave and come back. **Is anything sent that you did not pick up?** Any line `the live one reads id ...` in the log tells us more about the ids.
+
+**5. Fast travel on a new seed** (`start_with_airship: false`). **Are Grandshelt Castle and the Earth Shrine gone from the list?**
+
+**6. Bosses on Normal.** **Do they feel fairer now?** Universal Tracker should keep tier B bosses out of logic until you have 3 party members, and so on.
+
+**7. Airship-only places.** If you find more places only the airship reaches, list them with their names as Universal Tracker shows them: they go in `data/airship_only.tsv`.
+
+Send the `[FFRAP]` lines of the log and any crash folder.

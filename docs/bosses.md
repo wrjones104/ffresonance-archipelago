@@ -4,7 +4,7 @@ How boss fights come back into an open world seed, and how they open the Crystal
 
 **Asked for (round 59, 2026-11-11):** bosses back in the game. Each boss gives an item reward (a "Crystal Fragment" or similar). The fragments are an objective: for example, 10 of them open the tower.
 
-Facts here come from the game data dump (`dump/tables`, `dump/maps`, `data/game/`) unless a round is named. Related: [IDEAS.md](../IDEAS.md) ideas 24 (the tower's objectives) and 25 (boss fights, the `ffrap_bossfight` test), and [open_world.md](open_world.md).
+Facts here come from the game data dump (`dump/tables`, `dump/maps`, `data/game/`) unless a round is named. Related: [IDEAS.md](../IDEAS.md) ideas 24 (the tower's objectives), 25 (boss fights, the `ffrap_bossfight` test), and 29 (boss logic), [open_world.md](open_world.md), and [boss_logic.md](boss_logic.md) (capability macros, 8-element mitigation, per-boss rules, and unshuffled Vision placement).
 
 ## 1. How the game starts a boss fight
 
@@ -65,7 +65,7 @@ What a win gives in the game: a cave master gives Magicite (a Shard, a Magicite 
 
 Round 59: the user saw the cave masters and their rewards work on the open world start.
 
-Not yet seen in game: whether each cave's entrance is open at story 8000, and whether the Sanctissimus fights and Dragon's Maw can be reached.
+Seen in game: each cave's entrance is open at story 8000, and the Sanctissimus fights and Dragon's Maw can be reached.
 
 ### Tier 2: behind a side quest (about 60 fights)
 
@@ -129,6 +129,9 @@ Scripted fights need care one by one. The first Umbra and the Ignis and Evan due
 - The tower's last climb needs `final_boss_fragments` fragments, beside `final_boss_characters` and `final_boss_visions`.
 - Siren and Leviathan both hold Crystal Fragments as story bosses.
 
+**Newly introduced idea:**
+- Can every boss give give both a Crystal Fragment and a regular location check reward?
+
 **Built (world 0.17.0 to 0.19.0, mod 0.48.0 to 0.50.0):**
 - `data/bosses.tsv` lists 30 fights: battle group, win flag, map, kind. The kind `story` gives a fragment (12 fights: Liquid Thunder, the six Sanctissimus fights, Liquid Flame, Iron Giant, Belmodar, The Hunger and Mom Bomb). `cave` and `optional` (Sephiroth, Intangir, the Rogue Magitek Weapon) give a shuffled item.
 - A location's key is `boss:<battle group>`. Its region is the continent of its map.
@@ -185,6 +188,10 @@ Every battle group with a Boss-category unit (155), walked back from its fight r
 | 9061 | Alluvion | 3110 Water Shrine | a door's `eventList2` and an after-arrival list | not yet |
 
 **Built (mod 0.55.0, world 0.22.0):** the ten marked "yes". Each is a story boss with a locked Crystal Fragment (22 fragment bosses in all). The mod's new kind `list` rewrites the entry in the named event list (`m_EventList` or `m_EventList2`) on every actor of the named class, the entry that names the boss's own row, to `!{flag:N}&{flag:1441}` and the shared fight row. Nothing else on the actor changes, so a door is a door again after the win. The NPCs that showed some bosses before their fights stay hidden: the fight starts at the zone or door alone.
+
+**Round 72:** Behemoth (9051) is out again: it sits right before the final boss, and in the story the Sworn Six weaken it first (the user's call). Elfdrit's zone and the Wandering Lands' two Tellus zones are made 4 times bigger while their boss stands (`scale` in `G.STORY_BOSSES`): the user had to hunt for Elfdrit's and never found Tellus's.
+
+**Boss logic, first step (world 0.23.0).** Each boss has a `tier` in `data/bosses.tsv`, set from its highest unit level by the bands in `boss_logic.md`, section 2: A to 20, B 21 to 39, C 40 to 49, D 50 and up, and the optional superbosses D. The world's rule per tier (`locations.TIER_NEEDS`): A nothing more; B 3 party members and 2 continents unlocked; C 4 and 4; D 5 and 6, and the Airship when it is an item. Party counts above what the seed can give are lowered to it. Fina's Psyche takes Tellus's (9038) tier. The capability rules (healing, elements, status) are the next step.
 
 ## 5. Order of work
 

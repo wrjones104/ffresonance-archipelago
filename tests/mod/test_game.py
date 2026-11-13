@@ -93,7 +93,16 @@ function FindAllOf(c)
   if c == "ScriptStruct" then return scriptStructs end
   return nil
 end
+-- Round 72: game.lua keeps objects between ticks as paths (G.PathOf) and finds them again with
+-- StaticFindObject, which in the engine finds only objects that still exist. Fakes get a path here.
+fakePaths = {}
+function fakePathLookup(path)
+  local o = fakePaths[path]
+  if o and (not o.IsValid or o:IsValid()) then return o end
+  return nil
+end
 function StaticFindObject(path)
+  if fakePathLookup(path) then return fakePathLookup(path) end
   if path == "/Script/mucha.SaveData_PerMap" then return perMapStructT end
   if path == "/Script/mucha.SaveData_Timer" then return otherStructT end
   if path == "/Script/mucha.CPP_BFL_SaveDataParty" then return bflClass end
@@ -105,6 +114,7 @@ bflClass = { fns = { fnAdd } }
 function bflClass:IsValid() return true end
 function bflClass:ForEachFunction(fn) for _, f in ipairs(self.fns) do fn(f) end end
 G = (require("game"))
+G.PathOf = function(o) if not o then return nil end local k = "fake:" .. tostring(o); fakePaths[k] = o; return k end
 function snap(path)
   local f = io.open(path, "w")
   local ok = G.Snapshot(function(k, v) f:write(k, "\t", tostring(v), "\n") end)
@@ -1749,3 +1759,30 @@ for table in ("cdtTalk", "gimTalk"):
         assert L.eval(f"{table}.rows.C01_ArijigokuWin.ContinuousEventList[{i}].EventId:ToString()") == "C01_ArijigokuWin_02"
 assert L.eval("G.AntlionPatch()") == 0, "nothing to write the second time"
 print("antlion: ok")
+
+# Round 72: the map manager is kept as its path. Once the engine frees it (here: no longer found by
+# path, and any touch fails as an access violation would), the next call finds the new one and
+# never asks the old one anything. Round 71 crashed twice on IsValid of a freed, kept object.
+L.execute("""
+oldMgr = { IsValid = function() return true end, HasAnyInternalFlags = function() return false end,
+           HasAnyFlags = function() return false end, GetSameMapId = function() return 1000 end,
+           GetFullName = function() return "CPP_MapManager /Game/Map/Wld/Wld_PL.Wld_PL:PersistentLevel.MapManager" end }
+newMgr = { IsValid = function() return true end, HasAnyInternalFlags = function() return false end,
+           HasAnyFlags = function() return false end, GetSameMapId = function() return 2000 end }
+liveMgr = oldMgr
+savedFindFirstOf = FindFirstOf
+FindFirstOf = function(c) if c == "CPP_MapManager" then return liveMgr end return savedFindFirstOf(c) end
+G.ForgetObjects()
+""")
+assert L.eval("G.CurrentMap()") == 1000
+L.execute("""
+for k, v in pairs(fakePaths) do if v == oldMgr then fakePaths[k] = nil end end
+touchedFreed = false
+local function freed() touchedFreed = true; error("access violation") end
+oldMgr.IsValid, oldMgr.GetSameMapId, oldMgr.HasAnyInternalFlags, oldMgr.HasAnyFlags = freed, freed, freed, freed
+liveMgr = newMgr
+""")
+assert L.eval("G.CurrentMap()") == 2000, "the new map's manager"
+assert L.eval("touchedFreed") is False, "the old one is never touched: in the game that is a crash pcall cannot catch"
+L.execute("FindFirstOf = savedFindFirstOf; G.ForgetObjects()")
+print("kept objects as paths: ok")

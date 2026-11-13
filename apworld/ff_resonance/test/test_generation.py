@@ -10,7 +10,8 @@ ARTIFACT_IDS = (30000, 30018)    # DT_ArtifactItemData's rows
 LAST_PALACE_CHEST = "chest:2031:24"   # Oblivion Palace's 4-Star Chamber: all 99 shards
 PALACE_SHARDS = 99
 MARAUDER, LIQUID_THUNDER, ANTLION = 9079, 9083, 9060   # battle groups: a cave master, a story boss, an optional boss
-CAVE_MASTERS, FRAGMENT_BOSSES = 15, 22   # round 71: ten more story bosses
+TARTAROSAURUS, BELMODAR = 9112, 9004   # tier D and tier A
+CAVE_MASTERS, FRAGMENT_BOSSES = 15, 21   # round 71: ten more story bosses; round 72: Behemoth out
 
 
 def chest_location(test, key):
@@ -65,11 +66,28 @@ class TestDefault(FFResonanceTestBase):
         self.assertFalse(self.multiworld.state.can_reach_region("Gronoa", self.player))
 
     def test_places_with_no_route_hold_only_filler(self) -> None:
-        for name in ("Grandshelt Castle Chest 8", "Fina's Psyche Chest 1"):
+        for name in ("Grandshelt Castle Chest 8",):
             self.assertEqual(self.multiworld.get_location(name, self.player).progress_type, LocationProgressType.EXCLUDED)
         # Round 44 walked into the Earth Shrine's inner part and opened its chests.
         self.assertNotEqual(self.multiworld.get_location("Earth Shrine Chest 1", self.player).progress_type,
                             LocationProgressType.EXCLUDED)
+
+    def test_fina_psyche_is_behind_tellus(self) -> None:
+        """Round 71: Fina's Psyche is reached past Tellus (Tower of Mysidia, tier B): a third party
+        member and two continents, on top of Mysidia."""
+        chest = self.multiworld.get_location("Fina's Psyche Chest 1", self.player)
+        self.assertNotEqual(chest.progress_type, LocationProgressType.EXCLUDED)
+        self.collect_by_name(["Mysidia Unlock"])
+        self.assertFalse(chest.can_reach(self.multiworld.state), "two members are not enough")
+        self.collect_by_name(["Nichol"])
+        self.assertTrue(chest.can_reach(self.multiworld.state))
+
+    def test_zoldaad_dungeon_needs_its_key(self) -> None:
+        chest = self.multiworld.get_location("Zoldaad Dungeon Chest 1", self.player)
+        self.collect_by_name(["Zoldaad Unlock"])
+        self.assertFalse(chest.can_reach(self.multiworld.state))
+        self.collect_by_name(["Dungeon Key"])
+        self.assertTrue(chest.can_reach(self.multiworld.state))
 
     def test_slot_data(self) -> None:
         slot_data = self.world.fill_slot_data()
@@ -102,7 +120,7 @@ class TestChocoboItem(FFResonanceTestBase):
 
 class TestAirshipItem(FFResonanceTestBase):
     """Round 69: on foot from Grandshelt. The bridges and the ferry need only the far side's unlock."""
-    options = {"start_with_airship": False}
+    options = {"start_with_airship": False, "include_crystals": True}
 
     def test_the_airship_is_a_progression_item(self) -> None:
         airships = [i for i in self.multiworld.itempool if i.player == self.player and i.code == AIRSHIP_ITEM]
@@ -123,6 +141,15 @@ class TestAirshipItem(FFResonanceTestBase):
     def test_a_bridge_needs_the_far_side(self) -> None:
         self.collect_by_name(["Kolobos Unlock"])
         self.assertFalse(self.multiworld.state.can_reach_region("Kolobos", self.player), "Lanzelt is between")
+
+    def test_an_airship_only_place_needs_it(self) -> None:
+        """Round 71: the Sanctum of Light (Clive) in Grandshelt is reached only from the air."""
+        self.collect_by_name(["Grandshelt Unlock", "Lanzelt Unlock"])
+        self.assertTrue(self.multiworld.state.can_reach_region("Grandshelt", self.player))
+        sanctum = self.multiworld.get_location("Sanctum of Light (Clive)", self.player)
+        self.assertFalse(sanctum.can_reach(self.multiworld.state))
+        self.collect_by_name(["Airship"])
+        self.assertTrue(sanctum.can_reach(self.multiworld.state))
 
     def test_the_tower_needs_the_airship(self) -> None:
         self.collect_all_but(["Airship"])
@@ -147,6 +174,25 @@ class TestAirshipItemRealDefaults(FFResonanceTestBase, real_defaults=True):
 
     def test_the_airship_is_in_the_pool(self) -> None:
         self.assertIn(AIRSHIP_ITEM, [i.code for i in self.multiworld.itempool if i.player == self.player])
+
+
+class TestUnshuffledVisions(FFResonanceTestBase):
+    """Round 71 (the user's change): with visions not shuffled, Tronn and Leah come at the start and
+    each sanctum holds its own vision."""
+    options = {"shuffle_visions": False}
+
+    def test_starters_are_given(self) -> None:
+        state = self.multiworld.state
+        self.assertTrue(state.has("Tronn (Vision)", self.player) and state.has("Leah (Vision)", self.player))
+
+    def test_each_sanctum_holds_its_own_vision(self) -> None:
+        for crystal in CRYSTALS:
+            location = self.multiworld.get_location(crystal["name"], self.player)
+            self.assertEqual(location.item.code, crystal["vision"], crystal["name"])
+
+    def test_no_vision_in_the_pool(self) -> None:
+        pool = [i for i in self.multiworld.itempool if i.player == self.player]
+        self.assertFalse([i.name for i in pool if ITEMS[i.code]["category"] == "vision"])
 
 
 class TestShinies(FFResonanceTestBase):
@@ -256,6 +302,19 @@ class TestBosses(FFResonanceTestBase):
         antlion = self.boss_location(ANTLION)
         self.assertEqual(antlion.parent_region.name, "Lanzelt")
         self.assertFalse(antlion.locked, "a shuffled item, not a Crystal Fragment")
+
+    def test_a_late_boss_needs_a_party_and_continents(self) -> None:
+        """Round 72: Tartarosaurus (level 50, tier D) needs five party members and six continents."""
+        boss = self.boss_location(TARTAROSAURUS)
+        self.collect_by_name(["Pharm Unlock", "Lanzelt Unlock", "Kolobos Unlock", "Dirnado Unlock", "Olderion Unlock"])
+        self.collect_by_name(["Fina", "Lid", "Nichol"])
+        self.assertTrue(self.multiworld.state.can_reach_region("Pharm", self.player))
+        self.assertTrue(boss.can_reach(self.multiworld.state), "six continents, five members")
+        self.remove_by_name(["Nichol"])
+        self.assertFalse(boss.can_reach(self.multiworld.state), "four members are not enough")
+
+    def test_an_early_boss_needs_nothing_more(self) -> None:
+        self.assertTrue(self.boss_location(BELMODAR).can_reach(self.multiworld.state))
 
     def test_a_boss_is_on_its_continent(self) -> None:
         boss = self.boss_location(LIQUID_THUNDER)
@@ -370,7 +429,7 @@ class TestFinalBossLockWithoutShuffles(FFResonanceTestBase):
 
     def test_the_counts_are_lowered_to_what_the_pool_holds(self) -> None:
         slot_data = self.world.fill_slot_data()
-        self.assertEqual((slot_data["final_boss_characters"], slot_data["final_boss_visions"]), (2, 0))
+        self.assertEqual((slot_data["final_boss_characters"], slot_data["final_boss_visions"]), (2, 18))
 
 
 class TestFinalBossLockNotForShards(FFResonanceTestBase):

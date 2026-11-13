@@ -75,6 +75,8 @@ class FFResonanceWorld(World):
     def generate_early(self) -> None:
         if self.options.goal.value == ffr_options.Goal.option_tablet_shards:
             self.options.include_tablet_shards.value = 1      # the goal's items must be in the pool
+        if not self.options.shuffle_visions:
+            self.options.include_crystals.value = 1           # the sanctums hold their own visions
         self.starting_continent = self.options.starting_continent.current_key.capitalize()
         picks = [self.options.starting_character_1, self.options.starting_character_2,
                  self.options.starting_character_3, self.options.starting_character_4]
@@ -89,7 +91,8 @@ class FFResonanceWorld(World):
         # it can.
         if self.options.goal.value == ffr_options.Goal.option_final_boss:
             most_characters = len(ALL_PARTY_MEMBERS) if self.options.shuffle_party_members else len(self.starting_party)
-            most_visions = len(items.item_name_groups["Visions"]) if self.options.shuffle_visions else 0
+            most_visions = len(items.item_name_groups["Visions"]) if self.options.shuffle_visions else (
+                len(items.STARTER_VISIONS) + (len(locations.CRYSTALS) if self.options.include_crystals else 0))
             self.final_boss_characters = min(self.options.final_boss_characters.value, most_characters)
             self.final_boss_visions = min(self.options.final_boss_visions.value, most_visions)
             if self.options.include_bosses:

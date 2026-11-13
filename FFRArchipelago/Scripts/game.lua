@@ -43,14 +43,25 @@ local function Lib(name)
     return Find("/Script/mucha.Default__" .. name)
 end
 
--- The first live instance of a class, cached until it goes invalid.
+-- Round 72: an object kept from one tick to the next is kept as its path, never as the object.
+-- Round 71's two crashes were IsValid on a kept object the garbage collector had already freed,
+-- one pcall deep in a tick, with no map load to clear it first (round 49 cleared kept objects on
+-- each map load, which was not enough). Even IsValid reads the freed memory. StaticFindObject
+-- looks a path up in the engine's own table, so a gone object is just not found.
+function G.PathOf(o)
+    local ok, full = pcall(function() return o:GetFullName() end)
+    return ok and type(full) == "string" and full:match("^%S+ (.+)$") or nil
+end
+
+-- The first live instance of a class. Its path is kept, so the next call is one lookup.
 local liveCache = {}
 local function Live(shortClass)
-    local hit = liveCache[shortClass]
+    local path = liveCache[shortClass]
+    local hit = path and Find(path)
     if hit and Alive(hit) then return hit end
     local ok, obj = pcall(FindFirstOf, shortClass)
     if ok and obj and Alive(obj) then
-        liveCache[shortClass] = obj
+        liveCache[shortClass] = G.PathOf(obj)
         return obj
     end
     liveCache[shortClass] = nil
@@ -642,6 +653,10 @@ function G.LiveFieldItems()
                             e.itemId, e.itemNum, e.money = Int(a.m_ItemId), Int(a.m_ItemNum), Int(a.m_Money)
                         end)
                         pcall(function() e.visible = a.VisibleCondition:ToString() end)
+                        pcall(function()
+                            local loc = a:K2_GetActorLocation()
+                            e.x, e.y = loc.X, loc.Y
+                        end)
                         out[#out + 1] = e
                     end)
                 end
@@ -1498,7 +1513,8 @@ local function FeedBox()
     if not host then return nil, "no field HUD on screen" end
     local hostName
     pcall(function() hostName = host:GetFullName() end)
-    if feed.box and Alive(feed.box) and feed.host == hostName then return feed.box end
+    local kept = feed.box and Find(feed.box)
+    if kept and Alive(kept) and feed.host == hostName then return kept end
     local cls = Find("/Script/UMG.VerticalBox")
     if not cls then return nil, "no VerticalBox class" end
     local box
@@ -1513,7 +1529,7 @@ local function FeedBox()
     pcall(function() slot:SetHorizontalAlignment(ALIGN_RIGHT) end)
     pcall(function() slot:SetVerticalAlignment(ALIGN_BOTTOM) end)
     pcall(function() slot:SetPadding(FEED_PADDING) end)
-    feed.box, feed.host, feed.tree, feed.lines = box, hostName, tree, {}
+    feed.box, feed.host, feed.tree, feed.lines = G.PathOf(box), hostName, tree, {}
     return box
 end
 
@@ -1581,9 +1597,10 @@ function G.FeedLine(text, now, opts)
     pcall(function() slot:SetHorizontalAlignment(ALIGN_RIGHT) end)
     pcall(function() slot:SetPadding(FEED_LINE_GAP) end)
     step("line done")
-    feed.lines[#feed.lines + 1] = { tb = tb, born = now }
+    feed.lines[#feed.lines + 1] = { path = G.PathOf(tb), born = now }
     while #feed.lines > G.FEED_MAX do
-        pcall(function() feed.lines[1].tb:RemoveFromParent() end)
+        local old = Find(feed.lines[1].path)
+        if old then pcall(function() old:RemoveFromParent() end) end
         table.remove(feed.lines, 1)
     end
     return true
@@ -1616,28 +1633,32 @@ function G.FeedReport()
     out[#out + 1] = "key lists (WBP_FieldFuncList2_C): " .. lists .. ", on screen " .. shownLists
     local host = FeedHost()
     out[#out + 1] = "HUD overlay: " .. (host and (size(host) .. ", " .. vis(host)) or "none on screen")
-    if not (feed.box and Alive(feed.box)) then
+    local box = feed.box and Find(feed.box)
+    if not (box and Alive(box)) then
         out[#out + 1] = "box: none"
         return out
     end
     local parent = "?"
-    pcall(function() parent = feed.box:GetParent():GetFName():ToString() end)
+    pcall(function() parent = box:GetParent():GetFName():ToString() end)
     local h, v = "?", "?"
-    pcall(function() h = tostring(feed.box.Slot.HorizontalAlignment) end)
-    pcall(function() v = tostring(feed.box.Slot.VerticalAlignment) end)
-    out[#out + 1] = "box: " .. size(feed.box) .. ", " .. vis(feed.box) .. ", in " .. parent ..
+    pcall(function() h = tostring(box.Slot.HorizontalAlignment) end)
+    pcall(function() v = tostring(box.Slot.VerticalAlignment) end)
+    out[#out + 1] = "box: " .. size(box) .. ", " .. vis(box) .. ", in " .. parent ..
         ", alignment " .. h .. "/" .. v
     for i, line in ipairs(feed.lines) do
+        local tb = Find(line.path)
         local text, font, fsize, opacity = "?", "?", "?", "?"
-        pcall(function() text = line.tb:GetText():ToString() end)
-        pcall(function()
-            local f = line.tb.Font.FontObject
-            font = (f and f:IsValid()) and f:GetFName():ToString() or "none"
-        end)
-        pcall(function() fsize = tostring(line.tb.Font.Size) end)
-        pcall(function() opacity = tostring(line.tb:GetRenderOpacity()) end)
+        if tb then
+            pcall(function() text = tb:GetText():ToString() end)
+            pcall(function()
+                local f = tb.Font.FontObject
+                font = (f and f:IsValid()) and f:GetFName():ToString() or "none"
+            end)
+            pcall(function() fsize = tostring(tb.Font.Size) end)
+            pcall(function() opacity = tostring(tb:GetRenderOpacity()) end)
+        end
         out[#out + 1] = string.format("line %d: \"%s\", %s, %s, font %s size %s, opacity %s",
-            i, text, size(line.tb), vis(line.tb), font, fsize, opacity)
+            i, text, tb and size(tb) or "gone", tb and vis(tb) or "gone", font, fsize, opacity)
     end
     if #feed.lines == 0 then out[#out + 1] = "lines: none (they fade after " .. (G.FEED_SHOW + G.FEED_FADE) .. " s)" end
     return out
@@ -1648,12 +1669,13 @@ function G.FeedTick(now)
     local keep = {}
     for _, line in ipairs(feed.lines) do
         local age = now - line.born
-        if age >= G.FEED_SHOW + G.FEED_FADE or not Alive(line.tb) then
-            pcall(function() line.tb:RemoveFromParent() end)
+        local tb = Find(line.path)
+        if age >= G.FEED_SHOW + G.FEED_FADE or not (tb and Alive(tb)) then
+            if tb then pcall(function() tb:RemoveFromParent() end) end
         else
             if age > G.FEED_SHOW then
                 local alpha = 1 - (age - G.FEED_SHOW) / G.FEED_FADE
-                pcall(function() line.tb:SetRenderOpacity(alpha) end)
+                pcall(function() tb:SetRenderOpacity(alpha) end)
             end
             keep[#keep + 1] = line
         end
@@ -1675,7 +1697,7 @@ end
 local POPUP_MARKER = "obtained"       -- in the game's English chest message
 local POPUP_ITEM_LINE = "Overlay_Custom"
 local COLLAPSED = 1                   -- ESlateVisibility: Visible 0, Collapsed 1, Hidden 2, ...
-local popupHidden = nil               -- { line = widget, message = widget, visibility = n }
+local popupHidden = nil               -- { line = path, message = path, visibility = n }
 -- The dialog box is made once and used again, so its message widget is kept once found: the
 -- fast check (PopupJustOpened, ten times a second) then asks only that widget, instead of
 -- searching every rich text in the game (round 26: "the wait is real").
@@ -1697,7 +1719,7 @@ function G.PrimePopup()
         if Alive(b) then
             local name
             pcall(function() name = b:GetFName():ToString() end)
-            if name == POPUP_MESSAGE_NAME then popupCandidates[#popupCandidates + 1] = b end
+            if name == POPUP_MESSAGE_NAME then popupCandidates[#popupCandidates + 1] = G.PathOf(b) end
         end
     end
     return #popupCandidates
@@ -1711,7 +1733,7 @@ end
 
 -- The chest pop-up's message on screen, or nil. Searched for while none is cached.
 local function PopupMessage()
-    local m = popupMsgCache
+    local m = popupMsgCache and Find(popupMsgCache)
     if m and Alive(m) and Shown(m) then
         local t = PopupText(m)
         if t and t:find(POPUP_MARKER, 1, true) then return m end
@@ -1722,7 +1744,7 @@ local function PopupMessage()
         if Alive(b) and Shown(b) then
             local t = PopupText(b)
             if t and t:find(POPUP_MARKER, 1, true) then
-                popupMsgCache = b
+                popupMsgCache = G.PathOf(b)
                 return b
             end
         end
@@ -1734,18 +1756,22 @@ end
 -- it is cheap enough to call ten times a second. False until the first pop-up has been found
 -- by PopupMessage (the slower search from the regular tick).
 function G.PopupJustOpened()
-    local m = popupMsgCache
+    local m = popupMsgCache and Find(popupMsgCache)
     if not (m and Alive(m) and Shown(m)) then
         popupWasShown = false
         m = nil
-        for _, c in ipairs(popupCandidates) do
-            if Alive(c) and Shown(c) then
+        for _, path in ipairs(popupCandidates) do
+            local c = Find(path)
+            if c and Alive(c) and Shown(c) then
                 local t = PopupText(c)
-                if t and t:find(POPUP_MARKER, 1, true) then m = c break end
+                if t and t:find(POPUP_MARKER, 1, true) then
+                    m = c
+                    popupMsgCache = path
+                    break
+                end
             end
         end
         if not m then return false end
-        popupMsgCache = m
     end
     if popupWasShown then return false end
     local t = PopupText(m)
@@ -1775,7 +1801,7 @@ function G.ChestPopup(text)
             local was = 0
             pcall(function() was = child:GetVisibility() end)
             if pcall(function() child:SetVisibility(COLLAPSED) end) then
-                popupHidden = { line = child, message = msg, visibility = was }
+                popupHidden = { line = G.PathOf(child), message = G.PathOf(msg), visibility = was }
                 return true, "text set, item line hidden"
             end
         end
@@ -1786,13 +1812,15 @@ end
 -- Makes the item line visible again once the pop-up has closed. Call every tick.
 function G.ChestPopupRestore()
     if not popupHidden then return end
-    if not Alive(popupHidden.line) then
+    local line = popupHidden.line and Find(popupHidden.line)
+    if not (line and Alive(line)) then
         popupHidden = nil
         return
     end
-    if Alive(popupHidden.message) and Shown(popupHidden.message) then return end
+    local msg = popupHidden.message and Find(popupHidden.message)
+    if msg and Alive(msg) and Shown(msg) then return end
     local v = popupHidden.visibility
-    pcall(function() popupHidden.line:SetVisibility(v) end)
+    pcall(function() line:SetVisibility(v) end)
     popupHidden = nil
 end
 
@@ -1854,6 +1882,11 @@ local UNIT_NAMES = { [1001] = "Rain", [1002] = "Lasswell", [1003] = "Fina", [100
 local ARCHWITCH_FINA, ARCHWITCH_FIRST_SKILL = 1006, 408010
 local ALL_PARTY_MEMBERS = { 1001, 1002, 1003, 1004, 1005, 1006, 1007, 1008 }
 local SKIP_MAPS = { 5010, 2013, 20000, 3001 }   -- known and visited
+-- Round 71: on an open start, Grandshelt Castle (2013) and the Earth Shrine (3001) were fast
+-- travel destinations from the first minute, past the continent locks. The airship's deck (20000)
+-- would be one too for a seed that has to find the airship. So an open start marks the battlefield
+-- (5010) and, when it starts in the airship, its deck.
+G.OPEN_START_MAPS, G.OPEN_START_MAPS_AIRSHIP = { 5010 }, { 5010, 20000 }
 G.SKIP_ARRIVAL = { map = 3001, x = -5775.0, y = 0.0, z = -197.85, direction = 2 }
 -- The open world start (round 31, found with FFRSLib's story and travel tools): story 7090,
 -- then the Crystal Tower (map 3280), where two events move the story to 8000. Round 36's
@@ -2148,7 +2181,6 @@ G.BOSSES = {
     { group = 9013, flag = 1243 }, { group = 9017, flag = 1244 }, { group = 9031, flag = 1245 },
     { group = 9038, flag = 1246 }, { group = 9039, flag = 1247 }, { group = 9040, flag = 1248 },
     { group = 9044, flag = 1249 }, { group = 9046, flag = 1250 }, { group = 9048, flag = 1251 },
-    { group = 9051, flag = 1252 },
 }
 -- Win rows whose own reward is the location's item now: the 15 cave masters' Magicite, and
 -- Sephiroth's vision.
@@ -2193,16 +2225,17 @@ G.STORY_BOSSES = {
     -- Lux, Rugged Mountain Path
     [3230] = { group = 9039, flag = 1247, event = "C06_611_01", kind = "list", class = "BP_MapGimmick_EventTrigger_C", field = "m_EventList" },
     -- Elfdrit, Gronoa Shrine
-    [3240] = { group = 9040, flag = 1248, event = "C06_616_01", kind = "list", class = "CPP_MapGimmick_EventTrigger", field = "m_EventList" },
+    -- Round 72: the zone is small and the user had to hunt for it, so it is made bigger (`scale`).
+    [3240] = { group = 9040, flag = 1248, event = "C06_616_01", kind = "list", class = "CPP_MapGimmick_EventTrigger", field = "m_EventList", scale = 4 },
     -- Gelidus, Sanctissimus Shrine: an automatic door
     [3250] = { group = 9044, flag = 1249, event = "C06_627_01", kind = "list", class = "BP_MapTransitionTrigger_C", field = "m_EventList2" },
     -- Ignis, Mt. Reizan
     [3260] = { group = 9046, flag = 1250, event = "C07_707_01", kind = "list", class = "BP_MapGimmick_EventTrigger_C", field = "m_EventList" },
     -- Tellus, Wandering Lands: the same zone on two maps
-    [3270] = { group = 9048, flag = 1251, event = "C07_713_01", kind = "list", class = "BP_MapGimmick_EventTrigger_C", field = "m_EventList" },
-    [3271] = { group = 9048, flag = 1251, event = "C07_713_01", kind = "list", class = "BP_MapGimmick_EventTrigger_C", field = "m_EventList" },
-    -- Behemoth, Crystal Tower: an automatic door
-    [3280] = { group = 9051, flag = 1252, event = "C08_807_01", kind = "list", class = "BP_MapTransitionTrigger_C", field = "m_EventList2" },
+    -- Round 71: not found by the user. The zone on 3270 is at (235, 102590), past where the way
+    -- from 3272 comes in; on 3271 it is at (-1215, 40122). Both made bigger.
+    [3270] = { group = 9048, flag = 1251, event = "C07_713_01", kind = "list", class = "BP_MapGimmick_EventTrigger_C", field = "m_EventList", scale = 4 },
+    [3271] = { group = 9048, flag = 1251, event = "C07_713_01", kind = "list", class = "BP_MapGimmick_EventTrigger_C", field = "m_EventList", scale = 4 },
 }
 local STORY_BOSS_EVENTS, STORY_BOSS_GROUPS = {}, {}
 for _, b in pairs(G.STORY_BOSSES) do
@@ -2445,6 +2478,10 @@ function G.SyncStoryBossTrigger(say)
                             step("story boss: " .. boss.class .. " " .. boss.field .. "[" .. i .. "] -> " .. fightCond .. " / " .. STORY_BOSS_FIGHT)
                             list[i].Condition = fightCond
                             list[i].EventId = FName(STORY_BOSS_FIGHT)
+                            if boss.scale and not won then
+                                step("story boss: SetActorScale3D " .. boss.scale)
+                                a:SetActorScale3D({ X = boss.scale, Y = boss.scale, Z = boss.scale })
+                            end
                             triggers = triggers + 1
                         end
                     end
@@ -2671,13 +2708,14 @@ function G.SkipPrologue(opts)
     -- Maps passed through: known and visited.
     local perMap = Lib("CPP_BFL_SaveData_PerMap")
     local mapBad = {}
-    for _, m in ipairs(SKIP_MAPS) do
+    local visitMaps = open and (open.parked and G.OPEN_START_MAPS or G.OPEN_START_MAPS_AIRSHIP) or SKIP_MAPS
+    for _, m in ipairs(visitMaps) do
         local okAdd = perMap and pcall(function() perMap:AddKnownMap(m); perMap:AddVisitedMap(m) end)
         local visited
         pcall(function() visited = perMap:IsVisited(m) end)
         if not okAdd or visited ~= true then mapBad[#mapBad + 1] = tostring(m) end
     end
-    step(perMap ~= nil and #mapBad == 0, "maps known and visited: " .. table.concat(SKIP_MAPS, ", ")
+    step(perMap ~= nil and #mapBad == 0, "maps known and visited: " .. table.concat(visitMaps, ", ")
         .. (#mapBad > 0 and (" (failed: " .. table.concat(mapBad, ", ") .. ")") or ""))
 
     -- Where the reload puts the player: in front of the Earth Shrine, or at the Crystal Tower.

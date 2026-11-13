@@ -187,7 +187,10 @@ class ShufflePartyMembers(DefaultOnToggle):
 
 
 class ShuffleVisions(DefaultOnToggle):
-    """The 26 visions are items. With this off, they are not in the item pool."""
+    """
+    The 26 visions are items. With this off, you start with Tronn and Leah, and the rest stay at
+    their Sanctums and locations in the world.
+    """
     display_name = "Shuffle Visions"
 
 

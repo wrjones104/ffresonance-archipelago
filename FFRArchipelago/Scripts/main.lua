@@ -50,7 +50,7 @@
 -- follows the save slots the linked game is saved to. While any other save is loaded, the mod
 -- grants nothing, reports nothing and leaves the chests vanilla.
 
-local VERSION = "0.55.0"
+local VERSION = "0.56.0"
 local PROTOCOL = 2        -- the bridge protocol; the apworld's MOD_PROTOCOL
 
 local MOD_DIR = (debug.getinfo(1, "S").source:gsub("^@", ""):gsub("\\", "/"):match("^(.*/)Scripts/[^/]+$"))
@@ -58,6 +58,7 @@ local MOD_DIR = (debug.getinfo(1, "S").source:gsub("^@", ""):gsub("\\", "/"):mat
 
 local game = require("game")
 local bridge = require("bridge")
+local LEVEL_SHINIES = require("field_items")
 
 local TICK_MS = 500
 local LOCKS_EVERY = 2         -- ticks between checks that the continent locks match the save
@@ -736,9 +737,29 @@ end
 -- Shinies are reported when the actor's m_IsOpen is set or the map's save row says looted;
 -- round 2 showed the save answering true the moment one is picked up. Spots without an item or
 -- money are story or quest points, not pick-ups: they are recorded as "spot" but never reported.
+-- Round 72: a live shiny can report an id that is not its own. In round 63 Felicitas's shards
+-- read 0 and 1 for the level's 8 and 9; in round 71 Zoldaad Castle's shard 11, taken, came back
+-- on a later visit reading 10 and open, so 10 was sent with nothing picked up. The level's
+-- shiny that stands where the live one does (within SHINY_SAME_PLACE) gives the real id.
+local SHINY_SAME_PLACE = 150
+local function levelShinyUid(mapId, s)
+    if not (s.x and LEVEL_SHINIES[mapId]) then return s.uid end
+    local best, bestD = nil, SHINY_SAME_PLACE
+    for _, p in ipairs(LEVEL_SHINIES[mapId]) do
+        local d = math.sqrt((s.x - p[2]) ^ 2 + (s.y - p[3]) ^ 2)
+        if d < bestD then best, bestD = p[1], d end
+    end
+    if best and best ~= s.uid and not visit.recorded["fix" .. s.uid] then
+        visit.recorded["fix" .. s.uid] = true
+        log(string.format("shiny %d: the live one reads id %s; the level's shiny there is %d", mapId, tostring(s.uid), best))
+    end
+    return best or s.uid
+end
+
 local function scanShinies(mapId)
     local rows = game.SaveOpenRows(mapId)
     for _, s in ipairs(game.LiveFieldItems()) do
+        s.uid = s.uid and levelShinyUid(mapId, s)
         if s.uid then
             local hasReward = (s.itemId and s.itemId >= 0) or (s.money and s.money >= 0)
             if not visit.recorded["s" .. s.uid] then
@@ -2295,10 +2316,14 @@ end)
 -- as the clamp lifts them to it. So the enemies' band goes 1 under the centre and `above` over it
 -- (the user's numbers). Late regions sit at the top, so on Expert a region far ahead is 5 over.
 -- The bosses' band stays 2 each way: bosses felt right, and most sit at its top anyway.
+-- Round 71: a solo seed on the game's Normal with our Normal: bosses felt near unbeatable around
+-- level 20 without a full party, and at level 30 with a full party tough but beatable, "a tad too
+-- tough". Normal's bosses come in (115-125% level, 125-135% power before), and Expert's take
+-- Normal's old numbers. Plain enemies are unchanged.
 local SEED_SCALES = {
     [0] = { at = { 80, 90 }, power = { 75, 100 }, above = 1, bossAt = { 100, 100 }, bossPower = { 100, 100 } },
-    [1] = { at = { 90, 100 }, power = { 90, 115 }, above = 3, bossAt = { 115, 125 }, bossPower = { 125, 135 } },
-    [2] = { at = { 100, 110 }, power = { 105, 130 }, above = 5, bossAt = { 120, 130 }, bossPower = { 140, 150 } },
+    [1] = { at = { 90, 100 }, power = { 90, 115 }, above = 3, bossAt = { 110, 115 }, bossPower = { 115, 120 } },
+    [2] = { at = { 100, 110 }, power = { 105, 130 }, above = 5, bossAt = { 115, 125 }, bossPower = { 125, 135 } },
 }
 local SEED_RAMP = { below = 1, bossRange = 2, rampFrom = 5, rampTo = 25 }
 
