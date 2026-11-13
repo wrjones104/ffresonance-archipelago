@@ -1,4 +1,9 @@
-from BaseClasses import LocationProgressType
+from argparse import Namespace
+
+from BaseClasses import CollectionState, LocationProgressType, MultiWorld
+from worlds import AutoWorld
+from worlds.AutoWorld import call_all
+from test.general import gen_steps
 
 from ..data import AIRSHIP_ITEM, BOSSES, CHESTS, CHOCOBO_ITEM, CONTINENT_UNLOCKS, CRYSTALS, FRAGMENT_ITEM, ITEMS, NO_BOX, TABLET_SHINIES, PROGRESSION, SHINIES, SHUFFLE_ID_LIMIT, UNIT_ITEM_BASE
 from ..items import CLASSIFICATIONS, FILLER_CATEGORIES, FRAGMENT_NAME, item_name_groups
@@ -193,6 +198,44 @@ class TestUnshuffledVisions(FFResonanceTestBase):
     def test_no_vision_in_the_pool(self) -> None:
         pool = [i for i in self.multiworld.itempool if i.player == self.player]
         self.assertFalse([i.name for i in pool if ITEMS[i.code]["category"] == "vision"])
+
+
+class TestTrackerRebuild(FFResonanceTestBase):
+    """Round 72: Universal Tracker builds the world again from the slot data alone. A seed that
+    started on foot in Mysidia showed 0 locations in logic: the tracker had rolled its own start."""
+    options = {"start_with_airship": False, "starting_continent": "mysidia", "starting_character_1": "jake",
+               "starting_character_2": "nichol", "shuffle_key_items": False}
+
+    def rebuilt(self):
+        slot_data = self.world.interpret_slot_data(dict(self.world.fill_slot_data()))
+        multiworld = MultiWorld(1)
+        multiworld.game[1] = self.game
+        multiworld.player_name = {1: "Tracker"}
+        multiworld.set_seed(None)
+        args = Namespace()
+        for name, option in AutoWorld.AutoWorldRegister.world_types[self.game].options_dataclass.type_hints.items():
+            setattr(args, name, {1: option.from_any(option.default)})     # a tracker with no yaml
+        multiworld.set_options(args)
+        multiworld.re_gen_passthrough = {self.game: slot_data}
+        multiworld.state = CollectionState(multiworld)
+        for step in gen_steps:
+            if step in ("generate_output",):
+                continue
+            call_all(multiworld, step)
+        return multiworld
+
+    def test_the_rebuild_is_the_same_world(self) -> None:
+        multiworld = self.rebuilt()
+        world = multiworld.worlds[1]
+        self.assertEqual(world.starting_continent, "Mysidia")
+        self.assertEqual(world.starting_party, self.world.starting_party)
+        self.assertFalse(world.options.start_with_airship)
+        self.assertFalse(world.options.shuffle_key_items)
+        state = CollectionState(multiworld)
+        state.collect(world.create_item("Mysidia Unlock"), True)
+        in_logic = [loc for loc in multiworld.get_locations(1) if loc.address and loc.can_reach(state)]
+        self.assertTrue(in_logic, "the start's locations are in logic")
+        self.assertTrue(all(loc.parent_region.name == "Mysidia" for loc in in_logic))
 
 
 class TestShinies(FFResonanceTestBase):

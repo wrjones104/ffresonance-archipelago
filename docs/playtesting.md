@@ -676,9 +676,13 @@ World-map shinies verified as locations. Multiple crashes observed across differ
 - **Logic from the user's notes:** the Dungeon Key for Zoldaad's dungeon (`data/gates.tsv`); Fina's Psyche in logic, behind Tellus's tier; `data/airship_only.tsv` for places only the airship reaches.
 - **The user's own changes, reviewed:** unshuffled visions (Tronn and Leah at the start, each sanctum and Sephiroth holding its own vision) work and have a test now. `docs/boss_logic.md` is the plan for boss logic. Its battle group numbers differ from `data/bosses.tsv` in places (Marauder 9969 there, 9079 here; the Antlion 9015 there, 9060 here), so the tiers were set by boss name and level.
 
-## Round 72 test plan (mod 0.56.0, world 0.23.0)
+**Round 72, before play (world 0.23.0): Universal Tracker showed 0 locations in logic.** The seed started on foot in Mysidia, with Fina and Jake. The world had no tracker support, so Universal Tracker built it again from the yaml and rolled the starting continent and party itself. With the airship off, a tracker world that started elsewhere had nothing in reach.
 
-**Install:** copy `FFRArchipelago/Scripts` (it has a new file, `field_items.lua`) and `dist/ff_resonance.apworld`. A new seed is needed for the logic and fast travel changes. The crash fix, the shard fix and the boss changes also work on the round 71 save.
+**Changed (world 0.23.1):** the world takes the seed's own continent, party and options from its slot data when Universal Tracker builds it (`interpret_slot_data`, `ut_can_gen_without_yaml`). The slot data now also sends `shuffle_party_members`, `shuffle_visions` and `shuffle_key_items`. A seed made with 0.23.0 lacks those three, so the tracker takes their defaults (all on).
+
+## Round 72 test plan (mod 0.56.0, world 0.23.1)
+
+**Install:** copy `FFRArchipelago/Scripts` (it has a new file, `field_items.lua`) and `dist/ff_resonance.apworld` (0.23.1, for the tracker fix). A new seed is needed for the logic and fast travel changes. The crash fix, the shard fix and the boss changes also work on the round 71 save.
 
 **1. Play long.** The crash came about 2 hours in, on leaving the world map. **Does it still happen?** If it does, send the crash folder.
 

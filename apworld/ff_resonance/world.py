@@ -14,6 +14,11 @@ MOD_PROTOCOL = 2
 
 ALL_PARTY_MEMBERS = [1001, 1002, 1003, 1004, 1005, 1006, 1007, 1008]
 
+# The options the logic reads, sent in slot data so a tracker can build the same world again.
+SLOT_OPTIONS = ("tablet_shards_required", "include_shinies", "include_crystals", "include_tablet_shards",
+                "include_bosses", "start_with_chocobo", "start_with_airship", "shuffle_party_members",
+                "shuffle_visions", "shuffle_key_items")
+
 
 class FFResonanceSettings(settings.Group):
     class ModFolder(settings.UserFolderPath):
@@ -58,6 +63,11 @@ class FFResonanceWorld(World):
     settings: ClassVar[FFResonanceSettings]
     settings_key = "ff_resonance_options"
 
+    # Round 72: Universal Tracker builds the world again from the slot data alone. Without this it
+    # used the yaml and rolled the starting continent and party again: a seed that started on foot
+    # in Mysidia showed 0 locations in logic.
+    ut_can_gen_without_yaml = True
+
     item_name_to_id = items.ITEM_NAME_TO_ID
     location_name_to_id = locations.LOCATION_NAME_TO_ID
     item_name_groups = items.item_name_groups
@@ -72,7 +82,15 @@ class FFResonanceWorld(World):
         self.final_boss_visions = 0
         self.final_boss_fragments = 0
 
+    @staticmethod
+    def interpret_slot_data(slot_data: dict[str, Any]) -> dict[str, Any]:
+        return slot_data
+
     def generate_early(self) -> None:
+        tracked = getattr(self.multiworld, "re_gen_passthrough", {}).get(self.game)
+        if tracked:
+            self.take_slot_data(tracked)
+            return
         if self.options.goal.value == ffr_options.Goal.option_tablet_shards:
             self.options.include_tablet_shards.value = 1      # the goal's items must be in the pool
         if not self.options.shuffle_visions:
@@ -98,6 +116,19 @@ class FFResonanceWorld(World):
             if self.options.include_bosses:
                 self.final_boss_fragments = self.options.final_boss_fragments.value
 
+    def take_slot_data(self, slot_data: Mapping[str, Any]) -> None:
+        """A tracker's rebuild: the seed's own rolls and options, from its slot data. A key an older
+        seed does not send keeps the option's default."""
+        for name in SLOT_OPTIONS:
+            if name in slot_data:
+                getattr(self.options, name).value = slot_data[name]
+        self.options.goal.value = ffr_options.Goal.from_any(slot_data["goal"]).value
+        self.starting_continent = slot_data["starting_continent"]
+        self.starting_party = list(slot_data["starting_party"])
+        self.final_boss_characters = slot_data["final_boss_characters"]
+        self.final_boss_visions = slot_data["final_boss_visions"]
+        self.final_boss_fragments = slot_data["final_boss_fragments"]
+
     def create_regions(self) -> None:
         locations.create_regions_and_locations(self)
 
@@ -112,9 +143,7 @@ class FFResonanceWorld(World):
 
     def fill_slot_data(self) -> Mapping[str, Any]:
         return {
-            **self.options.as_dict("tablet_shards_required", "include_shinies", "include_crystals",
-                                   "include_tablet_shards", "include_bosses",
-                                   "start_with_chocobo", "start_with_airship"),
+            **self.options.as_dict(*SLOT_OPTIONS),
             "goal": self.options.goal.current_key,
             "mod_protocol": MOD_PROTOCOL,
             "open_world": True,
