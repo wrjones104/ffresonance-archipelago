@@ -713,7 +713,7 @@ World-map shinies verified as locations. Multiple crashes observed across differ
 
 **7. Airship-only places.** If you find more places only the airship reaches, list them with their names as Universal Tracker shows them: they go in `data/airship_only.tsv`.
 
-**8. The radar treasures.** When a Progressive Radar comes (or to try it early, `ffrap_grant item 27006 1`, up to three times; a grant by hand is not counted, so this tests only the pingers' own conditions), the log says `radar: level N (flag 702 true, progress 49 ...)`.
+**8. The radar treasures.** When a Progressive Radar comes, the log says `radar: level N (flag 702 true, progress 49 ...)`. To try treasures 1 to 5 early, `ffrap_grant flag 702` turns the radar on by hand (a granted item 27006 is not counted: only Archipelago's are).
 - Fly the airship over the sea. **Does the radar ping, and can you dig Radar Treasure 1?** The pop-up should say what it held, and the log `check radar:1`.
 - **Do they come in order, 1 to 13, with the later ones only after the second and third radar?**
 - **Does any scene play** after treasures 5, 9 or 13 (the game's own radar quest lines)?
