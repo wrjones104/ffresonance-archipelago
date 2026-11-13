@@ -686,9 +686,11 @@ World-map shinies verified as locations. Multiple crashes observed across differ
 
 **And (world 0.23.3):** Grandshelt Castle Chest 2 (`chest:2012:1`) is no location either. The user searched the whole castle and could not find its room; it is most likely one the story passes through and the castle closes later. The castle's other chests are numbered again: Chests 1 to 6 now.
 
-## Round 72 test plan (mod 0.56.0, world 0.23.3)
+**And (world 0.23.4):** eight more places only the airship reaches, from the user: World Map Shiny 27 (in Pharm by our continent map, not Dirnado), 88 and 89 (Mysidia), 94 and 169 (Lanzelt), Quarry Cave Chest 1 (Zoldaad), Tartarosaurus Cave (Pharm) and Jotunn Cave (Mysidia). Shiny 68 was in already. Shiva's fight (Mysidia, an esper side quest) is airship-only too, but is no location yet.
 
-**Install:** copy `FFRArchipelago/Scripts` (it has a new file, `field_items.lua`) and `dist/ff_resonance.apworld` (0.23.3). A new seed is needed for the logic and fast travel changes. The crash fix, the shard fix and the boss changes also work on the round 71 save.
+## Round 72 test plan (mod 0.56.0, world 0.23.4)
+
+**Install:** copy `FFRArchipelago/Scripts` (it has a new file, `field_items.lua`) and `dist/ff_resonance.apworld` (0.23.4). A new seed is needed for the logic and fast travel changes. The crash fix, the shard fix and the boss changes also work on the round 71 save.
 
 **1. Play long.** The crash came about 2 hours in, on leaving the world map. **Does it still happen?** If it does, send the crash folder.
 

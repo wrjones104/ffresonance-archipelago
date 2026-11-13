@@ -281,3 +281,11 @@ Along the same lines, I would also want an option for players to start with all 
 
 
 **Idea:** Each shop slot becomes an Archipelago location (see: Crystal Project, Cross-Code, ALttP, etc.) - you have to buy the item to trigger the send, afterwards that shop slot is removed (or replaced with its original vanilla item).
+
+## 32. Radar treasures as locations
+
+**Round 72, from the user's question.** The airship radar does not reveal any of the world-map shinies we have: those have no visibility condition and stand there from the start. It finds 13 treasures of its own instead (`docs/logic.md`, "Treasure radar").
+- **In the game:** a side quest on the airship (`{progress:49}`) installs the radar (flag 702) and then the Magi-tenna (27006), Resonance Stone (27007) and High-Power Generator (27008, sold by a merchant ship). Each part opens the next tier of pinger points: 5, then 4, then 3, then the 13th.
+- **The rewards:** `SubEv_C05_TreasureRadar_01_01` to `_13` give Adamantite (20016), Magicite (25001), two Magicite Crysts (25002) and nine pieces of equipment (11098, 12016, 11022, 10497, 10819, 12038, 12073, 12075, 12059).
+- **At story 8000 on our start,** flag 702 is off, so no pinger works. The three parts are key items in our pool that do nothing yet.
+- **To build:** the 13 treasures as locations (their found flags 704 to 715 as checks, as the bosses' win flags are), the radar on at the start (flag 702) or as an item, and the parts as a progressive item that steps `{progress:49}` to 40 and 50. They need the Airship. Their rewards go to the pool, and their win rows give nothing, as chests do.
