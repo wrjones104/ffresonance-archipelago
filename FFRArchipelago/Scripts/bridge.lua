@@ -18,6 +18,7 @@
 --     cfg chocobo <0|1>                           1: the open world save gets the Chocobo; 0: it is an item (0.53.0)
 --     cfg airship <0|1>                           1: start in the airship; 0: on foot, the airship an item (flag 1431) (0.54.0)
 --     cfg continent <name>                        the starting continent, for the start on foot (0.54.0)
+--     cfg radar <0|1>                             the radar's 13 treasures are locations (0.57.0)
 --     cfg finalboss <have> <need> ...             the tower lock: characters, visions, Crystal Fragments (0.44.0, 0.48.0)
 --     scout <base64>                              what a location holds: key, item, player, flags, own (0.11.0)
 --

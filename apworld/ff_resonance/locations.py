@@ -4,13 +4,13 @@ from typing import TYPE_CHECKING
 
 from BaseClasses import ItemClassification, Location, LocationProgressType, Region
 
-from .data import AIRSHIP_ITEM, BOSSES, CHESTS, CONTINENT_UNLOCKS, CRYSTALS, FINAL_AREA, ITEMS, OPEN_AREA, SHINIES, TABLET_SHINIES
+from .data import AIRSHIP_ITEM, BOSSES, CHESTS, CONTINENT_UNLOCKS, RADAR, RADAR_ITEM, CRYSTALS, FINAL_AREA, ITEMS, OPEN_AREA, SHINIES, TABLET_SHINIES
 from .items import FRAGMENT_NAME, GAME, FFResonanceItem, create_item, progression_ids
 
 if TYPE_CHECKING:
     from .world import FFResonanceWorld
 
-ALL_LOCATIONS = CHESTS + SHINIES + CRYSTALS + TABLET_SHINIES + BOSSES
+ALL_LOCATIONS = CHESTS + SHINIES + CRYSTALS + TABLET_SHINIES + BOSSES + RADAR
 LOCATION_NAME_TO_ID: dict[str, int] = {loc["name"]: loc["id"] for loc in ALL_LOCATIONS}
 LOCATION_KEY_TO_ID: dict[str, int] = {loc["key"]: loc["id"] for loc in ALL_LOCATIONS}
 
@@ -21,6 +21,7 @@ location_name_groups["Chests"] = {loc["name"] for loc in CHESTS}
 location_name_groups["Shinies"] = {loc["name"] for loc in SHINIES}
 location_name_groups["Crystals"] = {loc["name"] for loc in CRYSTALS}
 location_name_groups["Tablet Shard Shinies"] = {loc["name"] for loc in TABLET_SHINIES}
+location_name_groups["Radar Treasures"] = {loc["name"] for loc in RADAR}
 location_name_groups["Fragment Bosses"] = {loc["name"] for loc in BOSSES if loc["fragment"]}
 
 # Round 60: at party level 28 Sephiroth took no damage, even with enemy scaling at its lowest. So
@@ -33,6 +34,7 @@ VICTORY = "Victory"
 
 UNLOCK_NAMES = {continent: ITEMS[ap_id]["name"] for continent, ap_id in CONTINENT_UNLOCKS.items()}
 AIRSHIP = ITEMS[AIRSHIP_ITEM]["name"]
+RADAR_NAME = ITEMS[RADAR_ITEM]["name"]
 
 # Round 67: the ways between continents without the airship (open_world.md, section 4). No door
 # or cave joins two. Each way opens with the far continent's unlock, as the mod's gates do.
@@ -110,6 +112,8 @@ def create_regions_and_locations(world: FFResonanceWorld) -> None:
         chosen += TABLET_SHINIES
     if world.options.include_bosses:
         chosen += BOSSES
+    if world.options.include_radar_treasures:
+        chosen += RADAR
     excluded = world.options.excluded_regions.value
     in_pool = set(progression_ids(world))
 
@@ -143,6 +147,10 @@ def create_regions_and_locations(world: FFResonanceWorld) -> None:
             rules.append(tier_rule)
         if loc.get("airship") and on_foot:
             rules.append(lambda state: state.has(AIRSHIP, player))
+        # Round 72: a radar treasure needs as many Progressive Radars as its tier. The tiers only
+        # rise along the chain, so this also holds the treasures before it.
+        if "radar_tier" in loc:
+            rules.append(lambda state, n=loc["radar_tier"]: state.has(RADAR_NAME, player, n))
         if rules:
             location.access_rule = lambda state, rules=rules: all(rule(state) for rule in rules)
         if (world.options.priority_bosses and loc.get("fragment") is False and loc["key"] != SEPHIROTH

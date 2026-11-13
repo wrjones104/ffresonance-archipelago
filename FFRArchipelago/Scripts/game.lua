@@ -2349,6 +2349,24 @@ function G.AntlionPatch()
     return written
 end
 
+-- Round 72: a radar treasure's reward is the location's item now. Its dig row gives one Potion in
+-- its place, so the pop-up still shows and the mod writes what the treasure held (as for bosses).
+-- Returns the number of rows written.
+function G.RadarPatch()
+    local rows = {}
+    for _, t in ipairs(G.RADAR) do rows[t.row] = true end
+    local written = 0
+    EachTalkRow(function(key, row)
+        if not rows[key] or #row.ObtainItemList < 1 then return end
+        local reward = row.ObtainItemList[1]
+        if Int(reward.ID) ~= BOSS_STAND_IN then
+            reward.ID, reward.Num = BOSS_STAND_IN, 1
+            written = written + 1
+        end
+    end)
+    return written
+end
+
 -- Rewrites the current map's story boss trigger, NPC pawn and shared encounter/win rows so the
 -- boss can be fought at story 8000 until its flag is set. When `say` is given (ffrap_bossfight
 -- trigger), each step is logged before its engine write runs. Returns true and a summary on a
@@ -3561,6 +3579,31 @@ function G.SetStoryCounter(n)
     pcall(function() sd.Progress.Progress[1] = n end)
     return G.StoryCounter()
 end
+
+-- Any progress value, {progress:i} in the game's conditions (element i + 1 in Lua), or nil.
+function G.ProgressValue(i)
+    local sd = G.SaveData()
+    if not sd then return nil end
+    local ok, v = pcall(function() return sd.Progress.Progress[i + 1] end)
+    return ok and Int(v) or nil
+end
+
+function G.SetProgressValue(i, n)
+    local sd = G.SaveData()
+    if not sd then return nil end
+    pcall(function() sd.Progress.Progress[i + 1] = n end)
+    return G.ProgressValue(i)
+end
+
+-- Round 72: the airship radar (IDEAS.md idea 32). Its 13 treasures are pinger points at sea. A
+-- pinger works while flag 702 (the radar) is on, its own found flag (704 to 716) is off, and, from
+-- the sixth, {progress:49} is at least 40, from the tenth at least 50. Each also needs the one
+-- before it found ({progress:51}, which each dig row sets). A dig row turns on flag 703 and its
+-- found flag, which is the location's check.
+G.RADAR_ON_FLAG, G.RADAR_TIER_PROGRESS = 702, 49
+G.RADAR_TIER_VALUES = { [2] = 40, [3] = 50 }
+G.RADAR = {}
+for n = 1, 13 do G.RADAR[n] = { n = n, flag = 703 + n, row = string.format("SubEv_C05_TreasureRadar_01_%02d", n) } end
 
 -- Round 33's log: a rescale read Steel Bat (shipped level 1, HP 68) as level 47, HP 4800, and
 -- later 214 rows no longer held what we wrote. The FFR Randomizer mod did both: its enemy

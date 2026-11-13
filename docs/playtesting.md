@@ -688,9 +688,16 @@ World-map shinies verified as locations. Multiple crashes observed across differ
 
 **And (world 0.23.4):** eight more places only the airship reaches, from the user: World Map Shiny 27 (in Pharm by our continent map, not Dirnado), 88 and 89 (Mysidia), 94 and 169 (Lanzelt), Quarry Cave Chest 1 (Zoldaad), Tartarosaurus Cave (Pharm) and Jotunn Cave (Mysidia). Shiny 68 was in already. Shiva's fight (Mysidia, an esper side quest) is airship-only too, but is no location yet.
 
-## Round 72 test plan (mod 0.56.0, world 0.23.4)
+**And (mod 0.57.0, world 0.24.0): the radar's 13 treasures** (IDEAS.md idea 32, `data/radar.tsv`).
+- `include_radar_treasures` (on by default) makes "Radar Treasure 1" to "13" locations. They lie at sea, so they need the Airship.
+- Three "Progressive Radar" items take the place of the radar's three parts (Magi-tenna, Resonance Stone, High-Power Generator). In logic, 1 radar opens treasures 1 to 5, 2 open 6 to 9, and 3 open 10 to 13.
+- In game, the mod counts the Progressive Radars applied to the save. With 1 it turns the radar on (flag 702); with 2 and 3 it sets the radar quest's step (`{progress:49}`) to 40 and 50, which the later pingers test. It never lowers that step.
+- The treasures come in order in the game, as in vanilla: each pinger also needs the one before it found. The logic needs nothing more for that, as the tiers only rise along the chain.
+- A treasure's check is its found flag (704 to 716). Its dig row gives one Potion in place of its reward, so the pop-up shows and says what it held.
 
-**Install:** copy `FFRArchipelago/Scripts` (it has a new file, `field_items.lua`) and `dist/ff_resonance.apworld` (0.23.4). A new seed is needed for the logic and fast travel changes. The crash fix, the shard fix and the boss changes also work on the round 71 save.
+## Round 72 test plan (mod 0.57.0, world 0.24.0)
+
+**Install:** copy `FFRArchipelago/Scripts` (it has a new file, `field_items.lua`) and `dist/ff_resonance.apworld` (0.24.0). A new seed is needed for the logic and fast travel changes. The crash fix, the shard fix and the boss changes also work on the round 71 save.
 
 **1. Play long.** The crash came about 2 hours in, on leaving the world map. **Does it still happen?** If it does, send the crash folder.
 
@@ -705,5 +712,10 @@ World-map shinies verified as locations. Multiple crashes observed across differ
 **6. Bosses on Normal.** **Do they feel fairer now?** Universal Tracker should keep tier B bosses out of logic until you have 3 party members, and so on.
 
 **7. Airship-only places.** If you find more places only the airship reaches, list them with their names as Universal Tracker shows them: they go in `data/airship_only.tsv`.
+
+**8. The radar treasures.** When a Progressive Radar comes (or to try it early, `ffrap_grant item 27006 1`, up to three times; a grant by hand is not counted, so this tests only the pingers' own conditions), the log says `radar: level N (flag 702 true, progress 49 ...)`.
+- Fly the airship over the sea. **Does the radar ping, and can you dig Radar Treasure 1?** The pop-up should say what it held, and the log `check radar:1`.
+- **Do they come in order, 1 to 13, with the later ones only after the second and third radar?**
+- **Does any scene play** after treasures 5, 9 or 13 (the game's own radar quest lines)?
 
 Send the `[FFRAP]` lines of the log and any crash folder.

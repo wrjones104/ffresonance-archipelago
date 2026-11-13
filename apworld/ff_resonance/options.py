@@ -2,7 +2,7 @@ from dataclasses import dataclass
 
 from Options import Choice, DefaultOnToggle, OptionGroup, OptionSet, PerGameCommonOptions, Range, Visibility
 
-from .data import BOSSES, CHESTS, CRYSTALS, SHINIES, TABLET_SHINIES
+from .data import BOSSES, CHESTS, CRYSTALS, RADAR, SHINIES, TABLET_SHINIES
 
 
 class Goal(Choice):
@@ -160,6 +160,15 @@ class IncludeBosses(DefaultOnToggle):
     visibility = Visibility.none
 
 
+class IncludeRadarTreasures(DefaultOnToggle):
+    """
+    The airship radar's 13 treasures, dug up at sea, are locations. Three Progressive Radars are
+    items in their place: the first finds treasures 1 to 5, the second 6 to 9, the third 10 to 13.
+    The treasures come in order, and need the Airship.
+    """
+    display_name = "Include Radar Treasures"
+
+
 class PriorityBosses(DefaultOnToggle):
     """
     The cave masters and the two Dragon's Maw bosses are priority locations: the generator puts
@@ -175,7 +184,7 @@ class ExcludedRegions(OptionSet):
     this for areas you do not want to play.
     """
     display_name = "Excluded Regions"
-    valid_keys = sorted({loc["region"] for loc in CHESTS + SHINIES + CRYSTALS + TABLET_SHINIES + BOSSES})
+    valid_keys = sorted({loc["region"] for loc in CHESTS + SHINIES + CRYSTALS + TABLET_SHINIES + BOSSES + RADAR})
 
 
 class ShufflePartyMembers(DefaultOnToggle):
@@ -238,6 +247,7 @@ class FFResonanceOptions(PerGameCommonOptions):
     include_crystals: IncludeCrystals
     include_tablet_shards: IncludeTabletShards
     include_bosses: IncludeBosses
+    include_radar_treasures: IncludeRadarTreasures
     priority_bosses: PriorityBosses
     excluded_regions: ExcludedRegions
     shuffle_party_members: ShufflePartyMembers
@@ -250,6 +260,6 @@ option_groups = [
     OptionGroup("Start", [StartingContinent, StartingRoster, StartingCharacter1, StartingCharacter2,
                           StartingCharacter3, StartingCharacter4, StartWithChocobo,
                           StartWithAirship]),
-    OptionGroup("Locations", [PriorityBosses, ExcludedRegions]),
+    OptionGroup("Locations", [IncludeRadarTreasures, PriorityBosses, ExcludedRegions]),
     OptionGroup("Items", [ShufflePartyMembers, ShuffleVisions, ShuffleKeyItems]),
 ]

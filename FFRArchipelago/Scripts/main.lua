@@ -50,7 +50,7 @@
 -- follows the save slots the linked game is saved to. While any other save is loaded, the mod
 -- grants nothing, reports nothing and leaves the chests vanilla.
 
-local VERSION = "0.56.0"
+local VERSION = "0.57.0"
 local PROTOCOL = 2        -- the bridge protocol; the apworld's MOD_PROTOCOL
 
 local MOD_DIR = (debug.getinfo(1, "S").source:gsub("^@", ""):gsub("\\", "/"):match("^(.*/)Scripts/[^/]+$"))
@@ -361,7 +361,7 @@ local function newSession(key)
     state.syncPending = true
     state.slots, state.slotItems, state.bindPending, state.live = {}, {}, false, nil
     state.scouts = {}
-    seedCfg.finalboss, seedCfg.chocobo, seedCfg.airship, seedCfg.continent = nil, nil, nil, nil
+    seedCfg.finalboss, seedCfg.chocobo, seedCfg.airship, seedCfg.continent, seedCfg.radar = nil, nil, nil, nil, nil
     save.obj = nil     -- judge the loaded save again for this session
     saveState()
     local f = io.open(bridge.outPath, "w")
@@ -396,6 +396,8 @@ local function readInbox(initial)
             seedCfg.chocobo = f[3] == "1"
         elseif f[1] == "cfg" and f[2] == "airship" then
             seedCfg.airship = f[3] == "1"
+        elseif f[1] == "cfg" and f[2] == "radar" then
+            seedCfg.radar = f[3] == "1"
         elseif f[1] == "cfg" and f[2] == "continent" then
             seedCfg.continent = f[3] and f[3]:lower()
         elseif f[1] == "cfg" and f[2] == "finalboss" then
@@ -655,6 +657,17 @@ end
 -- chest's.
 local BOSS_POPUP_TRIES = 60
 local function scanBosses()
+    -- Round 72: a radar treasure's check is its found flag, as a boss's is its win flag.
+    if seedCfg.radar and sessionSave() then
+        for _, t in ipairs(game.RADAR) do
+            local key = "radar:" .. t.n
+            if game.GetFlag(t.flag) == true and report("check", key) then
+                log("check " .. key)
+                local s = state.scouts[key]
+                if s then popup = { text = popupText(s), key = key, tries = BOSS_POPUP_TRIES } end
+            end
+        end
+    end
     if not (seedCfg.bosses and sessionSave()) then return end
     for _, b in ipairs(game.BOSSES) do
         local key = "boss:" .. b.group
@@ -1389,6 +1402,10 @@ local function tick()
                 if newSave and seedCfg.bosses then
                     local okBosses, written = pcall(game.BossesPatch)
                     log("bosses: " .. tostring(written) .. " win rows changed" .. (okBosses and "" or " (failed)"))
+                end
+                if newSave and seedCfg.radar then
+                    local okRadar, written = pcall(game.RadarPatch)
+                    log("radar: " .. tostring(written) .. " treasure rewards set to the pop-up's stand-in" .. (okRadar and "" or " (failed)"))
                 end
                 -- Round 69: one win over the Antlion clears its sandpit for good, on every open
                 -- world seed, so the way between Kol and Grandport is never shut for long.
@@ -2202,6 +2219,33 @@ airshipItemTick = function()
     end
 end
 
+-- Round 72: the radar's level is the number of Progressive Radars (the Magi-tenna, 27006, as an
+-- Archipelago item) applied to this save, counted from the session's items: the game may keep
+-- one copy of a key item only. One turns the radar on (flag 702); two and three set the quest's
+-- step ({progress:49}) to 40 and 50, which the later pingers test. It is never lowered.
+-- One table, as main.lua's main chunk is at Lua's limit of 200 locals.
+local radar = { ITEM = 27006, logged = nil }
+function radar.level()
+    local n = 0
+    for i = 0, state.applied - 1 do
+        local it = state.items[i]
+        if it and it.kind == "item" and it.id == radar.ITEM then n = n + 1 end
+    end
+    return n
+end
+
+function radar.tick()
+    local level = radar.level()
+    if level >= 1 and game.GetFlag(game.RADAR_ON_FLAG) == false then game.SetFlag(game.RADAR_ON_FLAG, true) end
+    local want = game.RADAR_TIER_VALUES[math.min(level, 3)]
+    local now = game.ProgressValue(game.RADAR_TIER_PROGRESS)
+    if want and now and now < want then now = game.SetProgressValue(game.RADAR_TIER_PROGRESS, want) end
+    local line = string.format("radar: level %d (flag %d %s, progress %d %s)", level, game.RADAR_ON_FLAG,
+        tostring(game.GetFlag(game.RADAR_ON_FLAG)), game.RADAR_TIER_PROGRESS, tostring(now))
+    if line ~= radar.logged then log(line) end
+    radar.logged = line
+end
+
 seedExtrasTick = function()
     local seedSave = seedCfg.openworld and sessionSave() and (game.StoryCounter() or 0) >= game.OPEN_START.story
     if seedSave and seedCfg.chocobo ~= false and saddleSave ~= save.obj and game.OnField() then
@@ -2213,6 +2257,7 @@ seedExtrasTick = function()
     end
     pcall(finalLockTick)
     if seedSave and seedCfg.airship == false then pcall(airshipItemTick) end
+    if seedSave and seedCfg.radar and sessionSave() then pcall(radar.tick) end
     if seedSave and game.CurrentMap() == game.SHIPYARD_MAP then
         local woke = game.WakeShipyardElevators()
         if woke > 0 and not shipyardLogged then log("shipyard: " .. woke .. " stopped elevators turned on") end

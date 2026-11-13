@@ -181,6 +181,7 @@ class FFResonanceContext(CommonContext):
         wanted.append(("cfg", "bosses", int(bool(slot_data.get("include_bosses")))))
         # A seed from before world 0.20.0 has no such option: it gave the Chocobo at the start.
         wanted.append(("cfg", "chocobo", int(bool(slot_data.get("start_with_chocobo", True)))))
+        wanted.append(("cfg", "radar", int(bool(slot_data.get("include_radar_treasures")))))
         # Before world 0.21.0 every seed started in the airship.
         wanted.append(("cfg", "airship", int(bool(slot_data.get("start_with_airship", True)))))
         if slot_data.get("starting_continent"):

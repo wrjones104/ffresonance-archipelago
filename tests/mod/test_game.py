@@ -1707,6 +1707,8 @@ local function talkTable(name, parents)
       Gim_EV_ShipMovement_02_03_Choice = menu({ 1, 3, 4 }, "Gim_EV_ShipMovement_Cancel"),
       Gim_EV_ShipMovement_03_02_Choice = menu({ 1, 2, 4 }, "Gim_EV_ShipMovement_Cancel"),
       Gim_EV_ShipMovement_04_01_Choice = menu({ 1, 2, 3 }, "Gim_EV_ShipMovement_Cancel"),
+      SubEv_C05_TreasureRadar_01_01 = { ObtainItemList = { { ID = 20016, Num = 1 } } },
+      SubEv_C05_TreasureRadar_01_13 = { ObtainItemList = { { ID = 12059, Num = 1 } } },
       C01_ArijigokuWin = { ContinuousEventList = {
         { Condition = "!{flag:10}", EventId = FName("C01_ArijigokuWin_01") },
         { Condition = "{flag:10}", EventId = FName("C01_ArijigokuWin_02") } } } },
@@ -1759,6 +1761,15 @@ for table in ("cdtTalk", "gimTalk"):
         assert L.eval(f"{table}.rows.C01_ArijigokuWin.ContinuousEventList[{i}].EventId:ToString()") == "C01_ArijigokuWin_02"
 assert L.eval("G.AntlionPatch()") == 0, "nothing to write the second time"
 print("antlion: ok")
+
+# Round 72: a radar treasure's reward is the location's now: its dig row gives the pop-up's
+# stand-in Potion (1), in both tables, once
+RADAR_ROWS_TO_CHANGE = 2 * 2
+assert L.eval("G.RadarPatch()") == RADAR_ROWS_TO_CHANGE
+assert L.eval("gimTalk.rows.SubEv_C05_TreasureRadar_01_13.ObtainItemList[1].ID") == 1
+assert L.eval("G.RadarPatch()") == 0
+assert L.eval("#G.RADAR") == 13 and L.eval("G.RADAR[13].flag") == 716
+print("radar rows: ok")
 
 # Round 72: the map manager is kept as its path. Once the engine frees it (here: no longer found by
 # path, and any touch fails as an access violation would), the next call finds the new one and

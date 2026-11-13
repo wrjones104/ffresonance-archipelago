@@ -88,6 +88,6 @@ An Archipelago implementation for Final Fantasy Resonance (UE 5.6, game module `
 **Tooling:**
 - **The Bash tool can collapse backslashes** in heredocs and inline Python (`\\n` arrives as a line break). Write edit scripts and test patches as files with the Write tool, then run them.
 - **`python -m unittest worlds.ff_resonance.test` runs nothing of ours**: it loads only the package. Name the module, `worlds.ff_resonance.test.test_generation`. The runner printed ok for a long time while 12 tests were stale (round 59).
-- **`game.lua`'s main chunk is at Lua's limit of 200 local variables** (round 67). A new top-level `local` fails to compile ("too many local variables"). Put new state in a table or a `G` field, and new helpers on `G`.
+- **`game.lua`'s and `main.lua`'s main chunks are at Lua's limit of 200 local variables** (rounds 67 and 72). A new top-level `local` fails to compile ("too many local variables"). Put new state in a table or a `G` field, and new helpers on `G` or on that table.
 - **Universal Tracker builds the world again from the slot data** (`interpret_slot_data`). Every option the logic reads, and every roll (starting continent, party), must be in `fill_slot_data` and taken back in `World.take_slot_data`. Without it the tracker rolled its own start and showed 0 in logic (round 72).
 - When a test file's version string is replaced in bulk, comments that mention versions change too, so anchor edits on text that does not.

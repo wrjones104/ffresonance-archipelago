@@ -3,7 +3,7 @@ from test.bases import WorldTestBase
 # Most tests look at a small pool: chests only. A test of shinies, crystals, shards or bosses turns
 # its own option on.
 CHESTS_ONLY = {"goal": "final_boss", "include_shinies": False, "include_crystals": False,
-               "include_tablet_shards": False, "include_bosses": False}
+               "include_tablet_shards": False, "include_bosses": False, "include_radar_treasures": False}
 
 
 class FFResonanceTestBase(WorldTestBase):

@@ -56,6 +56,12 @@ FRAGMENT_NAME = "Crystal Fragment"
 # Round 67: the Chocobo, the game's Choboco Saddle (an artifact, 30002), which the game checks.
 CHOCOBO_GAME_ID = 30002
 CHOCOBO_ITEM = CHOCOBO_GAME_ID * 1000 + 1
+# Round 72: the airship radar's 13 treasures (data/radar.tsv, IDEAS.md idea 32) are locations, and
+# a Progressive Radar (the Magi-tenna, 27006, given again for each step) opens them by tier.
+RADAR_LOCATION_BASE = 5_000_000_000      # + the treasure's number
+RADAR_GAME_ID = 27006
+RADAR_ITEM = RADAR_GAME_ID * 1000 + 2
+RADAR_PARTS = [27006001, 27007001, 27008001]   # the three parts, which the Progressive Radar replaces
 # Round 69: the airship as an item is an event flag the mod gives the airship's spawn condition.
 # Its AP id is numbered like the continent unlocks, which are flags too.
 AIRSHIP_FLAG = 1431
@@ -401,6 +407,17 @@ def main() -> None:
     items[CHOCOBO_ITEM] = {"name": "Chocobo", "kind": "item", "game_id": CHOCOBO_GAME_ID, "count": 1, "category": "vehicle"}
     items[CONTINENT_ITEM_BASE + AIRSHIP_FLAG] = {"name": "Airship", "kind": "flag", "game_id": AIRSHIP_FLAG, "count": 1,
                                                  "category": "vehicle"}
+    items[RADAR_ITEM] = {"name": "Progressive Radar", "kind": "item", "game_id": RADAR_GAME_ID, "count": 1,
+                         "category": "radar"}
+    # Round 72: the radar's treasures lie at sea, dug from the airship, in a fixed order: each
+    # pinger also needs the one before it found ({progress:51}). Their rewards join the pool.
+    radar = []
+    for r in read_tsv("radar.tsv"):
+        n = int(r["n"])
+        radar.append({"key": f"radar:{n}", "name": f"Radar Treasure {n}", "region": "Radar Treasures",
+                      "area": OPEN_AREA, "open_world": True, "id": RADAR_LOCATION_BASE + n,
+                      "vanilla": item_for(int(r["reward"]), 1, 0, in_chest=True), "radar_tier": int(r["tier"]),
+                      "flag": int(r["found_flag"]), "row": r["row"], "airship": True})
     # A continent's unlock turns on its event flag; Ardra has no locations, so it has no unlock.
     # One name can cover two maps (the Earth Shrine), so a repeat gets its map id.
     counts = collections.Counter(e["name"] for e in tablet_shinies)
@@ -454,7 +471,7 @@ def main() -> None:
     for r in read_tsv("airship_only.tsv"):
         assert r["location"] in by_key, f"airship_only.tsv: no location {r['location']}"
         by_key[r["location"]]["airship"] = True
-    location_names = [e["name"] for e in chests + shinies + crystals + tablet_shinies + bosses]
+    location_names = [e["name"] for e in chests + shinies + crystals + tablet_shinies + bosses + radar]
     assert len(location_names) == len(set(location_names)), "duplicate location names"
 
     write_field_items_lua()
@@ -476,6 +493,10 @@ def main() -> None:
         f.write("BOSSES = " + pprint.pformat(bosses, width=110, sort_dicts=True) + "\n\n")
         f.write(f"FRAGMENT_ITEM = {FRAGMENT_ITEM}\n\n")
         f.write(f"CHOCOBO_ITEM = {CHOCOBO_ITEM}\n\n")
+        f.write("# The airship radar's treasures (data/radar.tsv): tier is how many Progressive Radars they need\n")
+        f.write("RADAR = " + pprint.pformat(radar, width=110, sort_dicts=True) + "\n\n")
+        f.write(f"RADAR_ITEM = {RADAR_ITEM}\n")
+        f.write(f"RADAR_PARTS = {RADAR_PARTS}\n\n")
         f.write(f"AIRSHIP_ITEM = {CONTINENT_ITEM_BASE + AIRSHIP_FLAG}\n\n")
         f.write("# Chests and shinies that keep vanilla key items or valuables: not locations\n")
         f.write("KEPT_VANILLA = " + pprint.pformat(sorted(e["key"] for e in kept_chests + kept_shinies), width=110) + "\n\n")

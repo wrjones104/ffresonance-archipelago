@@ -5,7 +5,7 @@ from worlds import AutoWorld
 from worlds.AutoWorld import call_all
 from test.general import gen_steps
 
-from ..data import AIRSHIP_ITEM, BOSSES, CHESTS, CHOCOBO_ITEM, NO_ROUTE, CONTINENT_UNLOCKS, CRYSTALS, FRAGMENT_ITEM, ITEMS, NO_BOX, TABLET_SHINIES, PROGRESSION, SHINIES, SHUFFLE_ID_LIMIT, UNIT_ITEM_BASE
+from ..data import AIRSHIP_ITEM, BOSSES, CHESTS, CHOCOBO_ITEM, NO_ROUTE, RADAR, RADAR_ITEM, RADAR_PARTS, CONTINENT_UNLOCKS, CRYSTALS, FRAGMENT_ITEM, ITEMS, NO_BOX, TABLET_SHINIES, PROGRESSION, SHINIES, SHUFFLE_ID_LIMIT, UNIT_ITEM_BASE
 from ..items import CLASSIFICATIONS, FILLER_CATEGORIES, FRAGMENT_NAME, item_name_groups
 from ..locations import GOAL_EVENT, LOCATION_KEY_TO_ID, SEPHIROTH, VICTORY
 from ..options import Goal, TabletShardsRequired
@@ -243,6 +243,36 @@ class TestTrackerRebuild(FFResonanceTestBase):
         in_logic = [loc for loc in multiworld.get_locations(1) if loc.address and loc.can_reach(state)]
         self.assertTrue(in_logic, "the start's locations are in logic")
         self.assertTrue(all(loc.parent_region.name == "Mysidia" for loc in in_logic))
+
+
+class TestRadarTreasures(FFResonanceTestBase):
+    """Round 72: the airship radar's 13 treasures are locations, opened by three Progressive Radars
+    (1 to 5, 6 to 9, 10 to 13) in place of the radar's three parts."""
+    options = {"include_radar_treasures": True, "start_with_airship": False}
+
+    def test_three_radars_in_place_of_the_parts(self) -> None:
+        pool = [i.code for i in self.multiworld.itempool if i.player == self.player]
+        self.assertEqual(pool.count(RADAR_ITEM), 3)
+        self.assertFalse(set(RADAR_PARTS) & set(pool))
+        self.assertEqual(len(RADAR), 13)
+
+    def test_tiers_and_the_airship(self) -> None:
+        state = self.multiworld.state
+        first, sixth, last = (self.multiworld.get_location(f"Radar Treasure {n}", self.player) for n in (1, 6, 13))
+        radars = self.get_items_by_name("Progressive Radar")
+        self.collect(radars[0])
+        self.assertFalse(first.can_reach(state), "they lie at sea: the Airship first")
+        self.collect_by_name(["Airship"])
+        self.assertTrue(first.can_reach(state))
+        self.assertFalse(sixth.can_reach(state))
+        self.collect(radars[1])
+        self.assertTrue(sixth.can_reach(state))
+        self.assertFalse(last.can_reach(state))
+        self.collect(radars[2])
+        self.assertTrue(last.can_reach(state))
+
+    def test_slot_data(self) -> None:
+        self.assertEqual(self.world.fill_slot_data()["include_radar_treasures"], 1)
 
 
 class TestShinies(FFResonanceTestBase):
@@ -631,7 +661,8 @@ class TestData(FFResonanceTestBase):
     def test_mod_keys_map_to_ids(self) -> None:
         self.assertEqual(LOCATION_KEY_TO_ID["chest:2012:5"], 1_000_000_000 + 2012 * 1000 + 5)
         self.assertEqual(LOCATION_KEY_TO_ID[f"boss:{MARAUDER}"], 4_000_000_000 + MARAUDER)
-        self.assertEqual(len(LOCATION_KEY_TO_ID), len(CHESTS) + len(SHINIES) + len(CRYSTALS) + len(TABLET_SHINIES) + len(BOSSES))
+        self.assertEqual(len(LOCATION_KEY_TO_ID), len(CHESTS) + len(SHINIES) + len(CRYSTALS) + len(TABLET_SHINIES)
+                         + len(BOSSES) + len(RADAR))
 
 
 class TestNoProgression(FFResonanceTestBase):

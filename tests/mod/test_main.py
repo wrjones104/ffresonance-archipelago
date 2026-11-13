@@ -193,6 +193,13 @@ function G.CrossingSync(list) G.crossingLists[#G.crossingLists + 1] = list; retu
 function G.CrossingNear(list, range) return nil end
 function G.CrossingClear() G.crossingsCleared = true end
 G.AIRSHIP_FLAG, G.airshipSyncs, G.parks = 1431, {}, {}
+G.RADAR_ON_FLAG, G.RADAR_TIER_PROGRESS, G.RADAR_TIER_VALUES = 702, 49, { [2] = 40, [3] = 50 }
+G.RADAR = {}
+for n = 1, 13 do G.RADAR[n] = { n = n, flag = 703 + n } end
+G.progress, G.radarPatches = {}, 0
+function G.ProgressValue(i) return G.progress[i] or 0 end
+function G.SetProgressValue(i, n) G.progress[i] = n; return n end
+function G.RadarPatch() G.radarPatches = G.radarPatches + 1; return 13 end
 G.FOOT_STARTS = { lanzelt = { name = "foot lanzelt", story = 8000, map = 1000, x = 12470, y = 14980, z = 65 } }
 function G.AirshipItemSync(asItem) G.airshipSyncs[#G.airshipSyncs + 1] = asItem; return nil end
 function G.ParkAirship(x, y, z) G.parks[#G.parks + 1] = x .. " " .. y .. " " .. z; return true end
@@ -1641,6 +1648,39 @@ L, G = boot()
 tick(4)
 assert list(G.airshipSyncs.values())[-1] is False
 print("airship as an item: ok")
+
+# Round 72: the radar's 13 treasures. Its level is the Progressive Radars (item 27006) applied to
+# this save: one turns the radar on (flag 702), two set the quest step to 40, three to 50, never
+# lower. A treasure's check is its found flag (704 to 716).
+inbox("seed\tS72r:0:1\ncfg\topenworld\t1\ncfg\tradar\t1\n", "w")
+L, G = boot5("SD_RADAR", "0", {})
+L.globals().G = G
+L.execute(SCALE_STUB)
+L.execute("function G.HeldCount(id) return 1 end")
+L.execute("""G.radarFlags = {}
+function G.GetFlag(i) return G.radarFlags[i] == true end
+function G.SetFlag(i, on) G.radarFlags[i] = on; return "ok", "" end""")
+G.chests = L.table()
+G.story = 8000
+tick(12)
+assert G.radarPatches >= 1, "the dig rows give the pop-up's stand-in"
+assert L.eval("G.radarFlags[702]") is None, "no radar yet"
+inbox("item\t0\titem\t27006\t1\tProgressive Radar\n")
+tick(12)
+assert L.eval("G.radarFlags[702]") is True and L.eval("G.progress[49]") is None, "level 1: the radar alone"
+inbox("item\t1\titem\t27006\t1\tProgressive Radar\n")
+tick(12)
+assert L.eval("G.progress[49]") == 40
+L.execute("G.progress[49] = 45")    # the game's own quest step, past ours: left alone
+tick(12)
+assert L.eval("G.progress[49]") == 45
+inbox("item\t2\titem\t27006\t1\tProgressive Radar\n")
+tick(12)
+assert L.eval("G.progress[49]") == 50
+L.execute("G.radarFlags[704] = true")
+tick(12)
+assert "check\tradar:1\n" in read("ap_out.txt") and "radar:2" not in read("ap_out.txt"), read("ap_out.txt")[-200:]
+print("radar: ok")
 
 # Round 58: the tower's last climb stays sealed while the client's counts are short, and says so near it
 inbox("seed\tS58:0:1\ncfg\topenworld\t1\ncfg\tfinalboss\t2\t6\t3\t12\n", "w")

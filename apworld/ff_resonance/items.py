@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 from BaseClasses import Item, ItemClassification
 from Options import OptionError
 
-from .data import AIRSHIP_ITEM, CHESTS, CHOCOBO_ITEM, CONTINENT_UNLOCKS, FRAGMENT_ITEM, ITEMS, PROGRESSION, UNIT_ITEM_BASE
+from .data import AIRSHIP_ITEM, CHESTS, CHOCOBO_ITEM, RADAR_ITEM, RADAR_PARTS, CONTINENT_UNLOCKS, FRAGMENT_ITEM, ITEMS, PROGRESSION, UNIT_ITEM_BASE
 
 if TYPE_CHECKING:
     from .world import FFResonanceWorld
@@ -31,6 +31,7 @@ CLASSIFICATIONS = {
     "continent": ItemClassification.progression,
     "fragment": ItemClassification.progression,
     "vehicle": ItemClassification.progression,
+    "radar": ItemClassification.progression,
 }
 
 item_name_groups: dict[str, set[str]] = {
@@ -77,6 +78,9 @@ def progression_ids(world: FFResonanceWorld) -> list[int]:
         chosen.append(CHOCOBO_ITEM)
     if not world.options.start_with_airship:
         chosen.append(AIRSHIP_ITEM)
+    # Round 72: with the radar's treasures, three Progressive Radars take the place of its parts.
+    if world.options.include_radar_treasures:
+        chosen = [ap_id for ap_id in chosen if ap_id not in RADAR_PARTS] + [RADAR_ITEM] * 3
     return chosen
 
 
