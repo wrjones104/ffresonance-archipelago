@@ -73,7 +73,8 @@ class TestDefault(FFResonanceTestBase):
     def test_places_with_no_route_are_not_locations(self) -> None:
         """Round 72: the burning Grandshelt Castle (3020) is the prologue's: its chests are not
         locations. The Imperial Residences (2113) are reached by the Zoldaad streetcar."""
-        self.assertTrue(NO_ROUTE and all(key.startswith("chest:3020:") for key in NO_ROUTE))
+        self.assertTrue(NO_ROUTE and all(key.startswith("chest:3020:") or key == "chest:2012:1" for key in NO_ROUTE))
+        self.assertNotIn("chest:2012:1", LOCATION_KEY_TO_ID, "the castle room the user could not find (round 72)")
         names = {loc.name for loc in self.multiworld.get_locations(self.player)}
         self.assertNotIn("Grandshelt Castle Chest 8", names)
         residences = self.multiworld.get_location("Imperial Residences Chest 1", self.player)
@@ -628,7 +629,7 @@ class TestData(FFResonanceTestBase):
         self.assertEqual(unseen, [70, 71, 84, 85, 86, 87, 88, 89, 91])
 
     def test_mod_keys_map_to_ids(self) -> None:
-        self.assertEqual(LOCATION_KEY_TO_ID["chest:2012:1"], 1_000_000_000 + 2012 * 1000 + 1)
+        self.assertEqual(LOCATION_KEY_TO_ID["chest:2012:5"], 1_000_000_000 + 2012 * 1000 + 5)
         self.assertEqual(LOCATION_KEY_TO_ID[f"boss:{MARAUDER}"], 4_000_000_000 + MARAUDER)
         self.assertEqual(len(LOCATION_KEY_TO_ID), len(CHESTS) + len(SHINIES) + len(CRYSTALS) + len(TABLET_SHINIES) + len(BOSSES))
 

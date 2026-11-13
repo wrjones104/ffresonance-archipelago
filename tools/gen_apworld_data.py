@@ -144,6 +144,10 @@ CONTINENT_ITEM_BASE = 700_000_000  # AP id of a continent's unlock: base + its e
 # Castle (3020) is the prologue's and cannot be entered at story 8000. Round 72: its chests are
 # no locations at all, as a location no one can open only inflates the count (the user).
 NO_ROUTE_MAPS = {3020}
+# Round 72: single chests with no route at story 8000. Grandshelt Castle's chest row 1 (box uid 63,
+# at (-30195, 8095) on map 2012) is in a room the user could not find after searching the castle:
+# most likely one the story passes through and the castle closes later.
+NO_ROUTE_CHESTS = {"chest:2012:1"}
 # Round 71 (the user): Fina's Psyche (maps 3210 to 3212) is reached past Tellus in the Tower of
 # Mysidia, so its locations need what that boss needs.
 AFTER_BOSS = {3210: 9038, 3211: 9038, 3212: 9038}
@@ -291,7 +295,7 @@ def main() -> None:
         if not r["boxes"]:
             no_box.append(f"chest:{map_id}:{chest_id}")
             continue
-        if map_id in NO_ROUTE_MAPS:
+        if map_id in NO_ROUTE_MAPS or f"chest:{map_id}:{chest_id}" in NO_ROUTE_CHESTS:
             no_route.append(f"chest:{map_id}:{chest_id}")
             continue
         item_id, count, money = int(r["ItemId"]), int(r["ItemNum"]), int(r["Money"])
@@ -477,7 +481,7 @@ def main() -> None:
         f.write("KEPT_VANILLA = " + pprint.pformat(sorted(e["key"] for e in kept_chests + kept_shinies), width=110) + "\n\n")
         f.write("# Chest table rows with no box placed on any map: not locations\n")
         f.write("NO_BOX = " + pprint.pformat(sorted(no_box), width=110) + "\n\n")
-        f.write("# Chest rows on a map with no route at story 8000 (the burning castle): not locations\n")
+        f.write("# Chest rows with no route at story 8000 (the burning castle, one castle room): not locations\n")
         f.write("NO_ROUTE = " + pprint.pformat(sorted(no_route), width=110) + "\n\n")
         f.write("# Progression items by group (AP ids): party members, visions, key items. One of each goes\n"
                 "# in the pool when its option is on, except the party members a player starts with.\n")

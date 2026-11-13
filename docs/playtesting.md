@@ -684,9 +684,11 @@ World-map shinies verified as locations. Multiple crashes observed across differ
 
 **Changed (world 0.23.2):** map 3020's nine chests are no locations (`NO_ROUTE` in `data.py`), so a seed has 9 fewer. The Imperial Residences' chest and shard are in logic, in Zoldaad. The no-route list now holds map 3020 only.
 
-## Round 72 test plan (mod 0.56.0, world 0.23.2)
+**And (world 0.23.3):** Grandshelt Castle Chest 2 (`chest:2012:1`) is no location either. The user searched the whole castle and could not find its room; it is most likely one the story passes through and the castle closes later. The castle's other chests are numbered again: Chests 1 to 6 now.
 
-**Install:** copy `FFRArchipelago/Scripts` (it has a new file, `field_items.lua`) and `dist/ff_resonance.apworld` (0.23.2). A new seed is needed for the logic and fast travel changes. The crash fix, the shard fix and the boss changes also work on the round 71 save.
+## Round 72 test plan (mod 0.56.0, world 0.23.3)
+
+**Install:** copy `FFRArchipelago/Scripts` (it has a new file, `field_items.lua`) and `dist/ff_resonance.apworld` (0.23.3). A new seed is needed for the logic and fast travel changes. The crash fix, the shard fix and the boss changes also work on the round 71 save.
 
 **1. Play long.** The crash came about 2 hours in, on leaving the world map. **Does it still happen?** If it does, send the crash folder.
 
