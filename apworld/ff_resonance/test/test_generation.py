@@ -94,6 +94,16 @@ class TestDefault(FFResonanceTestBase):
         self.collect_by_name(["Nichol"])
         self.assertTrue(chest.can_reach(self.multiworld.state))
 
+    def test_sanctissimus_is_behind_its_first_three_bosses(self) -> None:
+        """Round 72: Sanctissimus Shrine's chests are past Archaeoaevis, Dad Bomb and Test Rider
+        (tier C): four party members and four continents, on top of Gronoa."""
+        chest = self.multiworld.get_location("Sanctissimus Shrine Chest 1", self.player)
+        self.collect_by_name(["Gronoa Unlock", "Pharm Unlock", "Mysidia Unlock"])
+        self.collect(self.get_item_by_name("Nichol"))
+        self.assertFalse(chest.can_reach(self.multiworld.state), "three members are not enough")
+        self.collect(self.get_item_by_name("Lid"))
+        self.assertTrue(chest.can_reach(self.multiworld.state))
+
     def test_zoldaad_dungeon_needs_its_key(self) -> None:
         chest = self.multiworld.get_location("Zoldaad Dungeon Chest 1", self.player)
         self.collect_by_name(["Zoldaad Unlock"])

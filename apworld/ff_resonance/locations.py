@@ -139,9 +139,11 @@ def create_regions_and_locations(world: FFResonanceWorld) -> None:
                 rules.append(lambda state, names=names: state.has_all(names, player))
             else:
                 location.progress_type = LocationProgressType.EXCLUDED
-        # Round 72: a boss, or a place behind one (Fina's Psyche, behind Tellus), needs what the
-        # boss's tier needs. A place only the airship reaches (data/airship_only.tsv) needs it.
-        tier = loc.get("tier") or BOSS_TIER.get(loc.get("after_boss"))
+        # Round 72: a boss, or a place behind bosses (Fina's Psyche, Sanctissimus Shrine), needs
+        # what the highest of their tiers needs. A place only the airship reaches
+        # (data/airship_only.tsv) needs it.
+        tiers = [BOSS_TIER[group] for group in loc.get("after_boss", [])] + ([loc["tier"]] if loc.get("tier") else [])
+        tier = max(tiers) if tiers else None
         tier_rule = boss_rule(world, tier) if tier else None
         if tier_rule:
             rules.append(tier_rule)

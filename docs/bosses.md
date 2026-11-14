@@ -191,7 +191,7 @@ Every battle group with a Boss-category unit (155), walked back from its fight r
 
 **Round 72:** Behemoth (9051) is out again: it sits right before the final boss, and in the story the Sworn Six weaken it first (the user's call). Elfdrit's zone and the Wandering Lands' two Tellus zones are made 4 times bigger while their boss stands (`scale` in `G.STORY_BOSSES`): the user had to hunt for Elfdrit's and never found Tellus's.
 
-**Boss logic, first step (world 0.23.0).** Each boss has a `tier` in `data/bosses.tsv`, set from its highest unit level by the bands in `boss_logic.md`, section 2: A to 20, B 21 to 39, C 40 to 49, D 50 and up, and the optional superbosses D. The world's rule per tier (`locations.TIER_NEEDS`): A nothing more; B 3 party members and 2 continents unlocked; C 4 and 4; D 5 and 6, and the Airship when it is an item. Party counts above what the seed can give are lowered to it. Fina's Psyche takes Tellus's (9038) tier. The capability rules (healing, elements, status) are the next step.
+**Boss logic, first step (world 0.23.0).** Each boss has a `tier` in `data/bosses.tsv`, set from its highest unit level by the bands in `boss_logic.md`, section 2: A to 20, B 21 to 39, C 40 to 49, D 50 and up, and the optional superbosses D. The world's rule per tier (`locations.TIER_NEEDS`): A nothing more; B 3 party members and 2 continents unlocked; C 4 and 4; D 5 and 6, and the Airship when it is an item. Party counts above what the seed can give are lowered to it. Fina's Psyche takes Tellus's (9038) tier, and Sanctissimus Shrine's chests and shards take the highest of its first three fights' (Archaeoaevis, Dad Bomb, Test Rider, all C; round 72, the user). The capability rules (healing, elements, status) are the next step.
 
 ## 5. Order of work
 

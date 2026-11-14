@@ -695,9 +695,11 @@ World-map shinies verified as locations. Multiple crashes observed across differ
 - The treasures come in order in the game, as in vanilla: each pinger also needs the one before it found. The logic needs nothing more for that, as the tiers only rise along the chain.
 - A treasure's check is its found flag (704 to 716). Its dig row gives one Potion in place of its reward, so the pop-up shows and says what it held.
 
-## Round 72 test plan (mod 0.57.0, world 0.24.0)
+**And (world 0.24.1):** Sanctissimus Shrine's chests and shards (Chests 1 and 2, Shards 82 and 84) are past its first three fights, Archaeoaevis, Dad Bomb and Test Rider (the user). They need what those bosses need, tier C: four party members and four continents. A place behind bosses (`AFTER_BOSS` in `tools/gen_apworld_data.py`) can now name several, and takes the highest tier.
 
-**Install:** copy `FFRArchipelago/Scripts` (it has a new file, `field_items.lua`) and `dist/ff_resonance.apworld` (0.24.0). A new seed is needed for the logic and fast travel changes. The crash fix, the shard fix and the boss changes also work on the round 71 save.
+## Round 72 test plan (mod 0.57.0, world 0.24.1)
+
+**Install:** copy `FFRArchipelago/Scripts` (it has a new file, `field_items.lua`) and `dist/ff_resonance.apworld` (0.24.1). A new seed is needed for the logic and fast travel changes. The crash fix, the shard fix and the boss changes also work on the round 71 save.
 
 **1. Play long.** The crash came about 2 hours in, on leaving the world map. **Does it still happen?** If it does, send the crash folder.
 

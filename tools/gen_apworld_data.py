@@ -154,9 +154,11 @@ NO_ROUTE_MAPS = {3020}
 # at (-30195, 8095) on map 2012) is in a room the user could not find after searching the castle:
 # most likely one the story passes through and the castle closes later.
 NO_ROUTE_CHESTS = {"chest:2012:1"}
-# Round 71 (the user): Fina's Psyche (maps 3210 to 3212) is reached past Tellus in the Tower of
-# Mysidia, so its locations need what that boss needs.
-AFTER_BOSS = {3210: 9038, 3211: 9038, 3212: 9038}
+# Places behind boss fights: their locations need what each of those bosses needs (the highest
+# tier). Round 71 (the user): Fina's Psyche (maps 3210 to 3212) is reached past Tellus in the Tower
+# of Mysidia. Round 72 (the user): Sanctissimus Shrine's chests and shards (3250) are past its first
+# three fights, Archaeoaevis, Dad Bomb and Test Rider.
+AFTER_BOSS = {3210: [9038], 3211: [9038], 3212: [9038], 3250: [9075, 9074, 9073]}
 # The story counter on the open world start. A shiny whose condition is false there is not out.
 OPEN_START_STORY = 8000
 FINAL_AREA = "Crystal Tower"
