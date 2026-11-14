@@ -742,9 +742,9 @@ World-map shinies verified as locations. Multiple crashes observed across differ
 
 Send the `[FFRAP]` lines of the log and any crash folder.
 
-## Round 73 test plan (world 0.25.0, mod 0.57.1)
+## Round 73 test plan (world 0.25.0, mod 0.57.2)
 
-**Install:** copy `dist/ff_resonance.apworld` (0.25.0) into `custom_worlds` and generate a new seed. The mod is unchanged. Round 72's open items (long play, the radar, shards) carry over.
+**Install:** copy `dist/ff_resonance.apworld` (0.25.0) into `custom_worlds` and generate a new seed, and copy `FFRArchipelago/Scripts`. Mod 0.57.2 has the user's shorter chest pop-up text ("You found:" and "You found <player>'s:") and a clearer note when the Airship arrives. Round 72's open items (long play, the radar, shards) carry over.
 
 **1. Bosses in logic.** Universal Tracker should show a boss only once your party can hit its weakness and heal. **Was a boss in logic that you could not beat?** Note your party (members and levels), Visions and gear. **Was one out of logic that you beat easily?** Note the same.
 

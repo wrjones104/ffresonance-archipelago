@@ -1,7 +1,6 @@
 # Scratchpad
 
 ## Logic stuff
-* Airship radars should be progressive? - actually not sure about this one, need to do a bit more research/playtesting
 * Will need to work through logic for side-quests, specifically those that send you to other continents.
 * Sephiroth should not be in logic right away - goes along with other boss logic stuff
 

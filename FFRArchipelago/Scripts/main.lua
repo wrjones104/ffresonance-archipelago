@@ -50,7 +50,7 @@
 -- follows the save slots the linked game is saved to. While any other save is loaded, the mod
 -- grants nothing, reports nothing and leaves the chests vanilla.
 
-local VERSION = "0.57.1"
+local VERSION = "0.57.2"
 local PROTOCOL = 2        -- the bridge protocol; the apworld's MOD_PROTOCOL
 
 local MOD_DIR = (debug.getinfo(1, "S").source:gsub("^@", ""):gsub("\\", "/"):match("^(.*/)Scripts/[^/]+$"))
@@ -615,8 +615,8 @@ local POPUP_TRIES = 8
 local popup = nil   -- { text, key, tries }
 
 local function popupText(s)
-    if s.own then return "You obtained the following:\n" .. s.item end
-    return "You found the following for " .. s.player .. ":\n" .. s.item
+    if s.own then return "You found:\n" .. s.item end
+    return "You found " .. s.player .. "'s:\n" .. s.item
 end
 
 local function popupTick()
@@ -2210,7 +2210,7 @@ airshipItemTick = function()
     airshipCall.was = on
     if not came then return end
     if parkAirshipAtStart("received") then
-        notify("The airship is yours. It waits where you started this seed, from your next map change.")
+        notify("The airship will spawn where you started this seed. You may need to change maps for it to appear.")
     end
 end
 

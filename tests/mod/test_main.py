@@ -878,14 +878,14 @@ assert "check\tchest:3020:3" in read("ap_out.txt"), read("ap_out.txt")
 assert list(G.popups.values()) == [], "waits for the pop-up"
 G.popupReady = True
 tick(2)
-assert list(G.popups.values()) == ["You found the following for Alice:\nHookshot"], list(G.popups.values())
+assert list(G.popups.values()) == ["You found Alice's:\nHookshot"], list(G.popups.values())
 # an own item; and a chest with no scout leaves the pop-up alone
 G.chests = L.table_from({1: L.table_from({"uid": 2, "open": True, "rowMap": 3020, "rowId": 2, "uniqueId": 8,
                                           "typeId": 8, "itemId": 209, "itemNum": 3, "money": -1}),
                          2: L.table_from({"uid": 4, "open": True, "rowMap": 3020, "rowId": 4, "uniqueId": 9,
                                           "typeId": 9, "itemId": 1, "itemNum": 1, "money": -1})})
 tick(6)
-assert list(G.popups.values())[1:] == ["You obtained the following:\nTent"], list(G.popups.values())
+assert list(G.popups.values())[1:] == ["You found:\nTent"], list(G.popups.values())
 assert G.restores > 0
 # 0.11.2: the fast check: a pop-up that has just come up scans the chests at once and rewrites
 # the pop-up in the same pass, with no regular tick in between
@@ -897,7 +897,7 @@ G.chests = L.table_from({1: L.table_from({"uid": 5, "open": True, "rowMap": 3020
 G.popupOpen = True
 L.execute("fastFn()")
 assert "check\tchest:3020:5" in read("ap_out.txt"), "reported by the fast check"
-assert list(G.popups.values())[n:] == ["You found the following for Rat2:\nLongshot"], list(G.popups.values())[n:]
+assert list(G.popups.values())[n:] == ["You found Rat2's:\nLongshot"], list(G.popups.values())[n:]
 L.execute("fastFn()")                    # nothing new: nothing happens
 assert len(list(G.popups.values())) == n + 1
 # 0.11.2 (round 27): an older save reloaded; the chest is closed again, then opened again. Its
@@ -911,7 +911,7 @@ G.chests = L.table_from({1: L.table_from({"uid": 5, "open": True, "rowMap": 3020
 G.popupOpen = True
 L.execute("fastFn()")
 assert read("ap_out.txt").count("check\tchest:3020:5") == reported, "not reported twice"
-assert list(G.popups.values())[n + 1:] == ["You found the following for Rat2:\nLongshot"], list(G.popups.values())
+assert list(G.popups.values())[n + 1:] == ["You found Rat2's:\nLongshot"], list(G.popups.values())
 # still open on later scans: no more pop-ups
 tick(6)
 assert len(list(G.popups.values())) == n + 2
@@ -926,7 +926,7 @@ G.shinies = L.table_from({1: L.table_from({"uid": 77, "open": True, "itemId": -1
 G.popupOpen = True
 L.execute("fastFn()")
 assert f"check\tshiny:{G.map}:77" in read("ap_out.txt"), "reported by the fast check"
-assert list(G.popups.values())[n:] == ["You found the following for Rat2:\nLongshot"], list(G.popups.values())[n:]
+assert list(G.popups.values())[n:] == ["You found Rat2's:\nLongshot"], list(G.popups.values())[n:]
 G.shinies = L.table()
 # Round 63: in Felicitas the live shard read id 1, and the save had the level's id 8. A scouted
 # shiny on the map is asked of the save by its own id, and one the seed does not hold is not.
@@ -1914,7 +1914,7 @@ tick(4)
 assert read("ap_out.txt").count(f"check\tboss:{MARAUDER}\n") == 1, read("ap_out.txt")
 assert f"check\tboss:{LIQUID_THUNDER}" not in read("ap_out.txt")
 # Round 60: the win's pop-up says what the boss held; a boss with no scout asks for none
-assert list(G.popups.values()) == ["You found the following for Alice:\nHookshot"], list(G.popups.values())
+assert list(G.popups.values()) == ["You found Alice's:\nHookshot"], list(G.popups.values())
 L.execute("G.wonFlags[215] = true; G.popupOpen = true; fastFn()")
 assert f"check\tboss:{LIQUID_THUNDER}\n" in read("ap_out.txt"), "the fast check reports a boss as its pop-up comes up"
 assert len(list(G.popups.values())) == 1
