@@ -771,10 +771,18 @@ assert list(G.reloads.values())[reloads:] == [0], list(G.reloads.values())
 assert state_slots() == "0", state_slots()
 tick(10)
 assert G.skipRuns == runs + 1, "once"
+# connecting the client to a new seed after the automatic skip re-links and re-skips with the new seed's party
+G.story = 8000
+load(G, "SD_AP_RELOADED", "3000")
+tick(2)
+inbox("seed\tS9B:0:1\ncfg\topenworld\t1\ncfg\tparty\t1004,1005\n", "w")
+tick(2)
+assert G.skipRuns == runs + 2 and list(G.skipParty.values()) == [1004, 1005], (G.skipRuns, G.skipParty)
+assert state_slots() == "0", state_slots()
 # a later load of some other save does not get the Archipelago treatment
 G.story = 1030
 load(G, "SD_OTHER", "9999")
-assert G.skipRuns == runs + 1
+assert G.skipRuns == runs + 2
 assert G.orders >= 1, "the order is checked once the entry is in"
 G.ready = False                                   # back at the title screen
 tick(13)                                          # two checks: the line, then the logo

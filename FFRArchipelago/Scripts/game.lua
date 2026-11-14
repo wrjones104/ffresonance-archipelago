@@ -2552,13 +2552,20 @@ function G.SkipPrologue(opts)
     end)
     step(okParty and table.concat(partyNow, ",") == table.concat(party, ","), "party -> [" .. table.concat(partyNow, ", ") .. "]")
 
-    -- Join status: the starters in (0); Archwitch Fina (the prologue's Fina) out (2) unless she is one.
+    -- Join status: the starters in (0); Archwitch Fina (the prologue's Fina) out (2) unless she is one,
+    -- and any other non-starter back to NotJoin (1) so a re-skip after a session change leaves no old starter in.
     local rain, fina = UnitEntry(sd, 1001), UnitEntry(sd, ARCHWITCH_FINA)
     local okJoin, joined = rain ~= nil and fina ~= nil, {}
     for _, id in ipairs(party) do
         local entry = UnitEntry(sd, id)
         okJoin = entry ~= nil and Put(entry, "JoinStatus", 0) and Put(entry, "IsUsable", true) and okJoin
         joined[#joined + 1] = UNIT_NAMES[id] or tostring(id)
+    end
+    for id = 1001, 1008 do
+        if not isStarter[id] and id ~= ARCHWITCH_FINA then
+            local entry = UnitEntry(sd, id)
+            if entry then okJoin = Put(entry, "JoinStatus", 1) and okJoin end
+        end
     end
     local joinLine = "join status: " .. table.concat(joined, ", ") .. " 0"
     if not isStarter[ARCHWITCH_FINA] then

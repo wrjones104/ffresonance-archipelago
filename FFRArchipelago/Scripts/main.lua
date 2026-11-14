@@ -49,7 +49,7 @@
 -- follows the save slots the linked game is saved to. While any other save is loaded, the mod
 -- grants nothing, reports nothing and leaves the chests vanilla.
 
-local VERSION = "0.57.2"
+local VERSION = "0.57.3"
 local PROTOCOL = 2        -- the bridge protocol; the apworld's MOD_PROTOCOL
 
 local MOD_DIR = (debug.getinfo(1, "S").source:gsub("^@", ""):gsub("\\", "/"):match("^(.*/)Scripts/[^/]+$"))
@@ -212,6 +212,8 @@ local save = {
     pending = nil,     -- a timestamp the game just saved with, until its slot is known
     pendingItems = nil, -- the applied count when that save happened
     apObj = nil,       -- the save object of a new game started from the Archipelago title entry
+    apSlot = nil,      -- the slot the Archipelago new game was skipped into
+    reskip = false,    -- a new session connected after this Archipelago new game was already skipped
     autoWait = 0,      -- ticks waited before the automatic prologue skip
     autoDone = false,  -- the automatic skip was tried (or given up) for this game
     ok = false,        -- true when this is the session's save
@@ -349,7 +351,8 @@ local function newSession(key)
     state.syncPending = true
     state.slots, state.slotItems, state.bindPending, state.live = {}, {}, false, nil
     state.scouts = {}
-    seedCfg.finalboss, seedCfg.chocobo, seedCfg.airship, seedCfg.continent, seedCfg.radar = nil, nil, nil, nil, nil
+    seedCfg.party, seedCfg.finalboss, seedCfg.chocobo, seedCfg.airship, seedCfg.continent, seedCfg.radar = nil, nil, nil, nil, nil, nil
+    if save.apObj ~= nil and save.apObj == save.obj and save.autoDone then save.reskip = true end
     save.obj = nil     -- judge the loaded save again for this session
     saveState()
     local f = io.open(bridge.outPath, "w")
@@ -924,9 +927,13 @@ local function followSave()
         if state.apNewGame then
             state.apNewGame = false
             if save.slot == nil and story and story <= NEW_GAME_STORY then
-                save.apObj, save.autoWait, save.autoDone = obj, 0, false
+                save.apObj, save.apSlot, save.reskip, save.autoWait, save.autoDone = obj, nil, false, 0, false
                 log("an Archipelago new game")
             end
+        elseif save.apSlot ~= nil and save.slot == save.apSlot then
+            save.apObj = obj
+        elseif save.apObj ~= obj then
+            save.apObj, save.apSlot, save.reskip = nil, nil, false
         end
         log("save loaded: slot " .. tostring(save.slot) .. ", session slots [" .. slotsText(true) .. "]")
         judgeSave()
@@ -1086,6 +1093,7 @@ local function runSkip(slot, why, force)
     if not ok then notify("Prologue skip had failures (see the log); saving anyway") end
     -- The reload makes a new save object from this slot, so a linked session must own the slot
     -- first, or the reloaded game would look like someone else's.
+    if save.apObj == obj then save.apSlot = slot end
     if state.seed and save.ok then
         linkSlot(slot, state.applied)
         saveState()
@@ -1333,6 +1341,11 @@ local function tick()
                 bindLoaded()
             end
             autoSkip()
+            if save.reskip and save.ok and save.slot ~= nil then
+                save.reskip = false
+                skipped = save.obj
+                runSkip(save.slot, "automatic")
+            end
             pcall(popupTick)
             pcall(gateTick)
             if bossTest.group then pcall(bossTest.tick) end

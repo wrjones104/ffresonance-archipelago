@@ -150,6 +150,12 @@ assert any("inventory left alone" in l for l in report.values())
 assert lua("sd.Map.mapId") == 3001 and lua("sd.Map.unitLocation.Y") == 0.0
 assert lua("sd.Progress.eventFlag[2]") is False and lua("sd.Progress.eventFlag[9]") is False
 assert lua("#sd.Party.partyList") == 2 and lua("bag[11000]") == 2, "applying twice changes nothing else"
+ok, report = L.execute("return G.SkipPrologue({ inventory = false, party = { 1003 } })")
+assert ok is True, list(report.values())
+assert lua("sd.unitParameterList[1].JoinStatus") == 1 and lua("sd.unitParameterList[2].JoinStatus") == 1
+assert lua("sd.unitParameterList[4].JoinStatus") == 0
+ok, report = L.execute("return G.SkipPrologue({ inventory = false })")
+assert ok is True and lua("sd.unitParameterList[1].JoinStatus") == 0 and lua("sd.unitParameterList[4].JoinStatus") == 1
 
 # a save that writes the real position over the map: reported, and no reload
 L.execute("""libs["/Script/mucha.Default__CPP_BFL_SaveData"].SaveGameData =

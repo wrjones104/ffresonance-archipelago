@@ -691,6 +691,9 @@ class TestRepeatedCharacter(FFResonanceTestBase):
         self.assertEqual(len(party), 3)
         self.assertEqual(len(set(party)), 3, party)
         self.assertEqual(party[0], 1001)
+        self.assertEqual([self.world.options.starting_character_1.value,
+                          self.world.options.starting_character_2.value,
+                          self.world.options.starting_character_3.value], party)
 
 
 class TestSmallestStart(FFResonanceTestBase):

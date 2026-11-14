@@ -101,6 +101,7 @@ class FFResonanceWorld(World):
             if unit in self.starting_party:      # a repeat becomes someone not chosen yet
                 unit = self.random.choice([u for u in ALL_PARTY_MEMBERS if u not in self.starting_party and
                                            u not in [p.value for p in picks[:self.options.starting_roster.value]]])
+                pick.value = unit
             self.starting_party.append(unit)
         # Crystal Tower final boss lock (story goal only; shard goal does not require the last fight).
         # Counts exceeding the available pool are clamped down to what exists.
