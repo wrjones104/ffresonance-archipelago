@@ -717,6 +717,8 @@ World-map shinies verified as locations. Multiple crashes observed across differ
 
 **Round 73, in play (world 0.25.2): Old Town, Olderion Chests 1 to 3 are no locations.** The user could not reach them. They are on map 3090, the Old Town that monsters attack in chapter 3. Olderion's door to it opens only at story 3050 to 3085 (`transitions.tsv`), and the open start is at 8000. Map 3090 is on the no-route list now, as map 3020 is, so a seed has 3 fewer locations.
 
+**And (world 0.25.3):** World Map Shinies 36, 39 and 145 (Olderion) are airship-only (the user), in `data/airship_only.tsv`. Shiny 68, also in Olderion, was in the table already from round 71.
+
 ## Round 72 test plan (mod 0.57.1, world 0.24.1)
 
 **World 0.24.2 (during the round):** copy `dist/ff_resonance.apworld` and generate a new seed for the Liquid Thunder gate. The mod is unchanged.

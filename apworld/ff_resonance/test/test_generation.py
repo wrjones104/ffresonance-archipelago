@@ -191,6 +191,19 @@ class TestAirshipItem(FFResonanceTestBase):
         self.assertFalse(self.multiworld.get_location(GOAL_EVENT, self.player).can_reach(self.multiworld.state))
 
 
+class TestAirshipOnlyShinies(FFResonanceTestBase):
+    options = {"start_with_airship": False, "include_shinies": True}
+
+    def test_olderion_landing_spots_need_the_airship(self) -> None:
+        """Round 73 (the user): four world map shinies in Olderion are reached only from the air."""
+        self.collect_by_name(["Lanzelt Unlock", "Olderion Unlock"])
+        self.assertTrue(self.multiworld.state.can_reach_region("Olderion", self.player), "by the bridge and the ferry")
+        shinies = [self.multiworld.get_location(f"World Map Shiny {n}", self.player) for n in (36, 39, 68, 145)]
+        self.assertFalse(any(shiny.can_reach(self.multiworld.state) for shiny in shinies))
+        self.collect_by_name(["Airship"])
+        self.assertTrue(all(shiny.can_reach(self.multiworld.state) for shiny in shinies))
+
+
 class TestAirshipItemFromMysidia(FFResonanceTestBase):
     """Round 69: a start with no port and no bridge still generates: the Airship is found there."""
     options = {"start_with_airship": False, "starting_continent": "mysidia"}
