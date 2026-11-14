@@ -1,32 +1,31 @@
 -- bridge.lua: the file link between this mod and the Archipelago client.
 --
--- UE4SS Lua can read and write files but has no sockets, so the mod and the client (a Python
--- program, the fake server in tools/ for now) talk through two append-only text files in the
--- mod folder. Each line is tab-separated fields.
+-- UE4SS Lua can read and write files but has no sockets, so the mod and the client talk
+-- through two append-only tab-separated text files in the mod folder.
 --
 --   ap_in.txt   client -> game
---     item <index> <kind> <id> <count> <label>    kind: item | vision | unit | flag | token (0.48.0: nothing in game)
+--     item <index> <kind> <id> <count> <label>    kind: item | gil | vision | unit | flag | token (unused in game)
 --     msg  <text>                                 shown on screen, not stored
---     client <world version>                      the client that wrote the file (0.7.1)
+--     client <world version>                      the client that wrote the file
 --     cfg blank <0|1>                             chest blanking
---     cfg openworld <0|1>                         the open world start and continent locks (0.25.0)
---     cfg party <unit,unit,...>                   the starting party, leader first (0.25.0)
---     cfg shinies <0|1>                           shinies are locations: blank their rewards (0.29.0)
---     cfg crystals <0|1>                          sanctum crystals are locations (0.29.0)
---     cfg shards <0|1>                            Tablet Shard shinies are locations (0.30.0)
---     cfg bosses <0|1>                            boss fights are locations (0.48.0)
---     cfg chocobo <0|1>                           1: the open world save gets the Chocobo; 0: it is an item (0.53.0)
---     cfg airship <0|1>                           1: start in the airship; 0: on foot, the airship an item (flag 1431) (0.54.0)
---     cfg continent <name>                        the starting continent, for the start on foot (0.54.0)
---     cfg radar <0|1>                             the radar's 13 treasures are locations (0.57.0)
---     cfg finalboss <have> <need> ...             the tower lock: characters, visions, Crystal Fragments (0.44.0, 0.48.0)
---     scout <base64>                              what a location holds: key, item, player, flags, own (0.11.0)
+--     cfg openworld <0|1>                         the open world start and continent locks
+--     cfg party <unit,unit,...>                   the starting party, leader first
+--     cfg shinies <0|1>                           shinies are locations: blank their rewards
+--     cfg crystals <0|1>                          sanctum crystals are locations
+--     cfg shards <0|1>                            Tablet Shard shinies are locations
+--     cfg bosses <0|1>                            boss fights are locations
+--     cfg chocobo <0|1>                           1: the open world save gets the Chocobo; 0: it is an item
+--     cfg airship <0|1>                           1: start in the airship; 0: on foot with airship as an item (flag 1431)
+--     cfg continent <name>                        the starting continent when starting on foot
+--     cfg radar <0|1>                             the radar's 13 treasures are locations
+--     cfg finalboss <have> <need> ...             the tower lock: characters, visions, Crystal Fragments
+--     scout <base64>                              what a location holds: key, item, player, flags, own
 --
 --   ap_out.txt  game -> client
 --     hello <mod version>                         the mod started
 --     check <location key>                        e.g. chest:2031:7, boss:9079 (a battle group)
 --     story <counter>                             the story counter changed
---     won <battle group>                          a battle that matters was won: 9056, the last one (0.45.0)
+--     won <battle group>                          a victory that counts toward the goal (9056: final battle)
 --     applied <index>                             item <index> was handled
 --
 -- The client may rewrite ap_in.txt from the start (for example after it reconnects and the
@@ -81,10 +80,9 @@ function B.readNew()
     if not f then return {} end
     local size = f:seek("end")
     if size < B.offset then B.offset = 0 end
-    -- The client starts the file over for a new session with a new first line (the seed). The
-    -- new file can already be longer than what was read of the old one, so a change of first
-    -- line also means reading from the top (0.7.0).
-    -- Only a complete first line counts: one still being written has no newline after it yet.
+    -- The client resets the file for a new session with a new first line (the seed). Because the
+    -- new file can already be longer than the old read offset, a changed first line resets reading
+    -- from the top. Only a complete line with a trailing newline counts.
     f:seek("set", 0)
     local first = f:read("L")
     if first and first:sub(-1) == "\n" then

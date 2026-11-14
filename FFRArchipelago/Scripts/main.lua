@@ -9,7 +9,6 @@
 --   * Writes ap_status.txt every few seconds, so you can see what it thinks is going on.
 --
 -- The Archipelago client (apworld/ff_resonance/client.py) writes ap_in.txt and reads ap_out.txt.
--- What it does NOT do yet: replace shiny rewards, or stop story events giving theirs.
 --
 -- Console commands (open the UE4SS console, ConsoleEnablerMod):
 --   ffrap_status                 what the mod sees right now
@@ -19,30 +18,30 @@
 --   ffrap_snapshot [name]        every field of the loaded save to snap_<name>.tsv (tools/snapdiff.py)
 --   ffrap_functions [class ...]  the functions of game classes to functions.txt (default: save-data classes)
 --   ffrap_skip [slot] [force]    skip the prologue on a new game; with a slot, save there and reload
---   ffrap_input [fix]            probe: the player controller's input state; fix tries the engine's resets
---   ffrap_openstart [on|off|dock|air|event|at x y z|now [slot]]  test: the open world start (story 8000)
+--   ffrap_input [fix]            inspect the player controller's input state; fix tries the engine's resets
+--   ffrap_openstart [on|off|dock|air|event|at x y z|now [slot]]  configure or run the open world start (story 8000)
 --   ffrap_chats [done]           the loaded save's Active Time Chats; done marks them all played
---   ffrap_lock [on|off|open <continent|all>|close <continent|all>]  test: the continent locks
+--   ffrap_lock [on|off|open <continent|all>|close <continent|all>]  toggle or set continent locks
 --   ffrap_visions                the first vision's synchro keys, to the log
 --   ffrap_inspect <class|path> [label]  one object's fields and functions to inspect_<name>[_label].tsv
 --   ffrap_title [list|add]       the Archipelago entry on the title menu (added at start-up)
---   ffrap_notice [text]          experimental: show text with the game's quest-notice banner
---   ffrap_logo                   the Archipelago logo on the mod's title line, by hand
---   ffrap_layout <text>          the panels holding some on-screen text, to the log
---   ffrap_feed [on|off|test [plain]|check]  the item feed at the bottom right of the field HUD (on by default)
---   ffrap_find <text>            game classes, functions and fields named like the text, to find_<text>.txt
+--   ffrap_notice [text]          show text with the game's quest-notice banner
+--   ffrap_logo                   place the Archipelago logo on the mod's title line manually
+--   ffrap_layout <text>          log the panels holding some on-screen text
+--   ffrap_feed [on|off|test [plain]|check]  the item feed at the bottom right of the field HUD
+--   ffrap_find <text>            game classes, functions and fields matching the text, to find_<text>.txt
 --   ffrap_blank [on|off]         chests that are Archipelago locations give 1 gil instead
 --   ffrap_sync                   report every known location the save says is looted
 --   ffrap_bind                   link the loaded save to the client's session (also /bind in the client)
 --   ffrap_reset                  set the loaded save's applied-item count to 0 (re-grants everything to it!)
---   ffrap_gate <subcommand>      blockers: test gates, and the walking crossings between continents (mark)
+--   ffrap_gate <subcommand>      experimental blockers and world-map walking crossings
 --   ffrap_scale <level|low high|party n|off> [at %] [hp %] [attack %] [magic %] [power %] [boss] [follow]
---                                probe: rewrite every enemy's level and stats
---   ffrap_scale [show <id|name>] probe: the rescale in force, or one enemy's rows in every unit table
+--                                rewrite every enemy's level and stats
+--   ffrap_scale [show <id|name>] show the active rescale or one enemy's rows in every unit table
 --   ffrap_noland <list|here|show|hide|lock|unlock|refresh|spawn|move|channel|shadow|cond|off>
---                                probe: the airship's no-landing boxes
---   ffrap_story <value>          probe: set the loaded save's story counter (any value; save and reload)
---   ffrap_airship [condition|off|state|home]  probe: the airship's spawn condition (shipped {progress:0}>=4250); state logs its save fields; home parks a seed's airship at its start
+--                                inspect or modify the airship's no-landing boxes
+--   ffrap_story <value>          set the loaded save's story counter (save and reload to apply)
+--   ffrap_airship [condition|off|state|home]  inspect or rewrite the airship's spawn condition, log save fields, or park at start
 --
 -- Each client session belongs to its saves. A new game started from the Archipelago entry on
 -- the title menu is linked to it at once and skips the prologue by itself (plain New Game stays
@@ -78,10 +77,8 @@ local function log(msg)
     print("[FFRAP] " .. tostring(msg) .. "\n")
 end
 
--- Round 33: the FFR Randomizer mod was on next to this one. Every 3 seconds it writes its own
--- values back into the chest, shop and enemy rows, so it undoes our chest blanks and enemy
--- rescale. UE4SS starts a mod that has an enabled.txt, or a "name : 1" line in mods.txt.
--- The warning is logged at start and shown once, when the first save loads.
+-- FFRRandomizer re-writes chest, shop, and enemy tables every 3 seconds, undoing our patches.
+-- UE4SS enables any mod with enabled.txt or a "name : 1" entry in mods.txt.
 local function randomizerOn()
     local modsDir = MOD_DIR:match("^(.*/)[^/]+/$")
     if not modsDir then return false end
@@ -96,13 +93,11 @@ end
 local randomizerWarning = randomizerOn() and ("FFR Randomizer is on: it undoes Archipelago's chests and enemy " ..
     "levels. Turn it off: delete Mods/FFRRandomizer/enabled.txt") or nil
 
--- On-screen messages go to the item feed on the field HUD (IDEAS.md, idea 14) when it is on and
--- the HUD is there. Otherwise they wait in a short queue for the HUD (loading, a map change),
--- and off the field (the title screen) they go to ModSettings' Toast as before.
+-- On-screen messages go to the item feed on the field HUD when enabled and visible. Otherwise
+-- they queue briefly for the HUD (loading or map transitions), and off the field fall back to
+-- ModSettings' Toast.
 local FEED_QUEUE_MAX = 20
-local FEED_WAIT_MAX = 10     -- seconds messages wait for the feed before they go to the Toast
--- On unless switched off: it works since 0.9.5 (round 23), and messages it cannot show go to
--- the Toast after FEED_WAIT_MAX.
+local FEED_WAIT_MAX = 10     -- seconds messages wait for the feed before falling back to Toast
 local feedOn = true          -- ffrap_feed on|off; kept in ap_state.txt
 local openStart = false      -- ffrap_openstart on|off: the skip goes to the open world; kept in ap_state.txt
 local openArrival = nil      -- ffrap_openstart dock|air|event, kept once the user picks one
@@ -111,8 +106,8 @@ local continentLocks = nil   -- ffrap_lock on|off, kept once the user picks one;
 -- at every start, and the seed that wrote it is the only thing that decides these.
 local seedCfg = { openworld = false, party = nil, shinies = false, crystals = false, shards = false, bosses = false }
 local function openStartOn() return openStart or seedCfg.openworld end
--- Round 69: a seed with the airship as an item (`cfg airship 0`) starts on foot on its starting
--- continent (`cfg continent`), else in the airship by the tower.
+-- A seed with the airship as an item (`cfg airship 0`) starts on foot on its starting continent
+-- (`cfg continent`); otherwise the player starts in the airship by the Crystal Tower.
 local function seedArrival()
     if seedCfg.airship == false then return game.FOOT_STARTS[seedCfg.continent or ""] or game.OPEN_START end
     return game.OPEN_START
@@ -153,10 +148,8 @@ end
 -- how many more there were.
 local function flushFeed()
     if #feedQueue == 0 then return end
-    -- Waited too long and the feed has never shown a line this run (it cannot find a HUD on
-    -- screen, as in round 22): the Toast takes them, so no message is lost from the screen. Once
-    -- the feed has worked, messages wait for the HUD however long a pop-up or menu is open
-    -- (round 24: a chest pop-up held for 10 s sent its items to the Toast).
+    -- Fall back to Toast only if the feed has never succeeded this run (HUD missing). Once the feed
+    -- has worked, keep queued items waiting through pop-ups and menus until the HUD returns.
     if not feedShown and feedQueueSince and feedClock - feedQueueSince > FEED_WAIT_MAX then
         log("feed: no HUD on screen for " .. FEED_WAIT_MAX .. " s; " .. #feedQueue .. " message(s) go to the Toast")
         game.Toast(#feedQueue == 1 and feedQueue[1] or table.concat(feedQueue, " / "))
@@ -224,8 +217,7 @@ local save = {
     ok = false,        -- true when this is the session's save
 }
 
--- True when the loaded save is the session's. With no client session (fake_ap.py testing)
--- every save counts, as before 0.5.0.
+-- True when the loaded save belongs to the current session (any save counts when running without a session).
 local function sessionSave()
     return state.seed == nil or save.ok
 end
@@ -263,8 +255,7 @@ end
 local STATE_PATH = MOD_DIR .. "ap_state.txt"
 local STATUS_PATH = MOD_DIR .. "ap_status.txt"
 
--- The applied count is per save (0.7.0): each linked slot keeps how many items the save in it
--- holds, and `applied` is the loaded save's.
+-- The applied count is tracked per save slot so loading an older slot re-grants missing items.
 local function loadState()
     local f = io.open(STATE_PATH, "r")
     if not f then return end
@@ -272,9 +263,7 @@ local function loadState()
         local key, value = line:match("^(%w+)\t(.*)$")
         if key == "applied" then state.applied = tonumber(value) or 0 end
         if key == "blank" then state.blank = value == "1" end
-        -- "itemfeed", written only by ffrap_feed on|off. 0.9.0 wrote "feed 1" by itself (it
-        -- was on by default), and 0.9.1 took that as switched on and crashed (round 19), so the
-        -- old key is ignored.
+        -- Legacy "feed" key is ignored; only explicit "itemfeed" entries written by ffrap_feed are loaded.
         if key == "itemfeed" then feedOn = value == "1" end
         if key == "openstart" then openStart = value == "1" end
         if key == "continentlocks" then continentLocks = value == "1" end
@@ -327,8 +316,7 @@ local GRANTS = {
     item = function(it) return game.GrantItem(it.id, math.max(it.count, 1)) end,
     vision = function(it) return game.UnlockVision(it.id) end,
     unit = function(it)
-        -- Round 44: in a seed, a new member comes in at the party's average level. Before the
-        -- skip the party is the prologue's Fina at level 55, so that waits for the open world.
+        -- Wait for the open-world start before matching party average level; in the prologue Fina is level 55.
         local level = nil
         if seedCfg.openworld and (game.StoryCounter() or 0) >= game.OPEN_START.story then level = game.PartyLevel() end
         local code, detail = game.AddUnit(it.id)
@@ -340,7 +328,7 @@ local GRANTS = {
     end,
     flag = function(it) return game.SetFlag(it.id, it.count ~= 0) end,
     gil = function(it) return game.GrantGil(math.max(it.count, 1)) end,
-    -- Round 59: a Crystal Fragment is nothing in the game. The client counts them for the tower.
+    -- Crystal Fragments are tracked by the client for the Crystal Tower lock and have no in-game grant.
     token = function() return "ok", "counted by the client" end,
 }
 
@@ -401,7 +389,7 @@ local function readInbox(initial)
         elseif f[1] == "cfg" and f[2] == "continent" then
             seedCfg.continent = f[3] and f[3]:lower()
         elseif f[1] == "cfg" and f[2] == "finalboss" then
-            -- A client before world 0.17.0 sends no fragment counts: none are needed then.
+            -- Legacy clients without fragment counts leave lock thresholds unconstrained.
             seedCfg.finalboss = { characters = tonumber(f[3]) or 0, needCharacters = tonumber(f[4]) or 0,
                                   visions = tonumber(f[5]) or 0, needVisions = tonumber(f[6]) or 0,
                                   fragments = tonumber(f[7]) or 0, needFragments = tonumber(f[8]) or 0 }
@@ -427,8 +415,8 @@ local function readInbox(initial)
                 log("bad item line: " .. table.concat(f, " | "))
             end
         elseif f[1] == "scout" then
-            -- What a location holds, for the chest pop-up (0.11.0). Base64-encoded so opening
-            -- ap_in.txt does not spoil the seed; plain fields still work for hand-written tests.
+            -- Location scout data for chest pop-ups. Base64-encoded so ap_in.txt does not spoil
+            -- the seed; plain tab-separated fields also work for manual tests.
             local key, item, player, flags, own = f[2], f[3], f[4], f[5], f[6]
             if key and not item then
                 local d = bridge.split(bridge.decodeBase64(key))
@@ -451,12 +439,9 @@ local function readInbox(initial)
     end
 end
 
--- Items that cannot go in yet, by index. A grant that answers "wait" goes here and the queue
--- goes on. (Until 0.20.0 a vision answered "wait" while the save owned none; it no longer needs
--- one, so nothing answers "wait" today.) These are tried again each pass. The list is rebuilt from the received visions whenever a save is
--- loaded, because an older save can lack a vision that was unlocked after it was written.
--- Only visions: they are the same item however often they are granted. A unit is not re-added,
--- as the story itself makes some leave (Fina in chapter 3).
+-- Items that cannot go in yet, by index. A grant returning "wait" stays queued here and is
+-- retried each pass (rebuilt from received visions on save load so older saves get missed unlocks).
+-- Only visions re-apply safely; party members are not re-added because the story removes some (e.g. Fina in chapter 3).
 local waiting, waitingDirty = {}, true
 
 local function rebuildWaiting()
@@ -493,8 +478,7 @@ local function applyWaiting(names)
 end
 
 local function applyItems()
-    -- Round 62: two items received during a battle were in the bag at x 0 after it. The battle
-    -- seems to write its own copy of the bag back as it ends. Items go in only on the field.
+    -- Only grant items on the field; granting during battle is overwritten when battle ends.
     if not game.OnField() then
         state.lastResult = "waiting: not on the field"
         return
@@ -545,9 +529,7 @@ end
 -- Checks
 -- -------------------------------------------------------------------------------------------
 
--- After the map changes, actors from the map you left can still be alive for a moment, and
--- round 2 showed them being counted under the new map's id. So nothing is judged until the map
--- id has held for this many scans.
+-- Wait a few scans after a map change so actors from the previous map finish despawning.
 local MAP_SETTLE_SCANS = 3
 
 -- This map visit: which map, how many scans it has held, and which chests and shinies were
@@ -559,8 +541,7 @@ local visit = { mapId = nil, scans = 0, recorded = {}, closed = {} }
 --   kind  map  uid  row  item  count  money  visible-condition
 -- kind: chest (has a chest table row; row is its "mapId:ID"), xchest (no row), shiny, spot
 -- (a shiny-class story or quest point with no reward). map is the current map as the save
--- keys it (CPP_MapManager:GetSameMapId) and uid is m_UniqueId: IsOpenTreasureBox(map, uid)
--- answers for that location from anywhere in the game (round 3).
+-- keys it (CPP_MapManager:GetSameMapId) and uid is m_UniqueId.
 local SEEN_PATH = MOD_DIR .. "seen.tsv"
 local seen = {}       -- "kind:map:uid" -> true
 local seenList = {}   -- the parsed lines, for ffrap_sync
@@ -584,7 +565,7 @@ local function loadSeen()
     if not f then return end
     for line in f:lines() do
         local cells = split((line:gsub("\r$", "")))
-        -- 0.3.0 wrote rowless chests as "u<uid>", with the row map in the row column.
+        -- Legacy format stored rowless chests as "u<uid>" with row map in the row column.
         if cells[1] == "xchest" and cells[3] and cells[3]:sub(1, 1) == "u" then
             cells[3], cells[4] = cells[3]:sub(2), ""
         end
@@ -608,9 +589,8 @@ local function newVisit(mapId)
     visit = { mapId = mapId, scans = 0, recorded = {}, closed = {}, disagreed = {}, scoutShinies = nil }
 end
 
--- The chest pop-up (IDEAS.md, idea 13): the pop-up is up while the chest's check is reported,
--- so a check for a chest the client scouted asks for the pop-up to say what the chest held for
--- Archipelago. The pop-up is looked for over a few ticks, as it can come up a moment later.
+-- Chest pop-up override: when a scouted chest check is reported, look up the dialog widget
+-- over a few ticks (it can appear slightly after the state change) and replace its reward text.
 local POPUP_TRIES = 8
 local popup = nil   -- { text, key, tries }
 
@@ -635,29 +615,25 @@ local function popupTick()
     end
 end
 
--- `fresh`: the chest was seen closed in this map visit and is open now, so it was just opened in
--- front of the player. Its pop-up is rewritten whether or not the server has the check already
--- (round 27: after reloading an older save, chests opened again kept "1 gil", because only a
--- first report asked for the pop-up). A first report asks too, for a chest opened before the
--- map's first scan.
+-- `fresh` is true when a chest transitions from closed to open in this map visit; request the pop-up
+-- rewrite even if the check was already reported (e.g. after reloading an older save). Also request on
+-- first report for chests opened before the map's initial scan.
 local function opened(key, fresh)
     if not sessionSave() then return end
     local new = report("check", key)
     if new then log("check " .. key) end
     if new or fresh then
         local s = state.scouts[key]
-        -- Round 47: a shiny says what it held too, through the same dialog box.
+        -- Shinies use the same dialog widget to show their scouted reward.
         if s and (key:find("^chest:") or key:find("^shiny:")) then popup = { text = popupText(s), key = key, tries = POPUP_TRIES } end
     end
 end
 
--- Round 59: a boss's check is the flag its win row sets. Round 60: a boss with a shuffled item
--- keeps its reward pop-up (game.BossesPatch), and the pop-up says what the boss held. The win
--- scene can play between the flag and the pop-up, so the pop-up is waited for much longer than a
--- chest's.
+-- A boss check triggers on the win row's flag. Bosses with shuffled items keep their reward
+-- pop-up (game.BossesPatch), which may appear after the win scene so it waits longer than a chest.
 local BOSS_POPUP_TRIES = 60
 local function scanBosses()
-    -- Round 72: a radar treasure's check is its found flag, as a boss's is its win flag.
+    -- A radar treasure's check triggers on its found flag.
     if seedCfg.radar and sessionSave() then
         for _, t in ipairs(game.RADAR) do
             local key = "radar:" .. t.n
@@ -679,12 +655,9 @@ local function scanBosses()
     end
 end
 
--- The location key of a chest. A chest with a table row is keyed by the row ("chest:3020:1"),
--- which is stable and matches data/chests.tsv. Round 3 showed rows and maps do not line up
--- (rows 3020:* sit in map 2002), so the row key never depends on the current map.
--- A rowless chest with a reward is keyed by map and m_UniqueId ("chest:2002:u54"). Round 3's
--- rowless chests had no item and no money and were already open: story chests, it seems.
--- Those have no key: they are recorded but never reported.
+-- A chest with a table row is keyed by its row ("chest:3020:1"), because row mapIds do not always
+-- match the runtime map id (e.g. 3020:* rows sit in map 2002). Rowless reward chests use map and
+-- m_UniqueId ("chest:2002:u54"); rowless chests with no item or gil are story chests and ignored.
 local function chestKey(mapId, c)
     if c.rowMap and c.rowId and c.rowId >= 0 then return "chest:" .. c.rowMap .. ":" .. c.rowId end
     local hasReward = (c.itemId and c.itemId >= 0) or (c.money and c.money >= 0)
@@ -692,11 +665,9 @@ local function chestKey(mapId, c)
     return nil
 end
 
--- A loaded chest is reported when the actor says open (round 64, scanChests). ffrap_sync asks
--- the save's rows for the map (game.SaveOpenRows), by m_UniqueId.
--- Round 64: the game's Blueprints save a chest or shiny under the actor's GetUniqueId(), and the
--- mod reads the m_UniqueId field. The first answer of a session is logged, so a call that fails
--- shows; after that only a difference is (round 65 had no lines at all).
+-- Loaded chests are checked by actor state in scanChests, while ffrap_sync reads the save's map
+-- rows directly (game.SaveOpenRows) by m_UniqueId. The first save lookup per session is logged to
+-- confirm calls work; afterwards only discrepancies are logged.
 local gameUidNoted = false
 local function noteGameUid(kind, mapId, uid, actor)
     local gameUid, why = game.GameUniqueId(actor)
@@ -729,10 +700,8 @@ local function scanChests(mapId)
                 if key then opened(key, fresh) end
             else
                 visit.closed[id] = true   -- seen closed: opening it later is "in front of the player"
-                -- Round 64: on the first visit to the Earth Shrine, IsOpenTreasureBox said four
-                -- closed chests were open, and they were sent with nothing opened. So a loaded
-                -- chest is judged by its own state. Round 65's snapshot showed why: map 3000 had
-                -- no rows yet, and the game answered from other maps' rows with the same uid.
+                -- IsOpenTreasureBox falls back to other maps' rows when this map has no save rows yet,
+                -- returning false positives on unvisited maps. Judge loaded chests by m_IsOpen instead.
                 if key and not visit.disagreed[id] then
                     rows = rows or game.SaveOpenRows(mapId)
                     local native = game.IsChestOpenInSave(mapId, c.uniqueId)
@@ -747,13 +716,10 @@ local function scanChests(mapId)
     end
 end
 
--- Shinies are reported when the actor's m_IsOpen is set or the map's save row says looted;
--- round 2 showed the save answering true the moment one is picked up. Spots without an item or
--- money are story or quest points, not pick-ups: they are recorded as "spot" but never reported.
--- Round 72: a live shiny can report an id that is not its own. In round 63 Felicitas's shards
--- read 0 and 1 for the level's 8 and 9; in round 71 Zoldaad Castle's shard 11, taken, came back
--- on a later visit reading 10 and open, so 10 was sent with nothing picked up. The level's
--- shiny that stands where the live one does (within SHINY_SAME_PLACE) gives the real id.
+-- Shinies report when m_IsOpen is set or the map's save row marks them looted. Spots with neither
+-- item nor money are story/quest triggers, recorded as "spot" and never reported.
+-- Live shinies can report an m_UniqueId that differs from the level dump, so any level shiny
+-- within SHINY_SAME_PLACE supplies the canonical ID.
 local SHINY_SAME_PLACE = 150
 local function levelShinyUid(mapId, s)
     if not (s.x and LEVEL_SHINIES[mapId]) then return s.uid end
@@ -790,11 +756,8 @@ local function scanShinies(mapId)
             end
         end
     end
-    -- Round 63: in the Town of Felicitas the live Tablet Shards read ids 0 and 1, not the level's
-    -- 8 and 9, so a pick-up was reported under a key that is no location. The save had 8 and 9
-    -- (they were reported on the next visit). The Research Center Ruins' 34 to 36 never came.
-    -- Why the ids differ is not known. So each of the seed's shinies on this map is also asked
-    -- of the save by its own id.
+    -- Because live shiny IDs can differ from level data, also query the save directly for each
+    -- of this seed's expected shiny IDs on the current map.
     if not visit.scoutShinies then
         visit.scoutShinies = {}
         local prefix = "shiny:" .. mapId .. ":"
@@ -841,7 +804,7 @@ local function scanLoot()
             log("chest blanking: " .. game.BlankChests(true) .. " rows set to 1 gil")
         end
     end
-    -- Round 46: shinies are blanked before the map settles, so one cannot be picked up in time.
+    -- Blank shinies before the map settles so none can be picked up before blanking takes effect.
     if (seedCfg.shinies or seedCfg.shards) and sessionSave() then
         for _, s in ipairs(game.LiveFieldItems()) do game.BlankFieldItem(s, seedCfg.shinies, seedCfg.shards) end
     end
@@ -851,10 +814,9 @@ local function scanLoot()
     scanShinies(mapId)
 end
 
--- Round 58: the goal is the last battle, Rain against Sol (battle group 9056). Story 8050 comes
--- before the last floor, and 9000 only after the ending's scenes (round 57). The row run after
--- that win (C08_821_01) turns story flag 40 off. Flag 40 is on from the Sol fight before 8050
--- (C08_812_01) until then, so at 8050 it reads off only after the win.
+-- Goal victory tracking: Rain vs. Sol (battle group 9056). Story reaches 8050 before the last
+-- floor and 9000 after ending scenes; row C08_821_01 clears story flag 40 (set since C08_812_01)
+-- after the win, so at story >= 8050 flag 40 reading false indicates victory.
 local FINAL_BATTLE, FINAL_STORY, FINAL_FLAG = 9056, 8050, 40
 
 local function watchStory()
@@ -897,12 +859,12 @@ local function judgeSave()
         if not same then setApplied(0, "an Archipelago new game") end
         if save.slot ~= nil then linkSlot(save.slot, state.applied) end
         saveState()
-        -- Only logged: the player chose the Archipelago entry, so it says nothing new (round 24).
+        -- Log only (no on-screen notice), since the player explicitly chose the Archipelago entry.
         log("Archipelago: this new game is linked to the seed")
     elseif save.slot ~= nil and state.slots[save.slot] then
         setOk(true)
         log("save slot " .. save.slot .. " is the session's save")
-        -- A state file from before 0.7.0 has no count for the slot: keep the old one.
+        -- Legacy state files without a per-slot count retain the previous applied count.
         local n = state.slotItems[save.slot]
         if n and not same then setApplied(n, "slot " .. save.slot .. " holds") end
     elseif save.slot == nil and next(state.slots) == nil and not titleReady then
@@ -951,9 +913,8 @@ local function followSave()
     if obj ~= save.obj then
         save.obj, save.ticks, save.pending = obj, ticks, nil
         save.slot = game.SlotForTicks(ticks)
-        -- A new game can carry the timestamp of the autosave slot it is about to overwrite
-        -- (round 7: a new game showed up as linked slot 0). Nothing at the very start of the
-        -- story is worth keeping, so a save there is always a new game.
+        -- A brand-new game inherits the autosave slot timestamp it will overwrite; story values
+        -- at the very start always represent an unlinked new game.
         local story = game.StoryCounter()
         if save.slot ~= nil and story and story <= NEW_GAME_STORY then
             log("story " .. story .. ": a new game, although its timestamp matches slot " .. save.slot)
@@ -994,12 +955,11 @@ local function followSave()
 end
 
 -- -------------------------------------------------------------------------------------------
--- The Archipelago new game: the title entry and the prologue skip (IDEAS.md, ideas 2 and 6)
+-- The Archipelago new game: the title entry and the prologue skip
 -- -------------------------------------------------------------------------------------------
 
--- The title menu's entries are ETitleFunctionType values; the Archipelago entry is type 5, a
--- copy of New Game (game.AddTitleEntry). A hook on ExecuteEntry, run before the game's own
--- code, marks the next new game as an Archipelago one and turns type 5 into New Game (round 12).
+-- Title menu entries use ETitleFunctionType; the Archipelago entry uses type 5 as a copy of New Game
+-- (game.AddTitleEntry). The ExecuteEntry pre-hook flags the next new game and rewrites type 5 to New Game.
 local titleHooked = false
 local function hookTitle()
     if titleHooked then return true end
@@ -1013,7 +973,7 @@ local function hookTitle()
                 pcall(function() inType:set(game.TITLE_NEW_GAME) end)
                 notify(state.seed and "Archipelago: starting a new game for the seed"
                     or "Archipelago: starting a new game (connect the client to link it to a seed)")
-                -- Round 35: the switch was off and the log did not say so.
+                -- Log when skipped because open-world mode is off.
                 log("title: open world start is " .. (openStartOn() and "on" or "off") .. " (ffrap_openstart or the seed)")
             end
         end)
@@ -1027,11 +987,8 @@ end
 -- and checked again now and then in case the game reloads the asset. Loads the asset only
 -- outside a game.
 local orderLogged = nil   -- the last order result logged, so each new one is logged once
--- Round 48: the moogle's Vision Enhancement screen would not close with nothing to enhance. Its
--- IsClosable functions return false unless the native CPP_BFL_VisionUpgrade:IsVisionUpgrade says
--- true. What it tests is not known (play suggests "can the player enhance a vision"). A seed
--- answers true: a post hook's return value replaces the function's. The game's own answer is
--- logged each time it changes, to find out what it tests.
+-- Keep the moogle's Vision Enhancement screen closable even when nothing can be enhanced by
+-- forcing CPP_BFL_VisionUpgrade:IsVisionUpgrade to return true via a post-hook.
 local visionExitHooked = false
 local visionExitLast = "unset"
 local function hookVisionExit()
@@ -1094,12 +1051,10 @@ local function titleTick()
     end
 end
 
--- The prologue skip (see ffrap_skip). Applied again right before saving: round 8 showed the
--- opening scene can change flags and the position after a skip. Every step but the inventory
--- sets an absolute value; the inventory changes are relative, so they are made once per save.
+-- Re-apply the prologue skip right before saving because the opening scene can overwrite flags and
+-- position after the initial skip. Only the inventory step is non-idempotent, so it runs once per save.
 local skipped = nil    -- the save object the skip was applied to
--- `force` (ffrap_skip <slot> force) skips before story 1005 anyway: the round 36 probe of the
--- opening's input lock, which a skip at that point is known to leave behind (round 9).
+-- `force` (ffrap_skip <slot> force) skips before story 1005 for probing the opening input lock.
 local function runSkip(slot, why, force)
     local obj, story = game.SaveObjectName(), game.StoryCounter()
     if skipped ~= obj and (not story or story > game.SKIP_FROM_MAX) then
@@ -1140,8 +1095,7 @@ local function runSkip(slot, why, force)
     local saved, detail = game.SaveAndReload(slot, arrival.map)
     if openStartOn() then detail = detail .. "; open world start (" .. arrival.name .. ", story " .. arrival.story .. ")" end
     log("skip (" .. why .. "): " .. detail)
-    -- The automatic skip is part of starting an Archipelago game, so it is only logged when it
-    -- works (round 24); a failure, or a skip by command, is shown.
+    -- Log the automatic skip only on failure (success is expected as part of starting an AP game).
     if saved and why == "automatic" then
         log("Prologue skipped: " .. detail)
     else
@@ -1252,16 +1206,14 @@ local airshipItemTick -- the airship as an item, below
 local finalLockTick  -- the Crystal Tower's last climb, below
 local bossTest = { group = nil }   -- ffrap_bossfight, below: the group armed, and its tick
 
--- Round 67: the walking crossings between continents (game.CrossingSync): game.CROSSINGS, or
--- crossings.txt when there is one. `ffrap_gate mark` and the commands that adjust a crossing
--- write the whole list to that file, one line each:
+-- Walking crossings between continents (game.CrossingSync): reads crossings.txt if present,
+-- otherwise game.CROSSINGS. `ffrap_gate mark` and adjustment commands write one line per crossing:
 --   <continent a> <continent b> <x> <y> <z> <yaw> <scale>
 local CROSSINGS_PATH = MOD_DIR .. "crossings.txt"
 local crossings = {}
 local CROSSING_HINT_NEAR, CROSSING_HINT_AGAIN = 900, 1500
 local crossingHinted, crossingFailed = nil, nil
--- Round 67: on foot the pawn's rotation stays at 0, so every mark faced north. The way the player
--- last walked is taken from their position each lock check instead.
+-- On foot the pawn's rotation stays at 0, so compute movement heading from successive positions.
 local walk = { x = nil, y = nil, heading = nil }
 local WALK_MIN_STEP = 40
 
@@ -1323,9 +1275,8 @@ local function crossingsTick()
     end
 end
 
--- Continent locks (game.ContinentSync): while the switch is on, the world map keeps its lock
--- boxes in step with the save's flags. Round 40: the boxes go with each map change, so this puts
--- them back. Only on the field: a battle is no time to spawn actors.
+-- Continent locks (game.ContinentSync): re-spawn world-map lock boxes after map transitions so
+-- they match the save's flags. Run only on the field (never during battle).
 local function locksTick()
     if not locksOn() or not game.OnField() then return end
     local ferry = game.FerrySync()
@@ -1356,8 +1307,7 @@ local function tick()
         pcall(game.FeedTick, feedClock)
     end
     if titleReady or game.InGame() then pcall(menuTick) end
-    -- Round 69: the airship's spawn condition follows the seed before any map loads, so a new
-    -- game's first load already hides it.
+    -- Apply the seed's airship spawn condition before a map loads so a new game starts hidden if needed.
     if state.ticks % LOCKS_EVERY == 0 then
         local okSync, wrote = pcall(game.AirshipItemSync, seedCfg.airship == false)
         if okSync and wrote then log("airship: spawn condition " .. wrote) end
@@ -1407,8 +1357,7 @@ local function tick()
                     local okRadar, written = pcall(game.RadarPatch)
                     log("radar: " .. tostring(written) .. " treasure rewards set to the pop-up's stand-in" .. (okRadar and "" or " (failed)"))
                 end
-                -- Round 69: one win over the Antlion clears its sandpit for good, on every open
-                -- world seed, so the way between Kol and Grandport is never shut for long.
+                -- In open-world seeds, one Antlion defeat permanently clears the sandpit path between Kol and Grandport.
                 if newSave then
                     local okAntlion, written = pcall(game.AntlionPatch)
                     log("antlion: " .. tostring(written) .. " win choices set to clear the sandpit" .. (okAntlion and "" or " (failed)"))
@@ -1421,7 +1370,7 @@ local function tick()
             -- Chests and shinies are still recorded in seen.tsv for any save; scanLoot reports
             -- them only for the session's save (see opened).
             if state.ticks % CHEST_EVERY == 0 then scanLoot() end
-            -- Round 46: a crystal's check is its flag, which its event sets as it ends.
+            -- Crystal checks report by the flag set when their event finishes.
             if seedCfg.crystals and sessionSave() and state.ticks % CHEST_EVERY == 0 then
                 for _, c in ipairs(game.CRYSTALS) do
                     if game.GetFlag(c.flag) == true and report("check", "crystal:" .. c.map) then
@@ -1490,8 +1439,7 @@ command("ffrap_dump", function(p)
     notify("Chest and shiny dump written to ffrap_dump.txt")
 end)
 
--- Every field of the loaded save to snap_<name>.tsv, to compare two points in the game with
--- tools/snapdiff.py (the prologue investigation, IDEAS.md idea 2).
+-- Dump every field of the loaded save to snap_<name>.tsv for comparison via tools/snapdiff.py.
 command("ffrap_snapshot", function(p)
     local name = tostring(p[1] or os.date("%H%M%S")):gsub("[^%w_%-]", "")
     if name == "" then name = os.date("%H%M%S") end
@@ -1514,8 +1462,7 @@ command("ffrap_snapshot", function(p)
     end
 end)
 
--- Classes worth knowing for the prologue skip (IDEAS.md, idea 2): the save-data libraries, the
--- debug event shortcuts and the new-game task.
+-- Dump functions of core save, event, and new-game classes to functions.txt.
 local FUNCTION_CLASSES = {
     "CPP_BFL_SaveData", "CPP_BFL_SaveDataProgress", "CPP_BFL_SaveDataParty", "CPP_BFL_SaveDataUnit",
     "CPP_BFL_SaveDataInventory", "CPP_BFL_SaveDataMap", "CPP_BFL_SaveData_PerMap",
@@ -1525,8 +1472,7 @@ local FUNCTION_CLASSES = {
     "CPP_BFL_Chat", "CPP_ChatSubsystem", "CPP_QuestSubsystem", "CPP_VM_QuestNotice",
 }
 
--- ffrap_title [list|add]: the Archipelago title entry (IDEAS.md, idea 6). The mod adds it at
--- start-up; `add` does it again by hand, `list` logs what the menu shows.
+-- ffrap_title [list|add]: inspect title menu entries or manually add the Archipelago entry.
 command("ffrap_title", function(p)
     local what = (p and p[1]) or "list"
     if what == "add" then
@@ -1540,8 +1486,7 @@ command("ffrap_title", function(p)
     if what ~= "add" then notify("Title menu: " .. entries) end
 end)
 
--- ffrap_logo: put the Archipelago logo on the mod's line on the title screen by hand (the mod
--- does it by itself; IDEAS.md, idea 6).
+-- ffrap_logo: manually place the Archipelago logo on the title screen line.
 command("ffrap_logo", function()
     local result, detail = game.TitleLogo(LOGO_PATH, TITLE_LINE)
     log("logo: " .. tostring(result) .. ": " .. tostring(detail))
@@ -1559,12 +1504,9 @@ command("ffrap_feed", function(p)
         log("feed: " .. what)
         game.Toast("Item feed " .. what)
     elseif what == "test" then
-        -- Each step is logged before it runs: if the game crashes, the last `feed step:` line in
-        -- UE4SS.log names the call. `test plain` leaves out the styling.
+        -- Log each step before running so any engine crash points to the last `feed step:` in UE4SS.log.
         local plain = p[2] == "plain"
         log("feed test" .. (plain and " (plain)" or "") .. ": starting")
-        -- Each step is logged before it runs while testing: a crash in the engine ends the game
-        -- before Lua can log, so the last `feed step:` line in UE4SS.log names the call (round 19).
         game.feedTrace = function(step) log("feed step: " .. step) end
         local results = {}
         for _, msg in ipairs({ "Received Potion from Bob", "Sent Ether to Alice", "Received Rod of Focus" }) do
@@ -1581,11 +1523,9 @@ command("ffrap_feed", function(p)
     end
 end)
 
--- ffrap_openstart [on|off|dock|air|event|at <x> <y> <z>|now [slot]]: whether the prologue skip
--- goes to the open world start (game.OPEN_START) in place of the Earth Shrine. Off by default; a
--- test switch for now (round 35). `dock`, `air` and `event` choose the arrival (game.OPEN_STARTS;
--- air is the default, and a choice is kept: round 37 lost `air` at a restart). `at` moves the
--- arrival point for this run only.
+-- ffrap_openstart [on|off|dock|air|event|at <x> <y> <z>|now [slot]]: configure whether prologue skip
+-- jumps to the open-world start (game.OPEN_START). `dock`, `air`, and `event` select arrival points
+-- (game.OPEN_STARTS; `air` is default); `at` overrides coordinates for the current run only.
 -- `now` writes the open world start into the loaded save (one that has had the skip), saves it
 -- to its slot (or `slot`) and reloads, with no new game.
 command("ffrap_openstart", function(p)
@@ -1630,8 +1570,7 @@ command("ffrap_openstart", function(p)
         openStart and "on" or "off", a.name, a.story, a.map, a.x, a.y, a.z))
 end)
 
--- ffrap_layout <text>: the chain of panels holding the on-screen text that holds <text>, to
--- the log (IDEAS.md, idea 14: where the item feed can go).
+-- ffrap_layout <text>: log the widget panel hierarchy containing <text>.
 command("ffrap_layout", function(p)
     local text = table.concat(p or {}, " ")
     if text == "" then
@@ -1656,12 +1595,12 @@ command("ffrap_notice", function(p)
     if not ok then notify("Notice: " .. tostring(detail)) end
 end)
 
--- ffrap_gate: experimental blocker and custom key-item probe (IDEAS.md, idea 16).
+-- ffrap_gate: experimental blocker and world-map walking crossing commands.
 --   ffrap_gate spawn [combo|box|rock|pot|gate|world] [dist] [scale]
 --   ffrap_gate item [id] [count]
 --   ffrap_gate require <item|unit|flag|off> [id] [count]
 --   ffrap_gate lock | unlock | clear | status
---   ffrap_gate mark <continent> <continent> [scale] [dist] | unmark | crossings   (round 67)
+--   ffrap_gate mark <continent> <continent> [scale] [dist] | unmark | crossings
 --   ffrap_gate move <dx> <dy> [dz] | turn [degrees] | size <scale>: the nearest crossing
 command("ffrap_gate", function(p)
     local what = (p and p[1] and p[1]:lower()) or "status"
@@ -1719,8 +1658,7 @@ command("ffrap_gate", function(p)
         gateNear = false
         notify("Gate cleared (" .. tostring(n) .. " actor(s) removed)")
     elseif what == "mark" then
-        -- Round 67: a walking crossing, `dist` ahead of the player in the way they last walked,
-        -- turned to face them, so the cart lies across the path.
+        -- Place a walking crossing `dist` ahead along recent heading, turned to face the player.
         local a, b = p[2] and p[2]:lower(), p[3] and p[3]:lower()
         if not (a and b and a ~= b and game.IsContinent(a) and game.IsContinent(b)) then
             notify("Usage: ffrap_gate mark <continent> <continent> [scale] [dist]  (e.g. mark grandshelt lanzelt 2)")
@@ -1747,7 +1685,7 @@ command("ffrap_gate", function(p)
             walk.heading and "" or " (no walk seen: facing the pawn's way)"))
         notify(string.format("Crossing %d marked: %s-%s, scale %.1f. It shows while either side is locked.", #crossings, a, b, scale))
     elseif what == "unmark" or what == "move" or what == "turn" or what == "size" then
-        -- Round 67: the nearest crossing, taken away or changed where it stands. +x is north.
+        -- Modify or remove the nearest crossing (+x is north).
         local pose = game.PlayerPose()
         local at, d = nil, 1500
         for i, c in ipairs(crossings) do
@@ -1811,7 +1749,7 @@ command("ffrap_inspect", function(p)
         notify("Usage: ffrap_inspect <class name or object path> [label]")
         return
     end
-    -- The label keeps two states of one object apart (round 36: locked and normal input).
+    -- Optional label keeps two snapshots of the same object apart (e.g. locked vs normal input).
     local name = target:gsub("^.*[/.]", ""):gsub("[^%w_%-]", "") .. (p[2] and ("_" .. p[2]:gsub("[^%w_%-]", "")) or "")
     local f = io.open(MOD_DIR .. "inspect_" .. name .. ".tsv", "w")
     if not f then
@@ -1875,12 +1813,10 @@ command("ffrap_blank", function(p)
     notify("Chest blanking " .. (want and "on" or "off") .. ": " .. n .. " rows changed")
 end)
 
--- Open world probes (rounds 31 to 33, docs/open_world.md). None is saved: a game restart
--- undoes them.
+-- Enemy level/stat scaling commands (non-persistent; reset on game restart).
 --
--- ffrap_scale 30: every enemy at level 30. ffrap_scale 10 20: each enemy's own level, pulled
--- into 10 to 20. ffrap_scale party 2: pulled into 80% of the party's average level, plus or
--- minus 2 (the defaults; round 32 found "party 2 at 80" much better than "party 2").
+-- ffrap_scale 30: every enemy at level 30. ffrap_scale 10 20: each enemy's own level, clamped
+-- to 10-20. ffrap_scale party 2: clamped to 80% of party average level +/- 2 (default).
 -- ffrap_scale off: the game's own rows back. Options, in any order after the numbers:
 --   at 70      party mode: centre the band on 70% of the party's level (default 80)
 --   hp 70      enemy HP at 70% (default 100)
@@ -1966,7 +1902,7 @@ command("ffrap_scale", function(p)
     end
     local knobs = { hp = set.hp, attack = set.attack or set.power or 100, magic = set.magic or set.power or 100 }
     local first = tostring(args[1]):lower()
-    -- No arguments: say what is in force. "show": one enemy's rows (round 33).
+    -- No arguments: show active scaling. "show": inspect one enemy's rows.
     if args[1] == nil and not follow and not withBosses then
         local line = scaleStatus()
         log("scale: " .. line)
@@ -2017,17 +1953,13 @@ end)
 local SCALE_CHECK_EVERY = 2   -- scale ticks (of STATUS_EVERY) between table checks
 local scaleChecks = 0
 
--- The player's settings (round 50; IDEAS.md, idea 18): EXP, gil and MRP rates, random encounters
--- on or off, the encounter rate, and the seed's enemy scaling on or off and its strength. They
--- belong to the player, not the seed, and apply to any save. Round 56 kept them to the seed's
--- save, as the user had not seen the rows on a regular save; with the rows always there (round
--- 57) the user wants them on every save, where they can be changed. settings.txt
--- holds only what the player has set, through ffrap_set or the Options rows (a setting the mod
--- saved by itself once came back as a choice, round 19).
+-- Player gameplay settings: EXP, gil, and MRP rates, random encounters, encounter rate, and
+-- enemy scaling toggle/strength. These persist per player in settings.txt across all saves and
+-- record only explicit changes via ffrap_set or the Options screen.
 local SETTINGS_FILE = MOD_DIR .. "settings.txt"
 local SETTING_DEFAULTS = { exp = 1, gil = 1, mrp = 1, encounters = true, encounterrate = 1, scaling = true, strength = 1 }
 local SETTING_RANGES = { exp = { 0, 10 }, gil = { 0, 10 }, mrp = { 0, 10 }, encounterrate = { 0.1, 5 }, strength = { 0, 2 } }
--- The names on our Options row's buttons, which are the game's difficulty labels (round 63).
+-- Options row button labels match the game's difficulty preset names.
 local STRENGTH_NAMES = { [0] = "casual", [1] = "normal", [2] = "expert" }
 local settingsSet = {}   -- what the player has set
 local function setting(key)
@@ -2072,9 +2004,8 @@ end
 
 
 local settingsLogged = nil
--- Round 60: FFRS_QoL writes the same rate rows every 3 seconds, and our write came every 5, so
--- its rates were the ones in use most of the time. The fast tick now writes ours back within
--- 0.1 s. It writes what settingsTick last wrote, so a new setting still goes through there.
+-- Re-apply player rate rows in fastTick (0.1 s) so they stay current against mods like FFRS_QoL
+-- that overwrite DT_GameDifficultyParam every few seconds.
 local defendedRates, defendLogged = nil, false
 local function defendRates()
     if not defendedRates then return end
@@ -2090,8 +2021,8 @@ local function currentSettings()
     for k in pairs(SETTING_DEFAULTS) do current[k] = setting(k) end
     return current
 end
--- Round 57: the rows are checked every tick, at the title too, and put back when missing (a
--- table the game loads again loses them). Quiet unless rows were added or it failed.
+-- Re-insert custom Options rows whenever the game reloads DT_OP_GameSetting (at title and in-game).
+-- Log only the initial insertion or failures.
 local menuFailed, menuAdded = nil, false
 menuTick = function()
     local added, detail = game.EnsureOptionRows(currentSettings())
@@ -2100,14 +2031,13 @@ menuTick = function()
         menuFailed = detail
     elseif added > 0 then
         menuFailed = nil
-        -- Round 57: the game loads its table again every few seconds, so the rows go back in all
-        -- the time. Only the first time is logged.
+        -- Log only the first insertion because the game reloads the option table repeatedly.
         if not menuAdded then log("menu: rows added to the Options screen; " .. tostring(detail)) end
         menuAdded = true
     end
 end
 settingsTick = function()
-    -- Round 50: a value set in the Options screen wins over ffrap_set.
+    -- Choices set in the Options UI override ffrap_set values.
     local fromMenu = game.ReadOptionValues()
     if fromMenu then
         local parts = {}
@@ -2125,8 +2055,7 @@ settingsTick = function()
     end
     local rates = game.ApplyRates(setting("exp"), setting("gil"), setting("mrp"))
     defendedRates = { setting("exp"), setting("gil"), setting("mrp") }
-    -- Round 60: written at every pass, not once per map: FFRS_QoL writes these rows too, when its
-    -- config changes.
+    -- Re-apply encounter settings every pass since other mods (e.g. FFRS_QoL) also touch these rows.
     local rows, tables = game.ApplyEncounterTables(setting("encounters"), setting("encounterrate"))
     local players = game.ApplyPlayerEncounter(setting("encounters"))
     if rates > 0 or rows > 0 or players > 0 then
@@ -2137,18 +2066,13 @@ settingsTick = function()
     end
 end
 
--- Round 57: what every seed's open world save gets, the user's wish: the Chocobo (the Choboco
--- Saddle, 30002, which the game checks: round 5) next to the free airship, once per save loaded.
--- Round 58: and the Mobliz Shipyard's two stopped elevators, turned on at each visit.
--- Round 67: `cfg chocobo 0` (world 0.20.0, start_with_chocobo off) makes the saddle an
--- Archipelago item, which comes by the item path. A seed with no line is an older one: it gets it.
+-- Grant starting open-world extras (Chocobo Saddle 30002 unless `cfg chocobo 0` makes it an AP item)
+-- once per loaded save, and keep Mobliz Shipyard's elevators active at each visit.
 local CHOCOBO_SADDLE = 30002
 
--- Round 58: the final boss lock (Worlds Collide style, the user's choice). The client counts the
--- characters, visions and (round 59) Crystal Fragments received and writes them in a `cfg finalboss` line; while any count
--- is short, the Crystal Tower's point of no return stays sealed (game.SealTowerTop), and walking
--- up to it says what is missing, once per approach. A seed with no line (the shard goal, an old
--- seed) is never sealed.
+-- Crystal Tower final boss seal (`cfg finalboss`): while characters, visions, or Crystal Fragments
+-- are below threshold, keep the point of no return sealed (game.SealTowerTop) and notify on approach.
+-- Seeds without a `cfg finalboss` line (e.g. shard goal) leave the tower open.
 local lockLogged, lockMissLogged, lockNoticed = nil, false, false
 local LOCK_NOTICE_NEAR, LOCK_NOTICE_AGAIN = 1200, 2500
 finalLockTick = function()
@@ -2166,8 +2090,7 @@ finalLockTick = function()
         text = text .. string.format(", Crystal Fragments %d/%d", lock.fragments, lock.needFragments)
     end
     if changed == nil then
-        -- Round 57: the trigger is loaded only near the last climb, so far from it this is normal.
-        -- It comes back with its collision on, and the next tick seals it again.
+        -- Trigger only loads near the top climb, and reloads with collision enabled, so re-seal each tick.
         if not lockMissLogged then log("final boss lock: " .. tostring(why)) end
         lockMissLogged = true
     else
@@ -2189,12 +2112,8 @@ end
 local saddleSave, shipyardLogged, storyBossLogged = nil, false, nil
 local storyBossFieldTicks = 0
 local STORY_BOSS_READY_TICKS = 2   -- seedExtrasTick runs every LOCKS_EVERY ticks: about 2 s
--- Round 69: the airship as an item. Its flag turns on when the item comes. The game then places
--- the hidden airship at the next map change, from the save's parked place: the seed's start,
--- which the player can always walk back to.
--- Round 69: one received in Grandport was parked at the town's own coordinates, and landed in
--- Olderion. Round 72: one received on foot in Gronoa was parked where the player stood, in a part
--- of Gronoa the airship cannot take off from. So it always waits at the start.
+-- When the Airship is an item, keep its parked position at the seed's start so receiving it in
+-- towns or constrained maps (like Grandport or Gronoa) does not place it somewhere unflyable.
 local airshipCall = { save = nil, was = false }
 local function parkAirshipAtStart(why)
     local home = game.FOOT_STARTS[seedCfg.continent or ""]
@@ -2214,11 +2133,9 @@ airshipItemTick = function()
     end
 end
 
--- Round 72: the radar's level is the number of Progressive Radars (the Magi-tenna, 27006, as an
--- Archipelago item) applied to this save, counted from the session's items: the game may keep
--- one copy of a key item only. One turns the radar on (flag 702); two and three set the quest's
--- step ({progress:49}) to 40 and 50, which the later pingers test. It is never lowered.
--- One table, as main.lua's main chunk is at Lua's limit of 200 locals.
+-- Progressive Radar level comes from counting Magi-tenna (27006) items received, because the
+-- game only stores one copy of a key item. Level 1 sets flag 702; levels 2 and 3 set quest
+-- progress ({progress:49}) to 40 and 50. Never decreased. Keep state in one table for the 200-local limit.
 local radar = { ITEM = 27006, logged = nil }
 function radar.level()
     local n = 0
@@ -2318,8 +2235,7 @@ command("ffrap_set", function(p)
     notify("Settings: " .. settingsText())
 end)
 
--- ffrap_menu add: round 50. Our settings as rows at the end of the Options screen's Gameplay tab.
--- Behind a command for one round, as their tags are new to the game.
+-- ffrap_menu add: insert our settings rows at the end of the Options screen's Gameplay tab.
 command("ffrap_menu", function(p)
     local what = tostring(p[1] or ""):lower()
     if what == "dump" then
@@ -2336,30 +2252,11 @@ command("ffrap_menu", function(p)
     notify("Menu: " .. tostring(detail) .. ". Open Options, Gameplay now.")
 end)
 
--- Round 49: a seed scales its enemies by itself, in place of typing ffrap_scale each time. It
--- waits for the open world start, as the prologue's party is not the seed's. A save that is not
--- the seed's gets the game's own enemies back. In-game sliders are planned (IDEAS.md, idea 18).
--- The user's numbers: 75% HP and power felt right early but too easy from about level 20, and
--- bosses were too easy all along. So enemies ramp from 75% power at 80% of the party's level
--- (party level 5) to 100% power at 90% (party level 25), and bosses stay at 100% power and the
--- party's own level.
--- Round 56: the strength row picks one of three. Expert players asked for a hard run (the user's
--- Discord): the game's Expert multipliers (enemy HP x1.6, damage taken x1.4) apply in battle on
--- top of these, so the two stack.
--- Round 63: the user found all of it too easy. Each step moved up one: casual is the old normal
--- (the round 49 curve), normal the old expert, and expert one more step of the same size. An
--- easier game is the game's Casual difficulty with casual scaling. Bosses on normal still melted,
--- so on normal and expert they ramp too, from 10 points over that (level and power) at party level
--- 5 to 20 points over at 25. The ramp keeps a seed that starts with little gear playable.
--- Round 63, later: a level 8 party on Normal met level 5 enemies, the bottom of a band of 2 under
--- and over a centre of 7, and it was like fighting air. Early regions sit at the band's bottom,
--- as the clamp lifts them to it. So the enemies' band goes 1 under the centre and `above` over it
--- (the user's numbers). Late regions sit at the top, so on Expert a region far ahead is 5 over.
--- The bosses' band stays 2 each way: bosses felt right, and most sit at its top anyway.
--- Round 71: a solo seed on the game's Normal with our Normal: bosses felt near unbeatable around
--- level 20 without a full party, and at level 30 with a full party tough but beatable, "a tad too
--- tough". Normal's bosses come in (115-125% level, 125-135% power before), and Expert's take
--- Normal's old numbers. Plain enemies are unchanged.
+-- Automatic enemy scaling for open-world seeds (waits until after prologue so the prologue party
+-- does not skew level, and restores vanilla enemies on non-seed saves).
+-- Casual scales enemies 75%-100% power at 80%-90% party level and bosses 100% at party level.
+-- Normal and Expert step levels and power up, stacking with the game's own difficulty multipliers.
+-- Non-boss enemies clamp [1 under, `above` over] relative to band center; bosses stay +/- 2.
 local SEED_SCALES = {
     [0] = { at = { 80, 90 }, power = { 75, 100 }, above = 1, bossAt = { 100, 100 }, bossPower = { 100, 100 } },
     [1] = { at = { 90, 100 }, power = { 90, 115 }, above = 3, bossAt = { 110, 115 }, bossPower = { 115, 120 } },
@@ -2423,9 +2320,7 @@ end
 scaleTick = function()
     if not game.OnField() then return end
     seedScaleTick()
-    -- Round 33: a battle showed a level the last rescale did not give (the FFR Randomizer mod had
-    -- written the row again). If the table no longer holds what we wrote (loaded again, or written
-    -- by something else), say so and write it again.
+    -- Re-apply scaling if the table was reloaded or overwritten by another mod (e.g. FFRRandomizer).
     scaleChecks = scaleChecks + 1
     if scaleLast and scaleChecks % SCALE_CHECK_EVERY == 0 then
         local checked, differ, sample, reloaded = game.ScaleCheck()
@@ -2446,16 +2341,13 @@ scaleTick = function()
     followRescale(f)
 end
 
--- ffrap_bossfight <battle group> [quiet]: the closed chests near you become traps for that fight,
--- the Chamber of Arms sword pedestal starts it too, and a win is logged (round 49; IDEAS.md, idea
--- 25). The win plays the sword fight's own victory scene, or nothing with `quiet`.
--- ffrap_bossfight trigger: rewrites the current map's story boss trigger and logs each step.
--- ffrap_bossfight sword: gives the Ancient Greatsword the pedestal needs. off: undoes it.
--- ffrap_bossfight watch [class ...]: round 49 probe. The fight did not start twice, and the game
--- never asked for a battle. This hooks the native functions of the talk event and encounter
--- classes and logs each call (the first one, then at most one line every 2 seconds and 20 in all
--- per function), with its arguments where they are plain values or names. Each hook is logged
--- before it is made. `watch off` stops the logging (hooks stay until the game restarts).
+-- ffrap_bossfight <battle group> [quiet]: turn nearby closed chests and the Chamber of Arms sword
+-- pedestal into encounter triggers for that battle group and log wins. Plays the sword fight's
+-- victory scene unless `quiet` is passed.
+-- ffrap_bossfight trigger: rewrite the current map's story boss trigger and log each step.
+-- ffrap_bossfight sword: grant the Ancient Greatsword for the pedestal (`off` removes it).
+-- ffrap_bossfight watch [class ...]: hook native functions on talk/encounter classes to trace
+-- arguments (rate-limited after the first call); `watch off` stops logging.
 local WATCH_CLASSES = { "CPP_TalkEventManager", "CPP_BFL_TalkEvent", "CPP_MapManager", "CPP_BFL_Encount",
     "CPP_EncountManager", "CPP_BattleManager", "CPP_BFL_Battle", "CPP_BattleSystem", "CPP_MapGimmick_EventTrigger" }
 local WATCH_MAX_HOOKS, WATCH_MAX_LINES, WATCH_GAP = 200, 20, 2
@@ -2594,8 +2486,7 @@ end)
 -- ffrap_noland lock <mysidia|gronoa|pharm>: that story box stops landing (its condition always
 --   holds). unlock: it never holds. The box stays where the game put it. Every box with that
 --   story condition is written.
--- ffrap_noland refresh: round 34 probe. The boxes we changed get their collision switched on
---   or off to match their condition now, to see if that applies them without landing.
+-- ffrap_noland refresh: update box collisions to match their current condition immediately.
 -- ffrap_noland spawn [half]: a new box under you, `half` across each way (default 2000), at
 --   the Mysidia box's height.
 -- ffrap_noland move [half]: the game's own Mysidia box, moved under you, condition emptied.
@@ -2723,7 +2614,7 @@ end)
 command("ffrap_airship", function(p)
     local want = p[1]
     if want and want:lower() == "home" then
-        -- Round 69: puts a seed's airship back at its start, after one went astray.
+        -- Park the seed's airship back at its starting location.
         notify(parkAirshipAtStart("ffrap_airship home") and "Airship: parked at the start; it lands there at the next map change"
             or "Airship: no start on foot for this seed")
         return
@@ -2760,14 +2651,11 @@ command("ffrap_bind", function()
     bindLoaded()
 end)
 
--- ffrap_skip [slot]: skip the prologue on a new game (IDEAS.md, idea 2). Without a slot it only
--- changes the loaded save, so a snapshot can check it; with one it also saves to that slot and
--- reloads from it.
+-- ffrap_skip [slot]: skip the prologue on a new game. Without a slot it modifies the loaded save
+-- in place; with a slot it saves there and reloads.
 --
--- The skip is applied again right before saving. Round 8: the opening scene kept running after
--- a skip, turned flags 1 and 8 back on, and its autosave wrote the player's real position (the
--- prologue map) over the arrival point. Every step sets an absolute value, so applying it twice
--- is safe.
+-- The skip is re-applied right before saving because the opening scene can overwrite flags and
+-- position after an initial skip. Every step sets an absolute value, so running twice is safe.
 command("ffrap_skip", function(p)
     local slot = p and p[1] and tonumber(p[1])
     if p and p[1] and not slot then
@@ -2782,9 +2670,8 @@ command("ffrap_skip", function(p)
     runSkip(slot, "command", p[2] == "force")
 end)
 
--- ffrap_input [fix]: probe for the opening's input lock (round 9: a skip during the opening
--- movie came up with no menus and no movement). Logs the player controller's input switches;
--- `fix` tries the engine's own resets, logging each step before it runs.
+-- ffrap_input [fix]: inspect player controller input locks (for skips during the opening movie).
+-- Logs input switches; `fix` attempts the engine's reset calls.
 command("ffrap_input", function(p)
     log("input: " .. game.InputState())
     if p[1] == "fix" then
@@ -2795,8 +2682,7 @@ command("ffrap_input", function(p)
     notify("Input state written to the log")
 end)
 
--- ffrap_chats [done]: the loaded save's Active Time Chats, and `done` marks them all played (the
--- open world start does this by itself: round 37).
+-- ffrap_chats [done]: list the loaded save's Active Time Chats, or mark them all played.
 command("ffrap_chats", function(p)
     if p[1] == "done" then
         local ok, line = game.MarkChatsPlayed(game.SaveData())
@@ -2808,7 +2694,7 @@ command("ffrap_chats", function(p)
     notify("Active Time Chats: " .. text)
 end)
 
--- Round 42: the locks go in as the map loads, so a save loaded in the air has no moment to land.
+-- Re-apply continent locks on map load so saves loaded in the air cannot land prematurely.
 if RegisterLoadMapPostHook then
     local okHook, errHook = pcall(RegisterLoadMapPostHook, function(_, world)
         pcall(game.ForgetObjects)
@@ -2851,7 +2737,7 @@ command("ffrap_lock", function(p)
     notify("Continent locks: " .. text)
 end)
 
--- ffrap_visions: the first vision's synchro keys (round 37), for vision items on a save with none.
+-- ffrap_visions: log the first vision's synchro keys for inspecting vision data.
 command("ffrap_visions", function()
     local text = game.VisionKeys()
     log("visions: " .. text)
@@ -2882,10 +2768,8 @@ readInbox(true)
 log("version " .. VERSION .. " loaded from " .. MOD_DIR .. ", " .. state.applied .. " items already applied")
 if randomizerWarning then log(randomizerWarning) end
 
--- The fast check (IDEAS.md, idea 13): ten times a second, ask the chest pop-up's message widget
--- (kept once found) whether a pop-up has just come up. When one has, scan this map's chests at
--- once, so the check is reported and the pop-up rewritten within about 0.1 s, not on the next
--- one-second scan. Most passes are one widget lookup.
+-- Fast check (0.1 s): inspect the chest dialog widget and trigger an immediate scan when a pop-up
+-- appears so scout text updates within ~0.1 s rather than waiting for the 1 s tick.
 local function fastTick()
     pcall(defendRates)
     if not game.InGame() or state.inGameTicks <= SETTLE_TICKS or not sessionSave() then return end
@@ -2899,11 +2783,8 @@ local function fastTick()
     pcall(popupTick)
 end
 
--- Both timers run on the game thread, from UE4SS's own game-thread timer (round 29). Up to 0.11.3
--- they ran from LoopAsync, whose callback runs on UE4SS's async thread. That thread ran Lua in
--- this mod's Lua state, ten times a second, while the game thread ran the queued tick in the same
--- state. Lua is not safe on two threads at once: the game crashed at random, after minutes or
--- hours, in a different place each time (a bad name, a broken Lua table, a bad object).
+-- Run both timers on UE4SS's game thread: LoopAsync invokes Lua on an async worker thread while
+-- the main tick runs on the game thread, causing race-condition crashes on shared Lua state.
 local function every(ms, name, fn)
     local function run()
         local ok, err = pcall(fn)

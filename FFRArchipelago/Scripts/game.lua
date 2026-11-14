@@ -43,11 +43,8 @@ local function Lib(name)
     return Find("/Script/mucha.Default__" .. name)
 end
 
--- Round 72: an object kept from one tick to the next is kept as its path, never as the object.
--- Round 71's two crashes were IsValid on a kept object the garbage collector had already freed,
--- one pcall deep in a tick, with no map load to clear it first (round 49 cleared kept objects on
--- each map load, which was not enough). Even IsValid reads the freed memory. StaticFindObject
--- looks a path up in the engine's own table, so a gone object is just not found.
+-- Keep UObject references as path strings across ticks and resolve them via StaticFindObject.
+-- Cached pointers can be garbage-collected even without a map load, causing IsValid to crash on freed memory.
 function G.PathOf(o)
     local ok, full = pcall(function() return o:GetFullName() end)
     return ok and type(full) == "string" and full:match("^%S+ (.+)$") or nil
@@ -110,10 +107,9 @@ function G.StoryCounter()
     return Int(v)
 end
 
--- The map the player is on, as the save keys it: CPP_MapManager:GetSameMapId(). Maps that share
--- a save list (a town's inside and outside, say) answer with the same id, and that id is the one
--- CPP_BFL_SaveDataMap:IsOpenTreasureBox wants. Found in FFRS_QoL's markers. Round 2 showed the
--- save's own Map.mapId (G.MapId below) can lag minutes behind the map you are actually in.
+-- The map the player is on, as the save keys it: CPP_MapManager:GetSameMapId(). Shared areas
+-- (e.g. a town's interior and exterior) return the same id, which matches CPP_BFL_SaveDataMap.
+-- The save's own Map.mapId (G.MapId below) lags behind transitions, so it is never used for keys.
 function G.CurrentMap()
     local mgr = Live("CPP_MapManager")
     if not mgr then return nil end
@@ -177,9 +173,8 @@ function G.SlotForTicks(ticks)
     return found
 end
 
--- True when a save is loaded and the field is running. This is a guess at "safe to grant":
--- save data exists and the map manager exists. The title screen may also have save data, so
--- the map manager is the stronger signal. Verify this in the test plan (README, step 3).
+-- True when a save is loaded and the field is running (safe to grant). The title screen may
+-- have save data too, so the map manager is the decisive check.
 function G.InGame()
     return G.SaveData() ~= nil and Live("CPP_MapManager") ~= nil
 end
@@ -236,14 +231,12 @@ local function VisionRowExists(id)
     return visionRows[id] == true
 end
 
--- A vision entry's synchro map has one key per party member. Read from the game's own entries
--- in round 38 (`ffrap_visions`, a chapter 6 save).
+-- A vision entry's synchro map has one key per party member, matching the game's vision struct.
 G.VISION_SYNCHRO_KEYS = { 1001, 1002, 1003, 1006, 1004, 1005, 1007, 1008 }
 
 -- Adds a vision to the save's vision list and to the bag, the way FFRSLib's ffrs_vision_unlock
--- does: grow visionList by one zeroed entry, set its ID, write the synchro-map keys at 0, then
--- AddInventory(id, 1). The keys were copied from the first entry until round 38, so a save with
--- no vision had to wait for one, and the open world start never gets one from the story.
+-- does: grow visionList by one zeroed entry, set its ID, initialize the synchro-map keys to 0,
+-- and call AddInventory(id, 1).
 function G.UnlockVision(id)
     local sd = G.SaveData()
     if not sd then return "retry", "no save data" end
@@ -308,11 +301,10 @@ function G.GrantGil(n)
     return "ok", "gil " .. cur .. " -> " .. tostring(after or want)
 end
 
--- Party members. CPP_VM_Party:AddUnit puts a unit in the ACTIVE party, and fails when it is
--- full (round 1). The roster is each unit's JoinStatus in sd.unitParameterList
--- (eUnitJoinStatus: 0 Join, 1 NotJoin, 2 Leave, 3 TemporalLeave, 4 Lost), which the story's own
--- talk events set through ChangeUnitJoinStatusList (data dump, round 30). So a unit goes into
--- the active party when there is room, and otherwise joins the roster as the story would.
+-- Party members. CPP_VM_Party:AddUnit puts a unit in the active party and fails when full.
+-- The roster is tracked via JoinStatus in sd.unitParameterList
+-- (eUnitJoinStatus: 0 Join, 1 NotJoin, 2 Leave, 3 TemporalLeave, 4 Lost). Units enter the active
+-- party when room exists and otherwise join the roster.
 local function PartyVM() return Live("CPP_VM_Party") end
 
 local function Joined(vm, id)
@@ -320,8 +312,7 @@ local function Joined(vm, id)
     return ok and r == true
 end
 
--- Round 44: AddUnit puts a unit in the party but leaves its JoinStatus at NotJoin. Rain then got
--- no EXP, and gear on her did not count as equipped. So every join goes through G.FinishJoin.
+-- AddUnit leaves JoinStatus at NotJoin (which breaks EXP and equipped gear), so every join calls G.FinishJoin.
 function G.AddUnit(id)
     local vm = PartyVM()
     if not (vm and vm.AddUnit) then return "retry", "party view model not loaded" end
@@ -384,7 +375,7 @@ end
 -- The chests in the loaded maps. Each carries a copy of its chest table row in
 -- m_TreasureBoxData, so `rowMap` and `rowId` are the row's own mapId and ID: the location key,
 -- whatever map the game currently reports. `uid` (m_Id), `uniqueId` (m_UniqueId) and `typeId`
--- (TypeData.ID) are the candidates for the save's key, which round 2 showed is not m_Id.
+-- (TypeData.ID) are inspected for save-key matching (`m_UniqueId` is used by the save).
 function G.LiveChests()
     local out = {}
     local ok, all = pcall(FindAllOf, "CPP_MapGimmick_TreasureBox")
@@ -409,9 +400,8 @@ function G.LiveChests()
     return out
 end
 
--- The game's own answer about one chest or shiny: CPP_BFL_SaveDataMap:IsOpenTreasureBox.
--- Round 65: when the map has no row for that uid yet, it answers from another map's row with
--- the same uid. So the mod judges by G.SaveOpenRows, and this is only logged.
+-- CPP_BFL_SaveDataMap:IsOpenTreasureBox fallback: when the map has no row for that uid yet, it
+-- returns another map's row with the same uid. The mod judges by G.SaveOpenRows and logs this only.
 function G.IsChestOpenInSave(mapId, uid)
     local lib = Lib("CPP_BFL_SaveDataMap")
     if not (lib and lib.IsOpenTreasureBox) then return nil end
@@ -439,9 +429,8 @@ function G.SaveOpenRows(mapId)
     return rows
 end
 
--- The id the game's own Blueprints use for a chest or shiny in the save
--- (BP_MapGimmick_TreasureBox and BP_MapGimmick_FieldItem call GetUniqueId, round 64).
--- Returns the id, or nil and why not.
+-- Returns the save key ID used by BP_MapGimmick_TreasureBox and BP_MapGimmick_FieldItem (GetUniqueId).
+-- Returns the id, or nil and a reason.
 function G.GameUniqueId(actor)
     if not Alive(actor) then return nil, "not alive" end
     local ok, v = pcall(function() return actor:GetUniqueId() end)
@@ -451,9 +440,8 @@ function G.GameUniqueId(actor)
     return id
 end
 
--- Discovery: what the save says about a chest under each candidate key, as one string, e.g.
+-- Discovery: log what the save reports under each candidate key, e.g.
 -- "map 3020 / row map 2001: m_Id 3 false, m_UniqueId 17 true, TypeData.ID 17 true".
--- Round 2: IsOpenTreasureBox(map, m_Id) was false for every chest, opened or not.
 function G.ChestSaveKeys(mapId, c)
     local parts = {}
     for _, m in ipairs({ mapId, c.rowMap ~= mapId and c.rowMap or nil }) do
@@ -541,12 +529,10 @@ end
 -- Chests holding an item at or above SHUFFLE_ID_LIMIT (visions, key items, valuables) are not
 -- locations and keep their content. The apworld uses the same limit (tools/gen_apworld_data.py).
 local SHUFFLE_ID_LIMIT = 13000
-local MAGICITE_FIRST, MAGICITE_LAST = 25000, 25002   -- round 45: chests with Magicite are shuffled too
+local MAGICITE_FIRST, MAGICITE_LAST = 25000, 25002   -- Magicite chests are shuffled locations too
 --
--- The originals are keyed by the row's own mapId and ID, never by where the copy lives. A chest
--- that spawns while blanking is on copies the already-blank row, so a snapshot of the spawned
--- chest would "restore" it to blank. That was the 0.2.0 bug: after ffrap_blank off, chests in
--- the map you were standing in still gave 1 gil until you left.
+-- Key originals by the row's own mapId and ID rather than a spawned actor's copy, so chests
+-- spawned while blanking is active restore to their true vanilla contents when unblanked.
 local blankOriginals = {}   -- "mapId:ID" -> { ItemId, ItemNum, Money } as the game shipped them
 local BLANK = { ItemId = -1, ItemNum = 1, Money = 1 }
 
@@ -614,13 +600,10 @@ end
 -- -------------------------------------------------------------------------------------------
 -- Shining spots (shinies)
 -- -------------------------------------------------------------------------------------------
--- The sparkly pick-ups on the world map and in fields. They are not in a data table: they are
--- BP_MapGimmick_FieldItem* actors placed in the level files, each with an m_UniqueId.
--- FFRS_QoL's markers (based on ZArkadia's Item and Chest Markers, Nexus mod 25) treat a spot as
--- looted when CPP_BFL_SaveDataMap:IsOpenTreasureBox(saveMapId, uniqueId) says so, the same
--- call as chests. Round 2 confirmed that, live: the save answers true the moment a shiny is
--- picked up. The reward is on the actor: m_ItemId, m_ItemNum, m_Money. Spots with neither an
--- item nor money are story or quest points that only show under a VisibleCondition.
+-- The sparkly pick-ups on the world map and in fields. They are BP_MapGimmick_FieldItem* actors
+-- placed in level files with m_UniqueId; looted state uses IsOpenTreasureBox(saveMapId, uniqueId)
+-- and the reward lives on m_ItemId, m_ItemNum, and m_Money. Spots with neither item nor money are
+-- story or quest points guarded by VisibleCondition.
 
 local function ClassName(o)
     local ok, n = pcall(function() return o:GetClass():GetFName():ToString() end)
@@ -646,8 +629,7 @@ function G.LiveFieldItems()
                             class = cname,
                             actor = a,
                         }
-                        -- Round 2 dump: CPP_MapGimmick_FieldItem.m_IsOpen is the picked-up flag,
-                        -- and the reward is on the actor (CPP_MapGimmick_ItemObjectBase).
+                        -- CPP_MapGimmick_FieldItem.m_IsOpen is the picked-up flag; reward fields live on CPP_MapGimmick_ItemObjectBase.
                         pcall(function() e.open = a.m_IsOpen == true end)
                         pcall(function()
                             e.itemId, e.itemNum, e.money = Int(a.m_ItemId), Int(a.m_ItemNum), Int(a.m_Money)
@@ -759,8 +741,7 @@ local SAVE_STRUCT_NAMES = {
     "UI_MiniMap", "Unit", "UnitBtlCmdData", "UnitBtlCmdDataBundle", "UnitGuest", "UnitParameter",
     "Vision",
 }
--- Other struct types that map values can have, by their full short name: the title menu's
--- entries (round 11 probes; the names come from the executable).
+-- Other struct types that map values can hold, by full short name (such as title menu entries).
 local OTHER_STRUCT_NAMES = { "TitleEntryProperty", "TitleEntryDisplay", "TitleEntryBehavior" }
 local saveStructs
 local function SaveStructs()
@@ -925,11 +906,9 @@ local function FunctionLines(cls, label, out)
     return n
 end
 
--- Round 49 probe (ffrap_bossfight watch): the native functions of a /Script/mucha class that
--- are worth hooking, as RegisterHook paths. Left out: getters and checks (called all the time),
--- delegates (RegisterHook cannot hook them), and functions that are not native when the flags
--- can be read (FUNC_Native is 0x400). Returns the paths and whether the flags could be read, or
--- nil when the class is not found.
+-- Returns hookable native RegisterHook paths for a /Script/mucha class (used by ffrap_bossfight watch),
+-- skipping frequent getters/checks, delegates, and non-native functions (FUNC_Native = 0x400).
+-- Returns paths and whether flags were readable, or nil if the class is not found.
 local SKIP_PREFIX = { "Get", "Is", "Can", "Has", "Find", "K2_", "Exec" }
 function G.FunctionPaths(className)
     local cls = StaticFindObject("/Script/mucha." .. className)
@@ -1001,15 +980,13 @@ function G.Inspect(target, out)
     return true
 end
 
--- The kinds of type object FindNames looks in: native classes and structs, and the classes
--- Blueprints make (round 11: the opening's names were not on any native class).
+-- Search native classes/structs plus Blueprint-generated classes under /Game.
 local TYPE_KINDS = { Class = true, ScriptStruct = true, BlueprintGeneratedClass = true,
                      WidgetBlueprintGeneratedClass = true, AnimBlueprintGeneratedClass = true }
 
--- Every game class or struct (/Script/mucha, or a Blueprint under /Game) whose own name, or the
--- name of one of its functions or fields, holds `text` (any case), as lines through out(line).
--- Walks every object once, so the game pauses for a moment. Objects being destroyed are skipped
--- (round 11: the walk crashed the game at the title screen). Returns the number of matches.
+-- Walk every game class/struct (/Script/mucha or Blueprint under /Game) matching `text` on its
+-- name, functions, or fields, emitting lines via out(line). Skips objects being destroyed to avoid
+-- GC/loading crashes. Returns the match count.
 function G.FindNames(text, out)
     local want, n = text:lower(), 0
     local function match(kind, owner, name)
@@ -1037,12 +1014,12 @@ function G.FindNames(text, out)
 end
 
 -- -------------------------------------------------------------------------------------------
--- Title menu (IDEAS.md, idea 6). Experimental.
+-- Title menu
 -- -------------------------------------------------------------------------------------------
--- The title menu's entries are ETitleFunctionType values (Continue 0, LoadGame 1, NewGame 2,
--- Option 3, QuitGame 4, Max 5), with one row each in DA_Title.EntryPropertyMap, and choosing one
--- calls CPP_VM_Title:ExecuteEntry(type) (round 11 probes). The Archipelago entry is type 5: a
--- copy of the New Game row. A hook on ExecuteEntry turns it into New Game (main.lua).
+-- Title menu entries use ETitleFunctionType (Continue 0, LoadGame 1, NewGame 2, Option 3,
+-- QuitGame 4, Max 5), stored in DA_Title.EntryPropertyMap. Choosing one calls
+-- CPP_VM_Title:ExecuteEntry(type). The Archipelago entry uses type 5 as a copy of New Game;
+-- the ExecuteEntry hook in main.lua turns it back into New Game.
 
 G.TITLE_NEW_GAME = 2
 G.TITLE_ARCHIPELAGO = 5
@@ -1130,8 +1107,8 @@ function G.AddTitleEntry(load)
     return now, how .. (now and "" or ", but the row is not in the map afterwards")
 end
 
--- One title row's fields, as plain Lua values: everything TitleEntryProperty holds (round 12
--- inspect). The label is kept as the text it shows, in the current language.
+-- Returns one title row's TitleEntryProperty fields as plain Lua values; the label resolves in
+-- the current UI language.
 local function ReadTitleRow(v)
     local list = v.DisplayProperty.DisplayPlatformMap
     local platforms = {}
@@ -1166,10 +1143,8 @@ function G.OrderTitleEntries()
     if table.concat(keys, ",") == table.concat(TITLE_ORDER, ",") then return true, "already in order" end
     for _, k in ipairs(TITLE_ORDER) do
         if not rows[k] then return false, "row " .. k .. " is missing, so the order is left alone" end
-        -- Round 37: every row but ours read "<MISSING STRING TABLE ENTRY>", at random, until a
-        -- restart. A label reads like that while its string table is still loading, and the
-        -- rebuild below writes each label back as plain text, so the placeholder became the
-        -- label for that run. The order waits for the next check, with the map untouched.
+        -- While string tables are still loading, FText reads "<MISSING STRING TABLE ENTRY>". Defer
+        -- rebuilding instead of baking the placeholder text into plain strings.
         if k ~= G.TITLE_ARCHIPELAGO and (rows[k].name == "" or rows[k].name:find(TITLE_TEXT_MISSING, 1, true)) then
             return false, "row " .. k .. " has no text yet (string table not loaded), so the order waits"
         end
@@ -1211,13 +1186,10 @@ function G.OrderTitleEntries()
     return true, "rebuilt as [" .. table.concat(now, ",") .. "]"
 end
 
--- Writes `line` above the game's version text in the title screen's corner ("1.0.1.0", then
--- the copyright lines). The version is a TextBlock whose text starts with four dotted numbers;
--- the new line goes in front of it, so it shows above when the block grows upwards. The title
--- widget is made again each time the title shows, so this is checked again now and then.
--- The block is right-justified, which pushed the version to the right once our longer line
--- widened it (round 14), so it is set to left-justified (ETextJustify Left = 0).
--- Returns "added", "already" or nil when no version text is on screen, and the TextBlock.
+-- Writes `line` above the game's version text in the title screen's corner ("1.0.1.0", above
+-- copyright lines). Sets left justification (ETextJustify Left = 0) so the wider mod line does
+-- not push the version off-screen right. Rechecked periodically because the title widget rebuilds
+-- on each return to the title screen. Returns "added", "already", or nil, and the TextBlock.
 local JUSTIFY_LEFT = 0
 function G.TitleVersionLine(line)
     local ok, all = pcall(FindAllOf, "TextBlock")
@@ -1283,13 +1255,8 @@ function G.DescribeWidget(w)
     return table.concat(parts, "; ")
 end
 
--- The Archipelago logo at the end of the mod's line in the title screen's corner. Round 15
--- found the version text (Text_ApplicationVersion) in an Overlay (Overlay_UI) of
--- WBP_TitleLayout, so an Image added to that overlay can share the text's alignment and be
--- placed by padding. Round 16 put it above the text (padding 60,0,50,97, two lines 43.2 high);
--- now it is one line high, just right of the first line ("FFRArchipelago <version>"), whose
--- width is the block's width because it is the longer line. The picture is loaded from the
--- mod's PNG at run time.
+-- Places the Archipelago logo in WBP_TitleLayout's Overlay_UI beside the mod version line
+-- ("FFRArchipelago <version>"), loading the PNG at runtime and sharing the text's alignment.
 local LOGO_PREFIX = "FFRAP_Logo"
 local LOGO_ASPECT = 280 / 291   -- the PNG's width over its height
 local LOGO_SCALE = 1.15         -- the logo's height, in text lines
@@ -1379,10 +1346,8 @@ function G.TitleLogo(path, line)
         okPad and "" or ", padding not set")
 end
 
--- The chain of panels holding the first on-screen text widget whose text holds `text`, from
--- the widget up to the root, for the log: where a HUD element (the item feed) could go. Text
--- with icons in it is a RichTextBlock, which is not a TextBlock (round 24: the chest pop-up's
--- "(gil icon) 1"), so both kinds are searched.
+-- Logs the panel hierarchy holding the first visible text widget matching `text` (searches both
+-- TextBlock and RichTextBlock for icon-bearing prompts).
 local TEXT_CLASSES = { "TextBlock", "RichTextBlock" }
 function G.LayoutOf(text)
     local tb
@@ -1418,33 +1383,26 @@ function G.LayoutOf(text)
 end
 
 -- -------------------------------------------------------------------------------------------
--- The item feed (IDEAS.md, idea 14)
+-- The item feed
 -- -------------------------------------------------------------------------------------------
--- A few lines of text at the bottom right of the field HUD: what arrived and what was sent.
--- Round 17's ffrap_layout found the field HUD's overlay: WBP_FieldLayout_C's Overlay_66 holds
--- the minimap, the key list (WBP_FieldFuncList2), the quest tracker and the place name. The
--- feed is one more child of it: a VerticalBox with a TextBlock per line, made in the field
--- layout's widget tree the way the title logo is. The HUD is made again on loads and map
--- changes, so the box is made again when its overlay changes.
+-- Displays recent sent/received items at the bottom right of the field HUD inside
+-- WBP_FieldLayout_C's Overlay_66 (VerticalBox of TextBlocks). Rebuilt whenever the HUD overlay
+-- is recreated on map loads.
 
 local FEED_PREFIX = "FFRAP_Feed"
 G.FEED_MAX = 5          -- lines on screen at once
-G.FEED_SHOW = 10.0      -- seconds a line stays fully visible (round 23: a little longer)
+G.FEED_SHOW = 10.0      -- seconds a line stays fully visible
 G.FEED_FADE = 2.0       -- seconds it then takes to fade out
 local FEED_LINE_GAP = { Left = 0, Top = 0, Right = 0, Bottom = 6 }   -- space under each line
--- 140 px up: clear of the "Back" prompt that menus and the chest pop-up put at the very bottom
--- right (round 21).
+-- 140 px up clears the bottom-right "Back" prompt shown in menus and chest pop-ups.
 local FEED_PADDING = { Left = 0, Top = 0, Right = 48, Bottom = 140 }
 local FEED_FONT_SIZE = 20
--- EHorizontalAlignment and EVerticalAlignment are Fill 0, Left/Top 1, Center 2, Right/Bottom 3.
--- 0.9.0 to 0.9.3 had right as 2, which is centre (round 21). ETextJustify is Left 0, Center 1,
--- Right 2.
+-- EHorizontalAlignment and EVerticalAlignment: Fill 0, Left/Top 1, Center 2, Right/Bottom 3.
+-- ETextJustify: Left 0, Center 1, Right 2.
 local ALIGN_RIGHT, ALIGN_BOTTOM, JUSTIFY_RIGHT = 3, 3, 2
 local feed = { box = nil, host = nil, tree = nil, lines = {}, made = 0 }
 
--- Round 18: 0.9.0 crashed the game the first time it made the feed in the field. A crash in the
--- engine ends the game before the Lua can log anything, so while the feed is being tested every
--- risky call is announced through G.feedTrace first: the last line in UE4SS.log names the call.
+-- When G.feedTrace is set (via `ffrap_feed test`), risky UMG calls log first so crashes pinpoint the call.
 G.feedTrace = nil
 local function step(what)
     if G.feedTrace then G.feedTrace(what) end
@@ -1457,9 +1415,7 @@ local function Shown(w)
     return ok and v == true
 end
 
--- The first instance of a widget class that is on screen. FindFirstOf can hand back a copy that
--- is never drawn, such as the template a widget Blueprint keeps (round 22: the feed went into a
--- 0x0, never-visible HUD, and the key guide's font came back empty).
+-- Returns the first visible instance of a widget class, filtering out Blueprint template copies.
 local function ShownInstance(className)
     local ok, all = pcall(FindAllOf, className)
     if not ok or not all then return nil end
@@ -1486,9 +1442,8 @@ function G.OnField()
     return FeedHost() ~= nil
 end
 
--- Round 46: a shiny that is a location gives 1 gil, as a blanked chest does, and the check is the
--- real reward. The reward is on the actor. Same rule as the apworld's: items below the shuffle
--- limit and gil (`shinies`), and Tablet Shards (`shards`, round 47). Returns true when it wrote.
+-- Blanks a shiny actor that is an AP location to 1 gil (matching blanked chests), using the same
+-- shuffle limits (`shinies`) and Tablet Shards (`shards`) filter as the apworld. Returns true if modified.
 local TABLET_SHARD = 25004
 function G.BlankFieldItem(e, shinies, shards)
     if e.open or not e.actor then return false end
@@ -1533,19 +1488,12 @@ local function FeedBox()
     return box
 end
 
--- Makes the text look like the HUD's own: the key guide's font (its Text_Name, as FFRSLib reads
--- it) at FEED_FONT_SIZE, with a dark shadow, right-justified. The text stays the default white.
---
--- Round 20: `tb:SetFont(guide.Text_Name.Font)` crashed the game. A font (FSlateFontInfo) or a
--- Slate colour (FSlateColor) holds engine-only parts that a struct passed from Lua does not
--- carry, so no function here is given one. Each field is written into the new line's own
--- properties instead (plain values, an object and a name), before the line is added to the box:
--- the engine builds the on-screen text from these properties when the line is added.
+-- Style a feed line like the HUD's key guide (Text_Name) at FEED_FONT_SIZE with a dark shadow.
+-- Write primitive fields directly onto the TextBlock's Font and ShadowColorOffset/Color instead
+-- of calling SetFont(FSlateFontInfo) or passing FSlateColor structs, which crash UE4SS Lua.
 local function StyleLine(tb)
-    -- The key guide's text is a CommonTextBlock, which can take its font from a style when it is
-    -- drawn and leave its own Font.FontObject empty. A line given an empty font object draws
-    -- nothing (round 21: every step worked and no line showed), so the font is only copied
-    -- when there is one.
+    -- Key guide uses a CommonTextBlock whose style may supply the font while Font.FontObject is
+    -- nil; copying an empty FontObject renders invisible text, so only copy when present.
     local fontObject, typeface
     pcall(function()
         local guide = ShownInstance("WBP_KeyGuide_C")
@@ -1606,8 +1554,7 @@ function G.FeedLine(text, now, opts)
     return true
 end
 
--- What the engine says about the feed, as lines for the log: the box's and each line's size,
--- visibility and font. ffrap_feed check (round 21: the lines were made and none showed).
+-- Diagnostic dump of the feed box and each line's size, visibility, and font for ffrap_feed check.
 function G.FeedReport()
     local out = {}
     local function size(w)
@@ -1685,28 +1632,22 @@ function G.FeedTick(now)
 end
 
 -- -------------------------------------------------------------------------------------------
--- The chest pop-up (IDEAS.md, idea 13)
+-- The chest pop-up
 -- -------------------------------------------------------------------------------------------
--- A chest that is an Archipelago location gives 1 gil, so its pop-up says "You obtained the
--- following:" over a "(gil icon) 1" line. Round 25 found the pop-up: the game's general dialog
--- box (WBP_DialogBox_C), whose message is a CommonRichTextBlock (Text_Message) beside an
--- Overlay (Overlay_Custom) that holds the item line. The message is rewritten with what the
--- chest held for Archipelago, and the item line is collapsed. The dialog box is used by other
--- pop-ups too, so the line is made visible again once this pop-up has closed.
+-- Blanked chests give 1 gil, so the general dialog box (WBP_DialogBox_C) shows "You obtained
+-- the following:" over "(gil icon) 1". Rewrites Text_Message to the scouted AP item and collapses
+-- Overlay_Custom (the 1 gil item line), restoring Overlay_Custom when the dialog closes.
 
 local POPUP_MARKER = "obtained"       -- in the game's English chest message
 local POPUP_ITEM_LINE = "Overlay_Custom"
 local COLLAPSED = 1                   -- ESlateVisibility: Visible 0, Collapsed 1, Hidden 2, ...
 local popupHidden = nil               -- { line = path, message = path, visibility = n }
--- The dialog box is made once and used again, so its message widget is kept once found: the
--- fast check (PopupJustOpened, ten times a second) then asks only that widget, instead of
--- searching every rich text in the game (round 26: "the wait is real").
+-- Cache the dialog box message widget path once found so fastTick (10 Hz) only polls that widget
+-- instead of scanning all RichTextBlocks.
 local popupMsgCache = nil
 local popupWasShown = false           -- the cached message was on screen at the last check
--- Round 60: a map load forgets the cached message (round 49), so each map's first pop-up waited
--- for the regular tick: a second or two, where it had been at once. The dialog box is there
--- before it is shown, so its message widgets are found by name after each map load and the fast
--- check asks them.
+-- Pre-locate the dialog message widget after each map load (it exists before first opening) so the
+-- map's first chest pop-up is caught immediately in fastTick.
 local POPUP_MESSAGE_NAME = "Text_Message"
 local popupCandidates = {}
 
@@ -1824,19 +1765,15 @@ function G.ChestPopupRestore()
     popupHidden = nil
 end
 
--- Round 49: the game crashed on leaving a cave, in a Lua tick that asked a freed object for its
--- name. A map load frees the old map's objects, and a few were still cached here, above all the
--- map manager, which is asked every tick. Even IsValid on such a handle can crash, so a map load
--- forgets them before the next tick. They are found again when next needed.
+-- Clear cached paths on map load; old map objects are freed and dereferencing stale handles crashes.
 function G.ForgetObjects()
     liveCache = {}
     popupMsgCache, popupWasShown, popupHidden = nil, false, nil
     popupCandidates = {}
 end
 
--- Tries to show `text` with the game's quest-notice banner (the "new quest" pop-up): the
--- banner's view model holds NoticeData.NoticeTitle and ExecuteNotics(bool) (round 14 probes).
--- Experimental: returns ok and a detail.
+-- Experimental: shows `text` via the game's quest-notice banner view model (NoticeData.NoticeTitle
+-- and ExecuteNotics(bool)). Returns ok and a detail.
 function G.QuestNotice(text)
     local vm = Live("CPP_VM_QuestNotice")
     if not vm then return false, "no quest notice view model (be in the field)" end
@@ -1851,18 +1788,14 @@ function G.QuestNotice(text)
 end
 
 -- -------------------------------------------------------------------------------------------
--- Prologue skip (IDEAS.md, idea 2)
+-- Prologue skip
 -- -------------------------------------------------------------------------------------------
--- Makes a new game's save look like the start of chapter 1 in front of the Earth Shrine: the
--- fields the prologue changes, measured by save snapshots on 2026-11-05 (new game at story
--- 1000 against chapter 1 at story 1030). Fields are written straight into the save object,
--- because the skip ends with a save and a reload and the save object is what gets written.
--- The game's own calls are used where a direct write is awkward (inventory, visited maps).
+-- Writes chapter-1 start state directly into the save object before saving and reloading (using
+-- game API calls where direct writes are unsafe, such as inventory and visited maps).
 
-G.SKIP_FROM_MAX = 1005    -- a save up to this story counter is still at the prologue's start
--- Round 9: a skip during the opening movie (story 1000) reloads into the shrine with no menus
--- and no movement; the movie's input lock outlives the reload. From 1005, when the player first
--- controls Fina (the game autosaves there), the reload comes up clean.
+G.SKIP_FROM_MAX = 1005    -- prologue story threshold before Fina is controllable
+-- Skipping before 1005 (during the opening movie at 1000) leaves the movie's input lock active across
+-- reloads; starting from 1005 after the first autosave reloads cleanly.
 G.SKIP_FROM_MIN = 1005
 G.SKIP_STORY = 1030
 local SKIP_FLAGS_ON = { 14, 15, 16, 18, 19, 22, 23, 26, 27, 30, 32, 33, 105, 106, 108, 110, 124, 125,
@@ -1882,21 +1815,15 @@ local UNIT_NAMES = { [1001] = "Rain", [1002] = "Lasswell", [1003] = "Fina", [100
 local ARCHWITCH_FINA, ARCHWITCH_FIRST_SKILL = 1006, 408010
 local ALL_PARTY_MEMBERS = { 1001, 1002, 1003, 1004, 1005, 1006, 1007, 1008 }
 local SKIP_MAPS = { 5010, 2013, 20000, 3001 }   -- known and visited
--- Round 71: on an open start, Grandshelt Castle (2013) and the Earth Shrine (3001) were fast
--- travel destinations from the first minute, past the continent locks. The airship's deck (20000)
--- would be one too for a seed that has to find the airship. So an open start marks the battlefield
--- (5010) and, when it starts in the airship, its deck.
+-- Open-world starts only mark the battlefield (5010) and, when starting in the airship, its deck
+-- (20000), so Grandshelt Castle (2013), Earth Shrine (3001), or the unobtained airship are not
+-- immediate fast-travel destinations bypassing continent locks.
 G.OPEN_START_MAPS, G.OPEN_START_MAPS_AIRSHIP = { 5010 }, { 5010, 20000 }
 G.SKIP_ARRIVAL = { map = 3001, x = -5775.0, y = 0.0, z = -197.85, direction = 2 }
--- The open world start (round 31, found with FFRSLib's story and travel tools): story 7090,
--- then the Crystal Tower (map 3280), where two events move the story to 8000. Round 36's
--- snapshots showed those events write nothing else into the save, so the start can write 8000
--- itself and put the player where the events leave them, and then nothing plays. Arrivals:
---   dock   story 8000 at the tower's dock, where the events end
---   air    story 8000 on the world map, riding the airship beside the tower: what boarding at
---          the dock wrote (the airship's place and direction, riding, event flag 31). The
---          default since round 37, when the user chose it over the dock
---   event  story 7090 at the dock, near save point 139: the two events play (rounds 31, 35)
+-- Open-world start sets story 8000 directly (or 7090 at the dock for `event`). Arrivals:
+--   dock   story 8000 at the Crystal Tower dock
+--   air    story 8000 on the world map riding the airship beside the tower (default)
+--   event  story 7090 at the dock near save point 139, letting the two tower events play out
 G.OPEN_STARTS = {
     dock = { name = "dock", story = 8000, map = 3280, x = -2704.8, y = -171166.7, z = 3002.2, direction = 2 },
     air = { name = "air", story = 8000, map = 1000, x = -5935.0, y = -8305.0, z = 2075.0, direction = 2,
@@ -1904,10 +1831,9 @@ G.OPEN_STARTS = {
     event = { name = "event", story = 7090, map = 3280, x = -2830.0, y = -171140.0, z = 3000.0, direction = 2 },
 }
 G.OPEN_START = G.OPEN_STARTS.air
--- Round 69: a seed with start_with_airship off starts on foot on its starting continent, at the
--- airship landing point beside the continent's main town (gimmicks.tsv). The airship is parked
--- there too, hidden: its spawn condition is flag 1431 (G.AIRSHIP_FLAG), the Archipelago item.
--- Round 68 showed that condition hides it and brings it back at the next map change.
+-- When `start_with_airship` is off, start on foot at the landing point beside the starting
+-- continent's main town (gimmicks.tsv) and park the hidden airship there (spawn condition:
+-- flag 1431 / G.AIRSHIP_FLAG) so unlocking it spawns it at the next map load.
 G.FOOT_STARTS = {
     grandshelt = { x = 12460.0, y = 20700.0, z = 170.0 },   -- the Royal Capital
     lanzelt = { x = 12470.0, y = 14980.0, z = 65.0 },       -- Village of Kol
@@ -1970,10 +1896,9 @@ local function SetFlags(sd, on, off)
     return true, bad
 end
 
--- The map and point a reload starts the player at, as FFRSLib's ffrs_travel writes them. An
--- arrival with `airship` also puts the airship there with the player riding it, and `flags`
--- are turned on (what boarding the airship wrote in round 36). One with `parked` puts the airship
--- there with the player on foot. Returns ok and a report line.
+-- Writes arrival map/coordinates into the save (as ffrs_travel does). `airship` spawns the player
+-- riding the airship with event flags set; `parked` places the airship on the world map while the
+-- player starts on foot. Returns ok and a report line.
 local function WriteArrival(sd, a)
     local ok = pcall(function()
         sd.Map.mapId = a.map
@@ -1987,9 +1912,8 @@ local function WriteArrival(sd, a)
             sd.Map.airShipLocation.Z = a.z
             sd.Map.airShipDirection = a.direction
             sd.Map.IsRidingAirShip = true
-            -- Round 39: the airship was gone after a visit to a town. While this is false the
-            -- game has not placed its airship yet, and its first placement (DT_MapAirShip's
-            -- initSpawnPointId 9000) names a point that is in no map or landing table.
+            -- Keep false only before the airship's initial placement (DT_MapAirShip initSpawnPointId
+            -- 9000 points outside any map/landing table, so otherwise leaving a town loses the airship).
             sd.Map.IsAlreadySpawnAirship = true
         elseif a.parked then
             sd.Map.airShipLocation.X = a.x
@@ -2018,11 +1942,8 @@ local function WriteArrival(sd, a)
     return ok and G.MapId() == a.map, line
 end
 
--- A game value as text: a name, a string or an object's name. Array elements can come back in a
--- UE4SS wrapper that needs :get() first (round 37: the mapping contexts logged as
--- "LocalUnrealParam: 00000000713B9288").
--- Round 41: an array of objects can hold a null one, and asking a null object for its name is an
--- access violation that no pcall catches: the game crashed. IsValid is safe to ask.
+-- Format a UE value as text. Array elements may arrive as UE4SS LocalUnrealParam wrappers that need
+-- :get(), and object arrays can hold null elements whose GetFName() crashes without IsValid().
 local NULL_OBJECT = "(null)"
 local function ObjText(v)
     if type(v) == "string" then return v end
@@ -2038,8 +1959,7 @@ local function ObjText(v)
     return tostring(v)
 end
 
--- What a join needs besides the party list: JoinStatus 0 and usable. Nothing is put in the bag:
--- round 46 saw a spare copy of the unit's gear. Returns how the status was set.
+-- Sets JoinStatus = 0 and marks the unit usable without adding spare gear. Returns status string.
 function G.FinishJoin(id)
     local how = G.SetJoinStatus(id, 0)
     local sd = G.SaveData()
@@ -2048,10 +1968,8 @@ function G.FinishJoin(id)
     return how
 end
 
--- Active Time Chats (round 37: the user wants them all done). The 56 chats of DT_ChatEventData
--- (the rows named ATCnn; the table's Pinger and Nawatobi rows are mini-game lines, not chats).
--- The save keeps one row per chat in chat.DataMap (IsReleased, IsAlreadyPlayed), and the chats
--- waiting to be announced in chat.NoticeQueue. Every chat row turns on event flag 31.
+-- Active Time Chats: the 56 ATCnn rows of DT_ChatEventData (excluding Pinger and Nawatobi
+-- mini-game rows). Save state sits in chat.DataMap (IsReleased, IsAlreadyPlayed) and chat.NoticeQueue.
 local CHAT_NUMBERS = { 1, 2, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 16, 17, 18, 19, 21, 22, 23, 24, 25, 26, 27, 28,
                        29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 47, 48, 49, 50, 51, 52,
                        53, 54, 55, 56, 59, 61, 62, 63 }
@@ -2093,15 +2011,14 @@ function G.MarkChatsPlayed(sd)
         marked, #G.CHAT_IDS, added, okQueue and "" or " FAILED")
 end
 
--- What the story turns on that an open world start still needs:
---   21, 24   visions on the Equip screen (round 39: C01_014_04, at Mitra)
---   13, 34, 1180   fast travel, as Tutorial_FastTravel sets them (round 44; 34 is the Map screen's own)
---   102      the Earth Shrine's exit (round 44: its NoEntry event holds while 102 is off; C01_010_02)
---   25       staggering enemies (round 45: C01_008_02, the Earth Shrine's boss)
---   28       Fina's esper summoning (round 45: C01_037_01_Choice_After, after Siren)
---   90       Siren earned (round 45); her summon itself is an ability, see GrantSiren
--- 1160-1199 and 1217-1229 are every tutorial's "seen" flag (round 45: the OnFlagList of every
--- Tutorial_ row in the talk event table). Tutorials in battles and on maps test these.
+-- Story flags required in an open-world start:
+--   21, 24        visions on the Equip screen (C01_014_04, Mitra)
+--   13, 34, 1180  fast travel (Tutorial_FastTravel; 34 unlocks the Map screen)
+--   102           Earth Shrine exit (C01_010_02 NoEntry barrier clears when 102 is set)
+--   25            staggering enemies (C01_008_02, Earth Shrine boss)
+--   28            Fina's esper summoning (C01_037_01_Choice_After)
+--   90            Siren earned (ability granted separately by GrantSiren)
+-- Flags 1160-1199 and 1217-1229 are tutorial "seen" flags from Tutorial_ talk rows.
 local OPEN_WORLD_FEATURES = { 21, 24, 13, 34, 102, 25, 28, 90 }
 local OPEN_WORLD_TUTORIALS = {}
 for i = 1160, 1199 do OPEN_WORLD_TUTORIALS[#OPEN_WORLD_TUTORIALS + 1] = i end
@@ -2120,11 +2037,8 @@ local SHOP_TABLE = "/Game/Datatable/Event/TalkEvent/CDT_TalkEventData_Prod.CDT_T
 local BATTLE_GROUP_TABLE = "/Game/Datatable/Encount/DT_BattleGroup.DT_BattleGroup"
 local EVENT_SEQUENCE, EVENT_BLUEPRINT = 0, 1
 
--- The 16 sanctum crystals (round 46; data/crystals.tsv). Walking up to one starts event
--- Int_LegendEV_NN_01, or _01_Short after your first; a long scene and three questions end in
--- Int_LegendEV_NN_07, which sets the crystal's flag and gives the vision. So: the opening rows
--- jump straight to row 07, row 07 keeps its flags and gives nothing, and no scene plays (a
--- Blueprint row with no Blueprint is a no-op: the table has such rows, which the story runs).
+-- The 16 sanctum crystals (data/crystals.tsv). Short-circuits Int_LegendEV_NN_01 / _01_Short
+-- directly to row 07, keeping its flag assignment while clearing its vanilla vision reward and scene.
 G.CRYSTALS = {
     { event = 10, map = 10200, flag = 1000 }, { event = 6, map = 10201, flag = 1001 }, { event = 15, map = 10202, flag = 1002 },
     { event = 1, map = 10203, flag = 1003 }, { event = 2, map = 10205, flag = 1007 }, { event = 9, map = 10206, flag = 1009 },
@@ -2162,9 +2076,8 @@ function G.CrystalsPatch()
     return written
 end
 
--- Round 59: boss fights that are locations (data/bosses.tsv, docs/bosses.md). Each still starts
--- by itself on the open world start, because its trigger tests only its own flag, and the row
--- run after a win turns that flag on. So the flag is the check.
+-- Boss locations (data/bosses.tsv, docs/bosses.md). Each boss trigger checks its own win flag
+-- and the victory talk row sets that flag, so the flag reports the check.
 G.BOSSES = {
     { group = 9079, flag = 146 }, { group = 9080, flag = 214 }, { group = 9084, flag = 319 },
     { group = 9085, flag = 320 }, { group = 9094, flag = 433 }, { group = 9093, flag = 434 },
@@ -2176,8 +2089,8 @@ G.BOSSES = {
     { group = 9073, flag = 610 }, { group = 9072, flag = 611 }, { group = 9071, flag = 612 },
     { group = 9076, flag = 613 }, { group = 9004, flag = 1240 }, { group = 9012, flag = 1241 },
     { group = 9014, flag = 1242 }, { group = 9088, flag = 526 }, { group = 9089, flag = 527 },
-    { group = 9060, flag = 113 },   -- round 69: the Antlion (G.AntlionPatch)
-    -- Round 71: story bosses through G.STORY_BOSSES
+    { group = 9060, flag = 113 },   -- Antlion (G.AntlionPatch)
+    -- Story bosses added below via G.STORY_BOSSES
     { group = 9013, flag = 1243 }, { group = 9017, flag = 1244 }, { group = 9031, flag = 1245 },
     { group = 9038, flag = 1246 }, { group = 9039, flag = 1247 }, { group = 9040, flag = 1248 },
     { group = 9044, flag = 1249 }, { group = 9046, flag = 1250 }, { group = 9048, flag = 1251 },
@@ -2202,14 +2115,12 @@ local BOSS_ROWS_NO_STORY = {
     SubEv_BarrierReleased_BattleEnd_02_B = true,
 }
 
--- Round 62: story bosses whose triggers and talk rows test the story counter in the shipped game.
--- Each map rewrites its trigger condition to !{flag:N}, routes its pre-fight talk row through the
--- unused encounter row SubEv_C02_SymbolEnemy_Encount, and finishes with the shared post-battle
--- sequence Gim_EV_Majipot_Delete_02 setting that map's boss flag.
+-- Story bosses whose triggers and talk rows originally check the story counter. Each entry
+-- rewrites the trigger condition to !{flag:N}, routes pre-fight talk through SubEv_C02_SymbolEnemy_Encount,
+-- and finishes with sequence Gim_EV_Majipot_Delete_02 setting that boss's flag.
 local STORY_BOSS_FIGHT, STORY_BOSS_WIN, MAJIPOT_FLAG = "SubEv_C02_SymbolEnemy_Encount", "Gim_EV_Majipot_Delete_02", 915
--- Round 71: kind "list" rewrites one entry of an event list (`field`) on every actor of `class` on
--- the map, the entry that names the boss's own row. It leaves the actor alone otherwise, so a door
--- works as a door again once the boss is won. Flags 1240 to 1260 are used nowhere in the game.
+-- Kind "list" patches only the matching event list entry (`field`) on actors of `class`, leaving
+-- doors functional once defeated. Flags 1240-1260 are unused by vanilla.
 G.STORY_BOSSES = {
     [3000] = { group = 9004, flag = 1240, event = "C01_008_02", unit = 10003, kind = "trigger" },
     [3040] = { group = 9012, flag = 1241, event = "C01_030_01", point = 5000, kind = "transition" },
@@ -2224,16 +2135,13 @@ G.STORY_BOSSES = {
     [3200] = { group = 9038, flag = 1246, event = "C05_540_Retry", kind = "list", class = "BP_MapGimmick_EventTrigger_C", field = "m_EventList" },
     -- Lux, Rugged Mountain Path
     [3230] = { group = 9039, flag = 1247, event = "C06_611_01", kind = "list", class = "BP_MapGimmick_EventTrigger_C", field = "m_EventList" },
-    -- Elfdrit, Gronoa Shrine
-    -- Round 72: the zone is small and the user had to hunt for it, so it is made bigger (`scale`).
+    -- Elfdrit, Gronoa Shrine (enlarged trigger zone)
     [3240] = { group = 9040, flag = 1248, event = "C06_616_01", kind = "list", class = "CPP_MapGimmick_EventTrigger", field = "m_EventList", scale = 4 },
     -- Gelidus, Sanctissimus Shrine: an automatic door
     [3250] = { group = 9044, flag = 1249, event = "C06_627_01", kind = "list", class = "BP_MapTransitionTrigger_C", field = "m_EventList2" },
     -- Ignis, Mt. Reizan
     [3260] = { group = 9046, flag = 1250, event = "C07_707_01", kind = "list", class = "BP_MapGimmick_EventTrigger_C", field = "m_EventList" },
-    -- Tellus, Wandering Lands: the same zone on two maps
-    -- Round 71: not found by the user. The zone on 3270 is at (235, 102590), past where the way
-    -- from 3272 comes in; on 3271 it is at (-1215, 40122). Both made bigger.
+    -- Tellus, Wandering Lands: enlarge the trigger zone on both 3270 (235, 102590) and 3271 (-1215, 40122)
     [3270] = { group = 9048, flag = 1251, event = "C07_713_01", kind = "list", class = "BP_MapGimmick_EventTrigger_C", field = "m_EventList", scale = 4 },
     [3271] = { group = 9048, flag = 1251, event = "C07_713_01", kind = "list", class = "BP_MapGimmick_EventTrigger_C", field = "m_EventList", scale = 4 },
 }
@@ -2242,10 +2150,8 @@ for _, b in pairs(G.STORY_BOSSES) do
     STORY_BOSS_EVENTS[b.event] = true
     STORY_BOSS_GROUPS[b.group] = true
 end
--- Round 62: The Hunger's door fired again as the party came back from the fight, before the win
--- row could run, so the fight looped and flag 1241 never came on. The fight's condition also
--- needs this flag, which main.lua turns on only after the field has been up for a while. Flags
--- 1430 to 1449 are free in the game; 1430 is the Chest Radar and 1440 the boss test.
+-- Guard flag required by patched story boss triggers so returning from battle does not re-trigger
+-- before the victory row runs. main.lua enables it once the field has settled; flags 1430-1449 are unused.
 G.STORY_BOSS_READY_FLAG = 1441
 
 function G.SetStoryBossReady(on)
@@ -2285,9 +2191,8 @@ local function BossTestWriteGroup(row, win)
     row.isResultSkipOnLose = false
 end
 
--- Round 60: the user wants the win's reward pop-up kept, to say what the boss held (as a chest's
--- does). The pop-up needs a reward, so the row gives one Potion in place of its own item, as a
--- blanked chest gives 1 gil.
+-- Replace boss reward with 1 Potion so the victory reward dialog still triggers and the mod can
+-- overwrite it with the scouted AP item.
 local BOSS_STAND_IN = 1
 
 -- Swaps those rewards for the stand-in, takes story values out of win rows, and strips story
@@ -2329,10 +2234,9 @@ function G.BossesPatch()
     return written
 end
 
--- Round 69: the Antlion (battle group 9060) in Lanzelt's sandpit, between Kol and Grandport. A win
--- runs C01_ArijigokuWin, which goes on to _Win_02 (sets flag 113, so the fight is gone for good)
--- only when story flag 10 is on, and to _Win_01 (sets nothing, "it will attack us again")
--- otherwise. Both now go to _Win_02. Returns the number of rows written.
+-- Antlion (battle group 9060) in Lanzelt's sandpit: route both branches of C01_ArijigokuWin to
+-- _Win_02 (sets flag 113) so defeating it permanently clears the passage even without story flag 10.
+-- Returns the number of rows written.
 G.ANTLION_WIN, G.ANTLION_WIN_FOR_GOOD = "C01_ArijigokuWin", "C01_ArijigokuWin_02"
 function G.AntlionPatch()
     local written = 0
@@ -2349,9 +2253,8 @@ function G.AntlionPatch()
     return written
 end
 
--- Round 72: a radar treasure's reward is the location's item now. Its dig row gives one Potion in
--- its place, so the pop-up still shows and the mod writes what the treasure held (as for bosses).
--- Returns the number of rows written.
+-- Replace radar dig row rewards with 1 Potion so the reward dialog still triggers and displays
+-- the scouted AP item. Returns the number of rows written.
 function G.RadarPatch()
     local rows = {}
     for _, t in ipairs(G.RADAR) do rows[t.row] = true end
@@ -2512,10 +2415,8 @@ function G.SyncStoryBossTrigger(say)
     return true, detail
 end
 
--- Round 46: flag 90 alone did not put Siren in the summon menu. An esper is an ability on both
--- Finas: the event after her fight has AddAbilities [6, 430980] and AddCommandAbilities [6] for
--- units 1003 and 1006. 6 is the summon command, 430980 is Siren. Her fight is a story event, so
--- both Finas simply start with her. Safe to run again.
+-- Grant Siren's esper summon ability directly to both Finas (units 1003 and 1006: command ability
+-- 6 + ability 430980), since flag 90 alone does not unlock the summon command. Idempotent.
 local SIREN_UNITS, SIREN_ABILITIES, SIREN_COMMANDS = { 1003, 1006 }, { 6, 430980 }, { 6 }
 local function AppendOnce(list, value)
     for i = 1, #list do
@@ -2537,10 +2438,9 @@ local function GrantSiren(sd)
     return ok, "Siren: summon abilities on both Finas"
 end
 
--- Round 45: the moogle's Vision Enhancement screen has no way out when the save owns no vision.
--- The three talk events that open it are Blueprint rows. While the save owns none they are made
--- Sequence rows, which with no sequence set do nothing (the table has such rows, as cushions).
--- Writes only when the state changes; `force` after a save loads, as a reload can restore a table.
+-- Guard the moogle's Vision Enhancement shopkeeper talk rows: when no vision is owned, convert the
+-- three Blueprint rows to empty Sequence rows (no-ops) so the player cannot enter and get stuck.
+-- Writes only on state change; pass `force` after save loads in case tables reloaded.
 local SHOP_ROWS = { VisionUpgrade = true, VisionUpgrade_Main = true, FEV_Town_10Cry_41_720_01 = true }
 local shopBlocked = nil
 function G.VisionShopGuard(force)
@@ -2613,8 +2513,8 @@ function G.SkipPrologue(opts)
     local open = (opts and opts.openStart) and (opts.arrival or G.OPEN_START) or nil
     local storyTo = open and open.story or G.SKIP_STORY
     local a = open or G.SKIP_ARRIVAL
-    -- The starting party: Rain and Lasswell, or what the seed says (round 44). Nothing in the save
-    -- needs either of them: the game's hard-coded uses are story events, which this start skips.
+    -- Starting party: Rain and Lasswell by default, or the seed's starting party. Non-starting
+    -- story flags are unused once story events are skipped.
     local party = (opts and opts.party) or SKIP_PARTY
     local isStarter = {}
     for _, id in ipairs(party) do isStarter[id] = true end
@@ -2743,8 +2643,7 @@ function G.SkipPrologue(opts)
         step(G.MarkChatsPlayed(sd))
         step(EnableOpenWorld(sd))
         step(GrantSiren(sd))
-        -- Round 44: Jake came in at his story level, 27. Everyone starts at 1, and a member who
-        -- joins later comes in at the party's level (main.lua).
+        -- Reset every unit to level 1; units joining later scale to the party's current average level.
         local bad = {}
         for _, id in ipairs(ALL_PARTY_MEMBERS) do
             local okLevel, why = G.SetUnitLevel(id, 1)
@@ -2757,9 +2656,8 @@ function G.SkipPrologue(opts)
     return not failed, report
 end
 
--- Writes the open world start (G.OPEN_START: story 7090 and the Crystal Tower arrival) into
--- the loaded save, for a save that has already had the prologue skip (round 31 did these two
--- steps by hand after the skip). Saves nothing. Returns ok and report lines, as SkipPrologue.
+-- Applies the open-world start (G.OPEN_START: story 7090 and Crystal Tower arrival) to a save that
+-- already ran the prologue skip. Does not save to disk. Returns ok and report lines.
 function G.OpenStart()
     local sd = G.SaveData()
     if not sd then return false, { "FAIL no save loaded" } end
@@ -2772,12 +2670,8 @@ function G.OpenStart()
         (okFlags and "ok   " or "FAIL ") .. flags }
 end
 
--- Round 9: a reload during the opening movie came up with no menus and no movement, and what
--- holds that lock is not known yet (IDEAS.md, idea 6). The input state as text, to compare a
--- locked game with a normal one: the player controller's own switches (round 36: false in the
--- movie, the locked game and a normal game alike, so not those), then the game's own input
--- manager (a world subsystem, new on each map): IsEnableInput, its input mode, and its stack of
--- mapping contexts.
+-- Dump player controller input flags and input manager subsystem state (IsEnableInput, mode, and
+-- mapping context stack) for diagnosing input locks.
 function G.InputState()
     local pc = PlayerController()
     if not pc then return "no PlayerController" end
@@ -2825,8 +2719,7 @@ function G.InputFix(step)
     return failed
 end
 
--- The first vision's entry and its synchro keys, to the log. Round 38 read G.VISION_SYNCHRO_KEYS
--- with this; a future patch or DLC that adds a party member would show here.
+-- Log the first vision entry and its synchro keys (useful for checking keys after future patches).
 function G.VisionKeys()
     local sd = G.SaveData()
     if not sd then return "no save loaded" end
@@ -2957,10 +2850,9 @@ function G.DumpFieldItems(out)
 end
 
 -- -------------------------------------------------------------------------------------------
--- Artificial gates and custom key items (IDEAS.md, idea 16). Experimental.
+-- Artificial gates and custom key items (experimental)
 -- -------------------------------------------------------------------------------------------
--- Off until `ffrap_gate` runs from the console. Every engine call announces itself through
--- G.gateTrace first so UE4SS.log names the call if the engine crashes.
+-- Inactive unless `ffrap_gate` runs from the console. Logs risky calls via G.gateTrace beforehand.
 
 G.TEST_KEY_ID = 29901
 G.TEST_KEY_NAME = "Bridge Crest"
@@ -3401,47 +3293,35 @@ function G.PollGate()
 end
 
 -- -------------------------------------------------------------------------------------------
--- Open world probes (rounds 31 and 32): enemy levels, the airship, no-landing boxes
+-- Open-world systems: enemy scaling, airship, no-landing zones
 -- -------------------------------------------------------------------------------------------
--- Enemy stats are fixed per unit in DT_UnitParameter: no enemy has a level curve
--- (LevelParamId -1). So a scaled enemy is a rewritten row.
---
--- How a stat moves with level (round 32): a fit over the normal enemies of the encounter
--- tables, log(stat) = a + b*log(level) + c*level (r2 0.48 to 0.88; docs/open_world.md).
--- Only the ratio between two levels is used, so `a` drops out:
---   stat at L = own stat * (L / own)^b * e^(c * (L - own)).
--- Round 31 used a plain growth per level. That moved low enemies too little: a level 30
--- enemy pulled to level 2 kept too much attack. Levels above 70 (the last level in the data)
--- count as 70 for the curve. MP is left alone: it does not follow level.
+-- Enemy stats are fixed per unit in DT_UnitParameter (LevelParamId = -1), so scaling rewrites
+-- table rows directly using a log-linear fit from normal encounter groups (docs/open_world.md):
+--   log(stat) = a + b*log(level) + c*level
+--   stat(L) = base * (L / baseLevel)^b * e^(c * (L - baseLevel))
+-- Levels above 70 clamp to 70 for the curve. MP is left untouched.
 local UNIT_TABLE = "/Game/Datatable/Unit/DT_UnitParameter.DT_UnitParameter"
 G.ENEMY_CURVE = {
     MaxHitPoint = { 0.3675, 0.08917 }, MaxBreakPoint = { -0.1249, 0.05094 },
     Attack = { 0.3207, 0.02946 }, Defence = { 0.7752, 0.00867 },
     Intelligence = { 0.5644, 0.03269 }, Mind = { 0.7289, 0.01236 },
     Agility = { 0.7853, 0.00899 }, Experience = { -0.0647, 0.12967 }, Money = { 0.0934, 0.09910 },
-    -- Not a unit's stat: the MRP a battle gives, `ap` in DT_BattleGroup, against its enemies'
-    -- average level. Round 47: 459 groups without a boss, r2 0.70.
+    -- Battle-group MRP (`ap` in DT_BattleGroup) fitted against group average enemy level.
     BattleMRP = { 0.0689, 0.06162 },
 }
 G.CURVE_TOP = 70
 local GROWTH_ORDER = { "MaxHitPoint", "MaxBreakPoint", "Attack", "Defence", "Intelligence", "Mind",
                        "Agility", "Experience", "Money" }
--- Which stats each tuning knob multiplies: `hp` the HP, `attack` the physical damage stat,
--- `magic` the magic one (round 33: physical hits were much stronger than spells).
+-- Tuning multipliers: `hp` scales HP, `attack` scales Attack, `magic` scales Intelligence.
 local KNOB_STATS = { MaxHitPoint = "hp", Attack = "attack", Intelligence = "magic" }
 local CATEGORY_ENEMY, CATEGORY_BOSS = 2, 3     -- eUnitCategory
--- Round 62: The Hunger (unit 113) and the cave masters are in the Enemy category, so they were
--- scaled as plain enemies. The Hunger also ships with 0 EXP. A unit in a boss location's battle
--- group (G.BOSSES) is scaled as a boss. While scaling is on, one with no EXP gets a story boss's
--- EXP for its level: Mom Bomb (level 14) and Liquid Thunder (level 13) both ship with about 1350.
+-- Units in boss battle groups (G.BOSSES) scale as bosses even if categorized as Enemy (e.g. The
+-- Hunger and cave masters); those with 0 base EXP receive story-boss EXP (~1350 around Lv 13-14).
 local BOSS_EXP_LEVEL, BOSS_EXP = 14, 1350
 
--- Round 63: the Arena's rank battles are scaled as bosses too (the user: the Arena should be a
--- challenge). Groups 9705 to 9720 are Brawler Battle 1 to Champion Battle 5, and 9721 is the
--- Microchus Ochu calls in. Their units fight nowhere else. The Fledgling battles (9700 to 9704)
--- are left out: their units are field enemies (Wyvern, Coeurl, Balaur and more), and scaling
--- writes the unit's row, so they would be boss-strength on the field too. Arena units ship with
--- 0 EXP and keep it: the Arena pays in items.
+-- Arena rank battles (9705-9721: Brawler 1 through Champion 5 plus Microchus spawns) also scale as
+-- bosses since their units appear nowhere else. Fledgling battles (9700-9704) share field-enemy
+-- rows and are excluded; Arena enemies keep 0 EXP.
 local ARENA_BOSS_GROUPS = { first = 9705, last = 9721 }
 
 -- The units scaled as bosses whatever their category: those in a boss location's group (they get
@@ -3504,10 +3384,8 @@ function G.ScaledLevel(own, mode, a, b)
     return math.max(1, math.min(G.MAX_LEVEL, math.floor(lv)))
 end
 
--- The band of enemy levels for a party level: centred on `at` percent of the party's level
--- (100: the party's own level), from `range` below it to `above` over it (`range` when nil). In
--- the shipped game the party gets well ahead of the enemies from Olderion on (round 32), so `at`
--- below 100 is closer to it.
+-- Target enemy level band centered on `at`% of party level, clamped to [center - range, center + above].
+-- Values below 100 compensate for party outleveling later vanilla regions.
 function G.LevelBand(partyLevel, range, at, above)
     local c = math.max(1, math.floor(partyLevel * (at or 100) / 100 + 0.5))
     return c - range, c + (above or range), c
@@ -3524,9 +3402,8 @@ function G.UnitLevel(unitId)
     return nil
 end
 
--- Sets a party member's level, as the XP the game says it takes (FFRSLib's ffrs_unit_level), and
--- fills HP and MP for it (isMaxStatusSet: without it a unit brought down from level 27 keeps
--- level 27's HP). Round 44. Returns ok and a detail.
+-- Sets a unit's level via XP (as ffrs_unit_level does) and refills HP/MP via isMaxStatusSet so
+-- lowered units do not retain higher-level HP. Returns ok and a detail.
 function G.SetUnitLevel(unitId, level)
     local lib = Lib("CPP_BFL_Unit")
     if not (lib and lib.GetExpForReachLevel and lib.SetPlayableUnitExperience) then return false, "no unit library" end
@@ -3544,9 +3421,8 @@ function G.SetUnitLevel(unitId, level)
     return true, "level " .. level
 end
 
--- Round 44: the save slot's level stayed at 1 in a party without Rain, so the game takes it from
--- her. While she has not joined her level is ours to set: it follows the party. She joins at the
--- party's level anyway. Returns true when it wrote a level.
+-- Save slot level is read from Rain even if Rain has not joined, so keep her level synced to the
+-- active party while she remains unjoined. Returns true when a level write occurred.
 local RAIN = 1001
 function G.SyncSlotLevel()
     if G.UnitJoinStatus(RAIN) == 0 then return false end
@@ -3595,24 +3471,18 @@ function G.SetProgressValue(i, n)
     return G.ProgressValue(i)
 end
 
--- Round 72: the airship radar (IDEAS.md idea 32). Its 13 treasures are pinger points at sea. A
--- pinger works while flag 702 (the radar) is on, its own found flag (704 to 716) is off, and, from
--- the sixth, {progress:49} is at least 40, from the tenth at least 50. Each also needs the one
--- before it found ({progress:51}, which each dig row sets). A dig row turns on flag 703 and its
--- found flag, which is the location's check.
+-- Airship radar treasures: 13 sea pinger points enabled by flag 702 (radar), gated sequentially by
+-- found flags (704-716), {progress:49} (>= 40 for #6+, >= 50 for #10+), and {progress:51}. Each dig
+-- row sets flag 703 and its found flag (used as the check).
 G.RADAR_ON_FLAG, G.RADAR_TIER_PROGRESS = 702, 49
 G.RADAR_TIER_VALUES = { [2] = 40, [3] = 50 }
 G.RADAR = {}
 for n = 1, 13 do G.RADAR[n] = { n = n, flag = 703 + n, row = string.format("SubEv_C05_TreasureRadar_01_%02d", n) } end
 
--- Round 33's log: a rescale read Steel Bat (shipped level 1, HP 68) as level 47, HP 4800, and
--- later 214 rows no longer held what we wrote. The FFR Randomizer mod did both: its enemy
--- shuffle gives Steel Bat the stats of Nanochu (level 47), and it writes its rows again every
--- 3 seconds. So "original" is the table's latest values, not the shipped ones: a row that
--- changed since our last write gives a new original, and `off` gives back what is there.
+-- Track latest external values as "originals" (e.g. if FFRRandomizer overwrites enemy rows every 3s)
+-- so turning scaling off restores current table values rather than stale pre-mod values.
 local scaleOriginals = {}   -- unit id -> { Level = n, MaxHitPoint = n, ... } as the game last had it
--- Round 47: MRP is on the battle group, not the enemy, so a rescale left it alone, and a seed that
--- started on a late continent got far more of it. A group's MRP follows its enemies' average level.
+-- Battle-group MRP (`ap`) lives on the battle group table and scales with group average level.
 local groupOriginals, groupWrote = {}, {}   -- battle group id -> MRP as shipped, and as last written
 local function ScaleBattleGroups(mode, wanted)
     local changed = 0
@@ -3668,7 +3538,7 @@ end
 
 -- Rescales every enemy row (and bosses too, if withBosses) by mode, a, b, as in ScaledLevel,
 -- with the tuning knobs of ScaledStats. `bossBand` ({ a, b, knobs }) gives bosses their own band
--- and knobs (round 49: bosses were too easy at the enemies' 75%). mode "off" restores the originals. Returns how many
+-- and knobs. mode "off" restores the originals. Returns how many
 -- rows changed, one sample line (the first enemy that changed) for the log, a line per changed
 -- row (for scale.txt), and how many rows something else had changed since our last write
 -- (their values became the new originals).
@@ -3754,10 +3624,9 @@ function G.ScaleEnemies(mode, a, b, withBosses, knobs, bossBand)
     return changed, sample, lines, gameChanged
 end
 
--- Round 33: a Pharm enemy showed a level that the last rescale did not give it. Whether the
--- table still holds what the last rescale wrote. Returns how many rows it checked, how many
--- differ, one sample ("Metal Gigantuar (298): level 45, HP 9000, wrote level 3"), and whether the table is a
--- different object now (loaded again). nil when no rescale is in force, or the table is gone.
+-- Verify whether DT_UnitParameter still matches what the last rescale wrote (detecting table reloads
+-- or overwrites by other mods). Returns checked count, mismatch count, one sample, and reload flag;
+-- nil if no rescale is active or the table is unloaded.
 function G.ScaleCheck()
     if not scaleWanted then return nil, "no rescale in force" end
     local family = TableFamily(Find(UNIT_TABLE))
@@ -3851,9 +3720,8 @@ function G.AirshipCondition(cond)
     return now
 end
 
--- Round 69: for a seed with the airship as an item, its spawn condition is the item's flag. The
--- table can be loaded again, so main.lua calls this often. Off, it puts back the game's own only
--- over ours, so an ffrap_airship test stays. Returns the condition written, or nil.
+-- Rewrites DT_MapAirShip's spawn condition for airship-as-an-item seeds (re-applied because the
+-- table can reload). Off restores vanilla only over mod conditions, preserving ffrap_airship tests.
 function G.AirshipItemSync(asItem)
     local want = asItem and G.AIRSHIP_ITEM_CONDITION or G.AIRSHIP_CONDITION
     local now = G.AirshipCondition()
@@ -3876,16 +3744,11 @@ function G.ParkAirship(x, y, z)
     return readX == x
 end
 
--- No-landing boxes (round 32). The world map has 111 BP_MapNonLandingArea_C actors.
--- Each is a box (a CPP_MapAirShipCanNeverLandingBox component) with an m_Condition string;
--- while the condition holds (or when it is empty), the airship cannot land in the box. Before
--- story 5020 one big box (2400 x 6000 x 700, condition {progress:0}<5020) keeps the airship
--- off Mysidia. So a continent lock can be the same: a big box with our own condition. The
--- Blueprint has no script: the box and the condition are read by C++ (CPP_MapNonLandingArea).
---
--- Round 32: a box spawned at the airship, 6000 tall, lifted the airship over it (its collision
--- counts as ground), and the airship could still land. So boxes now go where the game puts
--- its own: centred at height 393, 700 up and down, like the Mysidia box.
+-- No-landing boxes. The world map has 111 BP_MapNonLandingArea_C actors, each holding a
+-- CPP_MapAirShipCanNeverLandingBox with m_Condition (empty or true blocks landing). Blueprint
+-- has no script; C++ CPP_MapNonLandingArea evaluates the box and condition.
+-- Boxes must sit at terrain ground height (centered at Z=393, +/-700 like the Mysidia box); boxes
+-- placed too high act as solid ground and let the airship land atop them.
 local NOLAND_CLASS = "BP_MapNonLandingArea_C"
 local NOLAND_PKG, NOLAND_NAME = "/Game/BP/Map/BP_MapNonLandingArea", "BP_MapNonLandingArea"
 G.MYSIDIA_BOX_CONDITION = "{progress:0}<5020"
@@ -3946,12 +3809,8 @@ local function BoxLine(i)
 end
 G.NoLandLine = BoxLine
 
--- Round 33: a changed condition took effect only after the airship landed and took off again,
--- and a spawned box hid the airship's shadow. So the game reads the condition at some moments
--- and does something to the box; the collision is the first guess. A box's collision as text:
--- the actor's switch, the component's ECollisionEnabled (0 none, 1 query, 2 physics, 3 both),
--- its profile and object type, and its response to channels 0 to 7 and 14 to 31 (the game's
--- own channels), one digit each (0 ignore, 1 overlap, 2 block).
+-- Format a no-landing box's collision state: actor enabled, ECollisionEnabled (0 none, 1 query,
+-- 2 physics, 3 both), profile/object type, and channel responses (0 ignore, 1 overlap, 2 block).
 local COLLISION_CHANNELS = { 0, 1, 2, 3, 4, 5, 6, 7, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31 }
 function G.NoLandCollision(i)
     local actor = i.actor
@@ -4005,12 +3864,8 @@ function G.NoLandHere()
     return out, pose
 end
 
--- Round 35: `lock pharm` did nothing that could be seen, and the Pharm story box was not found
--- by eye. It sits at z 110 to 370, and some of Pharm is high ground, so the box may be buried.
--- What is under the player: a line trace straight down on the Visibility channel, which the
--- no-landing boxes block while their collision is on. The player's own actor (the airship in
--- flight) is ignored. A no-landing box that is hit is listed, and the trace goes on from under
--- its bottom, so the ground comes last. Returns a list of { name, z, box }, or nil and why.
+-- Line trace down on the Visibility channel from the player (ignoring player/airship) to inspect
+-- all overlapping no-landing boxes and ground height (useful where high terrain buries default Z bounds).
 local TRACE_DOWN_TO = -20000
 local TRACE_MAX_HITS = 4
 function G.GroundUnder()
@@ -4031,8 +3886,7 @@ function G.GroundUnder()
         end)
         if not okCall then return nil, "LineTraceSingle failed: " .. tostring(err) end
         if not okHit then break end
-        -- Round 36: the hit is a component (BoxComponent, LandscapeHeightfieldCollisionComponent_80),
-        -- so the box is known by its owner's name.
+        -- Trace returns the hit component, so identify boxes via their owning actor's name.
         local name, z, hitObj = "?", nil, nil
         pcall(function() hitObj = hit.HitObjectHandle.ReferenceObject:Get() end)
         pcall(function() name = hitObj:GetFName():ToString() end)
@@ -4067,13 +3921,9 @@ local function PlaceBox(actor, x, y, z, hx, hy, hz, cond)
     return BoxInfo(actor)
 end
 
--- Adds the spawned boxes that are not listed yet to the shadow's ignore list on `pawn`. The
--- airship's shadow is placed by a sphere trace, and the game lists every one of its own
--- no-landing boxes for that trace to ignore (round 38: 111 boxes, the airship itself,
--- CPP_MuchaWorldSetting and StaticMeshActor_2). A listed box gives the red shadow over it, and
--- landing stays blocked. Returns the list's size before and after, and the names in it that are
--- not the game's own boxes, and how many entries are null (round 41); nil when `pawn` is not the
--- airship. `actors` defaults to the probe's spawned boxes.
+-- Adds spawned boxes to the airship shadow trace ignore list (`m_ShadowDecalSphareTraceActorsToIgnore`),
+-- which makes the airship's red no-landing shadow render over them while blocking landing.
+-- Returns before/after list sizes, non-vanilla entries, and null entry count (nil if not on airship).
 ShadowIgnoreAdd = function(pawn, actors)
     actors = actors or nolandSpawned
     local list = ShadowList(pawn)
@@ -4107,10 +3957,8 @@ ShadowIgnoreAdd = function(pawn, actors)
     return before, #list, names, nulls
 end
 
--- Spawns a new no-landing box under the player: `half` across each way (default 2000), 1400
--- tall, its top at `top` (default 1093: the Mysidia box's top). Round 35: on high ground the
--- default box may be buried, so the top can be set above the ground that GroundUnder finds.
--- Returns the box, or nil and why.
+-- Spawns a no-landing box under the player: `half` across each way (default 2000), 1400 tall,
+-- top at `top` (default 1093, raised above GroundUnder when terrain is elevated). Returns box or nil, why.
 function G.NoLandSpawn(half, top)
     local pose, why = G.PlayerPose()
     if not pose then return nil, why end
@@ -4124,7 +3972,7 @@ function G.NoLandSpawn(half, top)
     nolandSpawned[#nolandSpawned + 1] = actor
     half = half or 2000
     local box, problem = PlaceBox(actor, pose.x, pose.y, z, half, half, G.NOLAND_HALF_Z, nil)
-    ShadowIgnoreAdd(pose.pawn)   -- round 38: without this the shadow is gone over the box
+    ShadowIgnoreAdd(pose.pawn)   -- keep the airship shadow visible over the spawned box
     return box, problem
 end
 
@@ -4146,10 +3994,7 @@ function G.NoLandMove(half)
     return PlaceBox(target, pose.x, pose.y, nolandMoved.z or G.NOLAND_Z, half, half, nolandMoved.ez or G.NOLAND_HALF_Z, "")
 end
 
--- Round 36: over a spawned box the airship's shadow is gone. The boxes block the Visibility
--- channel (3), which a shadow is likely placed with. Sets the spawned boxes' response to one
--- channel (0 ignore, 1 overlap, 2 block), to find a setting that keeps the shadow and still
--- blocks landing. Returns how many boxes took it.
+-- Set spawned no-landing box collision response for a channel (0 ignore, 1 overlap, 2 block).
 function G.NoLandChannel(channel, response)
     local n = 0
     for _, a in ipairs(nolandSpawned) do
@@ -4182,8 +4027,7 @@ end
 -- One of the game's story boxes (mysidia, gronoa or pharm) locked (on: its condition always
 -- holds, so no landing) or unlocked (it never holds). The box stays where the game put it.
 -- Returns the box read back, or nil and why.
--- Every box with the story condition is written (round 33: a lock that did nothing may have
--- missed a second box). Returns the boxes read back (a list), or nil and why.
+-- Rewrites every box carrying that story condition (some areas have multiple boxes). Returns box list, or nil and why.
 function G.NoLandLock(which, on)
     local orig = G.STORY_BOXES[which]
     if not orig then return nil, "no story box called " .. tostring(which) .. " (mysidia, gronoa, pharm)" end
@@ -4212,11 +4056,8 @@ function G.NoLandLock(which, on)
     return out, err
 end
 
--- Round 34 probe: make the boxes we changed take effect now, without landing. Each box's
--- collision is switched on (as on a box with no condition, which always blocks) when its
--- condition is one that holds, and off when it never holds. Only conditions we wrote are
--- judged: "" and COND_ALWAYS hold, COND_NEVER does not; other boxes are left alone. Returns
--- how many were switched on and off, and the collision value used for "on".
+-- Immediately update box collision for modified boxes to match their written conditions (COND_ALWAYS
+-- or "" enables collision, COND_NEVER disables it; untouched boxes are skipped). Returns counts and collision flag.
 function G.NoLandRefresh()
     local onType
     for _, i in ipairs(G.NoLandBoxes()) do
@@ -4276,10 +4117,8 @@ function G.NoLandShow(on, width)
     return n
 end
 
--- Round 37: setting channels 3 and 4 did not bring the shadow back; round 38: this list did
--- (CPP_MapUnit_AirShip.m_ShadowDecalSphareTraceActorsToIgnore). A spawn now does it by itself.
--- This adds any spawned box the airship the player is riding has not listed: after boarding
--- again, say. Returns as ShadowIgnoreAdd, or nil and why.
+-- Re-adds any spawned boxes missing from the active airship's m_ShadowDecalSphareTraceActorsToIgnore
+-- list (e.g. after boarding). Returns as ShadowIgnoreAdd, or nil and why.
 function G.NoLandShadow()
     local pose, why = G.PlayerPose()
     if not pose then return nil, why end
@@ -4296,12 +4135,9 @@ end
 -- each of those lies in exactly one continent (a test checks this). Boxes are (x0, y0, x1, y1).
 -- The seas between continents take the slack, as the airship cannot land on water anyway. The
 -- Crystal Tower's exit is in no box.
--- Round 38 and 39: a box on the shadow's ignore list gives the red shadow and blocks landing, and
--- the listing lasts through boarding. Round 40: a box does not last through a map change, so
--- ContinentSync places them again each time the world map loads.
--- A continent's lock is one event flag in the save: off is locked, on is open. So an unlock
--- belongs to the save, and an Archipelago item can open one with the existing `flag` item kind.
--- Flags 1420 to 1429 are used nowhere in the game's data (the game's own run up to 1413, then 1450).
+-- Boxes on the airship's shadow ignore list show the red no-landing shadow and block landing across
+-- boarding; map transitions destroy spawned boxes, so ContinentSync re-creates them on world-map loads.
+-- Each continent lock maps to an unused event flag (1420-1429; off = locked, on = open).
 G.WORLD_MAP = 1000
 G.CONTINENTS = {
     { name = "grandshelt", flag = 1420, boxes = { { 8400, 17500, 20600, 24000 } } },
@@ -4324,8 +4160,8 @@ local continentListedLength, continentSeen, continentFresh = nil, 0, false
 -- The walking crossings' blockers (G.CrossingSync), by index in the list given, and the world
 -- they were placed in. One table, as the main chunk is at Lua's limit of 200 locals.
 local crossing = { actors = {}, world = nil }
--- Syncs that must see one controller before boxes go in. Round 41: on the way back from a town
--- the boxes were placed once while the world map was still arriving, and again 3 seconds later.
+-- Sync passes that must observe an active controller before placing boxes (world-map arrival settles
+-- before actors persist).
 G.CONTINENT_SETTLE = 3
 
 local function ContinentNamed(name)
@@ -4390,11 +4226,9 @@ local function PlaceLocked(world)
     return placed, removed
 end
 
--- Round 42: after loading a save in the air, the player could land in the first seconds, before
--- the first sync. This runs from the engine's LoadMap post hook, so the boxes are in before the
--- first frame of the new map and the player never has a moment without them. A new map always
--- means the old boxes are gone, so they are forgotten here whatever the map is. `place` is the
--- switch: off only forgets. Returns as PlaceLocked, or nil and why.
+-- Runs from the LoadMap post-hook so boxes are placed before frame 1 when loading a save mid-air.
+-- Any map transition clears previously spawned boxes; when `place` is false, only clears tracking.
+-- Returns as PlaceLocked, or nil and why.
 G.WORLD_LEVEL = "Wld_PL"
 function G.ContinentMapLoaded(world, place)
     continentActors, continentListed, continentListedLength = {}, nil, nil
@@ -4501,16 +4335,12 @@ function G.IsContinent(name)
 end
 
 -- -------------------------------------------------------------------------------------------
--- Walking crossings and the ferry (round 67, docs/open_world.md section 4)
+-- Walking crossings and the ferry (docs/open_world.md, section 4)
 -- -------------------------------------------------------------------------------------------
--- The landing locks stop only the airship. On foot, the world map joins some continents (round
--- 44: Grandshelt and Lanzelt), and no door or cave in the game data joins two. A crossing is a
--- world-map blocker between continents `a` and `b` that holds while either is locked:
--- { a, b, x, y, z, yaw, scale }. main.lua passes the list: crossings.txt when the user has one
--- (marked in game with ffrap_gate), else G.CROSSINGS.
--- Round 67: the only two crossings on foot, marked by the user. +X is north on screen. The stone
--- bridge (Grandshelt-Lanzelt) is part of the landscape, not an actor, so these places come from
--- play, not the game data. Round 68: turned, sized and moved by the user to sit on each bridge.
+-- Landing locks only block the airship; on foot, world-map bridges/ferries link continents (`a`, `b`,
+-- `x`, `y`, `z`, `yaw`, `scale`) and stay blocked while either continent is locked. main.lua passes
+-- crossings.txt when present, otherwise G.CROSSINGS. Stone bridges are landscape geometry (+X north),
+-- not actors, so coordinates reflect in-game placement via ffrap_gate.
 G.CROSSINGS = {
     { a = "grandshelt", b = "lanzelt", x = 13684, y = 16599, z = 87, yaw = 90.0, scale = 1.5 },
     { a = "lanzelt", b = "kolobos", x = 7834, y = 13928, z = 61, yaw = 90.0, scale = 1.5 },
@@ -4645,29 +4475,14 @@ function G.NoLandOff()
 end
 
 -- -------------------------------------------------------------------------------------------
--- The boss fight test (ffrap_bossfight, round 49; IDEAS.md, idea 25)
+-- Boss fight probe (ffrap_bossfight)
 -- -------------------------------------------------------------------------------------------
--- Can any boss be fought from anywhere, and can a win be seen? A battle group names the talk row
--- to run after a win (battleFinishEventId), which is how strong enemies give rewards. Mods 0.35.0
--- to 0.35.3 started the fight from a sanctum crystal through a borrowed talk row, and no battle
--- started in four tries, with the row's own group too. So the trigger is now a chest. Every chest
--- row has IsTrap, battleGroupId and battleFinishEventId: a monster-in-a-box. No shipped chest sets
--- IsTrap, so whether the engine still acts on it is what this finds out. The closed chests loaded
--- near the player become traps for the group. A live chest keeps its own copy of its row, so the
--- copy and the table row are both written, as chest blanking does.
--- The second trigger is the game's own: the sword pedestal in the Chamber of Arms (map 3290)
--- asks "challenge?" and goes straight to its fight row. Only that row's group number changes, so
--- the rest of the chain is as shipped. It needs the Ancient Greatsword in the bag and flag 901
--- off. If Siren appears there but not from a crystal, the crystal failure was our chain.
--- The win row sets a flag nothing else uses, so flag 901 stays off and the pedestal can be used
--- again. Round 49: with the Victory row made a Blueprint row with no Blueprint, both wins ended
--- on a black screen. The screen is faded out after a battle, and every after-win row the game
--- ships is a Sequence row. So the win row is now either the Victory row with its own scene
--- (only its flags and item change), or, with `quiet`, the magic pot fights' after-win row
--- Gim_EV_Majipot_Delete_02: a short shared sequence whose only effect is flag 915, which our
--- flag replaces. Round 49 tried choice_cancel (a Sequence row with no sequence) for `quiet`, and
--- the screen stayed black too: an after-win row needs a sequence to fade back in. `off` undoes
--- it all but the Victory row's item, which comes back when the game restarts.
+-- Turns nearby closed chests (via IsTrap / battleGroupId / battleFinishEventId, modifying both live
+-- actor copies and table rows) and the Chamber of Arms sword pedestal (map 3290; needs Ancient
+-- Greatsword and flag 901 off) into triggers for an arbitrary battle group.
+-- Post-battle talk rows must point to a Sequence row so the faded battle screen fades back in
+-- (otherwise the screen stays black): either the Victory row's scene or Gim_EV_Majipot_Delete_02
+-- for `quiet` (flag replaced with G.BOSS_TEST_FLAG). `off` restores everything except the Victory item.
 G.BOSS_TEST_FLAG = 1440       -- no condition or talk row in the game uses flags 1430 to 1449
 G.BOSS_TEST_SWORD = 10198     -- the Ancient Greatsword, which the sword pedestal checks for
 local BOSS_TEST_FIGHT, BOSS_TEST_VICTORY, BOSS_TEST_QUIET = "12Arms_01Sword_1stAwake_Encount", "12Arms_01Sword_1stAwake_Victory", "Gim_EV_Majipot_Delete_02"
@@ -4789,17 +4604,11 @@ function G.BossTestArm(id, say, quiet)
 end
 
 -- -------------------------------------------------------------------------------------------
--- Player settings (round 50; IDEAS.md, idea 18)
+-- Player settings
 -- -------------------------------------------------------------------------------------------
--- EXP, gil and MRP rates, random encounters and their rate. Our mod owns these. FFRS_QoL writes
--- the same rows with its multipliers and encounter settings, so with both on they undo each
--- other: turn FFRS_QoL's versions off. The rates are the reward rates per difficulty in
--- DT_GameDifficultyParam, as shipped: 1 for all, but MRP 1.5 on Expert. A random encounter comes
--- after walking a random distance between a map's encountMin/MaxMovementLength (the chocobo's
--- apart), and only where doMovementEncount is on. Those are MAP_DATA rows, one table per region.
--- A rate divides the distances, so 2 is twice as many battles. A map's row is read as it loads,
--- so while encounters are off the player on the current map also gets an encounter distance out
--- of reach, as FFRS_QoL does.
+-- EXP, gil, and MRP multipliers (DT_GameDifficultyParam) plus random encounter toggles/rates
+-- (regional MAP_DATA tables and current player encounter threshold). Note: FFRS_QoL writes the same
+-- fields, so turn off FFRS_QoL's versions if both mods are installed.
 do
 local DIFFICULTY_TABLE = "/Game/Datatable/Difficulty/DT_GameDifficultyParam.DT_GameDifficultyParam"
 local SHIPPED_RATES = { Easy = { 1, 1, 1 }, Normal = { 1, 1, 1 }, Expert = { 1, 1, 1.5 } }
@@ -4896,24 +4705,16 @@ function G.ApplyPlayerEncounter(on)
 end
 end
 
--- Round 50: our settings as rows of the game's Options screen, Gameplay tab (ffrap_menu add). The
--- tab is the rows of DT_OP_GameSetting. Round 50's probe showed the screen draws rows we add. A
--- row has a Type (Slider or RadioButton), a DisplayText, an ItemDescription (the footer) and an
--- EntryTag. The game saves each row's value as a float under its EntryTag, in the option save's
--- m_EntrySaveDataList (CPP_MuchaOptionSaveData): a slider's number, or a switch's index (On 0,
--- Off 1). So our rows get tags of their own, copied from a slider and a switch of the game's, and
--- their values are read back from that map. Sliders move in steps of 1.
--- Round 51: the screen held our values as pending changes, but Apply saved none of them: the save
--- had no entry under our tags, and the game only updates entries it has. So adding the rows also
--- adds an entry per tag (OPTION_SAVEDATA_SETTING: Value, IsDisplay, Type: Slider 1, RadioButton 2),
--- seeded from the current settings, unless the save has one already (the game keeps it on disk).
+-- Options > Gameplay custom rows in DT_OP_GameSetting. Each row uses an EntryTag copied from a
+-- vanilla Slider or RadioButton so m_EntrySaveDataList (CPP_MuchaOptionSaveData) persists it; we
+-- also seed missing OPTION_SAVEDATA_SETTING entries (Slider 1, RadioButton 2) because Apply only
+-- updates pre-existing save entries.
 do
 local OPTION_GAMEPLAY = "/Game/Datatable/UI/Option/Root/GameSetting/DT_OP_GameSetting.DT_OP_GameSetting"
 local OPTION_SLIDER = "Delegate.UI.System.Option.Root.GameSetting.GamePad.Sensitivity"
 local OPTION_SWITCH = "Delegate.UI.System.Option.Root.GameSetting.EncountSensor"
--- Round 56: the Difficulty row's choices (DT_OP_RadioButton_Difficulty) read Casual, Normal and
--- Expert, which is what our scaling strength needs. A copy has our tag, so it does not change the
--- game's own difficulty.
+-- Copy DT_OP_RadioButton_Difficulty choices (Casual, Normal, Expert) for scaling strength with
+-- an independent EntryTag so changing it leaves the game's actual difficulty untouched.
 local OPTION_CHOICE = "Delegate.UI.System.Option.Root.GameSetting.Difficulty"
 local OPTION_TAG = "Delegate.UI.System.Option.Root.GameSetting.FFRAP."
 G.OPTION_ROWS = {
@@ -4925,16 +4726,13 @@ G.OPTION_ROWS = {
       label = "AP: MRP rate", help = "MRP from battles, as a multiple of normal." },
     { key = "encounters", row = "FFRAP_Encounters", copy = OPTION_SWITCH, default = 0,
       label = "AP: Random encounters", help = "Off: walking never starts a battle. Bosses and set battles still happen." },
-    -- Round 60: the user wants 0.5 to 3 in steps of 0.5. The slider moves in whole steps and its
-    -- row has no step size, so each step counts as a half. The row has a new name, so a value
-    -- saved under the old one (whole rates) is not read as halves.
+    -- Slider moves in integer steps with no fractional step field, so each tick represents 0.5x
+    -- (0.5-3.0). Renamed row avoids misreading old whole-rate saved values as half steps.
     { key = "encounterrate", row = "FFRAP_EncounterHalves", copy = OPTION_SLIDER, min = 1, max = 6, default = 2, step = 0.5,
       label = "AP: Encounter rate (x0.5)", help = "How often random battles come, in halves: 1 is half as often, 2 is normal, 6 is three times as often." },
     { key = "scaling", row = "FFRAP_Scaling", copy = OPTION_SWITCH, default = 0,
       label = "AP: Enemy scaling", help = "Enemies follow your party's level. Off: the game's own levels." },
-    -- A choice row's labels come from the radio button table it points to (DT_RadioButton), and
-    -- every such table in the game is in use. Round 63 tried a 1 to 3 slider for names of our
-    -- own; its label ran past its box, and the user chose the game's labels back.
+    -- RadioButton labels come from referenced DT_RadioButton tables, keeping labels within UI bounds.
     { key = "strength", row = "FFRAP_ScalingStrength", copy = OPTION_CHOICE, choices = 3, default = 1,
       label = "AP: Scaling strength", help = "How strong scaled enemies and bosses are. It stacks with the game's own difficulty." },
 }
@@ -5018,11 +4816,8 @@ function G.AddOptionRows(say, current)
         (seeded and (seeded .. " option save entries added") or "no option save found"), added
 end
 
--- Round 57: the rows did not stay. They went in once per save load, so a table the game loaded
--- again lost them, and the title screen's Options never had them. This checks the table and puts
--- the rows back when they are missing; main.lua calls it every tick, at the title too. A table
--- not in memory is loaded, so the screen finds ours when it opens. Returns how many rows were
--- added (0 when they were there), or nil and why.
+-- Ensure our custom Options rows are present in DT_OP_GameSetting (re-inserted whenever the game
+-- reloads the table, including at the title screen). Returns rows added, or nil and reason.
 function G.EnsureOptionRows(current)
     local dt = LoadObject(OPTION_GAMEPLAY)
     if not dt then return nil, "DT_OP_GameSetting could not be loaded" end
@@ -5060,9 +4855,8 @@ function G.ReadOptionValues()
     return out
 end
 
--- Round 51: where our Options rows' values go (ffrap_menu dump). Round 50 set them and applied,
--- and nothing reached us. Lists every option save object found and its entries, and the open
--- Options screen's pending changes (CPP_VM_Option.ChangingOptionSetting). Returns lines.
+-- Diagnostic dump for ffrap_menu dump: lists every option save object's entries and open Options
+-- screen pending changes (CPP_VM_Option.ChangingOptionSetting). Returns lines.
 function G.OptionDump()
     local lines = {}
     local function entries(map, label)
@@ -5099,13 +4893,9 @@ end
 end
 
 
--- Round 58: the final boss lock. In the Crystal Tower (map 3280) the climb to the top floor
--- (3281) starts at an interact trigger, gimmick 133, whose event is
--- C08_Dng_10Cry_41_CanNotRetrun_01: the point of no return. The lock goes before it, or a player
--- without the counts could be stuck upstairs. With its collision off the trigger cannot be
--- reached, so the prompt never comes; on again, it works as the game made it. It is found by its
--- position in gimmicks.tsv. Returns 1 when it changed, 0 when it was already right, or nil and
--- why (with the nearest trigger's distance, to fix the position if it is off).
+-- Crystal Tower final boss lock (map 3280): disables collision on gimmick 133's interact trigger
+-- (C08_Dng_10Cry_41_CanNotRetrun_01, point of no return to floor 3281) until thresholds are met.
+-- Matched by gimmicks.tsv coordinates. Returns 1 if toggled, 0 if unchanged, or nil with distance info.
 G.TOWER_TOP = { map = 3280, x = 15890, y = -55300, reach = 500 }
 function G.SealTowerTop(sealed)
     if G.CurrentMap() ~= G.TOWER_TOP.map then return nil, "not in the Crystal Tower" end
@@ -5133,11 +4923,9 @@ function G.SealTowerTop(sealed)
     return 1
 end
 
--- Round 58: Mobliz Shipyard (map 3060). Two of its four elevators, uids 73 and 75, start
--- deactivated (Dng_04Dir_41_02_GD). In chapter 2 a lever puzzle turns 73 on
--- (BP_MapGimmick_SwitchSequence_C_1; its levers start deactivated too), and nothing in the level
--- turns 75 on, so a story scene likely does. The open world start skips both, so the chests and
--- shards past them could not be reached (round 57). Returns how many it turned on.
+-- Mobliz Shipyard (map 3060): activate elevators 73 and 75 (disabled by default until skipped
+-- chapter-2 puzzle/cutscene triggers) so open-world players can reach upper chests and shards.
+-- Returns how many elevators were activated.
 G.SHIPYARD_MAP = 3060
 local SHIPYARD_ELEVATORS = { [73] = true, [75] = true }
 local GIMMICK_ACTIVE = 0   -- eMapGimmickState: Active 0, Deactive 1

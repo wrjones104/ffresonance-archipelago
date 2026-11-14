@@ -25,8 +25,8 @@ location_name_groups["Tablet Shard Shinies"] = {loc["name"] for loc in TABLET_SH
 location_name_groups["Radar Treasures"] = {loc["name"] for loc in RADAR}
 location_name_groups["Fragment Bosses"] = {loc["name"] for loc in BOSSES if loc["fragment"]}
 
-# Round 60: at party level 28 Sephiroth took no damage, even with enemy scaling at its lowest. So
-# priority_bosses does not put a needed item on him.
+# Sephiroth takes negligible damage at midgame levels even at minimum scaling, so priority_bosses
+# avoids placing required items on him.
 SEPHIROTH = "boss:9138"
 
 GOAL_EVENT = "Story Goal"
@@ -37,8 +37,8 @@ UNLOCK_NAMES = {continent: ITEMS[ap_id]["name"] for continent, ap_id in CONTINEN
 AIRSHIP = ITEMS[AIRSHIP_ITEM]["name"]
 RADAR_NAME = ITEMS[RADAR_ITEM]["name"]
 
-# Round 67: the ways between continents without the airship (open_world.md, section 4). No door
-# or cave joins two. Each way opens with the far continent's unlock, as the mod's gates do.
+# Walking routes between continents without the airship (open_world.md, section 4). No door
+# or cave joins two continents; each crossing opens with the far continent's unlock, matching the mod's gates.
 BRIDGES = [("Grandshelt", "Lanzelt"), ("Lanzelt", "Kolobos")]
 FERRY_PORTS = ["Lanzelt", "Dirnado", "Olderion", "Zoldaad"]
 
@@ -64,8 +64,7 @@ def create_regions_and_locations(world: FFResonanceWorld) -> None:
         menu.connect(region, f"To {name}", rule)
         regions[name] = region
 
-    # Round 69: with the Airship an item, the airship lands only once it comes. Until then the
-    # player walks from the starting continent, over the bridges and by the ferry.
+    # When Airship is an item, walk from the starting continent via bridges and ferries until unlocked.
     on_foot = not world.options.start_with_airship
     for continent, unlock in UNLOCK_NAMES.items():
         if on_foot and continent != world.starting_continent:
@@ -117,22 +116,19 @@ def create_regions_and_locations(world: FFResonanceWorld) -> None:
                 rules.append(lambda state, names=names: state.has_all(names, player))
             else:
                 location.progress_type = LocationProgressType.EXCLUDED
-        # Round 72: a boss, or a place behind bosses (Fina's Psyche, Sanctissimus Shrine), needs
-        # what each of those bosses needs (boss_logic.py). A place only the airship reaches
-        # (data/airship_only.tsv) needs it.
+        # Bosses and post-boss regions (Fina's Psyche, Sanctissimus Shrine) require those bosses'
+        # combat needs (boss_logic.py). Places only the airship reaches (data/airship_only.tsv) require it.
         fights = list(loc.get("after_boss", []))
         if loc["key"].startswith("boss:"):
             fights.append(int(loc["key"].split(":")[1]))
         rules += [boss_rule(world, group) for group in fights]
         if loc.get("airship") and on_foot:
             rules.append(lambda state: state.has(AIRSHIP, player))
-        # Round 73: on foot, a place past a boss (the rest of Dirnado, past Liquid Thunder) needs
-        # what that boss needs, or the Airship to fly over it.
+        # On foot, regions past a boss (Dirnado past Liquid Thunder) need that boss's needs or the Airship.
         if "past_boss" in loc and on_foot:
             beat = boss_rule(world, loc["past_boss"])
             rules.append(lambda state, beat=beat: state.has(AIRSHIP, player) or beat(state))
-        # Round 72: a radar treasure needs as many Progressive Radars as its tier. The tiers only
-        # rise along the chain, so this also holds the treasures before it.
+        # A radar treasure requires as many Progressive Radars as its tier; tiers only increase along the chain.
         if "radar_tier" in loc:
             rules.append(lambda state, n=loc["radar_tier"]: state.has(RADAR_NAME, player, n))
         if rules:
@@ -141,7 +137,7 @@ def create_regions_and_locations(world: FFResonanceWorld) -> None:
                 and location.progress_type == LocationProgressType.DEFAULT):
             location.progress_type = LocationProgressType.PRIORITY
         region.locations.append(location)
-        # Round 59: a story boss gives a Crystal Fragment, always its own.
+        # Story bosses always award their own Crystal Fragment.
         if loc.get("fragment"):
             location.place_locked_item(create_item(world, FRAGMENT_NAME))
         elif "vision" in loc and not world.options.shuffle_visions:

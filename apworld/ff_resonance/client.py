@@ -107,7 +107,7 @@ class FFResonanceContext(CommonContext):
         self.mod_folder = ""
         self.set_mod_folder(mod_folder)
         self.session_key: str | None = None   # "<seed name>:<team>:<slot>" once connected
-        self.room_seed_name: str | None = None  # RoomInfo's seed name, kept here because 0.6.7 does not store it
+        self.room_seed_name: str | None = None  # captured from RoomInfo because AP 0.6.7 does not store it
         self.goal = 8050
         self.goal_kind = "story_checkpoint"
         self.shards_needed = 99
@@ -164,8 +164,7 @@ class FFResonanceContext(CommonContext):
             self.items_written = 0
             self.goal_announced = False
             self.scouts_written = False
-        # Which client this is, for the mod's log: round 10 ran an old client without anyone
-        # noticing.
+        # Record the client version for the mod's log.
         self.write_line("client", world_version())
         self.out_offset = 0
         self.out_scope = None
@@ -179,10 +178,10 @@ class FFResonanceContext(CommonContext):
         wanted.append(("cfg", "crystals", int(bool(slot_data.get("include_crystals")))))
         wanted.append(("cfg", "shards", int(bool(slot_data.get("include_tablet_shards")))))
         wanted.append(("cfg", "bosses", int(bool(slot_data.get("include_bosses")))))
-        # A seed from before world 0.20.0 has no such option: it gave the Chocobo at the start.
+        # Legacy seeds without this option started with the Chocobo.
         wanted.append(("cfg", "chocobo", int(bool(slot_data.get("start_with_chocobo", True)))))
         wanted.append(("cfg", "radar", int(bool(slot_data.get("include_radar_treasures")))))
-        # Before world 0.21.0 every seed started in the airship.
+        # Legacy seeds without this option started in the airship.
         wanted.append(("cfg", "airship", int(bool(slot_data.get("start_with_airship", True)))))
         if slot_data.get("starting_continent"):
             wanted.append(("cfg", "continent", str(slot_data["starting_continent"]).lower()))
@@ -214,7 +213,7 @@ class FFResonanceContext(CommonContext):
             name = info["name"]
             if item.item == SHARD_ITEM and self.goal_kind == SHARD_GOAL:
                 shards += 1
-                # Past the goal only the count is shown (round 56 read "99/20").
+                # Past the goal, show only the total count instead of "received/needed".
                 name = f"{name} ({shards}/{self.shards_needed})" if shards <= self.shards_needed else f"{name} ({shards})"
             if item.item == FRAGMENT_ITEM:
                 fragments += 1
@@ -237,7 +236,7 @@ class FFResonanceContext(CommonContext):
         return len(members), len(visions), fragments
 
     def write_lock(self) -> None:
-        """Round 58: tells the mod how far the final boss lock is, each time that changes."""
+        """Send final-boss lock progress to the mod whenever the counts change."""
         if self.session_key is None or not os.path.isdir(self.mod_folder):
             return
         characters, visions, fragments = self.lock_counts()
@@ -254,7 +253,7 @@ class FFResonanceContext(CommonContext):
             return self.shards_received() >= self.shards_needed
         if self.goal_kind == FINAL_GOAL:
             return FINAL_BATTLE in self.battles_won or self.max_story >= ENDING_STORY
-        return self.max_story >= self.goal        # a seed before world 0.14.0: a story checkpoint
+        return self.max_story >= self.goal        # legacy story-checkpoint goal
 
     def goal_text(self) -> str:
         if self.goal_kind == SHARD_GOAL:
@@ -342,14 +341,13 @@ class FFResonanceContext(CommonContext):
         elif cmd == "Connected":
             slot_data = args.get("slot_data") or {}
             self.goal = int(slot_data.get("goal_story_checkpoint", 8050))
-            self.goal_kind = str(slot_data.get("goal", "story_checkpoint"))    # a seed before world 0.7.0 has no "goal"
+            self.goal_kind = str(slot_data.get("goal", "story_checkpoint"))    # default for legacy seeds without "goal"
             self.shards_needed = int(slot_data.get("tablet_shards_required", 99))
             self.starting_party = [int(unit) for unit in slot_data.get("starting_party") or []]
             self.lock_needs = (int(slot_data.get("final_boss_characters", 0)), int(slot_data.get("final_boss_visions", 0)),
                                int(slot_data.get("final_boss_fragments", 0)))
             self.lock_written = None
-            # The 0.6.7 release never stores RoomInfo's seed name (seed_name stays None), so it is
-            # captured above; later versions also keep it in server_seed_name.
+            # AP 0.6.7 leaves seed_name unset, so fall back to the captured RoomInfo name.
             seed = getattr(self, "server_seed_name", None) or self.room_seed_name or self.seed_name
             if not seed:
                 # Without a seed name every seed would share one session key, and the mod would
@@ -394,8 +392,8 @@ async def game_loop(ctx: FFResonanceContext) -> None:
                 checks, story = ctx.read_new_output()
                 if checks:
                     sent = await ctx.check_locations(checks)
-                    if sent:
-                        logger.info(f"Sent {len(sent)} check(s)")
+                    # if sent:
+                    #     logger.info(f"Sent {len(sent)} check(s)") #enable if you want check confirmation in client
                 if story is not None and story > ctx.max_story:
                     ctx.max_story = story
                 if not ctx.finished_game and ctx.goal_reached():

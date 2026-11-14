@@ -15,9 +15,8 @@ FRAGMENT_NAME = ITEMS[FRAGMENT_ITEM]["name"]
 
 ITEM_NAME_TO_ID: dict[str, int] = {info["name"]: ap_id for ap_id, info in ITEMS.items()}
 
-# Continent unlocks are what the logic reads (world 0.4.0). Party members, visions and key items
-# are progression too (world 0.3.0), though no logic reads them yet: they are marked so the logic
-# can use them later without a change of item ids or classes.
+# Continent unlocks are what the logic reads. Party members, visions and key items are marked
+# progression too so future logic changes do not alter item IDs or classes.
 # Equipment is useful, so hints and fill treat it as worth something.
 CLASSIFICATIONS = {
     "consumable": ItemClassification.filler,
@@ -78,7 +77,7 @@ def progression_ids(world: FFResonanceWorld) -> list[int]:
         chosen.append(CHOCOBO_ITEM)
     if not world.options.start_with_airship:
         chosen.append(AIRSHIP_ITEM)
-    # Round 72: with the radar's treasures, three Progressive Radars take the place of its parts.
+    # Three Progressive Radars replace individual radar parts when radar treasures are included.
     if world.options.include_radar_treasures:
         chosen = [ap_id for ap_id in chosen if ap_id not in RADAR_PARTS] + [RADAR_ITEM] * 3
     return chosen

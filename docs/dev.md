@@ -178,3 +178,44 @@ These commands run in UE4SS's `ConsoleEnablerMod` console for development and de
 | `ffrap_set [exp\|gil\|mrp\|encounterrate <number>] [encounters\|scaling <on\|off>] [strength casual\|normal\|expert] [reset]` | View or set player gameplay settings in `settings.txt` |
 | `ffrap_menu add\|dump` | Manually add `AP:` rows to Options > Gameplay, or dump option save entries |
 | `ffrap_gate <subcommand>` | Experimental blocker probe and world-map bridge crossing placement (`mark`, `unmark`, `crossings`, `move`, `turn`, `size`) |
+
+## Engine and UE4SS invariants
+
+Keep `UObject` references as full path strings via `G.PathOf` and resolve them on demand with `StaticFindObject`; level loads free actors, widgets, and tables, so cached pointers crash when dereferenced. Always guard objects from `FindAllOf` or `FindFirstOf` with `IsValid()`, and wrap `Alive()` checks in `pcall`.
+
+Schedule polling and delayed work with `LoopInGameThreadWithDelay`, never `LoopAsync`. Reading UObjects or dispatching back to the game thread from an async thread can crash during map loads.
+
+Do not pass constructed `FSlateFontInfo` or `FSlateColor` structs into UMG setters from Lua; UE4SS cannot safely marshal them. When finding live UI widgets, filter through `ShownInstance` (`IsVisible()`) to avoid mutating Blueprint template instances outside the widget tree.
+
+`UDataTable:AddRow` drops `FText` values passed from Lua tables. When adding rows to `DT_OP_GameSetting`, `game.lua` clones the structure from an existing row and copies `m_Text` separately.
+
+Both `main.lua` and `game.lua` sit near Lua's 200 file-scope local limit. Add new module-level state to existing state tables instead of declaring new top-level `local` variables.
+
+## Save, chest, and progression notes
+
+`CPP_BFL_SaveDataMap:IsOpenTreasureBox(mapId, uid)` falls back to checking other maps when `mapId` has no save entry yet, causing false positives on unvisited maps. `main.lua` reads the save's open map rows directly via `G.SaveOpenRows` and trusts live `CPP_MapGimmick_TreasureBox.m_IsOpen` over `IsOpenTreasureBox`. A chest row's `mapId` can also differ from `GetSameMapId()`, so check keys use `row mapId:row ID` while save tracking uses the active map and `m_UniqueId`.
+
+Live `BP_MapGimmick_FieldItem*` actors can report a different `m_UniqueId` than the level dump, so `game.lua` matches them against `field_items.lua` coordinates within tolerance to translate between save keys and location IDs.
+
+Save slots are tracked by `SavedDateTime.Ticks` via `GameSaveDataSummaryMap` rather than slot number alone so saves copied across slots remain bound to the same AP session.
+
+`CPP_VM_Party:AddUnit` leaves party flags incomplete on its own (`JoinStatus`, `IsUsable`, and gear/EXP behavior), so character grants call `G.FinishJoin`, and `G.SyncSlotLevel` keeps Rain's level synchronized while unjoined in open-world mode.
+
+`G.VisionShopGuard` protects vision-upgrade behavior by toggling shopkeeper rows between `EVENT_SEQUENCE` and `EVENT_BLUEPRINT`, paired with a post-hook on `CPP_BFL_VisionUpgrade:IsVisionUpgrade`.
+
+Story boss triggers use flag `STORY_BOSS_READY_FLAG` (`1441`) so defeated or triggered encounters do not loop on re-entry, and patch `Gim_EV_Majipot_Delete_02` (flag `915`) so victory sequences restore screen fade cleanly. The Antlion story encounter redirects both outcomes to `_Win_02`. Arena ranks map to battle groups `9705` through `9721`.
+
+Enemy level scaling in `DT_UnitParameter` fits `log(stat) = a + b * log(level) + c * level` across base enemies.
+
+Airship spawn checks `sd.Map.IsAlreadySpawnAirship` against `DT_MapAirShip`. On-foot starts park the airship at the starting dock/location, add actors to `m_ShadowDecalSphareTraceActorsToIgnore`, and wait settle ticks after `Wld_PL` `SpawnActor` before moving world-map objects. Mobliz Shipyard elevators require `GIMMICK_ACTIVE` (`0`) during open-world starts.
+
+## Mod compatibility
+
+`FFRRandomizer` re-applies chest and unit tables roughly every 3 seconds, and `FFRS_QoL` rewrites `DT_GameDifficultyParam` multipliers every 3 seconds. `fastTick` re-applies AP settings and chest blanking periodically to stay current, and disables conflicting mods or logs warnings if `FFRRandomizer` is enabled.
+
+## Client notes
+
+`apworld/ff_resonance/client.py` captures `room_seed_name` directly from the `RoomInfo` packet before falling back to `server_seed_name` or `seed_name`, because Archipelago `0.6.7` leaves `seed_name` unset.
+
+For backward compatibility with older generated seeds, missing `slot_data` keys default to pre-split behavior (`start_with_chocobo = True`, `start_with_airship = True`, `goal = "story_checkpoint"`).
+

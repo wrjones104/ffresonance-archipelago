@@ -63,9 +63,7 @@ class FFResonanceWorld(World):
     settings: ClassVar[FFResonanceSettings]
     settings_key = "ff_resonance_options"
 
-    # Round 72: Universal Tracker builds the world again from the slot data alone. Without this it
-    # used the yaml and rolled the starting continent and party again: a seed that started on foot
-    # in Mysidia showed 0 locations in logic.
+    # Universal Tracker rebuilds the world from slot_data alone rather than the player yaml.
     ut_can_gen_without_yaml = True
 
     item_name_to_id = items.ITEM_NAME_TO_ID
@@ -104,9 +102,8 @@ class FFResonanceWorld(World):
                 unit = self.random.choice([u for u in ALL_PARTY_MEMBERS if u not in self.starting_party and
                                            u not in [p.value for p in picks[:self.options.starting_roster.value]]])
             self.starting_party.append(unit)
-        # Round 58: the final boss lock (Worlds Collide style). It belongs to the story goal: the
-        # shard goal never needs the last fight. A count the pool cannot meet is lowered to what
-        # it can.
+        # Crystal Tower final boss lock (story goal only; shard goal does not require the last fight).
+        # Counts exceeding the available pool are clamped down to what exists.
         if self.options.goal.value == ffr_options.Goal.option_final_boss:
             most_characters = len(ALL_PARTY_MEMBERS) if self.options.shuffle_party_members else len(self.starting_party)
             most_visions = len(items.item_name_groups["Visions"]) if self.options.shuffle_visions else (
