@@ -42,6 +42,11 @@ To curve boss readiness and Vision Awakening depth across the seed without track
 | Tier C | Lv 39-52 | `PartyCount >= 4`, `ContinentsUnlocked >= 4`, `CanAoEHealOrRevive` |
 | Tier D | Lv 50-63 | `PartyCount >= 5`, `ContinentsUnlocked >= 6`, `HasAirship`, `CanAoEHealOrRevive` |
 
+**What is built (world 0.24.2).** Only the party, continent and Airship parts of the tiers (`TIER_NEEDS` in `locations.py`). None of the capability macros (`CanHeal`, `Has<Element>`, mitigations) are built, and no per-boss rule from section 5 is.
+- Round 72: Liquid Thunder (`boss:9083` in `data/bosses.tsv`; section 5 lists it as `9101`) could not be beaten at party level 3 with Lasswell and Archwitch Fina and no gear. That party fails its section 5 rule: no Earth, no healing, no cleansing, no Lightning resistance. Until the rule is built, the boss is tier B.
+- On foot, Liquid Thunder also holds the rest of Dirnado: only Dilmagia, Mt. Thunderclap Shard 22 and the fight are on the near side. Every other Dirnado location needs the boss's tier, or the Airship.
+- Bosses' stats against a normal enemy of the same level (median of 367 enemies, along the curve scaling uses): HP 3x to 26x, Attack 0.9x to 2.4x, Intelligence 0.5x to 2.75x, Defence and Mind 0.45x to 1.55x. Scaling keeps each ratio. So a boss's danger is in its HP, its damage and its mechanics, not its Defence. Liquid Thunder's Intelligence is the highest of all (2.75x).
+
 ## 3. Composable Capability Matrix
 
 Boss logic uses capability macros evaluated as `OR` across party members, Visions (gated by the Awakening curve above), and reachable open-world shops.

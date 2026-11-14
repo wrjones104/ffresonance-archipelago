@@ -15,7 +15,7 @@ ARTIFACT_IDS = (30000, 30018)    # DT_ArtifactItemData's rows
 LAST_PALACE_CHEST = "chest:2031:24"   # Oblivion Palace's 4-Star Chamber: all 99 shards
 PALACE_SHARDS = 99
 MARAUDER, LIQUID_THUNDER, ANTLION = 9079, 9083, 9060   # battle groups: a cave master, a story boss, an optional boss
-TARTAROSAURUS, BELMODAR = 9112, 9004   # tier D and tier A
+TARTAROSAURUS, BELMODAR, MOM_BOMB = 9112, 9004, 9014   # tier D, tier A, tier A
 CAVE_MASTERS, FRAGMENT_BOSSES = 15, 21   # round 71: ten more story bosses; round 72: Behemoth out
 
 
@@ -196,6 +196,38 @@ class TestAirshipItemRealDefaults(FFResonanceTestBase, real_defaults=True):
 
     def test_the_airship_is_in_the_pool(self) -> None:
         self.assertIn(AIRSHIP_ITEM, [i.code for i in self.multiworld.itempool if i.player == self.player])
+
+
+class TestDirnadoOnFoot(FFResonanceTestBase, real_defaults=True):
+    """Round 73: the user's seed. On foot from Dilmagia, Liquid Thunder (tier B) holds the rest of
+    Dirnado: three party members and a second continent, or the Airship to fly over it."""
+    options = {"start_with_airship": False, "starting_continent": "dirnado", "starting_roster": 2,
+               "starting_character_1": "Lasswell", "starting_character_2": "Archwitch Fina"}
+
+    def reachable(self, name: str) -> bool:
+        return self.multiworld.get_location(name, self.player).can_reach(self.multiworld.state)
+
+    def test_only_dilmagia_at_first(self) -> None:
+        self.assertTrue(self.reachable("Dilmagia, the Machinopolis Chest 1"))
+        self.assertTrue(self.reachable("Dirnado Shipyard Chest 1"))
+        self.assertTrue(self.reachable("Mt. Thunderclap Shard 22"))
+        for name in ("Mt. Thunderclap: Liquid Thunder", "Mt. Thunderclap Chest 1", "Dwarven Forge Chest 1",
+                     "Dwarven Forge: Mom Bomb", "World Map Shiny 5", "Sanctum of Light (Zidane)"):
+            self.assertFalse(self.reachable(name), name)
+
+    def test_liquid_thunder_opens_the_rest(self) -> None:
+        self.collect_by_name(["Rain"])
+        self.assertFalse(self.reachable("Mt. Thunderclap: Liquid Thunder"), "a second continent too")
+        self.collect_by_name(["Lanzelt Unlock"])
+        for name in ("Mt. Thunderclap: Liquid Thunder", "Dwarven Forge Chest 1", "Wind Shrine Chest 1",
+                     "Sanctum of Light (Zidane)"):
+            self.assertTrue(self.reachable(name), name)
+
+    def test_the_airship_flies_over_it(self) -> None:
+        self.collect_by_name(["Airship"])
+        self.assertFalse(self.reachable("Mt. Thunderclap: Liquid Thunder"))
+        self.assertTrue(self.reachable("Dwarven Forge Chest 1"))
+        self.assertTrue(self.reachable("Dwarven Forge: Mom Bomb"), "tier A")
 
 
 class TestUnshuffledVisions(FFResonanceTestBase):
@@ -407,7 +439,7 @@ class TestBosses(FFResonanceTestBase):
         self.assertTrue(self.boss_location(BELMODAR).can_reach(self.multiworld.state))
 
     def test_a_boss_is_on_its_continent(self) -> None:
-        boss = self.boss_location(LIQUID_THUNDER)
+        boss = self.boss_location(MOM_BOMB)
         self.assertFalse(boss.can_reach(self.multiworld.state))
         self.collect_by_name(["Dirnado Unlock"])
         self.assertTrue(boss.can_reach(self.multiworld.state))

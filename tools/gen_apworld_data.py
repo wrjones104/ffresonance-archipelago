@@ -159,6 +159,11 @@ NO_ROUTE_CHESTS = {"chest:2012:1"}
 # of Mysidia. Round 72 (the user): Sanctissimus Shrine's chests and shards (3250) are past its first
 # three fights, Archaeoaevis, Dad Bomb and Test Rider.
 AFTER_BOSS = {3210: [9038], 3211: [9038], 3212: [9038], 3250: [9075, 9074, 9073]}
+# Places that on foot lie past a boss, which the airship flies over. Round 73 (the user): from
+# Dilmagia, where the Dirnado start and the ferry arrive, Liquid Thunder on Mt. Thunderclap's
+# summit blocks the way to the rest of Dirnado. Only Dilmagia (maps 2060 and 2061), Mt.
+# Thunderclap Shard 22 and the fight itself are this side of it.
+PAST_BOSS_ON_FOOT = {9083: ("Dirnado", {2060, 2061}, {"shiny:3050:22", "boss:9083"})}
 # The story counter on the open world start. A shiny whose condition is false there is not out.
 OPEN_START_STORY = 8000
 FINAL_AREA = "Crystal Tower"
@@ -473,6 +478,12 @@ def main() -> None:
     for r in read_tsv("airship_only.tsv"):
         assert r["location"] in by_key, f"airship_only.tsv: no location {r['location']}"
         by_key[r["location"]]["airship"] = True
+    for group, (area, near_maps, near_keys) in PAST_BOSS_ON_FOOT.items():
+        for key, entry in by_key.items():
+            kind, place = key.split(":")[:2]
+            near = key in near_keys or (kind in ("chest", "shiny") and int(place) in near_maps)
+            if entry["area"] == area and not near:
+                entry["past_boss"] = group
     location_names = [e["name"] for e in chests + shinies + crystals + tablet_shinies + bosses + radar]
     assert len(location_names) == len(set(location_names)), "duplicate location names"
 

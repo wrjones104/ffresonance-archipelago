@@ -138,7 +138,7 @@ Scripted fights need care one by one. The first Umbra and the Ignis and Evan due
 - The mod sends the check when the win flag is on. It empties the cave masters' and Sephiroth's reward lists, and takes story 6123 out of Archaeoaevis's win row.
 - A Crystal Fragment is nothing in the game (item kind `token`). The client counts them and writes the count in the `cfg finalboss` line.
 
-**Round 60: all of it works in game.** The cave masters, Liquid Thunder, the six Sanctissimus fights and both Dragon's Maw bosses start, end and send their checks. Sephiroth is open from the start but took no damage at party level 28, even with scaling at 1%: scaling does not write defence.
+**Round 60: all of it works in game.** The cave masters, Liquid Thunder, the six Sanctissimus fights and both Dragon's Maw bosses start, end and send their checks. Sephiroth is open from the start but took no damage at party level 28, even with scaling at 1%: scaling does not write defence. Round 72 correction: the level curve does move Defence and Mind with level (`GROWTH_ORDER` in `game.lua`); only the strength percentages (HP, Attack, Intelligence) leave them alone. Sephiroth's Defence is 1.5x a normal enemy's of his level, so it does not explain the 0 damage either (`docs/boss_logic.md`, section 2).
 
 **Changed after round 60 (world 0.18.0, mod 0.49.0):**
 - A boss with a shuffled item keeps its reward pop-up. Its win row gives one Potion in place of its own reward, and the mod writes what the boss held into the pop-up, as for a chest. Not seen in game yet: whether that pop-up is the same dialog box as a chest's.

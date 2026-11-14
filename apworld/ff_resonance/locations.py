@@ -149,6 +149,12 @@ def create_regions_and_locations(world: FFResonanceWorld) -> None:
             rules.append(tier_rule)
         if loc.get("airship") and on_foot:
             rules.append(lambda state: state.has(AIRSHIP, player))
+        # Round 73: on foot, a place past a boss (the rest of Dirnado, past Liquid Thunder) needs
+        # what that boss needs, or the Airship to fly over it.
+        if "past_boss" in loc and on_foot:
+            beat_rule = boss_rule(world, BOSS_TIER[loc["past_boss"]])
+            if beat_rule:
+                rules.append(lambda state, beat_rule=beat_rule: state.has(AIRSHIP, player) or beat_rule(state))
         # Round 72: a radar treasure needs as many Progressive Radars as its tier. The tiers only
         # rise along the chain, so this also holds the treasures before it.
         if "radar_tier" in loc:

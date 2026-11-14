@@ -699,7 +699,18 @@ World-map shinies verified as locations. Multiple crashes observed across differ
 
 **And (mod 0.57.1):** an Airship received on foot inside Gronoa was parked where the user stood, in a part of Gronoa the airship cannot take off from, so it was stuck there. The Airship now always waits at the seed's start point, wherever it comes.
 
+**Round 72, in play (mod 0.57.1, world 0.24.1): Liquid Thunder held all of Dirnado.** A new seed on foot from Dirnado, with Lasswell and Archwitch Fina. Universal Tracker showed most of Dirnado in logic, Liquid Thunder too.
+- Liquid Thunder stands on Mt. Thunderclap's summit, between Dilmagia and the rest of Dirnado. On foot, only Dilmagia (maps 2060 and 2061, the town and its shipyard), Mt. Thunderclap Shard 22 and the fight are this side of it. The ferry's port is on this side too: the story's chapter 2 lands there.
+- At party level 3, on the game's Normal with our Normal, with no gear or Visions, Liquid Thunder could not be beaten. It was tier A, which needs nothing.
+- Its stats against a normal enemy of its level: HP 10x, Intelligence 2.75x (its `Gigavolt` is magic, an AoE with Paralysis), Defence 0.9x. Scaling keeps those ratios. The party had no Earth damage, healing, cleansing or Lightning resistance. That is what `docs/boss_logic.md` asks for this fight, but those per-boss rules are not built yet.
+
+**Changed (world 0.24.2):**
+- Liquid Thunder is tier B: three party members and a second continent.
+- On foot, the rest of Dirnado is past it: 38 locations (Dwarven Forge, Mt. Thunderclap's other chests and shards, Mobliz Shipyard, the Wind Shrine, the world map's shinies, Mom Bomb, Aether, Shoggoth Cave and three sanctums). They need what Liquid Thunder needs, or the Airship to fly over it. With `start_with_airship` on, nothing changes. `PAST_BOSS_ON_FOOT` in `tools/gen_apworld_data.py` holds this; it marks the locations `past_boss`.
+
 ## Round 72 test plan (mod 0.57.1, world 0.24.1)
+
+**World 0.24.2 (during the round):** copy `dist/ff_resonance.apworld` and generate a new seed for the Liquid Thunder gate. The mod is unchanged.
 
 **Install:** copy `FFRArchipelago/Scripts` (it has a new file, `field_items.lua`) and `dist/ff_resonance.apworld` (0.24.1). A new seed is needed for the logic and fast travel changes. The crash fix, the shard fix and the boss changes also work on the round 71 save.
 

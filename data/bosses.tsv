@@ -17,7 +17,7 @@ group	flag	map	kind	name	reward	win_row	round	note	area	tier
 9138	1018	10218	optional	Sephiroth	13113	Str_LegendEV_07_Boss_05	59	Its win row gives the Sephiroth vision (13113), which is in the pool		D
 7042	928	3010	optional	Intangir			59	No reward of its own		D
 7057	929	3010	optional	Rogue Magitek Weapon			59	No reward of its own		D
-9083	215	3050	story	Liquid Thunder			59	Seen in the open world in round 59		A
+9083	215	3050	story	Liquid Thunder			59	Seen in the open world in round 59		B
 9075	608	3250	story	Archaeoaevis		Dng_08Gro_43_BattleEnd_01	59	Its win row sets story 6123, which the mod takes out		C
 9074	609	3250	story	Dad Bomb			59			C
 9073	610	3250	story	Test Rider			59			C
