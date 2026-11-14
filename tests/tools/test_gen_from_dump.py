@@ -51,7 +51,42 @@ def make_dump(root):
         "seed": item(9500, "<MISSING STRING TABLE ENTRY>"),    # falls back to the Japanese text
     }})
     write(root, f"{T}/Item/DT_EquipmentItemData.json", {"Rows": {
-        "sword": item(10100, "Broadsword", "Equipment", equipmentDetailType="eEquipmentDetailType::Sword"),
+        "sword": item(10100, "Broadsword", "Equipment", EquipmentType="eEquipmentType::Weapon",
+                      equipmentDetailType="eEquipmentDetailType::Sword", equipmentLimitSex="eUnitSex::None",
+                      passiveList=[-1, -1]),
+        "gloves": item(12034, "Insulated Gloves", "Equipment", EquipmentType="eEquipmentType::Accessory",
+                       equipmentDetailType="eEquipmentDetailType::None", equipmentLimitSex="eUnitSex::None",
+                       passiveList=[1250, -1]),
+    }})
+    # Round 73: what skills and gear do in a boss fight. Fina learns Cure at level 3, the Amelia
+    # Vision has Stone from the start, and Insulated Gloves resist Lightning for anyone.
+    write(root, f"{T}/Skill/DT_SkillData.json", {"Rows": {
+        "cure": {"ID": 210010, "Name": ftext("Cure"), "defaultTargetRelation": "eRelation::Friendlies",
+                 "TargetType": "eSkillTargetType::Single", "DamageType": "eSkillDamageType::Magic",
+                 "element": "eElement::None", "skillEffectType": "eSkillEffectType::DamageAndRecovery",
+                 "damageCalcType": "eSkillDamageCalcType::Magic", "effectBundleList": []},
+        "stone": {"ID": 220210, "Name": ftext("Stone"), "defaultTargetRelation": "eRelation::Enemies",
+                  "TargetType": "eSkillTargetType::Single", "DamageType": "eSkillDamageType::Magic",
+                  "element": "eElement::Earth", "skillEffectType": "eSkillEffectType::DamageAndRecovery",
+                  "damageCalcType": "eSkillDamageCalcType::Magic", "effectBundleList": []},
+    }})
+    write(root, f"{T}/Skill/DT_PassiveSkillData.json", {"Rows": {
+        "resist": {"ID": 1250, "Name": ftext("Resist Lightning"), "effectBundleList": [{"effectId": 5001}]},
+    }})
+    write(root, f"{T}/Skill/DT_SkillEffectData.json", {"Rows": {
+        "resist": {"ID": 5001, "EffectType": "eSkillEffectType::AddElementResistance", "ParamList": [5, 2, -1]},
+    }})
+    write(root, f"{T}/Unit/DT_PlayableUnitParameter.json", {"Rows": {
+        "fina": {"ID": 1003, "equipableWeaponType": "eEquipmentDetailType::Rod", "equipableArmorTypeList": []},
+        "lid": {"ID": 1004, "equipableWeaponType": "eEquipmentDetailType::Gun", "equipableArmorTypeList": []},
+    }})
+    write(root, f"{T}/Unit/LevelParameter/Playable/DT_UnitLevelParameterFina.json", {"Rows": {
+        "1": {"Level": 1, "AddSkills": [-1, -1]}, "3": {"Level": 3, "AddSkills": [210010, -1]},
+    }})
+    write(root, f"{T}/Item/Vision/DT_VisionAwakeningMasteryData.json", {"Rows": {
+        "amelia0": {"ID": 13017, "Level": 0, "detailData": [
+            {"parameterType": "eVisionMasteryParameterType::ActiveSkill", "params": [220210, -1]},
+            {"parameterType": "eVisionMasteryParameterType::None", "params": [-1, -1]}]},
     }})
     write(root, f"{T}/Item/Vision/DT_VisionItemData.json", {"Rows": {"cloud": item(13110, "Cloud", "Equipment")}})
     write(root, f"{T}/Item/DT_ValuableItemData.json", {"Rows": {"jade": item(20005, "White Jade Stone", "Valuable")}})
@@ -125,7 +160,7 @@ def make_data(root):
     data = Path(root) / "data"
     data.mkdir()
     (data / "item_names.tsv").write_text(
-        "id\tname\n1\tPotion\n3\tEther\n9500\t名前\n10100\tBroadsword\n13110\tCloud\n20005\tWhite Jade\n99\tGone\n",
+        "id\tname\n1\tPotion\n3\tEther\n9500\t名前\n10100\tBroadsword\n12034\tInsulated Gloves\n13110\tCloud\n20005\tWhite Jade\n99\tGone\n",
         encoding="utf-8")
     (data / "chests.tsv").write_text(
         "row\tmapId\tID\tItemId\tItemNum\tMoney\tIsTrap\tbattleGroupId\n"
@@ -156,7 +191,7 @@ def main():
         game = data / "game"
 
         items = {r["id"]: r for r in tsv(game / "items.tsv")}
-        assert list(items) == ["1", "3", "9500", "10100", "13110", "20005"], list(items)
+        assert list(items) == ["1", "3", "9500", "10100", "12034", "13110", "20005"], list(items)
         assert items["3"]["name"] == "Ether", items["3"]              # stripped
         assert items["9500"]["name"] == "名前", items["9500"]          # missing English -> Japanese
         assert items["10100"]["detail"] == "Sword" and items["10100"]["table"] == "equipment"
@@ -164,6 +199,10 @@ def main():
 
         units = {r["id"]: r for r in tsv(game / "units.tsv")}
         assert units["1001"]["category"] == "Playable" and units["10452"]["name"] == "Ifrit"
+
+        caps = [(r["source"], r["id"], r["level"], r["capability"], r["who"]) for r in tsv(game / "capabilities.tsv")]
+        assert caps == [("party", "1003", "3", "heal", ""), ("vision", "13017", "0", "earth_magic", ""),
+                        ("gear", "12034", "0", "resist_lightning", "1003,1004")], caps
 
         maps = {r["key"]: r["id"] for r in tsv(game / "maps.tsv")}
         assert maps == {"Wld": "1000", "01Gra_40": "3000", "01Gra_41": "3001", "01Gra_02": "2011"}, maps

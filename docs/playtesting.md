@@ -708,6 +708,13 @@ World-map shinies verified as locations. Multiple crashes observed across differ
 - Liquid Thunder is tier B: three party members and a second continent.
 - On foot, the rest of Dirnado is past it: 38 locations (Dwarven Forge, Mt. Thunderclap's other chests and shards, Mobliz Shipyard, the Wind Shrine, the world map's shinies, Mom Bomb, Aether, Shoggoth Cave and three sanctums). They need what Liquid Thunder needs, or the Airship to fly over it. With `start_with_airship` on, nothing changes. `PAST_BOSS_ON_FOOT` in `tools/gen_apworld_data.py` holds this; it marks the locations `past_boss`.
 
+**Round 73, before play (world 0.25.0): boss logic by what the party can do.** The user's calls: a character's skill counts from the level it is learned at, up to the boss's own level; shop gear counts where a reachable shop sells it; gear from the item pool never counts, so no gear becomes progression. The Discord playtest starts with this world.
+- `data/game/capabilities.tsv` (from `tools/gen_from_dump.py`) has what every party member's skills (by level), Vision's (by awakening) and gear's passives do: element attacks, heals, group heals, revives, cleanses, dispels, Reflect, element resistances and status immunities. 368 rows.
+- `apworld/ff_resonance/boss_logic.py` checks them. From tier B a boss needs a healer, from tier C a group heal or a revive. The tier A and B bosses have their own needs too: their weaknesses and a way through their worst attack (`docs/boss_logic.md`, section 2). Liquid Thunder needs Earth and a healer.
+- A Vision's awakening counts by continents opened: 1 from two, 2 from four, 3 from five and the Airship.
+- `SHOP_MAPS` in `tools/gen_apworld_data.py`: the 55 gear shops open at story 8000, by their names. The only shop gear that counts in logic is resistance and status accessories and armour; no open shop sells an elemental weapon.
+- Off-line, 54 seeds (every starting continent, with and without the Airship, 3 seeds each, the real defaults) filled and could be finished.
+
 ## Round 72 test plan (mod 0.57.1, world 0.24.1)
 
 **World 0.24.2 (during the round):** copy `dist/ff_resonance.apworld` and generate a new seed for the Liquid Thunder gate. The mod is unchanged.
@@ -734,3 +741,20 @@ World-map shinies verified as locations. Multiple crashes observed across differ
 - **Does any scene play** after treasures 5, 9 or 13 (the game's own radar quest lines)?
 
 Send the `[FFRAP]` lines of the log and any crash folder.
+
+## Round 73 test plan (world 0.25.0, mod 0.57.1)
+
+**Install:** copy `dist/ff_resonance.apworld` (0.25.0) into `custom_worlds` and generate a new seed. The mod is unchanged. Round 72's open items (long play, the radar, shards) carry over.
+
+**1. Bosses in logic.** Universal Tracker should show a boss only once your party can hit its weakness and heal. **Was a boss in logic that you could not beat?** Note your party (members and levels), Visions and gear. **Was one out of logic that you beat easily?** Note the same.
+
+**2. The early bosses.** Siren, Marauder, Antlion, Mom Bomb, Aether, Liquid Thunder and the tier B cave masters have their own rules now. **Did any feel wrong for what logic asked?**
+
+**3. Shops.** The logic counts these accessories where they are sold. **Do these shops sell them at story 8000?**
+- Jeweled Ring (Paralysis, Petrify) and Calm Armlet (Confuse, Berserk) in Olderion or Amore.
+- Monk's Prayer Beads (Charm) in Grandport, Olderion or Amore.
+- Star Pendant (Poison) in a Lanzelt shop (Kol or Grandport) or Felicitas.
+- The element resistance accessories (Resist Fire, Lightning and the rest) in Sian.
+- Safety Bit (Instant Death) in Mysidia.
+
+Also, **is Felicitas's shop the one the data calls "ナシャト"?** If a town's shop sells something else, a screenshot of its list helps.

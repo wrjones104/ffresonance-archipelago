@@ -1,0 +1,369 @@
+source	id	level	skill	name	capability	who
+party	1001	1	401040	Infinity Drive	fire_physical	
+party	1001	1	220010	Fire	fire_magic	
+party	1001	12	401060	Flame Sword	fire_physical	
+party	1001	15	220020	Fira	fire_magic	
+party	1001	25	401030	Crimson Onslaught	fire_physical	
+party	1001	31	220030	Firaga	fire_magic	
+party	1001	37	401050	Banishing Raid	fire_physical	
+party	1002	1	220050	Blizzard	ice_magic	
+party	1002	3	402130	Dawn Frost	ice_physical	
+party	1002	15	402150	Ice Splitter	ice_physical	
+party	1002	18	220060	Blizzara	ice_magic	
+party	1002	25	402030	Transient Rite	ice_physical	
+party	1002	31	220070	Blizzaga	ice_magic	
+party	1002	35	402050	Absolving Hailstorm	ice_physical	
+party	1003	1	403040	Holy Ray	light_magic	
+party	1003	1	403530	Shining Arrow	light_magic	
+party	1003	3	210010	Cure	heal	
+party	1003	5	210120	Esuna	cleanse	
+party	1003	8	403090	Pray	cleanse	
+party	1003	8	403090	Pray	heal	
+party	1003	17	210020	Cura	heal	
+party	1003	23	210140	Raise	revive	
+party	1003	25	403030	Radiant Restoration	aoe_heal	
+party	1003	25	403030	Radiant Restoration	revive	
+party	1003	32	403050	Luminant Cannon	light_magic	
+party	1003	35	210030	Curaga	heal	
+party	1003	53	210150	Arise	revive	
+party	1004	1	404080	Mechabo Kick	earth_physical	
+party	1004	3	220210	Stone	earth_magic	
+party	1004	16	220220	Stonera	earth_magic	
+party	1004	25	230120	Reflect	reflect	
+party	1004	32	220230	Stonega	earth_magic	
+party	1005	3	220130	Water	water_magic	
+party	1005	7	210200	Dispel	dispel	
+party	1005	16	220140	Watera	water_magic	
+party	1005	22	210210	Dispelga	dispel	
+party	1005	28	405130	Aquatic Pulse	water_magic	
+party	1005	31	220150	Waterga	water_magic	
+party	1005	37	405050	Aqua Blast	water_magic	
+party	1006	1	408030	Chaotic Convergence	dark_magic	
+party	1006	1	408060	Dark Pain	dark_magic	
+party	1006	9	408110	Queenly Whip	dark_physical	
+party	1006	19	408050	Dystopia	dark_magic	
+party	1006	35	408040	Abyss Graviton	dark_magic	
+party	1006	41	408070	Shadow Unending	dark_magic	
+party	1007	1	406030	T.R.N.D.	wind_physical	
+party	1007	3	220170	Aero	wind_magic	
+party	1007	6	406080	Gale Strike	wind_physical	
+party	1007	16	220180	Aerora	wind_magic	
+party	1007	30	220190	Aeroga	wind_magic	
+party	1007	33	406070	Blitzstrahl	lightning_physical	
+party	1007	40	406050	Demolisher Rush	wind_physical	
+party	1008	3	220090	Thunder	lightning_magic	
+party	1008	9	407110	Magicide	dispel	
+party	1008	13	407070	Stygian Scythe	dark_magic	
+party	1008	16	220100	Thundara	lightning_magic	
+party	1008	19	407060	Luminant Glim	light_magic	
+party	1008	26	220110	Thundaga	lightning_magic	
+party	1008	30	407130	Tonitus	lightning_magic	
+party	1008	35	407050	Blighted Gloom	dark_magic	
+vision	13017	0	220010	Fire	fire_magic	
+vision	13017	0	220210	Stone	earth_magic	
+vision	13017	1	414200	Rapid Fire	fire_magic	
+vision	13017	1	220020	Fira	fire_magic	
+vision	13017	1	220220	Stonera	earth_magic	
+vision	13017	2	414210	Disorder	fire_magic	
+vision	13017	2	220030	Firaga	fire_magic	
+vision	13017	2	220230	Stonega	earth_magic	
+vision	13024	0	220010	Fire	fire_magic	
+vision	13024	0	220050	Blizzard	ice_magic	
+vision	13024	0	220090	Thunder	lightning_magic	
+vision	13024	1	220020	Fira	fire_magic	
+vision	13024	1	220060	Blizzara	ice_magic	
+vision	13024	1	220100	Thundara	lightning_magic	
+vision	13024	2	220030	Firaga	fire_magic	
+vision	13024	2	220070	Blizzaga	ice_magic	
+vision	13024	2	220110	Thundaga	lightning_magic	
+vision	13024	2	210200	Dispel	dispel	
+vision	13027	0	220050	Blizzard	ice_magic	
+vision	13027	0	220170	Aero	wind_magic	
+vision	13027	0	220390	Dark	dark_magic	
+vision	13027	1	220060	Blizzara	ice_magic	
+vision	13027	1	220180	Aerora	wind_magic	
+vision	13027	1	220520	Darkra	dark_magic	
+vision	13027	1	1109	Nullify Confuse	immune_confuse	
+vision	13027	2	414300	Spill	dark_magic	
+vision	13027	2	220070	Blizzaga	ice_magic	
+vision	13027	2	220190	Aeroga	wind_magic	
+vision	13027	2	220400	Darkga	dark_magic	
+vision	13033	0	420100	Water Blade	water_physical	
+vision	13033	0	420160	Stone Blade	earth_physical	
+vision	13033	0	1462	Water’s Protection	water_physical	
+vision	13033	1	414400	Torrential Hew	water_physical	
+vision	13033	1	420110	Watera Blade	water_physical	
+vision	13033	1	420170	Stonera Blade	earth_physical	
+vision	13033	1	1249	Resist Earth	resist_earth	
+vision	13033	2	414410	Aquatic Synergy	water_physical	
+vision	13033	2	420120	Waterga Blade	water_physical	
+vision	13033	2	420180	Stonega Blade	earth_physical	
+vision	13045	0	210010	Cure	heal	
+vision	13045	0	210250	Banish	light_magic	
+vision	13045	0	1111	Nullify Charm	immune_charm	
+vision	13045	1	210020	Cura	heal	
+vision	13045	1	210120	Esuna	cleanse	
+vision	13045	1	210260	Banishra	light_magic	
+vision	13045	1	1104	Nullify Poison	immune_poison	
+vision	13045	2	210030	Curaga	heal	
+vision	13045	2	210140	Raise	revive	
+vision	13045	2	210270	Banishga	light_magic	
+vision	13045	3	230120	Reflect	reflect	
+vision	13051	0	210010	Cure	heal	
+vision	13051	0	210120	Esuna	cleanse	
+vision	13051	0	210200	Dispel	dispel	
+vision	13051	1	414500	Purify	aoe_heal	
+vision	13051	1	210020	Cura	heal	
+vision	13051	1	210140	Raise	revive	
+vision	13051	1	1107	Nullify Silence	immune_silence	
+vision	13051	2	210030	Curaga	heal	
+vision	13051	2	210150	Arise	revive	
+vision	13051	2	1325	Nullify Instant Death	immune_death	
+vision	13051	3	210130	Esunaga	cleanse	
+vision	13060	0	421370	Blizzard Surge	ice_physical	
+vision	13060	0	421190	Water Surge	water_physical	
+vision	13060	0	1463	Knight of the Sacred Frost	ice_physical	
+vision	13060	1	421380	Blizzara Surge	ice_physical	
+vision	13060	1	421200	Watera Surge	water_physical	
+vision	13060	1	1033	Resist Ice	resist_ice	
+vision	13060	2	421390	Blizzaga Surge	ice_physical	
+vision	13060	2	421210	Waterga Surge	water_physical	
+vision	13060	2	230120	Reflect	reflect	
+vision	13060	3	1363	Ice Immunity	resist_ice	
+vision	13062	0	421400	Stone Surge	earth_physical	
+vision	13062	0	421190	Water Surge	water_physical	
+vision	13062	1	414700	D Sword Breaker	earth_physical	
+vision	13062	1	421410	Stonera Surge	earth_physical	
+vision	13062	1	421200	Watera Surge	water_physical	
+vision	13062	2	421420	Stonega Surge	earth_physical	
+vision	13062	2	421210	Waterga Surge	water_physical	
+vision	13062	2	1106	Nullify Sleep	immune_sleep	
+vision	13080	0	421370	Blizzard Surge	ice_physical	
+vision	13080	0	421400	Stone Surge	earth_physical	
+vision	13080	0	1461	Supercharged Driver	earth_physical	
+vision	13080	1	414800	Crust Driver	earth_physical	
+vision	13080	1	421380	Blizzara Surge	ice_physical	
+vision	13080	1	421410	Stonera Surge	earth_physical	
+vision	13080	1	1105	Nullify Blind	immune_blind	
+vision	13080	2	414810	Mantle Driver	earth_physical	
+vision	13080	2	421390	Blizzaga Surge	ice_physical	
+vision	13080	2	421420	Stonega Surge	earth_physical	
+vision	13080	3	230120	Reflect	reflect	
+vision	13100	0	445010	Vanguard Glaive	light_physical	
+vision	13100	0	210010	Cure	heal	
+vision	13100	0	420070	Thunder Blade	lightning_physical	
+vision	13100	0	420160	Stone Blade	earth_physical	
+vision	13100	1	210020	Cura	heal	
+vision	13100	1	420170	Stonera Blade	earth_physical	
+vision	13100	1	420080	Thundara Blade	lightning_physical	
+vision	13100	2	445020	Sacred Wave	light_physical	
+vision	13100	2	420180	Stonega Blade	earth_physical	
+vision	13100	2	420090	Thundaga Blade	lightning_physical	
+vision	13100	2	1253	Resist Dark	resist_dark	
+vision	13100	2	1408	Lustrous Shield	light_physical	
+vision	13100	3	445030	Vanguard Glaive+	light_physical	
+vision	13100	3	210030	Curaga	heal	
+vision	13100	3	1369	Dark Immunity	resist_dark	
+vision	13101	0	445100	Fulminating Strike	light_physical	
+vision	13101	0	421250	Aero Knife	wind_physical	
+vision	13101	0	421100	Thunder Knife	lightning_physical	
+vision	13101	0	1353	Light of Rebellion	light_physical	
+vision	13101	1	421260	Aerora Knife	wind_physical	
+vision	13101	1	421110	Thundara Knife	lightning_physical	
+vision	13101	1	1325	Nullify Instant Death	immune_death	
+vision	13101	2	445110	Saber of Adversity	light_physical	
+vision	13101	2	421270	Aeroga Knife	wind_physical	
+vision	13101	2	421120	Thundaga Knife	lightning_physical	
+vision	13101	3	445120	Fulminating Strike+	light_physical	
+vision	13102	0	220010	Fire	fire_magic	
+vision	13102	0	220170	Aero	wind_magic	
+vision	13102	0	220210	Stone	earth_magic	
+vision	13102	1	220020	Fira	fire_magic	
+vision	13102	1	220180	Aerora	wind_magic	
+vision	13102	1	220220	Stonera	earth_magic	
+vision	13102	1	1116	Nullify Slow	immune_slow	
+vision	13102	2	445200	Blade Torrent	wind_magic	
+vision	13102	2	220030	Firaga	fire_magic	
+vision	13102	2	220190	Aeroga	wind_magic	
+vision	13102	2	220230	Stonega	earth_magic	
+vision	13103	0	210010	Cure	heal	
+vision	13103	0	420330	Banish Blade	light_physical	
+vision	13103	0	420300	Dark Blade	dark_physical	
+vision	13103	0	1457	Dark Sword	dark_physical	
+vision	13103	1	210020	Cura	heal	
+vision	13103	1	420340	Banishra Blade	light_physical	
+vision	13103	1	420310	Darkra Blade	dark_physical	
+vision	13103	2	445300	Moonlightbringer	light_physical	
+vision	13103	2	445310	Shadowbringer	dark_physical	
+vision	13103	2	230120	Reflect	reflect	
+vision	13103	2	420350	Banishga Blade	light_physical	
+vision	13103	2	420320	Darkga Blade	dark_physical	
+vision	13105	0	420070	Thunder Blade	lightning_physical	
+vision	13105	0	420130	Aero Blade	wind_physical	
+vision	13105	0	420160	Stone Blade	earth_physical	
+vision	13105	0	1458	Guiding Wind	wind_physical	
+vision	13105	1	445500	Crushing Blade	wind_physical	
+vision	13105	1	420080	Thundara Blade	lightning_physical	
+vision	13105	1	420140	Aerora Blade	wind_physical	
+vision	13105	1	420170	Stonera Blade	earth_physical	
+vision	13105	1	1248	Resist Wind	resist_wind	
+vision	13105	2	445510	Wind Cutter Blade	wind_physical	
+vision	13105	2	420090	Thundaga Blade	lightning_physical	
+vision	13105	2	420150	Aeroga Blade	wind_physical	
+vision	13105	2	420180	Stonega Blade	earth_physical	
+vision	13108	0	220010	Fire	fire_magic	
+vision	13108	0	220050	Blizzard	ice_magic	
+vision	13108	0	220130	Water	water_magic	
+vision	13108	1	220020	Fira	fire_magic	
+vision	13108	1	220060	Blizzara	ice_magic	
+vision	13108	1	220140	Watera	water_magic	
+vision	13108	2	220030	Firaga	fire_magic	
+vision	13108	2	220070	Blizzaga	ice_magic	
+vision	13108	2	220150	Waterga	water_magic	
+vision	13108	2	220380	Meltdown	fire_magic	
+vision	13110	0	421130	Thunder Surge	lightning_physical	
+vision	13110	0	421190	Water Surge	water_physical	
+vision	13110	1	446000	Braver	lightning_physical	
+vision	13110	1	421140	Thundara Surge	lightning_physical	
+vision	13110	1	421200	Watera Surge	water_physical	
+vision	13110	1	1250	Resist Lightning	resist_lightning	
+vision	13110	2	421150	Thundaga Surge	lightning_physical	
+vision	13110	2	421210	Waterga Surge	water_physical	
+vision	13110	3	1366	Lightning Immunity	resist_lightning	
+vision	13116	0	220010	Fire	fire_magic	
+vision	13116	0	220130	Water	water_magic	
+vision	13116	1	446600	Rough Divide	fire_physical	
+vision	13116	1	220020	Fira	fire_magic	
+vision	13116	1	220140	Watera	water_magic	
+vision	13116	1	1105	Nullify Blind	immune_blind	
+vision	13116	2	446610	Fated Circle	fire_physical	
+vision	13116	2	220030	Firaga	fire_magic	
+vision	13116	2	220150	Waterga	water_magic	
+vision	13116	2	230120	Reflect	reflect	
+vision	13118	0	446800	Free Energy	water_magic	
+vision	13118	1	446820	Meo Twister	wind_magic	
+vision	13118	2	446810	Free Energy+	water_magic	
+vision	13118	2	1104	Nullify Poison	immune_poison	
+vision	13118	3	446830	Meo Twister+	wind_magic	
+vision	13120	0	447000	Spiral Cut	water_physical	
+vision	13120	0	421220	Slice & Dice - Water	water_physical	
+vision	13120	0	421280	Slice & Dice - Wind	wind_physical	
+vision	13120	0	210010	Cure	heal	
+vision	13120	1	421230	Slice & Dice - Water II	water_physical	
+vision	13120	1	421290	Slice & Dice - Wind II	wind_physical	
+vision	13120	1	1251	Resist Water	resist_water	
+vision	13120	2	447010	Energy Rain	water_physical	
+vision	13120	2	447020	Spiral Cut+	water_physical	
+vision	13120	2	421240	Slice & Dice - Water III	water_physical	
+vision	13120	2	421300	Slice & Dice - Wind III	wind_physical	
+vision	13120	3	1367	Water Immunity	resist_water	
+vision	13123	0	220090	Thunder	lightning_magic	
+vision	13123	0	220130	Water	water_magic	
+vision	13123	1	447300	Nightmare Scythe	dark_magic	
+vision	13123	1	220100	Thundara	lightning_magic	
+vision	13123	1	220140	Watera	water_magic	
+vision	13123	1	1107	Nullify Silence	immune_silence	
+vision	13123	2	447310	Salvation Scythe	dark_magic	
+vision	13123	2	220110	Thundaga	lightning_magic	
+vision	13123	2	220150	Waterga	water_magic	
+vision	13124	0	421010	Fire Slam	fire_physical	
+vision	13124	0	421340	Stone Slam	earth_physical	
+vision	13124	1	447400	Red Spiral	fire_physical	
+vision	13124	1	421020	Fira Slam	fire_physical	
+vision	13124	1	421350	Stonera Slam	earth_physical	
+vision	13124	1	1114	Nullify Berserk	immune_berserk	
+vision	13124	2	421030	Firaga Slam	fire_physical	
+vision	13124	2	421360	Stonega Slam	earth_physical	
+vision	13125	0	421070	Froststrike	ice_physical	
+vision	13125	0	421160	Sparkstrike	lightning_physical	
+vision	13125	0	210120	Esuna	cleanse	
+vision	13125	0	1459	Radiant Knight	lightning_physical	
+vision	13125	1	447500	Lightning Strike	lightning_physical	
+vision	13125	1	421080	Froststrike II	ice_physical	
+vision	13125	1	421170	Sparkstrike II	lightning_physical	
+vision	13125	1	1250	Resist Lightning	resist_lightning	
+vision	13125	2	447510	Thunderfall	lightning_physical	
+vision	13125	2	421090	Froststrike III	ice_physical	
+vision	13125	2	421180	Sparkstrike III	lightning_physical	
+vision	13125	3	210130	Esunaga	cleanse	
+vision	13125	3	1366	Lightning Immunity	resist_lightning	
+vision	13127	0	220420	Blizzard of the Seventh Dawn	ice_magic	
+vision	13127	0	220450	Aero of the Seventh Dawn	wind_magic	
+vision	13127	0	220480	Cure of the Seventh Dawn	heal	
+vision	13127	1	220430	Blizzard II of the Seventh Dawn	ice_magic	
+vision	13127	1	220460	Aero II of the Seventh Dawn	wind_magic	
+vision	13127	1	220490	Cure II of the Seventh Dawn	heal	
+vision	13127	1	220410	Manaward	aoe_heal	
+vision	13127	1	1107	Nullify Silence	immune_silence	
+vision	13127	2	220440	Blizzard III of the Seventh Dawn	ice_magic	
+vision	13127	2	220470	Aero III of the Seventh Dawn	wind_magic	
+vision	13127	2	220500	Cure III of the Seventh Dawn	aoe_heal	
+vision	13128	0	220090	Thunder	lightning_magic	
+vision	13128	0	220050	Blizzard	ice_magic	
+vision	13128	1	447810	Warp-Strike	light_physical	
+vision	13128	1	220100	Thundara	lightning_magic	
+vision	13128	1	220060	Blizzara	ice_magic	
+vision	13128	2	447800	Plunge	light_physical	
+vision	13128	2	220110	Thundaga	lightning_magic	
+vision	13128	2	220070	Blizzaga	ice_magic	
+vision	13130	0	421040	Fire Surge	fire_physical	
+vision	13130	0	421310	Aero Surge	wind_physical	
+vision	13130	0	1460	Boundless Flames	fire_physical	
+vision	13130	1	448000	Rising Flames	fire_physical	
+vision	13130	1	421050	Fira Surge	fire_physical	
+vision	13130	1	421320	Aerora Surge	wind_physical	
+vision	13130	1	1011	Resist Fire	resist_fire	
+vision	13130	2	448010	Heatwave	fire_physical	
+vision	13130	2	421060	Firaga Surge	fire_physical	
+vision	13130	2	421330	Aeroga Surge	wind_physical	
+vision	13130	3	1362	Fire Immunity	resist_fire	
+vision	13113	0	422050	Dark Surge	dark_physical	
+vision	13113	1	422060	Darkra Surge	dark_physical	
+vision	13113	1	220030	Firaga	fire_magic	
+vision	13113	1	220070	Blizzaga	ice_magic	
+vision	13113	1	220110	Thundaga	lightning_magic	
+vision	13113	2	446310	Purging Blade	dark_physical	
+vision	13113	2	422070	Darkga Surge	dark_physical	
+vision	13113	2	210030	Curaga	heal	
+gear	10106	0	1522	氷属性付与	ice_physical	1001
+gear	10196	0	1527	光属性付与	light_physical	1001
+gear	10204	0	1248	Resist Wind	resist_wind	1002
+gear	10602	0	1523	Imbue Lightning	lightning_physical	1006
+gear	10706	0	1522	氷属性付与	ice_physical	1007
+gear	11017	0	1325	Nullify Instant Death	immune_death	1001,1002,1003,1004,1005,1006,1007,1008
+gear	11017	0	1105	Nullify Blind	immune_blind	1001,1002,1003,1004,1005,1006,1007,1008
+gear	11017	0	1104	Nullify Poison	immune_poison	1001,1002,1003,1004,1005,1006,1007,1008
+gear	11017	0	1114	Nullify Berserk	immune_berserk	1001,1002,1003,1004,1005,1006,1007,1008
+gear	11309	0	1038	Fire Eater	resist_fire	1001,1002,1004,1007
+gear	11310	0	1344	Ice Eater	resist_ice	1001,1002,1004,1007
+gear	11397	0	1325	Nullify Instant Death	immune_death	1001,1002,1004,1007
+gear	11399	0	1325	Nullify Instant Death	immune_death	1001,1002,1004,1007
+gear	11508	0	1250	Resist Lightning	resist_lightning	1003,1005,1006,1008
+gear	11518	0	1365	Earth Immunity	resist_earth	1003,1005,1006,1008
+gear	12006	0	1011	Resist Fire	resist_fire	1001,1002,1003,1004,1005,1006,1007,1008
+gear	12011	0	1071	Auto-Reflect	reflect	1001,1002,1003,1004,1005,1006,1007,1008
+gear	12018	0	1325	Nullify Instant Death	immune_death	1001,1002,1003,1004,1005,1006,1007,1008
+gear	12019	0	1104	Nullify Poison	immune_poison	1001,1002,1003,1004,1005,1006,1007,1008
+gear	12020	0	1105	Nullify Blind	immune_blind	1001,1002,1003,1004,1005,1006,1007,1008
+gear	12032	0	1111	Nullify Charm	immune_charm	1001,1002,1003,1004,1005,1006,1007,1008
+gear	12034	0	1250	Resist Lightning	resist_lightning	1001,1002,1003,1004,1005,1006,1007,1008
+gear	12035	0	1106	Nullify Sleep	immune_sleep	1001,1002,1003,1004,1005,1006,1007,1008
+gear	12039	0	1251	Resist Water	resist_water	1001,1002,1003,1004,1005,1006,1007,1008
+gear	12040	0	1110	Nullify Petrify	immune_petrify	1001,1002,1003,1004,1005,1006,1007,1008
+gear	12040	0	1108	Nullify Paralysis	immune_paralysis	1001,1002,1003,1004,1005,1006,1007,1008
+gear	12042	0	1033	Resist Ice	resist_ice	1001,1002,1003,1004,1005,1006,1007,1008
+gear	12043	0	1248	Resist Wind	resist_wind	1001,1002,1003,1004,1005,1006,1007,1008
+gear	12044	0	1249	Resist Earth	resist_earth	1001,1002,1003,1004,1005,1006,1007,1008
+gear	12045	0	1252	Resist Light	resist_light	1001,1002,1003,1004,1005,1006,1007,1008
+gear	12046	0	1253	Resist Dark	resist_dark	1001,1002,1003,1004,1005,1006,1007,1008
+gear	12049	0	1114	Nullify Berserk	immune_berserk	1001,1002,1003,1004,1005,1006,1007,1008
+gear	12049	0	1109	Nullify Confuse	immune_confuse	1001,1002,1003,1004,1005,1006,1007,1008
+gear	12078	0	1521	Imbue Fire	fire_physical	1001,1002,1003,1004,1005,1006,1007,1008
+gear	12079	0	1522	氷属性付与	ice_physical	1001,1002,1003,1004,1005,1006,1007,1008
+gear	12080	0	1523	Imbue Lightning	lightning_physical	1001,1002,1003,1004,1005,1006,1007,1008
+gear	12081	0	1524	水属性付与	water_physical	1001,1002,1003,1004,1005,1006,1007,1008
+gear	12082	0	1525	風属性付与	wind_physical	1001,1002,1003,1004,1005,1006,1007,1008
+gear	12083	0	1526	土属性付与	earth_physical	1001,1002,1003,1004,1005,1006,1007,1008
+gear	12084	0	1527	光属性付与	light_physical	1001,1002,1003,1004,1005,1006,1007,1008
+gear	12085	0	1528	闇属性付与	dark_physical	1001,1002,1003,1004,1005,1006,1007,1008
+gear	12101	0	1325	Nullify Instant Death	immune_death	1001,1002,1003,1004,1005,1006,1007,1008

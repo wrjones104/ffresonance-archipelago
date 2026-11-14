@@ -36,6 +36,7 @@ Enemy levels and stats scale to your party level by default, with bosses scaling
 - Which **AP: Scaling strength** setting (`Casual`, `Normal`, `Expert`) and in-game difficulty did you use?
 - How did fights feel early on (around levels 1 to 15 with a small party and limited gear), in the mid-game (around levels 20 to 35), and near the end?
 - Did any specific boss or regular enemy feel unfair, overly spongy, or trivial for the point where logic expected you to fight it?
+- From world 0.25.0, logic puts a boss in reach only when your party can hit its weakness and heal, and for some bosses get through their worst attack (cleanse a status, resist an element). A skill counts once a character would have learned it by the boss's own level. A Vision skill counts once you have opened enough continents for that awakening. Gear counts only when a shop you can reach sells it, never from a chest. If a boss was in logic and you could not beat it, tell us your party (members and levels), your Visions and your gear.
 - Did turning scaling off or adjusting the multipliers behave as expected?
 
 ### 2. Crashes, freezes, and softlocks

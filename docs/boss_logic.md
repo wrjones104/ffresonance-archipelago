@@ -42,8 +42,19 @@ To curve boss readiness and Vision Awakening depth across the seed without track
 | Tier C | Lv 39-52 | `PartyCount >= 4`, `ContinentsUnlocked >= 4`, `CanAoEHealOrRevive` |
 | Tier D | Lv 50-63 | `PartyCount >= 5`, `ContinentsUnlocked >= 6`, `HasAirship`, `CanAoEHealOrRevive` |
 
-**What is built (world 0.24.2).** Only the party, continent and Airship parts of the tiers (`TIER_NEEDS` in `locations.py`). None of the capability macros (`CanHeal`, `Has<Element>`, mitigations) are built, and no per-boss rule from section 5 is.
-- Round 72: Liquid Thunder (`boss:9083` in `data/bosses.tsv`; section 5 lists it as `9101`) could not be beaten at party level 3 with Lasswell and Archwitch Fina and no gear. That party fails its section 5 rule: no Earth, no healing, no cleansing, no Lightning resistance. Until the rule is built, the boss is tier B.
+**What is built (world 0.25.0, round 73).** `apworld/ff_resonance/boss_logic.py`.
+- Every tier: its party, continents and Airship (`TIER_NEEDS`), and a baseline: from tier B a healer (`heal`), from tier C a group heal or a revive (`aoe_heal` or `revive`).
+- Tiers A and B: each boss's own needs (`BOSS_NEEDS`), from section 5 below, with the weaknesses checked against the dump. Tiers C and D have the baseline only so far.
+- The capabilities come from the game data, not from this document's tables: `tools/gen_from_dump.py` writes `data/game/capabilities.tsv` (each party member's skills by level, each Vision's by awakening, each gear's passives), and `tools/gen_apworld_data.py` turns it into `CAPABILITIES` in `data.py`. An element alone (`earth`) means either kind of attack (`earth_physical` or `earth_magic`).
+- The user's calls (round 73):
+  - A party member's skill counts when it is learned by the boss's own shipped level (the `level` column in `data/bosses.tsv`). Scaling puts the boss near the party's level, so this is the level the party is expected to have.
+  - Gear counts when an open shop sells it and someone in the party can wear it. `SHOP_MAPS` in `tools/gen_apworld_data.py` lists the shops open at story 8000, by their names (town and chapter). Gear in the item pool never counts, so no gear becomes a progression item.
+  - Consumables never count.
+- A Vision's awakening counts by the continents opened (section 2): 1 from two, 2 from four, 3 from five and the Airship.
+- Not counted yet: Vision Mastery Ranks, `DebuffResistance` effects (Ribbon, Light Veil, Preventive Care), and espers.
+- Found in the data, against this document: Pray targets one ally, not the party, so Fina's first group heal is Radiant Restoration at level 25. Belmodar is weak to Fire and Dark, not Water. The Shock Whip (10703) is a gun, and no open shop sells it. No open shop sells any elemental weapon at all; the shop gear that counts is accessories and armour for resistances and status immunity (Olderion's Amore and Olderion, Sian in Pharm, Mysidia, Lanzelt, Kolobos, and the airship's own shop). Section 5's battle group numbers do not match `data/bosses.tsv`, which the logic uses.
+- Changed from section 5's rules: Shoggoth takes Poison immunity where section 5 had `OR HasAirship`. Liquid Thunder needs Earth and the tier B healer; section 5's `OR Lightning (Vision)` is gone, as that Vision has no Earth attack.
+- Round 72: Liquid Thunder (`boss:9083` in `data/bosses.tsv`; section 5 lists it as `9101`) could not be beaten at party level 3 with Lasswell and Archwitch Fina and no gear. That party fails its section 5 rule: no Earth, no healing, no cleansing, no Lightning resistance. It is tier B (world 0.24.2), and from world 0.25.0 needs Earth and a healer.
 - On foot, Liquid Thunder also holds the rest of Dirnado: only Dilmagia, Mt. Thunderclap Shard 22 and the fight are on the near side. Every other Dirnado location needs the boss's tier, or the Airship.
 - Bosses' stats against a normal enemy of the same level (median of 367 enemies, along the curve scaling uses): HP 3x to 26x, Attack 0.9x to 2.4x, Intelligence 0.5x to 2.75x, Defence and Mind 0.45x to 1.55x. Scaling keeps each ratio. So a boss's danger is in its HP, its damage and its mechanics, not its Defence. Liquid Thunder's Intelligence is the highest of all (2.75x).
 

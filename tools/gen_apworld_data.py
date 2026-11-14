@@ -164,6 +164,25 @@ AFTER_BOSS = {3210: [9038], 3211: [9038], 3212: [9038], 3250: [9075, 9074, 9073]
 # summit blocks the way to the rest of Dirnado. Only Dilmagia (maps 2060 and 2061), Mt.
 # Thunderclap Shard 22 and the fight itself are this side of it.
 PAST_BOSS_ON_FOOT = {9083: ("Dirnado", {2060, 2061}, {"shiny:3050:22", "boss:9083"})}
+# Round 73: the gear shops open at story 8000, and the town map each is in (data/game/shops.tsv).
+# The game opens a shop from an actor in the town, not from a table, so this goes by the shops'
+# names: a town and the chapter. Left out: the burning Grandshelt's, Zoldaad's from before its
+# chapter is cleared, the airship's of chapters 5 to 7, an unused Grandport one, the Colosseum's
+# (they open with its proofs) and Sanctissimus Shrine's. "ナシャト" is taken to be Felicitas, the
+# only town in Kolobos. AIRSHIP_SHOP is the airship's own, from chapter 8.
+AIRSHIP_SHOP = 0
+SHOP_MAPS = {
+    2001: 2000, 2002: 2010, 2004: 2030, 2005: 2060, 2006: 2050, 2007: 2040, 2008: 2070, 2009: 2090,
+    2010: 2110, 2011: 2130, 2012: 2140, 2014: 2170, 2016: 2150, 2017: 2160, 2019: AIRSHIP_SHOP,
+    2020: 2114, 2021: 2120,
+    4001: 2000, 4002: 2010, 4005: 2040, 4006: 2060, 4007: 2050, 4008: 2114, 4009: 2120, 4012: AIRSHIP_SHOP,
+    4013: 2150, 4014: 2160, 4017: 2030, 4018: 2070, 4019: 2090, 4020: 2110, 4021: 2130, 4022: 2140, 4023: 2170,
+    6001: 2000, 6002: 2000, 6003: 2010, 6005: 2120, 6008: AIRSHIP_SHOP, 6010: 2030, 6011: 2070, 6012: 2090,
+    6013: 2110, 6014: 2130, 6015: 2140, 6016: 2170,
+    8002: 2030, 8003: 2070, 8004: 2090, 8005: 2110, 8008: 2040, 8009: AIRSHIP_SHOP, 8010: 2130, 8011: 2140,
+    8013: 2170,
+}
+AIRSHIP_AREA = "Airship"
 # The story counter on the open world start. A shiny whose condition is false there is not out.
 OPEN_START_STORY = 8000
 FINAL_AREA = "Crystal Tower"
@@ -405,11 +424,31 @@ def main() -> None:
         vanilla = item_for(reward, 1, 0, in_chest=True) if r["kind"] == "cave" else None
         entry = {"key": f"boss:{group}", "name": name, "region": "Bosses", "area": r.get("area") or map_area(map_id),
                  "open_world": True, "id": BOSS_LOCATION_BASE + group, "vanilla": vanilla,
-                 "fragment": r["kind"] == "story", "tier": r["tier"]}
+                 "fragment": r["kind"] == "story", "tier": r["tier"], "level": int(r["level"])}
         if r["kind"] != "cave" and reward >= SHUFFLE_ID_LIMIT:
             entry["vision"] = reward * 1000 + 1
         bosses.append(entry)
     bosses.sort(key=lambda e: e["id"])
+
+    # Round 73: what each party member (by level), Vision (by awakening) and piece of shop gear
+    # does in a boss fight (data/game/capabilities.tsv, docs/boss_logic.md). Gear counts only
+    # where an open shop sells it, never from the item pool (the user's call).
+    shop_areas: dict[int, set[str]] = collections.defaultdict(set)
+    for r in read_tsv("game/shops.tsv"):
+        town = SHOP_MAPS.get(int(r["shop"]))
+        if town is not None and int(r["item"]) > 0:
+            shop_areas[int(r["item"])].add(AIRSHIP_AREA if town == AIRSHIP_SHOP else map_area(town))
+    capabilities: dict[str, dict] = {}
+    for r in read_tsv("game/capabilities.tsv"):
+        cap = capabilities.setdefault(r["capability"], {"party": {}, "vision": {}, "gear": {}})
+        owner, level = int(r["id"]), int(r["level"])
+        if r["source"] == "party":
+            cap["party"][owner] = min(level, cap["party"].get(owner, level))
+        elif r["source"] == "vision":
+            ap_id = owner * 1000 + 1
+            cap["vision"][ap_id] = min(level, cap["vision"].get(ap_id, level))
+        elif owner in shop_areas:
+            cap["gear"][owner] = {"who": [int(u) for u in r["who"].split(",")], "shops": sorted(shop_areas[owner])}
     items[FRAGMENT_ITEM] = {"name": FRAGMENT_NAME, "kind": "token", "game_id": 0, "count": 1, "category": "fragment"}
     items[CHOCOBO_ITEM] = {"name": "Chocobo", "kind": "item", "game_id": CHOCOBO_GAME_ID, "count": 1, "category": "vehicle"}
     items[CONTINENT_ITEM_BASE + AIRSHIP_FLAG] = {"name": "Airship", "kind": "flag", "game_id": AIRSHIP_FLAG, "count": 1,
@@ -504,6 +543,11 @@ def main() -> None:
         f.write("CRYSTALS = " + pprint.pformat(crystals, width=110, sort_dicts=True) + "\n\n")
         f.write("# Boss fights (data/bosses.tsv); fragment marks the ones that hold a locked Crystal Fragment\n")
         f.write("BOSSES = " + pprint.pformat(bosses, width=110, sort_dicts=True) + "\n\n")
+        f.write("# What helps in a boss fight (data/game/capabilities.tsv): party members by unit id and the\n"
+                "# level they learn it, Visions by AP id and awakening, shop gear by item id with who can\n"
+                "# wear it and the areas whose shops sell it\n")
+        f.write("CAPABILITIES = " + pprint.pformat(capabilities, width=110, sort_dicts=True) + "\n\n")
+        f.write(f"AIRSHIP_AREA = {AIRSHIP_AREA!r}\n\n")
         f.write(f"FRAGMENT_ITEM = {FRAGMENT_ITEM}\n\n")
         f.write(f"CHOCOBO_ITEM = {CHOCOBO_ITEM}\n\n")
         f.write("# The airship radar's treasures (data/radar.tsv): tier is how many Progressive Radars they need\n")

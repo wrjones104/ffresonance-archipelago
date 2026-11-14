@@ -9,7 +9,7 @@ An Archipelago implementation for Final Fantasy Resonance (UE 5.6, game module `
   - `Scripts/game.lua`: every engine call. The only file to fix after a game patch.
   - `Scripts/bridge.lua`: the file bridge (`ap_in.txt` from the client, `ap_out.txt` to it). The line formats are in its header.
   - `Assets/`: the Archipelago logo.
-- **The apworld and client**, `apworld/ff_resonance/` (`client.py`, `world.py`, `items.py`, `locations.py`, `options.py`, generated `data.py`). `python tools/build_apworld.py` builds `dist/ff_resonance.apworld`.
+- **The apworld and client**, `apworld/ff_resonance/` (`client.py`, `world.py`, `items.py`, `locations.py`, `boss_logic.py`, `options.py`, generated `data.py`). `python tools/build_apworld.py` builds `dist/ff_resonance.apworld`.
 - **The game data dump**, `tools/dump_game/` (C#, CUE4Parse) and `tools/gen_from_dump.py`. They read the game's pak files off-line and write `data/game/*.tsv`. Use these tables, not FFR-Randomizer's lists, as the reference for items, units, maps, chests, field items, map exits and gimmicks. See "The game data dump" in the README.
 - **Docs:**
   - `README.md`: setup, commands, bridge format, test results per round, the current round's test plan, open questions.

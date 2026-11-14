@@ -18,6 +18,8 @@ Outputs (data/game/):
     transitions.tsv  every map exit: from map, to map and point, and its condition
     gimmicks.tsv     blockers, no-entry zones, doors, event triggers, airship landing points
     shops.tsv        every shop's stock, one row per item
+    capabilities.tsv what each party member's skills (by level), Vision's (by awakening) and gear's
+                     passives do in a boss fight: element attacks, heals, cleanses, resistances
 """
 
 import argparse
@@ -153,6 +155,106 @@ def shops():
             rows.append([r["ShopID"], key, i.get("ItemId"), i.get("Condition", ""), i.get("MaxOrderNum", ""),
                          i.get("PriceRatio", "")])
     write_tsv("shops.tsv", ["shop", "row", "item", "condition", "max", "price_ratio"], rows)
+
+
+# ---------------------------------------------------------------- what skills and gear do (boss logic)
+
+# Element numbers in skill effects' params, and the status numbers of AddStatusConditionRegist,
+# read from the passives' names (Resist Fire is [1, 2], Nullify Paralysis is [5, 100]).
+ELEMENTS = {1: "fire", 2: "ice", 3: "wind", 4: "earth", 5: "lightning", 6: "water", 7: "light", 8: "dark"}
+SKILL_ELEMENTS = {"Fire": "fire", "Ice": "ice", "Wind": "wind", "Earth": "earth", "Thunder": "lightning",
+                  "Water": "water", "Light": "light", "Dark": "dark"}
+PLAYABLE_LEVEL_FILES = {"DT_UnitLevelParameterRain": 1001, "DT_UnitLevelParameterLasswell": 1002,
+                        "DT_UnitLevelParameterFina": 1003, "DT_UnitLevelParameterLid": 1004,
+                        "DT_UnitLevelParameterNichol": 1005, "DT_UnitLevelParameterDarkfina": 1006,
+                        "DT_UnitLevelParameterJake": 1007, "DT_UnitLevelParameterSakura": 1008}
+STATUSES = {1: "poison", 2: "blind", 3: "sleep", 4: "silence", 5: "paralysis", 6: "confuse", 7: "petrify",
+            8: "charm", 10: "berserk", 11: "doom", 12: "slow", 13: "death"}
+
+
+def skill_effects(row, effects):
+    """(effect type, params without the -1s) for each effect a skill adds."""
+    out = []
+    for bundle in row.get("effectBundleList") or []:
+        effect = effects.get(bundle["effectId"])
+        if effect:
+            out.append((enum(effect["EffectType"]), [p for p in effect["ParamList"] if p != -1]))
+    return out
+
+
+def skill_capabilities(row, effects, is_active):
+    """What a skill lets a party do in a boss fight, as capability names (docs/boss_logic.md)."""
+    caps = set()
+    done = skill_effects(row, effects)
+    if is_active:
+        friendly = enum(row["defaultTargetRelation"]) == "Friendlies"
+        group = enum(row["TargetType"]) in ("Group", "All")
+        damage = enum(row["DamageType"])
+        element = SKILL_ELEMENTS.get(enum(row["element"]))
+        if friendly and enum(row["skillEffectType"]) == "DamageAndRecovery" and enum(row["damageCalcType"]) != "None":
+            caps.add("aoe_heal" if group else "heal")
+        if not friendly and element and damage in ("Physic", "Magic"):
+            caps.add(f"{element}_{'physical' if damage == 'Physic' else 'magic'}")
+    for kind, params in done:
+        if kind == "Revival":
+            caps.add("revive")
+        elif kind == "CureStatusCondition" and params and params[0] == 1:
+            caps.add("cleanse")
+        elif kind == "CureStatusCondition" and len(params) > 2 and (params[1] == 1 or params[2] == 1):
+            caps.add("dispel")
+        elif kind == "Reflect":
+            caps.add("reflect")
+        elif kind == "AddElementResistance" and params[0] in ELEMENTS:
+            caps.add(f"resist_{ELEMENTS[params[0]]}")
+        elif kind in ("AddElement", "AddElementWhenNoneElement") and params[0] in ELEMENTS:
+            caps.add(f"{ELEMENTS[params[0]]}_physical")
+        elif kind == "AddStatusConditionRegist" and params[0] in STATUSES:
+            caps.add(f"immune_{STATUSES[params[0]]}")
+    return caps
+
+
+def capabilities():
+    """Every party member's skills by level, every Vision's by awakening, and every piece of gear's
+    passives, with what each does in a boss fight. Gear rows list the party members who can wear it."""
+    active = {r["ID"]: r for r in table_rows("Skill/DT_SkillData").values()}
+    passive = {r["ID"]: r for r in table_rows("Skill/DT_PassiveSkillData").values()}
+    effects = {r["ID"]: r for r in table_rows("Skill/DT_SkillEffectData").values()}
+
+    def caps_of(skill_id):
+        if skill_id in active:
+            return text(active[skill_id].get("Name")), skill_capabilities(active[skill_id], effects, True)
+        if skill_id in passive:
+            return text(passive[skill_id].get("Name")), skill_capabilities(passive[skill_id], effects, False)
+        return "", set()
+
+    rows = []
+
+    def add(source, owner, level, skill_id, who=""):
+        name, caps = caps_of(skill_id)
+        rows.extend([source, owner, level, skill_id, name, cap, who] for cap in sorted(caps))
+
+    playable = {r["ID"]: r for r in table_rows("Unit/DT_PlayableUnitParameter").values()}
+    unit_rows = {r["ID"]: r for r in table_rows("Unit/DT_UnitParameter").values()}
+    for path in sorted(glob.glob(os.path.join(DUMP, TABLES, "Unit/LevelParameter/Playable/*.json"))):
+        unit = PLAYABLE_LEVEL_FILES[os.path.basename(path)[:-5]]
+        for r in load(os.path.relpath(path, DUMP))["Rows"].values():
+            for skill_id in r["AddSkills"]:
+                if skill_id != -1:
+                    add("party", unit, r["Level"], skill_id)
+    for r in table_rows("Item/Vision/DT_VisionAwakeningMasteryData").values():
+        for d in r["detailData"]:
+            if enum(d["parameterType"]) in ("ActiveSkill", "PassiveSkill"):
+                add("vision", r["ID"], r["Level"], d["params"][0])
+    for r in table_rows("Item/DT_EquipmentItemData").values():
+        kind, detail, sex = enum(r["EquipmentType"]), enum(r["equipmentDetailType"]), enum(r["equipmentLimitSex"])
+        who = [unit for unit, p in playable.items()
+               if (kind == "Accessory" or detail == enum(p["equipableWeaponType"])
+                   or detail in [enum(t) for t in p["equipableArmorTypeList"]])
+               and (sex == "None" or sex == enum(unit_rows[unit]["Sex"]))]
+        for skill_id in r["passiveList"]:
+            if skill_id != -1 and who:
+                add("gear", r["ID"], 0, skill_id, ",".join(map(str, sorted(who))))
+    write_tsv("capabilities.tsv", ["source", "id", "level", "skill", "name", "capability", "who"], rows)
 
 
 # ---------------------------------------------------------------- chests
@@ -388,6 +490,7 @@ def main():
     shard_chests()
     by_key = maps()
     shops()
+    capabilities()
     field_rows, box_rows = actors(by_key)
     chest_rows = chests(box_rows)
     if args.check:

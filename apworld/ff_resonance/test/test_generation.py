@@ -6,6 +6,7 @@ from worlds.AutoWorld import call_all
 from test.general import gen_steps
 
 from ..data import AIRSHIP_ITEM, BOSSES, CHESTS, CHOCOBO_ITEM, NO_ROUTE, RADAR, RADAR_ITEM, RADAR_PARTS, CONTINENT_UNLOCKS, CRYSTALS, FRAGMENT_ITEM, ITEMS, NO_BOX, TABLET_SHINIES, PROGRESSION, SHINIES, SHUFFLE_ID_LIMIT, UNIT_ITEM_BASE
+from ..boss_logic import has_capability
 from ..items import CLASSIFICATIONS, FILLER_CATEGORIES, FRAGMENT_NAME, item_name_groups
 from ..locations import GOAL_EVENT, LOCATION_KEY_TO_ID, SEPHIROTH, VICTORY
 from ..options import Goal, TabletShardsRequired
@@ -15,8 +16,9 @@ ARTIFACT_IDS = (30000, 30018)    # DT_ArtifactItemData's rows
 LAST_PALACE_CHEST = "chest:2031:24"   # Oblivion Palace's 4-Star Chamber: all 99 shards
 PALACE_SHARDS = 99
 MARAUDER, LIQUID_THUNDER, ANTLION = 9079, 9083, 9060   # battle groups: a cave master, a story boss, an optional boss
-TARTAROSAURUS, BELMODAR, MOM_BOMB = 9112, 9004, 9014   # tier D, tier A, tier A
+TARTAROSAURUS, BELMODAR, THE_HUNGER = 9112, 9004, 9012   # tier D, and two tier A with no needs
 CAVE_MASTERS, FRAGMENT_BOSSES = 15, 21   # round 71: ten more story bosses; round 72: Behemoth out
+EARLY_LEVEL, FINA_GROUP_HEAL_LEVEL, MAX_LEVEL = 3, 25, 99   # boss levels: Fina has Cure at 3
 
 
 def chest_location(test, key):
@@ -86,23 +88,28 @@ class TestDefault(FFResonanceTestBase):
 
     def test_fina_psyche_is_behind_tellus(self) -> None:
         """Round 71: Fina's Psyche is reached past Tellus (Tower of Mysidia, tier B): a third party
-        member and two continents, on top of Mysidia."""
+        member and two continents, on top of Mysidia. Round 73: and Wind, a healer, and a group heal
+        or Earth resistance. Fina heals, Jake has Wind."""
         chest = self.multiworld.get_location("Fina's Psyche Chest 1", self.player)
         self.assertNotEqual(chest.progress_type, LocationProgressType.EXCLUDED)
-        self.collect_by_name(["Mysidia Unlock"])
-        self.assertFalse(chest.can_reach(self.multiworld.state), "two members are not enough")
-        self.collect_by_name(["Nichol"])
+        self.collect_by_name(["Mysidia Unlock", "Fina"])
+        self.assertFalse(chest.can_reach(self.multiworld.state), "no Wind")
+        self.collect_by_name(["Jake"])
         self.assertTrue(chest.can_reach(self.multiworld.state))
 
     def test_sanctissimus_is_behind_its_first_three_bosses(self) -> None:
         """Round 72: Sanctissimus Shrine's chests are past Archaeoaevis, Dad Bomb and Test Rider
-        (tier C): four party members and four continents, on top of Gronoa."""
+        (tier C): four party members and four continents, on top of Gronoa. Round 73: and a group
+        heal or a revive, which Fina has from level 25."""
         chest = self.multiworld.get_location("Sanctissimus Shrine Chest 1", self.player)
         self.collect_by_name(["Gronoa Unlock", "Pharm Unlock", "Mysidia Unlock"])
-        self.collect(self.get_item_by_name("Nichol"))
-        self.assertFalse(chest.can_reach(self.multiworld.state), "three members are not enough")
-        self.collect(self.get_item_by_name("Lid"))
+        self.collect_by_name(["Nichol", "Lid"])
+        self.assertFalse(chest.can_reach(self.multiworld.state), "no group heal or revive")
+        self.remove_by_name(["Lid"])
+        self.collect_by_name(["Fina"])
         self.assertTrue(chest.can_reach(self.multiworld.state))
+        self.remove_by_name(["Nichol"])
+        self.assertFalse(chest.can_reach(self.multiworld.state), "three members are not enough")
 
     def test_zoldaad_dungeon_needs_its_key(self) -> None:
         chest = self.multiworld.get_location("Zoldaad Dungeon Chest 1", self.player)
@@ -202,7 +209,7 @@ class TestDirnadoOnFoot(FFResonanceTestBase, real_defaults=True):
     """Round 73: the user's seed. On foot from Dilmagia, Liquid Thunder (tier B) holds the rest of
     Dirnado: three party members and a second continent, or the Airship to fly over it."""
     options = {"start_with_airship": False, "starting_continent": "dirnado", "starting_roster": 2,
-               "starting_character_1": "Lasswell", "starting_character_2": "Archwitch Fina"}
+               "starting_character_1": "Lasswell", "starting_character_2": "Archwitch Fina", "shuffle_visions": True}
 
     def reachable(self, name: str) -> bool:
         return self.multiworld.get_location(name, self.player).can_reach(self.multiworld.state)
@@ -216,9 +223,12 @@ class TestDirnadoOnFoot(FFResonanceTestBase, real_defaults=True):
             self.assertFalse(self.reachable(name), name)
 
     def test_liquid_thunder_opens_the_rest(self) -> None:
-        self.collect_by_name(["Rain"])
+        """Round 73: it needs Earth and a healer too. Lid's Mechabo Kick is Earth from level 1."""
+        self.collect_by_name(["Lid"])
         self.assertFalse(self.reachable("Mt. Thunderclap: Liquid Thunder"), "a second continent too")
         self.collect_by_name(["Lanzelt Unlock"])
+        self.assertFalse(self.reachable("Mt. Thunderclap: Liquid Thunder"), "no healer")
+        self.collect_by_name(["Leah (Vision)"])
         for name in ("Mt. Thunderclap: Liquid Thunder", "Dwarven Forge Chest 1", "Wind Shrine Chest 1",
                      "Sanctum of Light (Zidane)"):
             self.assertTrue(self.reachable(name), name)
@@ -227,7 +237,7 @@ class TestDirnadoOnFoot(FFResonanceTestBase, real_defaults=True):
         self.collect_by_name(["Airship"])
         self.assertFalse(self.reachable("Mt. Thunderclap: Liquid Thunder"))
         self.assertTrue(self.reachable("Dwarven Forge Chest 1"))
-        self.assertTrue(self.reachable("Dwarven Forge: Mom Bomb"), "tier A")
+        self.assertTrue(self.reachable("Wind Shrine Chest 1"))
 
 
 class TestUnshuffledVisions(FFResonanceTestBase):
@@ -439,14 +449,57 @@ class TestBosses(FFResonanceTestBase):
         self.assertTrue(self.boss_location(BELMODAR).can_reach(self.multiworld.state))
 
     def test_a_boss_is_on_its_continent(self) -> None:
-        boss = self.boss_location(MOM_BOMB)
+        boss = self.boss_location(THE_HUNGER)
         self.assertFalse(boss.can_reach(self.multiworld.state))
-        self.collect_by_name(["Dirnado Unlock"])
+        self.collect_by_name(["Kolobos Unlock"])
         self.assertTrue(boss.can_reach(self.multiworld.state))
 
     def test_slot_data(self) -> None:
         slot_data = self.world.fill_slot_data()
         self.assertEqual((slot_data["include_bosses"], slot_data["final_boss_fragments"]), (1, 3))
+
+
+class TestBossCapabilities(FFResonanceTestBase):
+    """Round 73: what counts toward a boss's needs (data/game/capabilities.tsv). The party starts as
+    Rain and Lasswell, on Grandshelt, with the Airship."""
+    options = {"include_bosses": True, "shuffle_visions": True}
+
+    def has(self, capability: str, level: int) -> bool:
+        return has_capability(self.world, self.multiworld.state, capability, level)
+
+    def test_a_skill_counts_from_its_level(self) -> None:
+        """Fina learns her first group heal, Radiant Restoration, at level 25."""
+        self.collect_by_name(["Fina"])
+        self.assertTrue(self.has("heal", EARLY_LEVEL), "Cure at level 3")
+        self.assertFalse(self.has("aoe_heal", FINA_GROUP_HEAL_LEVEL - 1))
+        self.assertTrue(self.has("aoe_heal", FINA_GROUP_HEAL_LEVEL))
+
+    def test_an_element_is_either_kind_of_attack(self) -> None:
+        self.assertTrue(self.has("fire", EARLY_LEVEL), "Rain's Fire")
+        self.assertFalse(self.has("earth", MAX_LEVEL))
+        self.collect_by_name(["Lid"])
+        self.assertTrue(self.has("earth", EARLY_LEVEL), "Mechabo Kick")
+
+    def test_a_vision_awakens_with_continents(self) -> None:
+        """Leah's Esuna is at awakening 1, which needs a second continent."""
+        self.collect_by_name(["Leah (Vision)"])
+        self.assertTrue(self.has("heal", EARLY_LEVEL), "Cure at awakening 0")
+        self.assertFalse(self.has("cleanse", MAX_LEVEL))
+        self.collect_by_name(["Lanzelt Unlock"])
+        self.assertTrue(self.has("cleanse", MAX_LEVEL))
+
+    def test_shop_gear_counts_where_its_shop_is_open(self) -> None:
+        """Insulated Gloves are sold in Sian, in Pharm. Gear in the item pool never counts."""
+        self.assertFalse(self.has("resist_lightning", MAX_LEVEL))
+        self.collect_by_name(["Pharm Unlock"])
+        self.assertTrue(self.has("resist_lightning", MAX_LEVEL))
+
+    def test_liquid_thunder_needs_earth_and_a_healer(self) -> None:
+        boss = self.multiworld.get_location("Mt. Thunderclap: Liquid Thunder", self.player)
+        self.collect_by_name(["Dirnado Unlock", "Lanzelt Unlock", "Lid"])
+        self.assertFalse(boss.can_reach(self.multiworld.state), "no healer")
+        self.collect_by_name(["Fina"])
+        self.assertTrue(boss.can_reach(self.multiworld.state))
 
 
 class TestBossesNotPriority(FFResonanceTestBase):

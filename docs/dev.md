@@ -68,6 +68,7 @@ Requirements and notes:
 | `transitions.tsv` | Map exits: source map, destination map/point, and condition |
 | `gimmicks.tsv` | Blockers, no-entry zones, doors, event triggers, save points, and airship landing points |
 | `shops.tsv` | Shop stock, one row per item |
+| `capabilities.tsv` | What each party member's skills (by level), Vision's (by awakening) and gear's passives do in a boss fight, for `boss_logic.py` |
 
 At runtime, the mod writes working files in its own folder: `ap_out.txt`, `ap_state.txt`, `ap_status.txt`, `settings.txt`, `ffrap_dump.txt`, `chests.tsv`, `seen.tsv`, and (when `ffrap_gate mark` is used) `crossings.txt`. `tools/fake_ap.py` writes `ap_in.txt` for standalone mod testing.
 

@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING
 from BaseClasses import ItemClassification, Location, LocationProgressType, Region
 
 from .data import AIRSHIP_ITEM, BOSSES, CHESTS, CONTINENT_UNLOCKS, RADAR, RADAR_ITEM, CRYSTALS, FINAL_AREA, ITEMS, OPEN_AREA, SHINIES, TABLET_SHINIES
+from .boss_logic import boss_rule
 from .items import FRAGMENT_NAME, GAME, FFResonanceItem, create_item, progression_ids
 
 if TYPE_CHECKING:
@@ -40,29 +41,6 @@ RADAR_NAME = ITEMS[RADAR_ITEM]["name"]
 # or cave joins two. Each way opens with the far continent's unlock, as the mod's gates do.
 BRIDGES = [("Grandshelt", "Lanzelt"), ("Lanzelt", "Kolobos")]
 FERRY_PORTS = ["Lanzelt", "Dirnado", "Olderion", "Zoldaad"]
-
-# Round 72: what a boss needs, by its tier in data/bosses.tsv (docs/boss_logic.md, section 2): party
-# members in all, continents unlocked, and the Airship. In round 71 bosses near level 20 felt out
-# of reach without a full party, and beatable at level 30 with one. The capability rules per boss
-# (healing, elements) in boss_logic.md are not built yet.
-TIER_NEEDS = {"A": (0, 0, False), "B": (3, 2, False), "C": (4, 4, False), "D": (5, 6, True)}
-BOSS_TIER = {int(b["key"].split(":")[1]): b["tier"] for b in BOSSES}
-
-
-def boss_rule(world: FFResonanceWorld, tier: str):
-    """The rule for a boss of `tier`, or None when it needs nothing. Party sizes above what the
-    seed can give (party members not shuffled) count as the most it can."""
-    members, continents, wants_airship = TIER_NEEDS[tier]
-    player = world.player
-    most = 8 if world.options.shuffle_party_members else len(world.starting_party)
-    extra = max(0, min(members, most) - len(world.starting_party))
-    airship = wants_airship and not world.options.start_with_airship
-    if not (extra or continents or airship):
-        return None
-    return lambda state: (state.has_group("Party Members", player, extra)
-                          and state.has_group("Continent Unlocks", player, continents)
-                          and (not airship or state.has(AIRSHIP, player)))
-
 
 class FFResonanceLocation(Location):
     game = GAME
@@ -140,21 +118,19 @@ def create_regions_and_locations(world: FFResonanceWorld) -> None:
             else:
                 location.progress_type = LocationProgressType.EXCLUDED
         # Round 72: a boss, or a place behind bosses (Fina's Psyche, Sanctissimus Shrine), needs
-        # what the highest of their tiers needs. A place only the airship reaches
+        # what each of those bosses needs (boss_logic.py). A place only the airship reaches
         # (data/airship_only.tsv) needs it.
-        tiers = [BOSS_TIER[group] for group in loc.get("after_boss", [])] + ([loc["tier"]] if loc.get("tier") else [])
-        tier = max(tiers) if tiers else None
-        tier_rule = boss_rule(world, tier) if tier else None
-        if tier_rule:
-            rules.append(tier_rule)
+        fights = list(loc.get("after_boss", []))
+        if loc["key"].startswith("boss:"):
+            fights.append(int(loc["key"].split(":")[1]))
+        rules += [boss_rule(world, group) for group in fights]
         if loc.get("airship") and on_foot:
             rules.append(lambda state: state.has(AIRSHIP, player))
         # Round 73: on foot, a place past a boss (the rest of Dirnado, past Liquid Thunder) needs
         # what that boss needs, or the Airship to fly over it.
         if "past_boss" in loc and on_foot:
-            beat_rule = boss_rule(world, BOSS_TIER[loc["past_boss"]])
-            if beat_rule:
-                rules.append(lambda state, beat_rule=beat_rule: state.has(AIRSHIP, player) or beat_rule(state))
+            beat = boss_rule(world, loc["past_boss"])
+            rules.append(lambda state, beat=beat: state.has(AIRSHIP, player) or beat(state))
         # Round 72: a radar treasure needs as many Progressive Radars as its tier. The tiers only
         # rise along the chain, so this also holds the treasures before it.
         if "radar_tier" in loc:
