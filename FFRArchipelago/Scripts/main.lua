@@ -50,7 +50,7 @@
 -- follows the save slots the linked game is saved to. While any other save is loaded, the mod
 -- grants nothing, reports nothing and leaves the chests vanilla.
 
-local VERSION = "0.57.0"
+local VERSION = "0.57.1"
 local PROTOCOL = 2        -- the bridge protocol; the apworld's MOD_PROTOCOL
 
 local MOD_DIR = (debug.getinfo(1, "S").source:gsub("^@", ""):gsub("\\", "/"):match("^(.*/)Scripts/[^/]+$"))
@@ -2190,12 +2190,11 @@ local saddleSave, shipyardLogged, storyBossLogged = nil, false, nil
 local storyBossFieldTicks = 0
 local STORY_BOSS_READY_TICKS = 2   -- seedExtrasTick runs every LOCKS_EVERY ticks: about 2 s
 -- Round 69: the airship as an item. Its flag turns on when the item comes. The game then places
--- the hidden airship at the next map change, from the save's parked place. On the world map it is
--- parked where the player stands. Anywhere else it stays at the seed's start, which the player can
--- always walk back to.
--- Round 69: an Airship received in Grandport was parked at the town's own coordinates, read as
--- the map changed to the world map, which put it in Olderion. So a place counts only from the
--- world map's own pawn.
+-- the hidden airship at the next map change, from the save's parked place: the seed's start,
+-- which the player can always walk back to.
+-- Round 69: one received in Grandport was parked at the town's own coordinates, and landed in
+-- Olderion. Round 72: one received on foot in Gronoa was parked where the player stood, in a part
+-- of Gronoa the airship cannot take off from. So it always waits at the start.
 local airshipCall = { save = nil, was = false }
 local function parkAirshipAtStart(why)
     local home = game.FOOT_STARTS[seedCfg.continent or ""]
@@ -2210,12 +2209,8 @@ airshipItemTick = function()
     local came = on and not airshipCall.was
     airshipCall.was = on
     if not came then return end
-    local pose = game.CurrentMap() == game.WORLD_MAP and game.OnField() and game.PlayerPose()
-    if pose and tostring(pose.class):find("Field", 1, true) and game.ParkAirship(pose.x, pose.y, pose.z) then
-        log(string.format("airship: parked at (%.0f, %.0f, %.0f) for the next map change", pose.x, pose.y, pose.z))
-        notify("The airship is yours. It lands here after your next map change (a town, a cave).")
-    elseif parkAirshipAtStart("received off the world map") then
-        notify("The airship is yours. It waits where you started this seed.")
+    if parkAirshipAtStart("received") then
+        notify("The airship is yours. It waits where you started this seed, from your next map change.")
     end
 end
 

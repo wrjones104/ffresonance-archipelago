@@ -1628,12 +1628,12 @@ tick(12)
 assert len(G.parks) == 0, "no airship yet"
 G.airshipFlag = True
 tick(12)
-assert list(G.parks.values()) == ["500 600 7"], list(G.parks.values())
+# Round 72: it waits at the seed's start even when it comes on the world map: one parked where
+# the player stood, inside Gronoa, could not take off
+assert list(G.parks.values()) == ["12470 14980 65"], list(G.parks.values())
 tick(12)
 assert len(G.parks) == 1, "parked once"
-# Round 69: received in a town, it waits at the seed's start. The world map's id can come before
-# the town's pawn is gone (Grandport's own coordinates put it in Olderion), so only the world
-# map's pawn counts.
+# received in a town, the same
 L.execute("G.airshipFlag = false")
 tick(12)
 L.execute("G.pawn = 'BP_MapUnit_Player_C'")

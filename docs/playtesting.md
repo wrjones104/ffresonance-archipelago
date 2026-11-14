@@ -697,7 +697,9 @@ World-map shinies verified as locations. Multiple crashes observed across differ
 
 **And (world 0.24.1):** Sanctissimus Shrine's chests and shards (Chests 1 and 2, Shards 82 and 84) are past its first three fights, Archaeoaevis, Dad Bomb and Test Rider (the user). They need what those bosses need, tier C: four party members and four continents. A place behind bosses (`AFTER_BOSS` in `tools/gen_apworld_data.py`) can now name several, and takes the highest tier.
 
-## Round 72 test plan (mod 0.57.0, world 0.24.1)
+**And (mod 0.57.1):** an Airship received on foot inside Gronoa was parked where the user stood, in a part of Gronoa the airship cannot take off from, so it was stuck there. The Airship now always waits at the seed's start point, wherever it comes.
+
+## Round 72 test plan (mod 0.57.1, world 0.24.1)
 
 **Install:** copy `FFRArchipelago/Scripts` (it has a new file, `field_items.lua`) and `dist/ff_resonance.apworld` (0.24.1). A new seed is needed for the logic and fast travel changes. The crash fix, the shard fix and the boss changes also work on the round 71 save.
 
