@@ -149,7 +149,9 @@ CONTINENT_ITEM_BASE = 700_000_000  # AP id of a continent's unlock: base + its e
 # and the Imperial Residences (2113, by the Zoldaad streetcar, round 72). The burning Grandshelt
 # Castle (3020) is the prologue's and cannot be entered at story 8000. Round 72: its chests are
 # no locations at all, as a location no one can open only inflates the count (the user).
-NO_ROUTE_MAPS = {3020}
+# Round 73: the attacked Old Town of Olderion (3090) is chapter 3's. Olderion's door to it opens
+# only at story 3050 to 3085, and the user found no way in.
+NO_ROUTE_MAPS = {3020, 3090}
 # Round 72: single chests with no route at story 8000. Grandshelt Castle's chest row 1 (box uid 63,
 # at (-30195, 8095) on map 2012) is in a room the user could not find after searching the castle:
 # most likely one the story passes through and the castle closes later.

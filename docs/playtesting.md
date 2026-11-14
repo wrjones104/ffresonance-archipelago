@@ -715,6 +715,8 @@ World-map shinies verified as locations. Multiple crashes observed across differ
 - `SHOP_MAPS` in `tools/gen_apworld_data.py`: the 55 gear shops open at story 8000, by their names. The only shop gear that counts in logic is resistance and status accessories and armour; no open shop sells an elemental weapon.
 - Off-line, 54 seeds (every starting continent, with and without the Airship, 3 seeds each, the real defaults) filled and could be finished.
 
+**Round 73, in play (world 0.25.2): Old Town, Olderion Chests 1 to 3 are no locations.** The user could not reach them. They are on map 3090, the Old Town that monsters attack in chapter 3. Olderion's door to it opens only at story 3050 to 3085 (`transitions.tsv`), and the open start is at 8000. Map 3090 is on the no-route list now, as map 3020 is, so a seed has 3 fewer locations.
+
 ## Round 72 test plan (mod 0.57.1, world 0.24.1)
 
 **World 0.24.2 (during the round):** copy `dist/ff_resonance.apworld` and generate a new seed for the Liquid Thunder gate. The mod is unchanged.

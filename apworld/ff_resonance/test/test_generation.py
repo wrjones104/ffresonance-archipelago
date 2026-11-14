@@ -74,11 +74,16 @@ class TestDefault(FFResonanceTestBase):
 
     def test_places_with_no_route_are_not_locations(self) -> None:
         """Round 72: the burning Grandshelt Castle (3020) is the prologue's: its chests are not
-        locations. The Imperial Residences (2113) are reached by the Zoldaad streetcar."""
-        self.assertTrue(NO_ROUTE and all(key.startswith("chest:3020:") or key == "chest:2012:1" for key in NO_ROUTE))
+        locations. The Imperial Residences (2113) are reached by the Zoldaad streetcar. Round 73:
+        the attacked Old Town of Olderion (3090) is chapter 3's."""
+        self.assertTrue(NO_ROUTE and all(key.startswith(("chest:3020:", "chest:3090:")) or key == "chest:2012:1"
+                                         for key in NO_ROUTE))
         self.assertNotIn("chest:2012:1", LOCATION_KEY_TO_ID, "the castle room the user could not find (round 72)")
+        for chest in range(3):
+            self.assertNotIn(f"chest:3090:{chest}", LOCATION_KEY_TO_ID, "Old Town, Olderion (round 73)")
         names = {loc.name for loc in self.multiworld.get_locations(self.player)}
         self.assertNotIn("Grandshelt Castle Chest 8", names)
+        self.assertNotIn("Old Town, Olderion Chest 1", names)
         residences = self.multiworld.get_location("Imperial Residences Chest 1", self.player)
         self.assertEqual(residences.progress_type, LocationProgressType.DEFAULT)
         self.assertEqual(residences.parent_region.name, "Zoldaad")
