@@ -14,10 +14,6 @@ This project is in active playtesting. If you are helping test a seed, see the [
 - Each Archipelago session links to the save created by **New Game (Archipelago)** and any slot you save it to. Plain **New Game** and other vanilla saves stay untouched; while another save is loaded, the mod pauses automatically.
 - Universal Tracker is supported for tracking reachable locations and logic.
 
-Current limitations:
-- World-map shinies still grant their normal game pickup alongside sending their Archipelago check.
-- Chests that hold key items or visions in the base game are not shuffled locations and still give their normal contents.
-
 ## Requirements
 
 - *Final Fantasy Resonance* (Steam, Windows)
@@ -29,7 +25,7 @@ Current limitations:
 
 Disable `FFRRandomizer` if you have it installed (delete or rename its `enabled.txt`, or disable it in `mods.txt`), because it overwrites the same chest and enemy tables.
 
-`FFRSLib`, `FFRS_QoL`, and `FFRBestiary` are not needed. If you keep `FFRS_QoL` installed alongside `TreasureMinimap` for map markers, leave `FFRS_QoL`'s encounter rate at `1` and disable its EXP, Gil, MRP, and encounter overrides so it does not fight with `FFRArchipelago`.
+If you have `FFRS_QoL` installed alongside `TreasureMinimap` for map markers, leave `FFRS_QoL`'s encounter rate at `1` and disable its EXP, Gil, MRP, and encounter overrides so it does not fight with `FFRArchipelago`.
 
 ## Installation
 
