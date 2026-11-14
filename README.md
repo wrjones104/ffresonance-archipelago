@@ -29,6 +29,8 @@ If you have `FFRS_QoL` installed alongside `TreasureMinimap` for map markers, le
 
 ## Installation
 
+Download the latest `FFRArchipelago` mod zip and `ff_resonance.apworld` from the [latest GitHub release](https://github.com/wrjones104/ffresonance-archipelago/releases/latest).
+
 ### 1. Install UE4SS
 
 Skip this step if you already have a UE 5.6 build of UE4SS installed (for example, through FFR Modding Tools or another FFRS mod).
@@ -40,14 +42,16 @@ Skip this step if you already have a UE 5.6 build of UE4SS installed (for exampl
 
 ### 2. Install the game mod
 
-1. Copy the `FFRArchipelago` folder (containing `enabled.txt`, `Scripts/`, and `Assets/`) into your game's UE4SS Mods directory:
+1. Extract the `FFRArchipelago` zip from the latest release into your game's UE4SS `Mods` directory so the `FFRArchipelago` folder (containing `enabled.txt`, `Scripts/`, and `Assets/`) sits at:
    `...\FINAL FANTASY RESONANCE\FFRS\Binaries\Win64\ue4ss\Mods\FFRArchipelago`
+   Make sure there is no extra nested folder (such as `Mods\FFRArchipelago\FFRArchipelago\`).
 2. If you are updating from an older version of the mod, delete `ap_in.txt`, `ap_out.txt`, and `ap_state.txt` from that folder before starting a new seed. Keep `seen.tsv` if present.
 
 ### 3. Install the Archipelago world
 
-- Copy `dist/ff_resonance.apworld` into your Archipelago `custom_worlds` folder.
-- If you are running from source instead of the packaged `.apworld`, run `python tools/build_apworld.py` to build `dist/ff_resonance.apworld`, or copy `apworld/ff_resonance` into Archipelago's `worlds/` folder.
+1. Download `ff_resonance.apworld` from the latest release.
+2. Double-click `ff_resonance.apworld` to install it through the Archipelago Launcher, or copy it directly into your Archipelago `custom_worlds` folder (replacing any older version).
+   - If you are building from source instead, run `python tools/build_apworld.py` to generate `dist/ff_resonance.apworld`.
 
 ## Generating and playing a seed
 

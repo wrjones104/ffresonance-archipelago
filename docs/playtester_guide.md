@@ -19,10 +19,19 @@ Known work in progress:
 - Espers are all rewarded in their vanilla manner (with the exception of Siren, which is granted from the start).
 - Chamber of Arms and the Arena are not touched yet.
 
+## Installing a release
+
+Download the `FFRArchipelago` mod zip and `ff_resonance.apworld` from the [latest GitHub release](https://github.com/wrjones104/ffresonance-archipelago/releases/latest).
+
+1. Install a UE 5.6 build of [UE4SS](https://github.com/UE4SS-RE/RE-UE4SS/releases) into `...\FINAL FANTASY RESONANCE\FFRS\Binaries\Win64\` if you do not already have it (see the [README](../README.md#1-install-ue4ss) for details).
+2. Extract the `FFRArchipelago` zip into `...\FINAL FANTASY RESONANCE\FFRS\Binaries\Win64\ue4ss\Mods\` so `enabled.txt`, `Scripts/`, and `Assets/` sit directly inside `Mods\FFRArchipelago\`.
+3. If you are updating an existing install, delete `ap_in.txt`, `ap_out.txt`, and `ap_state.txt` from `Mods\FFRArchipelago\` before starting a new seed (keep `seen.tsv` if present).
+4. Install `ff_resonance.apworld` by double-clicking it or copying it into your Archipelago `custom_worlds` folder, overwriting any previous version.
+
 ## Before you start
 
-- Most other mods have not been tested alongside this mod - use other mods at your own risk.
-- If you have it, nake sure `FFRRandomizer` is disabled. If you use `FFRS_QoL` for map markers, leave its encounter rate at `1` and turn off its EXP, Gil, MRP, and encounter overrides so they do not conflict with `FFRArchipelago`.
+- Most other mods have not been tested alongside this mod; use other mods at your own risk.
+- If you have it, make sure `FFRRandomizer` is disabled. If you use `FFRS_QoL` for map markers, leave its encounter rate at `1` and turn off its EXP, Gil, MRP, and encounter overrides so they do not conflict with `FFRArchipelago`.
 - Connect the **Final Fantasy Resonance Client** to the server before starting a new game, and start the run from **New Game (Archipelago)** on the title screen (not the regular **New Game**).
 - You can change EXP, Gil, MRP, random encounters, encounter rate, enemy scaling, and scaling strength (`Casual`, `Normal`, `Expert`) at any time in **Options > Gameplay** at the bottom of the list. Note that `AP: Scaling strength` stacks with the game's own difficulty setting.
 
