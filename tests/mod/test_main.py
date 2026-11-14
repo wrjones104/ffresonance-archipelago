@@ -200,6 +200,8 @@ G.progress, G.radarPatches = {}, 0
 function G.ProgressValue(i) return G.progress[i] or 0 end
 function G.SetProgressValue(i, n) G.progress[i] = n; return n end
 function G.RadarPatch() G.radarPatches = G.radarPatches + 1; return 13 end
+G.BEHEMOTH, G.behemothPatches = { map = 3280 }, 0
+function G.BehemothPatch() G.behemothPatches = G.behemothPatches + 1; return 3 end
 G.FOOT_STARTS = { lanzelt = { name = "foot lanzelt", story = 8000, map = 1000, x = 12470, y = 14980, z = 65 } }
 function G.AirshipItemSync(asItem) G.airshipSyncs[#G.airshipSyncs + 1] = asItem; return nil end
 function G.ParkAirship(x, y, z) G.parks[#G.parks + 1] = x .. " " .. y .. " " .. z; return true end
@@ -1689,6 +1691,24 @@ L.execute("G.radarFlags[704] = true")
 tick(12)
 assert "check\tradar:1\n" in read("ap_out.txt") and "radar:2" not in read("ap_out.txt"), read("ap_out.txt")[-200:]
 print("radar: ok")
+
+# Round 73: the Behemoth fight's assist hits deal 1 damage. The patch runs on a new save and again
+# on each way into the Crystal Tower (map 3280), not on every tick there.
+patches = G.behemothPatches
+assert patches >= 1, "on the new save"
+L.execute(CAPTURE)
+G.map = 3280
+tick(12)
+assert G.behemothPatches == patches + 1, "on entering the tower"
+tick(12)
+assert G.behemothPatches == patches + 1, "not again while there"
+G.map = 1000
+tick(12)
+G.map = 3280
+tick(12)
+assert G.behemothPatches == patches + 2, "on the next way in"
+assert any("behemoth: 3 assist hits set to 1 damage" in s for s in L.eval("logged").values()), "logged"
+print("behemoth: ok")
 
 # Round 58: the tower's last climb stays sealed while the client's counts are short, and says so near it
 inbox("seed\tS58:0:1\ncfg\topenworld\t1\ncfg\tfinalboss\t2\t6\t3\t12\n", "w")

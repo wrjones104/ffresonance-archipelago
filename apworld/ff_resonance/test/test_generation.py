@@ -190,6 +190,19 @@ class TestAirshipItem(FFResonanceTestBase):
         self.assertFalse(self.multiworld.state.can_reach_region("Crystal Tower", self.player))
         self.assertFalse(self.multiworld.get_location(GOAL_EVENT, self.player).can_reach(self.multiworld.state))
 
+    def test_the_tower_third_section_is_past_behemoth(self) -> None:
+        """Round 73 (the user): the tower's first two sections need only the Airship. Chests 3 and 6
+        to 9 are past Behemoth, which needs a tier B party with Wind or Light."""
+        self.collect_by_name(["Airship"])
+        state = self.multiworld.state
+        for n in (1, 2, 4, 5, 10, 11):
+            self.assertTrue(self.multiworld.get_location(f"Crystal Tower Chest {n}", self.player).can_reach(state), n)
+        third = [self.multiworld.get_location(f"Crystal Tower Chest {n}", self.player) for n in (3, 6, 7, 8, 9)]
+        self.assertFalse(any(chest.can_reach(state) for chest in third))
+        self.assertFalse(self.multiworld.get_location(GOAL_EVENT, self.player).can_reach(state))
+        self.collect_all_but([])
+        self.assertTrue(all(chest.can_reach(self.multiworld.state) for chest in third))
+
 
 class TestAirshipOnlyShinies(FFResonanceTestBase):
     options = {"start_with_airship": False, "include_shinies": True}

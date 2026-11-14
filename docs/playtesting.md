@@ -719,6 +719,12 @@ World-map shinies verified as locations. Multiple crashes observed across differ
 
 **And (world 0.25.3):** World Map Shinies 36, 39 and 145 (Olderion) are airship-only (the user), in `data/airship_only.tsv`. Shiny 68, also in Olderion, was in the table already from round 71.
 
+**And (mod 0.58.0, world 0.26.0): the Crystal Tower in sections.** The user: the first two sections should be in logic as soon as the Airship is, and Behemoth, between sections 2 and 3, can be a tier B boss. The fight between sections 1 and 2 is a plain enemy formation and gates nothing.
+- **Logic.** The tower needs only the Airship now (nothing when the seed starts with it), not every continent. Sections 1 and 2 hold Chests 1, 2, 4, 5, 10 and 11 and Shards 124 and 125. Chests 3 and 6 to 9 and Shard 126 are past Behemoth: they need a tier B party (3 members, 2 continents, a healer) with Wind or Light, its weaknesses (`docs/boss_logic.md`). The goal still needs every continent, and Behemoth too.
+- **Which section is which,** from the level (map 3280's transition points, dumped off-line): Behemoth's door (transition 11, story 8020) leads to a room at y -125400, and that room's other door to the third section, around (8000, -58000). The user named Chests 7 and 9 as maybe in the first two; the level puts them in the third, with Chest 8 and Shard 126.
+- **Behemoth** is level 52 in the game. It is not in `data/bosses.tsv`, which must match the mod's boss list, so its tier is in `boss_logic.py` (`GATE_BOSSES`), with its skills counted to level 39, the top of tier B.
+- **The scripted hits.** In the fight, the Sworn Six's ally (unit 1014, Water Flower's Alluvion) uses three skills with fixed damage: 501940 (Water, 2000), 501950 (Light, 2000) and 501960 (Light, 3000, with a defence and magic defence break). The battle's text names three Water support hits, three Light ones and a last one. With Behemoth scaled to a low party, those alone killed it. Mod 0.58.0 sets the three skills' damage (`magnification` in `DT_SkillData`) to 1, on each new save and on each way into the tower. No other unit uses them. The ally's own attack, Ruin (500100), is a common skill and is unchanged.
+
 ## Round 72 test plan (mod 0.57.1, world 0.24.1)
 
 **World 0.24.2 (during the round):** copy `dist/ff_resonance.apworld` and generate a new seed for the Liquid Thunder gate. The mod is unchanged.
@@ -762,3 +768,5 @@ Send the `[FFRAP]` lines of the log and any crash folder.
 - Safety Bit (Instant Death) in Mysidia.
 
 Also, **is Felicitas's shop the one the data calls "ナシャト"?** If a town's shop sells something else, a screenshot of its list helps.
+
+**4. The Crystal Tower's Behemoth (mod 0.58.0, world 0.26.0, during the round).** Install: copy `FFRArchipelago/Scripts` and `dist/ff_resonance.apworld`, and generate a new seed. On entering the tower the log should say `behemoth: 3 assist hits set to 1 damage`. **In the fight, do the Water and Light support hits now deal 1 or 2 damage, and does the fight end only when your party wins it?** Note any other hit from the allies that still takes a big part of its HP. **Was Behemoth fair for a tier B party,** and was anything past it out of logic that you could reach without the fight?

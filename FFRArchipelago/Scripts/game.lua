@@ -2253,6 +2253,29 @@ function G.AntlionPatch()
     return written
 end
 
+-- Round 73: in the Crystal Tower's Behemoth fight (battle group 9051, battle event C08_808), the
+-- Sworn Six's ally (unit 1014) hits for a fixed 2000, 2000 and 3000. With Behemoth scaled to a low
+-- party, those hits alone killed it. They now deal 1, so the scenes still play but the party has
+-- to win the fight. No other unit uses these three skills. Returns the number of rows written.
+G.BEHEMOTH = { map = 3280, skillTable = "/Game/Datatable/Skill/DT_SkillData.DT_SkillData",
+    assistSkills = { [501940] = true, [501950] = true, [501960] = true } }
+function G.BehemothPatch()
+    local written = 0
+    for _, dt in ipairs(TableFamily(Find(G.BEHEMOTH.skillTable))) do
+        pcall(function()
+            dt:ForEachRow(function(_, row)
+                pcall(function()
+                    if G.BEHEMOTH.assistSkills[Int(row.ID)] and Int(row.magnification) ~= 1 then
+                        row.magnification = 1
+                        written = written + 1
+                    end
+                end)
+            end)
+        end)
+    end
+    return written
+end
+
 -- Replace radar dig row rewards with 1 Potion so the reward dialog still triggers and displays
 -- the scouted AP item. Returns the number of rows written.
 function G.RadarPatch()

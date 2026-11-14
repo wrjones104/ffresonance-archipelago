@@ -18,8 +18,13 @@ PARTY_MEMBERS = [ap_id - UNIT_ITEM_BASE for ap_id in PROGRESSION["party"]]
 
 # Party size, continents unlocked, and Airship requirement per tier (docs/boss_logic.md).
 TIER_NEEDS = {"A": (0, 0, False), "B": (3, 2, False), "C": (4, 4, False), "D": (5, 6, True)}
-BOSS_TIER = {int(b["key"].split(":")[1]): b["tier"] for b in BOSSES}
-BOSS_LEVEL = {int(b["key"].split(":")[1]): b["level"] for b in BOSSES}
+# Fights that gate places but are no locations, so they are not in data/bosses.tsv (which must match
+# the mod's G.BOSSES): battle group -> (tier, level). Round 73 (the user): Behemoth, level 52 in the
+# game, is tier B once the Sworn Six's assist hits deal 1 damage (game.BehemothPatch). Its skills
+# count to level 39, the top of tier B.
+GATE_BOSSES = {9051: ("B", 39)}
+BOSS_TIER = {int(b["key"].split(":")[1]): b["tier"] for b in BOSSES} | {g: t for g, (t, _) in GATE_BOSSES.items()}
+BOSS_LEVEL = {int(b["key"].split(":")[1]): b["level"] for b in BOSSES} | {g: lv for g, (_, lv) in GATE_BOSSES.items()}
 
 # Vision awakening depends on uncounted materials, so unlocked continents stand in for it
 # (docs/boss_logic.md, section 2): awakening 1 from 2, 2 from 4, 3 from 5 and the Airship.
@@ -55,6 +60,7 @@ BOSS_NEEDS: dict[int, Callable[[Callable[[str], bool]], bool]] = {
     9089: lambda has: has("lightning_magic"),                                               # Iron Giant
     9031: lambda has: has("wind") and (has("aoe_heal") or has("resist_earth")),             # Tellus
     9038: lambda has: has("wind") and (has("aoe_heal") or has("resist_earth")),             # Tellus
+    9051: lambda has: has("wind") or has("light"),                                          # Behemoth
 }
 
 

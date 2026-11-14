@@ -161,6 +161,12 @@ NO_ROUTE_CHESTS = {"chest:2012:1"}
 # of Mysidia. Round 72 (the user): Sanctissimus Shrine's chests and shards (3250) are past its first
 # three fights, Archaeoaevis, Dad Bomb and Test Rider.
 AFTER_BOSS = {3210: [9038], 3211: [9038], 3212: [9038], 3250: [9075, 9074, 9073]}
+# Single locations behind a boss fight, where the rest of their map is not. Round 73: the Crystal
+# Tower's third section is past Behemoth (9051). Its door (transition 11, at story 8020) leads to
+# the room at y -125400, and that room's other door to the section around (8000, -58000). These
+# are the chests and shard there. The first two sections need only the way in (the user).
+AFTER_BOSS_KEYS = {9051: {"chest:3280:2", "chest:3280:5", "chest:3280:6", "chest:3280:7", "chest:3280:8",
+                          "shiny:3280:126"}}
 # Places that on foot lie past a boss, which the airship flies over. Round 73 (the user): from
 # Dilmagia, where the Dirnado start and the ferry arrive, Liquid Thunder on Mt. Thunderclap's
 # summit blocks the way to the rest of Dirnado. Only Dilmagia (maps 2060 and 2061), Mt.
@@ -519,6 +525,10 @@ def main() -> None:
     for r in read_tsv("airship_only.tsv"):
         assert r["location"] in by_key, f"airship_only.tsv: no location {r['location']}"
         by_key[r["location"]]["airship"] = True
+    for group, keys in AFTER_BOSS_KEYS.items():
+        for key in keys:
+            assert key in by_key, f"AFTER_BOSS_KEYS: no location {key}"
+            by_key[key].setdefault("after_boss", []).append(group)
     for group, (area, near_maps, near_keys) in PAST_BOSS_ON_FOOT.items():
         for key, entry in by_key.items():
             kind, place = key.split(":")[:2]

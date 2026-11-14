@@ -28,6 +28,8 @@ location_name_groups["Fragment Bosses"] = {loc["name"] for loc in BOSSES if loc[
 # Sephiroth takes negligible damage at midgame levels even at minimum scaling, so priority_bosses
 # avoids placing required items on him.
 SEPHIROTH = "boss:9138"
+# The Crystal Tower's Behemoth, before its third section and the way up.
+BEHEMOTH = 9051
 
 GOAL_EVENT = "Story Goal"
 SHARD_GOAL_EVENT = "Tablet Shard Goal"
@@ -48,10 +50,9 @@ class FFResonanceLocation(Location):
 
 def create_regions_and_locations(world: FFResonanceWorld) -> None:
     """
-    One region per continent, each behind its unlock item. The Crystal Tower and the goal need
-    every unlock: the tower is open from the start in game, but it is the end of the road, and
-    this keeps what the player needs out of it until the continents are done. Everything on a
-    continent counts as reachable once it opens.
+    One region per continent, each behind its unlock item. Everything on a continent counts as
+    reachable once it opens. The Crystal Tower needs only the Airship: its third section is past
+    Behemoth (`after_boss`). The goal needs every unlock and Behemoth too.
     """
     player = world.player
     menu = Region("Menu", player, world.multiworld)
@@ -72,7 +73,7 @@ def create_regions_and_locations(world: FFResonanceWorld) -> None:
         else:
             add_region(continent, lambda state, unlock=unlock: state.has(unlock, player))
     every_unlock = list(UNLOCK_NAMES.values()) + ([AIRSHIP] if on_foot else [])
-    add_region(FINAL_AREA, lambda state: state.has_all(every_unlock, player))
+    add_region(FINAL_AREA, lambda state: not on_foot or state.has(AIRSHIP, player))
     if on_foot:
         ways = BRIDGES + [(a, b) for i, a in enumerate(FERRY_PORTS) for b in FERRY_PORTS[i + 1:]]
         for a, b in ways:
@@ -157,7 +158,9 @@ def create_regions_and_locations(world: FFResonanceWorld) -> None:
         members = max(0, world.final_boss_characters - len(world.starting_party))
         visions = world.final_boss_visions
         fragments = world.final_boss_fragments
-        goal.access_rule = lambda state: (state.has_group("Party Members", player, members) and
+        behemoth = boss_rule(world, BEHEMOTH)
+        goal.access_rule = lambda state: (state.has_all(every_unlock, player) and behemoth(state) and
+                                          state.has_group("Party Members", player, members) and
                                           state.has_group("Visions", player, visions) and
                                           state.has(FRAGMENT_NAME, player, fragments))
     goal.place_locked_item(FFResonanceItem(VICTORY, ItemClassification.progression, None, player))

@@ -49,7 +49,7 @@
 -- follows the save slots the linked game is saved to. While any other save is loaded, the mod
 -- grants nothing, reports nothing and leaves the chests vanilla.
 
-local VERSION = "0.57.3"
+local VERSION = "0.58.0"
 local PROTOCOL = 2        -- the bridge protocol; the apworld's MOD_PROTOCOL
 
 local MOD_DIR = (debug.getinfo(1, "S").source:gsub("^@", ""):gsub("\\", "/"):match("^(.*/)Scripts/[^/]+$"))
@@ -1375,6 +1375,13 @@ local function tick()
                     local okAntlion, written = pcall(game.AntlionPatch)
                     log("antlion: " .. tostring(written) .. " win choices set to clear the sandpit" .. (okAntlion and "" or " (failed)"))
                 end
+                -- Again on each way into the tower, in case the game loaded the skill table again.
+                local inTower = game.CurrentMap() == game.BEHEMOTH.map
+                if newSave or (inTower and not state.inTower) then
+                    local okBehemoth, written = pcall(game.BehemothPatch)
+                    log("behemoth: " .. tostring(written) .. " assist hits set to 1 damage" .. (okBehemoth and "" or " (failed)"))
+                end
+                state.inTower = inTower
                 if newSave and bossTest.group then pcall(bossTest.arm, bossTest.group, bossTest.quiet) end
                 if okShop and blocked ~= nil then
                     log("vision shop " .. (blocked and "closed (no vision yet)" or "open") .. ": " .. tostring(rows) .. " rows")

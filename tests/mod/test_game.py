@@ -1771,6 +1771,29 @@ assert L.eval("G.RadarPatch()") == 0
 assert L.eval("#G.RADAR") == 13 and L.eval("G.RADAR[13].flag") == 716
 print("radar rows: ok")
 
+# Round 73: the Sworn Six's three assist skills in the Behemoth fight deal a fixed 1 damage, and
+# no other skill changes (Ruin, 500100, is the same ally's own attack and is used elsewhere too).
+L.execute("""
+skillRows = { water = { ID = 501940, magnification = 2000 }, light = { ID = 501950, magnification = 2000 },
+  both = { ID = 501960, magnification = 3000 }, ruin = { ID = 500100, magnification = 12 } }
+skillTable = { rows = skillRows, ParentTables = {} }
+function skillTable:IsValid() return true end
+function skillTable:GetFullName() return "DataTable DT_SkillData" end
+function skillTable:ForEachRow(fn) for k, r in pairs(self.rows) do fn(fname(k), r) end end
+local prevSkillFind = StaticFindObject
+function StaticFindObject(p)
+  if p == G.BEHEMOTH.skillTable then return skillTable end
+  return prevSkillFind(p)
+end
+""")
+ASSIST_SKILLS = 3
+assert L.eval("G.BehemothPatch()") == ASSIST_SKILLS
+for row in ("water", "light", "both"):
+    assert L.eval(f"skillRows.{row}.magnification") == 1, row
+assert L.eval("skillRows.ruin.magnification") == 12, "the ally's own attack is left alone"
+assert L.eval("G.BehemothPatch()") == 0, "nothing to write the second time"
+print("behemoth assist hits: ok")
+
 # Round 72: the map manager is kept as its path. Once the engine frees it (here: no longer found by
 # path, and any touch fails as an access violation would), the next call finds the new one and
 # never asks the old one anything. Round 71 crashed twice on IsValid of a freed, kept object.
