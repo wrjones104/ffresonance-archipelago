@@ -59,7 +59,7 @@ class FinalBossFragments(Range):
     display_name = "Final Boss Fragments"
     range_start = 0
     range_end = FRAGMENT_BOSSES
-    default = 4
+    default = 14
 
 
 class StartingContinent(Choice):

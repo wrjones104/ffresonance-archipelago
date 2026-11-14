@@ -126,7 +126,7 @@ Scripted fights need care one by one. The first Umbra and the Ignis and Evan due
 **Decided (round 59 and round 61, the user):**
 - A story boss holds a locked Crystal Fragment and no shuffled item.
 - A cave master holds a shuffled item. Its own Magicite goes into the pool.
-- The tower's last climb needs `final_boss_fragments` fragments, beside `final_boss_characters` and `final_boss_visions`.
+- The tower's last climb needs `final_boss_fragments` fragments, beside `final_boss_characters` and `final_boss_visions`. Round 73 (world 0.27.0): the default is 14 of the 21 (the user).
 - Siren and Leviathan both hold Crystal Fragments as story bosses.
 
 **Newly introduced idea:**

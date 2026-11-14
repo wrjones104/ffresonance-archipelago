@@ -59,6 +59,11 @@ def clean(text: Any) -> str:
     return " ".join(str(text).split())
 
 
+def with_count(name: str, held: int, need: int) -> str:
+    """An item's name with its goal count. Past the need, only the count shows."""
+    return f"{name} ({held}/{need})" if held <= need else f"{name} ({held})"
+
+
 def encode_scout(key: str, name: str, player: str, flags: Any, own: int) -> str:
     raw = "\t".join(clean(x) for x in (key, name, player, flags, own))
     return base64.b64encode(raw.encode("utf-8")).decode("ascii")
@@ -201,8 +206,10 @@ class FFResonanceContext(CommonContext):
         if len(self.items_received) <= self.items_written:
             return
         new = self.items_received[self.items_written:]
-        shards = sum(1 for item in self.items_received[:self.items_written] if item.item == SHARD_ITEM)
-        fragments = sum(1 for item in self.items_received[:self.items_written] if item.item == FRAGMENT_ITEM)
+        earlier = self.items_received[:self.items_written]
+        shards = sum(1 for item in earlier if item.item == SHARD_ITEM)
+        members, visions, fragments = self.lock_holdings(earlier)
+        need_members, need_visions, need_fragments = self.lock_needs
         for index, item in enumerate(new, start=self.items_written):
             info = ITEMS.get(item.item)
             if info is None:
@@ -213,26 +220,37 @@ class FFResonanceContext(CommonContext):
             name = info["name"]
             if item.item == SHARD_ITEM and self.goal_kind == SHARD_GOAL:
                 shards += 1
-                # Past the goal, show only the total count instead of "received/needed".
-                name = f"{name} ({shards}/{self.shards_needed})" if shards <= self.shards_needed else f"{name} ({shards})"
-            if item.item == FRAGMENT_ITEM:
+                name = with_count(name, shards, self.shards_needed)
+            elif item.item == FRAGMENT_ITEM:
                 fragments += 1
-                name = f"{name} ({fragments}/{self.lock_needs[2]})" if fragments <= self.lock_needs[2] else f"{name} ({fragments})"
+                name = with_count(name, fragments, need_fragments)
+            # Party members and visions show a count only when the final boss lock asks for them.
+            elif info["category"] == "party" and need_members:
+                members.add(info["game_id"])
+                name = with_count(name, len(members), need_members)
+            elif info["category"] == "vision" and need_visions:
+                visions.add(info["game_id"])
+                name = with_count(name, len(visions), need_visions)
             label = name if item.player == self.slot else f"{name} from {sender}"
             self.write_line("item", index, info["kind"], info["game_id"], info["count"], label)
         self.items_written = len(self.items_received)
 
-    def lock_counts(self) -> tuple[int, int, int]:
-        """Characters held (the starting party and every member received), visions and Crystal Fragments received."""
+    def lock_holdings(self, received: list[NetworkItem]) -> tuple[set[int], set[int], int]:
+        """Party members held (the starting party and every member received), the visions and the
+        number of Crystal Fragments in `received`."""
         members = set(self.starting_party)
         visions = set()
-        for item in self.items_received:
+        for item in received:
             info = ITEMS.get(item.item)
             if info and info["category"] == "party":
                 members.add(info["game_id"])
             elif info and info["category"] == "vision":
                 visions.add(info["game_id"])
-        fragments = sum(1 for item in self.items_received if item.item == FRAGMENT_ITEM)
+        fragments = sum(1 for item in received if item.item == FRAGMENT_ITEM)
+        return members, visions, fragments
+
+    def lock_counts(self) -> tuple[int, int, int]:
+        members, visions, fragments = self.lock_holdings(self.items_received)
         return len(members), len(visions), fragments
 
     def write_lock(self) -> None:

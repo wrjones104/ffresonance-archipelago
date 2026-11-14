@@ -9,7 +9,7 @@ from ..data import AIRSHIP_ITEM, BOSSES, CHESTS, CHOCOBO_ITEM, NO_ROUTE, RADAR, 
 from ..boss_logic import has_capability
 from ..items import CLASSIFICATIONS, FILLER_CATEGORIES, FRAGMENT_NAME, item_name_groups
 from ..locations import GOAL_EVENT, LOCATION_KEY_TO_ID, SEPHIROTH, VICTORY
-from ..options import Goal, TabletShardsRequired
+from ..options import FinalBossFragments, Goal, TabletShardsRequired
 from . import FFResonanceTestBase
 
 ARTIFACT_IDS = (30000, 30018)    # DT_ArtifactItemData's rows
@@ -684,6 +684,11 @@ class TestDefaultOptions(FFResonanceTestBase, real_defaults=True):
     def test_the_default_goal(self) -> None:
         self.assertEqual(Goal.default, Goal.option_final_boss)
         self.assertEqual(TabletShardsRequired.default, 50)
+
+    def test_the_final_boss_needs_14_fragments_by_default(self) -> None:
+        """Round 73 (the user): 14 of the 21 story bosses' Crystal Fragments."""
+        self.assertEqual(FinalBossFragments.default, 14)
+        self.assertEqual(self.world.fill_slot_data()["final_boss_fragments"], 14)
 
     def test_enemy_scaling_is_not_a_yaml_option(self) -> None:
         self.assertFalse([k for k in self.world.fill_slot_data() if k.startswith("enemy_")])

@@ -9,9 +9,11 @@ Final Fantasy Resonance:
   goal: final_boss
 
   # With the final_boss goal, the way to the top of the Crystal Tower stays sealed until you have
-  # this many party members (your starting party counts) and visions.
+  # this many party members (your starting party counts), visions and Crystal Fragments (a story
+  # boss gives one when you beat it; 21 in all).
   final_boss_characters: 6
   final_boss_visions: 12
+  final_boss_fragments: 14
 
   # With the tablet_shards goal: how many of the 99 Tablet Shards you must receive.
   tablet_shards_required: 50

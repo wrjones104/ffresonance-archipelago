@@ -92,6 +92,31 @@ async def main():
     fragment_lines = [line for line in open(in_path, encoding="utf-8").read().splitlines() if line.startswith("item")]
     check("a fragment is a token with its count", fragment_lines[0] == "item\t0\ttoken\t0\t1\tCrystal Fragment (1/2)")
     check("past the need only the count shows", fragment_lines[2].endswith("Crystal Fragment (3)"))
+    # Round 73: party members and visions show their count too, when the lock asks for them. The
+    # starting party counts, a member already held adds nothing, and a seed that needs no visions
+    # shows none.
+    connect(ctx, "G4C", {"goal": "final_boss", "starting_party": [1001, 1002],
+                         "final_boss_characters": 4, "final_boss_visions": 2, "final_boss_fragments": 0})
+    ctx.items_received = [NetworkItem(UNIT_ITEM_BASE + 1003, 1, 1, 0), NetworkItem(vision_ids[0], 2, 1, 0),
+                          NetworkItem(UNIT_ITEM_BASE + 1001, 3, 1, 0)]
+    ctx.write_new_items()
+    ctx.items_received += [NetworkItem(vision_ids[1], 4, 2, 0), NetworkItem(vision_ids[2], 5, 1, 0),
+                           NetworkItem(UNIT_ITEM_BASE + 1004, 6, 1, 0), NetworkItem(UNIT_ITEM_BASE + 1005, 7, 1, 0)]
+    ctx.write_new_items()
+    lines = [line for line in open(in_path, encoding="utf-8").read().splitlines() if line.startswith("item")][-7:]
+    names = lambda ap_id: ITEMS[ap_id]["name"]
+    check("a party member counts with the starting party", lines[0].endswith(f"{names(UNIT_ITEM_BASE + 1003)} (3/4)"))
+    check("a vision counts", lines[1].endswith(f"{names(vision_ids[0])} (1/2)"))
+    check("a starter received again adds nothing", lines[2].endswith(f"{names(UNIT_ITEM_BASE + 1001)} (3/4)"))
+    check("counts carry over from earlier items", lines[3].endswith(f"{names(vision_ids[1])} (2/2) from Rat"))
+    check("past the need only the count shows", lines[4].endswith(f"{names(vision_ids[2])} (3)"))
+    check("the party fills up", lines[5].endswith("(4/4)") and lines[6].endswith("(5)"))
+    connect(ctx, "G4D", {"goal": "final_boss", "starting_party": [1001, 1002],
+                         "final_boss_characters": 3, "final_boss_visions": 0, "final_boss_fragments": 0})
+    ctx.items_received = [NetworkItem(vision_ids[0], 1, 1, 0)]
+    ctx.write_new_items()
+    last = [line for line in open(in_path, encoding="utf-8").read().splitlines() if line.startswith("item")][-1]
+    check("no count for visions the lock does not need", last.endswith("\t" + names(vision_ids[0])))
     connect(ctx, "G5", {"goal": "tablet_shards", "tablet_shards_required": 1})
     ctx.items_received = [shard(), shard()]
     ctx.write_new_items()
