@@ -27,6 +27,7 @@ An Archipelago implementation for Final Fantasy Resonance (UE 5.6, game module `
   - The mod's version is `VERSION` in `main.lua`; bump it with each change the user installs.
   - The world's version is `world_version` in `apworld/ff_resonance/archipelago.json`. When the world or client changes, bump it and rebuild the apworld. The user copies `dist/ff_resonance.apworld` into Archipelago's `custom_worlds` and generates a new seed.
   - Install steps in a test plan must say which of these to copy: `Scripts`, `Assets`, the apworld.
+  - **GitHub releases** (the user makes them): the tag is the apworld's `world_version`, and the title names both, such as "v0.27.0 (apworld 0.27.0, mod 0.58.0)". Every release gets a new world version: when only the mod changed, bump the world's patch number too and rebuild the apworld. A release ships the mod zip, the apworld and the template yaml together (decided 2026-11-14).
 - **Commits:**
   - Commit each finished round on `main` without asking, and say so in the reply.
   - Never push; the user pushes. The user also commits from other machines, so when they mention a commit, `git fetch` and fast-forward first.
