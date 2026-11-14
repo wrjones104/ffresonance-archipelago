@@ -1,16 +1,19 @@
-# Example player options for Final Fantasy Resonance.
+# Example player options for Final Fantasy Resonance. Each value here is the default.
 name: Player{number}
 game: Final Fantasy Resonance
 
 Final Fantasy Resonance:
+  # Goal
+
   # What completes your seed.
   # final_boss: win the last battle at the top of the Crystal Tower.
-  # tablet_shards: receive tablet_shards_required Tablet Shards.
+  # tablet_shards: receive tablet_shards_required Tablet Shards. Only shards received from
+  # Archipelago count.
   goal: final_boss
 
   # With the final_boss goal, the way to the top of the Crystal Tower stays sealed until you have
-  # this many party members (your starting party counts), visions and Crystal Fragments (a story
-  # boss gives one when you beat it; 21 in all).
+  # this many party members (0 to 8; your starting party counts), visions (0 to 26) and Crystal
+  # Fragments (0 to 21; a story boss gives one when you beat it).
   final_boss_characters: 6
   final_boss_visions: 12
   final_boss_fragments: 14
@@ -18,11 +21,14 @@ Final Fantasy Resonance:
   # With the tablet_shards goal: how many of the 99 Tablet Shards you must receive.
   tablet_shards_required: 50
 
+  # Start
+
   # The continent you can land on at the start: grandshelt, lanzelt, kolobos, dirnado, olderion,
   # zoldaad, mysidia, gronoa or pharm. Each other continent opens when you receive its Unlock item.
   starting_continent: grandshelt
 
-  # How many party members you start with (1 to 4), and who. Only the first starting_roster count.
+  # How many party members you start with (1 to 4), all at level 1, and who. Only the first
+  # starting_roster count, and a repeat is swapped for someone else.
   # Choices: rain, lasswell, fina, lid, nichol, archwitch_fina, jake, sakura.
   starting_roster: 2
   starting_character_1: rain
@@ -30,10 +36,34 @@ Final Fantasy Resonance:
   starting_character_3: fina
   starting_character_4: lid
 
-  # Regions where you only find your own filler items, e.g. ['Crystal Tower'].
+  # Your save has the Chocobo from the start. With false, the Chocobo is an item you find.
+  start_with_chocobo: true
+
+  # You start in the airship. With false, you start on foot on your starting continent and the
+  # Airship is an item you find. Until then the ferry and two bridges are the only ways between
+  # continents, and Mysidia, Gronoa, Pharm and the Crystal Tower need the Airship.
+  start_with_airship: true
+
+  # Locations
+
+  # The airship radar's 13 treasures, dug up at sea, are locations, and three Progressive Radars
+  # are items: the first finds treasures 1 to 5, the second 6 to 9, the third 10 to 13.
+  include_radar_treasures: true
+
+  # The cave masters and the two Dragon's Maw bosses get items that someone needs first, so they
+  # are worth the fight. Sephiroth is left out.
+  priority_bosses: true
+
+  # Regions where you only find your own filler items, e.g. ['Crystal Tower', 'Radar Treasures'].
+  # Choices: Bosses, Crystal Tower, Dirnado, Grandshelt, Gronoa, Kolobos, Lanzelt, Mysidia,
+  # Olderion, Pharm, Radar Treasures, Sanctums, Tablet Shards, World Map, Zoldaad.
   excluded_regions: []
 
-  # The party members you do not start with, the 26 visions, and the key items are items you can find.
+  # Items
+
+  # The party members you do not start with, the 26 visions, and the key items (keys, key cards,
+  # quest items and Colosseum proofs) are items you can find. With shuffle_visions false, you
+  # start with Tronn and Leah, and the rest stay where the game puts them.
   shuffle_party_members: true
   shuffle_visions: true
   shuffle_key_items: true
