@@ -27,7 +27,7 @@
 
 The mod pauses while any other save is loaded: it gives no items, sends no checks, and the chests are vanilla.
 
-The client finds the mod folder through `ff_resonance_options.mod_folder` in `host.yaml`. It defaults to the usual Steam path. To use another folder for one session, run `/modfolder <path>` in the client.
+The client finds the mod folder through `ff_resonance_options.mod_folder` in `host.yaml`. It defaults to the usual Steam path. When the mod is not there, the client looks in your other Steam libraries. To use another folder for one session, run `/modfolder <path>` in the client. Both take the `FFRArchipelago` folder or the `Mods` folder that holds it.
 
 ## Client commands
 

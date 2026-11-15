@@ -21,6 +21,7 @@ import base64
 import json
 import os
 import pkgutil
+import re
 import sys
 from typing import Any
 
@@ -131,7 +132,7 @@ class FFResonanceContext(CommonContext):
     # -- files ------------------------------------------------------------------------------------
 
     def set_mod_folder(self, path: str) -> None:
-        self.mod_folder = os.path.abspath(os.path.expanduser(path))
+        self.mod_folder = resolve_mod_folder(path)
         self.in_path = os.path.join(self.mod_folder, "ap_in.txt")
         self.out_path = os.path.join(self.mod_folder, "ap_out.txt")
 
@@ -144,6 +145,9 @@ class FFResonanceContext(CommonContext):
         if not os.path.isdir(self.mod_folder):
             logger.error(f"Mod folder not found: {self.mod_folder}. Set it with /modfolder <path>.")
             return
+        if not is_mod_folder(self.mod_folder):
+            logger.warning(f"{self.mod_folder} has no Scripts/main.lua, so the mod will not see the client. "
+                           f"Point /modfolder at the FFRArchipelago folder.")
         header = f"seed\t{self.session_key}"
         existing: list[str] = []
         if os.path.exists(self.in_path):
@@ -426,12 +430,58 @@ async def game_loop(ctx: FFResonanceContext) -> None:
         await asyncio.sleep(POLL_SECONDS)
 
 
+MOD_IN_LIBRARY = os.path.join("steamapps", "common", "FINAL FANTASY RESONANCE", "FFRS", "Binaries", "Win64",
+                              "ue4ss", "Mods", "FFRArchipelago")
+
+
+def is_mod_folder(path: str) -> bool:
+    return os.path.isfile(os.path.join(path, "Scripts", "main.lua"))
+
+
+def resolve_mod_folder(path: str) -> str:
+    """The FFRArchipelago folder, given that folder or the UE4SS Mods folder that holds it."""
+    path = os.path.abspath(os.path.expanduser(path))
+    inner = os.path.join(path, "FFRArchipelago")
+    if not is_mod_folder(path) and is_mod_folder(inner):
+        return inner
+    return path
+
+
+def steam_mod_folders() -> list[str]:
+    """The FFRArchipelago folder in each Steam library that has one, read from Steam's library list."""
+    try:
+        import winreg
+        with winreg.OpenKey(winreg.HKEY_CURRENT_USER, r"Software\Valve\Steam") as key:
+            steam = winreg.QueryValueEx(key, "SteamPath")[0]
+        with open(os.path.join(steam, "steamapps", "libraryfolders.vdf"), encoding="utf-8") as f:
+            vdf = f.read()
+    except (ImportError, OSError):  # not Windows, or no Steam install
+        return []
+    return library_mod_folders(steam, vdf)
+
+
+def library_mod_folders(steam: str, vdf: str) -> list[str]:
+    # The vdf escapes backslashes: "path"		"D:\\SteamLibrary"
+    libraries = [steam] + [p.replace("\\\\", "\\") for p in re.findall(r'"path"\s+"([^"]+)"', vdf)]
+    # Steam's own folder is usually in the list too, spelled differently.
+    unique = dict.fromkeys(os.path.normcase(os.path.normpath(lib)) for lib in libraries)
+    return [folder for folder in (os.path.join(lib, MOD_IN_LIBRARY) for lib in unique) if is_mod_folder(folder)]
+
+
 def default_mod_folder() -> str:
+    """host.yaml's mod folder. When the mod is not there, the first Steam library that has it."""
     try:
         from .world import FFResonanceWorld
-        return str(FFResonanceWorld.settings.mod_folder)
+        configured = str(FFResonanceWorld.settings.mod_folder)
     except Exception:  # settings unavailable (e.g. no host.yaml yet)
-        return os.path.join(".", "FFRArchipelago")
+        configured = os.path.join(".", "FFRArchipelago")
+    if is_mod_folder(resolve_mod_folder(configured)):
+        return configured
+    found = steam_mod_folders()
+    if found:
+        logger.info(f"No mod in {configured} (host.yaml). Found it in a Steam library: {found[0]}")
+        return found[0]
+    return configured
 
 
 def launch_client(*args: str) -> None:

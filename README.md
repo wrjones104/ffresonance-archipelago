@@ -59,7 +59,7 @@ Skip this step if you already have a UE 5.6 build of UE4SS installed (for exampl
 2. Generate the seed and host it locally (`MultiServer.py`) or on archipelago.gg as usual.
 3. Launch *Final Fantasy Resonance*. On the title screen, you should see `FFRArchipelago <version>` above the game's version and a **New Game (Archipelago)** option in the menu.
 4. Open the Archipelago Launcher, start **Final Fantasy Resonance Client**, and connect to your server and slot.
-   - By default, the client looks for the mod in `C:\Program Files (x86)\Steam\steamapps\common\FINAL FANTASY RESONANCE\FFRS\Binaries\Win64\ue4ss\Mods\FFRArchipelago`. If your game is installed somewhere else, set `ff_resonance_options.mod_folder` in Archipelago's `host.yaml` or run `/modfolder <path>` in the client.
+   - By default, the client looks for the mod in `C:\Program Files (x86)\Steam\steamapps\common\FINAL FANTASY RESONANCE\FFRS\Binaries\Win64\ue4ss\Mods\FFRArchipelago`. If the mod is not there, the client looks in your other Steam libraries. You can also set `ff_resonance_options.mod_folder` in Archipelago's `host.yaml` or run `/modfolder <path>` in the client. Either one takes the `FFRArchipelago` folder or the `Mods` folder that holds it.
 5. Select **New Game (Archipelago)** in game. The mod links your new save to the active session, skips the prologue, and starts you on your starting continent.
    - To link an existing save manually instead, load it and run `/bind` in the client.
    - If you ever reconnect or suspect a missed check, run `/resync` in the client.
