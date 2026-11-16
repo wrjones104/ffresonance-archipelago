@@ -816,6 +816,18 @@ Also, **is Felicitas's shop the one the data calls "ナシャト"?** If a town's
 - **Tellus in the Tower of Mysidia (mod).** `nowalk` clears the entry's walk target, as most zones have none. The log line ends with `walk off` when it took, or `walk kept`.
 - **Tablet Shards (world).** The category is progression (skipping balancing), so every shard counts, in Universal Tracker too. In a seed nothing changes: all 99 were marked already.
 
+**Round 75, in play (mod 0.59.0 build 2dc8cf35, world 0.28.0 build ea6ac2e8, 2026-11-16).** A new seed of the user's.
+- **Radar:** with two radars the log said `step 40, found 22`, and Radar Treasure 4 was dug. Works.
+- **The Resonance Stone chest** sent its check (`chest:3260:3`), with a Tablet Shard from the pool. Works.
+- **Tellus in the Tower of Mysidia:** `walk off`, and the fight started with no walk. Works.
+- **Tablet Shards:** Oblivion Palace's chests came into logic in Universal Tracker. Works.
+- **Tellus in the Forest Path, and Elfdrit: nothing on the first pass.** Tellus started only on a later visit, near the save point. Elfdrit started on the way back, and then every time after a reload. The same was true of Tellus in Mysidia: three shinies were taken between the first pass and the fight. The base class `CPP_MapGimmick` has a state, `m_GimmickCondition` (Active 0, Deactive 1). The game judges it at the map's load from the zone's rows as they are then: `{progress:0}==7050` is false at story 8000, so the zone is off. The mod writes its rows about 2 seconds later. The game looks again only when a flag changes in its own way, such as a shiny taken. Lux and Ignis worked the same way; their players took a shiny or a chest first.
+- **The Forest Path's fight sent "Wandering Lands: Tellus".** The two zones share group 9048 and flag 1251, and the location took map 3270's name.
+
+**Round 76, before play (mod 0.59.0, world 0.28.0, same versions):**
+- **Zones on the first pass (mod).** For a boss zone (an `EventTrigger` class) not yet won, the mod sets `m_GimmickCondition` to 0 with `SetGimmickCondition` when it is not 0. The log's story boss line ends with `1 zones turned on` when it did. Doors are left alone.
+- **Tellus's place (world and mod).** The fight is the Forest Path's: the location is "Forest Path: Tellus" (map 3271 in `data/bosses.tsv`), with the same id and rules. The Wandering Lands zone (3270) is left to the story, which never runs it at story 8000.
+
 ## Round 74 test plan (mod 0.59.0 build d8e6e426, world 0.28.0 build ddd8aeb4)
 
 **Install:** copy `FFRArchipelago/Scripts` and `dist/ff_resonance.apworld` into `custom_worlds`, and generate a new seed. The radar and door fixes also work on an older save.
@@ -866,5 +878,17 @@ Send the `[FFRAP]` lines of the log and any crash folder.
 **5. Elfdrit in Gronoa Shrine.** The zone is longer and deeper now. **Does it still start the fight where it did before?**
 
 **6. Oblivion Palace in Universal Tracker (new seed).** **Do the Palace's chests come into logic as shards come in, up to the 99-shard chest?**
+
+Send the `[FFRAP]` lines of the log and any crash folder.
+
+## Round 76 test plan (mod 0.59.0 build 1c03b1ed, world 0.28.0 build 6df97dd3)
+
+**Install:** copy `FFRArchipelago/Scripts`. For the Tellus name, also copy `dist/ff_resonance.apworld` into `custom_worlds` and generate a new seed. The zone fix works on the current seed.
+
+**0. The builds.** The log should say `version 0.59.0 (build 1c03b1ed)`, and with the new apworld `client: world version 0.28.0 (build 6df97dd3)`.
+
+**1. Boss zones on the first pass.** Go to a boss you have not fought, with no shiny or chest on the way: Tellus in the Forest Path, Elfdrit, Lux or Ignis. The story boss line should end with `1 zones turned on`. **Does the fight start the first time you walk into the zone?**
+
+**2. Tellus's name (new seed).** **Does the Forest Path's fight send "Forest Path: Tellus"?**
 
 Send the `[FFRAP]` lines of the log and any crash folder.

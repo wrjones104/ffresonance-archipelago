@@ -574,20 +574,27 @@ assert "1 triggers" in detail, "found again by the fight row's name"
 # Round 75: `size` is the zone's new scale. The zone is the actor's root, so the level's own scale
 # (the Forest Path's line across the path, 14.1 x 0.44 x 3) is replaced; 4 x 4 x 4 made it shorter.
 L.execute("""
-local function zone(event, extra)
+local function zone(event, extra, state)
   local a = { IsValid = function() return true end, HasAnyInternalFlags = function() return false end,
     HasAnyFlags = function() return false end, SetActorScale3D = function(s, v) s.size = v end,
+    m_GimmickCondition = state, SetGimmickCondition = function(s, c) s.m_GimmickCondition = c end,
     m_EventList = arr({ { Condition = "x", EventId = nameOf(event), MoveInfo = { MoveTargetPoint = extra } } }) }
   return a
 end
-storyActors.BP_MapGimmick_EventTrigger_C[2] = zone("C07_713_01", nil)
-storyActors.BP_MapGimmick_EventTrigger_C[3] = zone("C05_540_Retry", { IsValid = function() return true end })
+storyActors.BP_MapGimmick_EventTrigger_C[1].m_GimmickCondition = 0
+storyActors.BP_MapGimmick_EventTrigger_C[2] = zone("C07_713_01", nil, 1)
+storyActors.BP_MapGimmick_EventTrigger_C[3] = zone("C05_540_Retry", { IsValid = function() return true end }, 0)
 mockMap = 3271""")
 ok, detail = L.execute("return G.SyncStoryBossTrigger(say)")
 forest = "storyActors.BP_MapGimmick_EventTrigger_C[2]"
 assert lua(forest + ".size.X") == 20 and lua(forest + ".size.Y") == 6, "the line, wider and deeper"
 assert lua(forest + ".m_EventList[1].Condition") == "!{flag:1251}&{flag:1441}"
 assert "walk" not in detail, detail
+# Round 76: the game turned the zone off at the map's load (1), from the rows as they were then,
+# and the first pass did nothing. The zone is turned on, and only when it is off.
+assert lua(forest + ".m_GimmickCondition") == 0 and detail.endswith("; 1 zones turned on"), detail
+ok, detail = L.execute("return G.SyncStoryBossTrigger(say)")
+assert "turned on" not in detail, detail
 # Tellus in the Tower of Mysidia: the entry walks the player to a point east of the zone, and from
 # the zone's sides a stairway is in the way. The walk's target is cleared.
 L.execute("mockMap = 3200")

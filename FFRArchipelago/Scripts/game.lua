@@ -2149,9 +2149,9 @@ G.STORY_BOSSES = {
     [3250] = { group = 9044, flag = 1249, event = "C06_627_01", kind = "list", class = "BP_MapTransitionTrigger_C", field = "m_EventList2" },
     -- Ignis, Mt. Reizan
     [3260] = { group = 9046, flag = 1250, event = "C07_707_01", kind = "list", class = "BP_MapGimmick_EventTrigger_C", field = "m_EventList" },
-    -- Tellus, Wandering Lands (3270, the zone at 235, 102590, level scale 1 x 6.25 x 1) and the
-    -- Forest Path (3271, at -1215, 40122, a line across the path, 14.1 x 0.44 x 3).
-    [3270] = { group = 9048, flag = 1251, event = "C07_713_01", kind = "list", class = "BP_MapGimmick_EventTrigger_C", field = "m_EventList", size = { X = 6, Y = 10, Z = 4 } },
+    -- Tellus, Forest Path (3271, at -1215, 40122, a line across the path, 14.1 x 0.44 x 3). The
+    -- story fights him in the Wandering Lands (3270) too; that zone is left to the story, so the
+    -- one fight is where its location says (round 76).
     [3271] = { group = 9048, flag = 1251, event = "C07_713_01", kind = "list", class = "BP_MapGimmick_EventTrigger_C", field = "m_EventList", size = { X = 20, Y = 6, Z = 4 } },
 }
 local STORY_BOSS_EVENTS, STORY_BOSS_GROUPS = {}, {}
@@ -2340,7 +2340,7 @@ function G.SyncStoryBossTrigger(say)
             groupRows = groupRows + 1
         end)
     end
-    local triggers, transitions, npcs, walks = 0, 0, 0, ""
+    local triggers, transitions, npcs, walks, woken = 0, 0, 0, "", 0
     if boss.kind == "trigger" then
         local ok, all = pcall(FindAllOf, "BP_MapGimmick_EventTrigger_C")
         for _, a in ipairs(ok and all or {}) do
@@ -2445,6 +2445,16 @@ function G.SyncStoryBossTrigger(say)
                                 a:SetActorScale3D(boss.size)
                             end
                             triggers = triggers + 1
+                            -- The game judges a zone once, at the map's load, from the rows as
+                            -- they were then, and turns it off (m_GimmickCondition 1). It looks
+                            -- again only when a flag changes in the game's own way, such as a
+                            -- shiny taken, so the first pass did nothing (round 76). Doors are
+                            -- left alone: they have always worked.
+                            if not won and boss.class:find("EventTrigger", 1, true) and a.m_GimmickCondition ~= 0 then
+                                step("story boss: SetGimmickCondition 0 (active)")
+                                a:SetGimmickCondition(0, false)
+                                woken = woken + 1
+                            end
                             if boss.nowalk then
                                 step("story boss: " .. boss.field .. "[" .. i .. "].MoveInfo.MoveTargetPoint -> none")
                                 pcall(function() list[i].MoveInfo.MoveTargetPoint = nil end)
@@ -2457,8 +2467,9 @@ function G.SyncStoryBossTrigger(say)
             end
         end
     end
-    local detail = string.format("map %d group %d flag %d (won %s): %d fight, %d win, %d group rows; %d triggers, %d transitions, %d npcs%s",
-        mapId, boss.group, boss.flag, tostring(won), fightRows, winRows, groupRows, triggers, transitions, npcs, walks)
+    local detail = string.format("map %d group %d flag %d (won %s): %d fight, %d win, %d group rows; %d triggers, %d transitions, %d npcs%s%s",
+        mapId, boss.group, boss.flag, tostring(won), fightRows, winRows, groupRows, triggers, transitions, npcs, walks,
+        woken > 0 and ("; " .. woken .. " zones turned on") or "")
     return true, detail
 end
 

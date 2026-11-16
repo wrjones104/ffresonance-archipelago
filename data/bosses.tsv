@@ -38,4 +38,4 @@ group	flag	map	kind	name	reward	win_row	round	note	area	tier	level
 9040	1248	3240	story	Elfdrit		Gim_EV_Majipot_Delete_02	71	Trigger row C06_616_01 rewritten from its story value to !{flag:1248}		C	42
 9044	1249	3250	story	Gelidus		Gim_EV_Majipot_Delete_02	71	Trigger row C06_627_01 rewritten from its story value to !{flag:1249}		C	43
 9046	1250	3260	story	Ignis		Gim_EV_Majipot_Delete_02	71	Trigger row C07_707_01 rewritten from its story value to !{flag:1250}		C	47
-9048	1251	3270	story	Tellus		Gim_EV_Majipot_Delete_02	71	Trigger row C07_713_01 rewritten from its story value to !{flag:1251}		C	49
+9048	1251	3271	story	Tellus		Gim_EV_Majipot_Delete_02	71	Forest Path zone C07_713_01 rewritten from its story value to !{flag:1251}; the Wandering Lands zone (3270) is left to the story (round 76)		C	49
