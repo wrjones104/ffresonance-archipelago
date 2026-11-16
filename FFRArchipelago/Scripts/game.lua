@@ -1450,7 +1450,9 @@ function G.BlankFieldItem(e, shinies, shards)
     local id, money = e.itemId or -1, e.money or -1
     if id == BLANK.ItemId and money == BLANK.Money then return false end
     local isShard = id == TABLET_SHARD
+    -- Round 74: shinies holding Magicite are locations, as Magicite chests are since round 45.
     local isLocation = (id >= 0 and id < SHUFFLE_ID_LIMIT) or (id < 0 and money > 0)
+        or (id >= MAGICITE_FIRST and id <= MAGICITE_LAST)
     if not ((shards and isShard) or (shinies and isLocation)) then return false end
     return (pcall(function()
         e.actor.m_ItemId, e.actor.m_ItemNum, e.actor.m_Money = BLANK.ItemId, BLANK.ItemNum, BLANK.Money
@@ -2129,8 +2131,9 @@ G.STORY_BOSSES = {
     [3030] = { group = 9013, flag = 1243, event = "C01_036_01", kind = "list", class = "BP_MapTransitionTrigger_C", field = "m_EventList" },
     -- Aether, Wind Shrine
     [3070] = { group = 9017, flag = 1244, event = "C02_221_01", kind = "list", class = "BP_MapTransitionTrigger_C", field = "m_EventList" },
-    -- Tellus, Nameless Ruins: a door like The Hunger's
-    [3180] = { group = 9031, flag = 1245, event = "C05_510_01", point = 5000, kind = "transition" },
+    -- Tellus, Nameless Ruins: a door like The Hunger's. Its second entry goes nowhere (map -1), so
+    -- after the win the first entry is a plain door again: the stairs to the upper floor (round 74).
+    [3180] = { group = 9031, flag = 1245, event = "C05_510_01", point = 5000, kind = "transition", reopen = true },
     -- Tellus, Tower of Mysidia
     [3200] = { group = 9038, flag = 1246, event = "C05_540_Retry", kind = "list", class = "BP_MapGimmick_EventTrigger_C", field = "m_EventList" },
     -- Lux, Rugged Mountain Path
@@ -2370,7 +2373,16 @@ function G.SyncStoryBossTrigger(say)
                     local ev = #d.EventList >= 1 and ObjText(d.EventList[1].EventId) or nil
                     match = (Int(d.pointId) == boss.point or ev == boss.event or ev == STORY_BOSS_FIGHT)
                 end)
-                if match and d then
+                if match and d and won and boss.reopen then
+                    step("story boss: transition mTransitionDataList[1] -> a door again (won), fight row only on " .. cond)
+                    pcall(function()
+                        d.FlagCondition = ""
+                        d.isEventOnly = false
+                        d.EventList[1].Condition = cond
+                        d.EventList[1].EventId = FName(STORY_BOSS_FIGHT)
+                    end)
+                    transitions = transitions + 1
+                elseif match and d then
                     step("story boss: transition mTransitionDataList[1] -> " .. fightCond .. ", isEventOnly true, " .. STORY_BOSS_FIGHT)
                     pcall(function()
                         d.FlagCondition = fightCond
@@ -3503,9 +3515,16 @@ end
 
 -- Airship radar treasures: 13 sea pinger points enabled by flag 702 (radar), gated sequentially by
 -- found flags (704-716), {progress:49} (>= 40 for #6+, >= 50 for #10+), and {progress:51}. Each dig
--- row sets flag 703 and its found flag (used as the check).
-G.RADAR_ON_FLAG, G.RADAR_TIER_PROGRESS = 702, 49
-G.RADAR_TIER_VALUES = { [2] = 40, [3] = 50 }
+-- row sets flag 703 and its found flag (used as the check), and sets {progress:51} to a fixed value.
+-- The radar itself works only while DT_MapPingerData's condition holds: step {progress:49} must be
+-- one of a band's steps while the found count {progress:51} is in that band (round 74). Installing
+-- the radar sets step 20, and the first dig moves it to 30; the upgrades set 40 and 50.
+G.RADAR_ON_FLAG, G.RADAR_TIER_PROGRESS, G.RADAR_FOUND_PROGRESS = 702, 49, 51
+G.RADAR_BANDS = {
+    { level = 1, upTo = 13, steps = { 20, 30 } },
+    { level = 2, upTo = 22, steps = { 40 } },
+    { level = 3, upTo = 31, steps = { 50 } },
+}
 G.RADAR = {}
 for n = 1, 13 do G.RADAR[n] = { n = n, flag = 703 + n, row = string.format("SubEv_C05_TreasureRadar_01_%02d", n) } end
 

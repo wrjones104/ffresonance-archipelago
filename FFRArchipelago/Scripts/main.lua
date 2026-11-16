@@ -49,7 +49,7 @@
 -- follows the save slots the linked game is saved to. While any other save is loaded, the mod
 -- grants nothing, reports nothing and leaves the chests vanilla.
 
-local VERSION = "0.58.0"
+local VERSION = "0.59.0"
 local PROTOCOL = 2        -- the bridge protocol; the apworld's MOD_PROTOCOL
 
 local MOD_DIR = (debug.getinfo(1, "S").source:gsub("^@", ""):gsub("\\", "/"):match("^(.*/)Scripts/[^/]+$"))
@@ -431,9 +431,10 @@ local function readInbox(initial)
             end
         elseif f[1] == "client" then
             -- The client's world version, written each time it connects.
-            if f[2] ~= state.clientVersion then
-                state.clientVersion = f[2]
-                log("client: world version " .. tostring(f[2]))
+            local client = tostring(f[2]) .. " (build " .. tostring(f[3] or "?") .. ")"
+            if client ~= state.clientVersion then
+                state.clientVersion = client
+                log("client: world version " .. client)
             end
         elseif f[1] == "msg" then
             -- Messages from before this game session started are old news.
@@ -1145,7 +1146,7 @@ end
 local function statusLines()
     local party = game.PartyIds()
     return {
-        "FFRArchipelago " .. VERSION .. "  " .. os.date("%Y-%m-%d %H:%M:%S"),
+        "FFRArchipelago " .. VERSION .. " (build " .. bridge.build(MOD_DIR) .. ")  " .. os.date("%Y-%m-%d %H:%M:%S"),
         "in game: " .. tostring(game.InGame()) .. " (" .. state.inGameTicks .. " ticks)",
         "map: " .. tostring(game.CurrentMap()) .. " (save's Map.mapId " .. tostring(game.MapId()) .. ")   story: " .. tostring(game.StoryCounter()),
         "party: " .. (party and table.concat(party, ", ") or "?"),
@@ -2154,8 +2155,10 @@ airshipItemTick = function()
 end
 
 -- Progressive Radar level comes from counting Magi-tenna (27006) items received, because the
--- game only stores one copy of a key item. Level 1 sets flag 702; levels 2 and 3 set quest
--- progress ({progress:49}) to 40 and 50. Never decreased. Keep state in one table for the 200-local limit.
+-- game only stores one copy of a key item. Level 1 sets flag 702. The radar's step ({progress:49})
+-- must match the band the found count is in, so it is set from both (game.RADAR_BANDS). With too
+-- low a level for the band the step is left as it is: the radar is off there, as in the game.
+-- Keep state in one table for the 200-local limit.
 local radar = { ITEM = 27006, logged = nil }
 function radar.level()
     local n = 0
@@ -2169,11 +2172,18 @@ end
 function radar.tick()
     local level = radar.level()
     if level >= 1 and game.GetFlag(game.RADAR_ON_FLAG) == false then game.SetFlag(game.RADAR_ON_FLAG, true) end
-    local want = game.RADAR_TIER_VALUES[math.min(level, 3)]
     local now = game.ProgressValue(game.RADAR_TIER_PROGRESS)
-    if want and now and now < want then now = game.SetProgressValue(game.RADAR_TIER_PROGRESS, want) end
-    local line = string.format("radar: level %d (flag %d %s, progress %d %s)", level, game.RADAR_ON_FLAG,
-        tostring(game.GetFlag(game.RADAR_ON_FLAG)), game.RADAR_TIER_PROGRESS, tostring(now))
+    local found = game.ProgressValue(game.RADAR_FOUND_PROGRESS)
+    for _, band in ipairs(game.RADAR_BANDS) do
+        if now and found and found <= band.upTo then
+            local inBand = false
+            for _, step in ipairs(band.steps) do inBand = inBand or now == step end
+            if level >= band.level and not inBand then now = game.SetProgressValue(game.RADAR_TIER_PROGRESS, band.steps[1]) end
+            break
+        end
+    end
+    local line = string.format("radar: level %d (flag %d %s, step %s, found %s)", level, game.RADAR_ON_FLAG,
+        tostring(game.GetFlag(game.RADAR_ON_FLAG)), tostring(now), tostring(found))
     if line ~= radar.logged then log(line) end
     radar.logged = line
 end
@@ -2277,9 +2287,12 @@ end)
 -- Casual scales enemies 75%-100% power at 80%-90% party level and bosses 100% at party level.
 -- Normal and Expert step levels and power up, stacking with the game's own difficulty multipliers.
 -- Non-boss enemies clamp [1 under, `above` over] relative to band center; bosses stay +/- 2.
+-- Round 74: Normal's bosses came down from 110-115% level and 115-120% power. A tester on Normal
+-- met story bosses that killed a two-member party on turn one or two, and the user found the HP
+-- spongy.
 local SEED_SCALES = {
     [0] = { at = { 80, 90 }, power = { 75, 100 }, above = 1, bossAt = { 100, 100 }, bossPower = { 100, 100 } },
-    [1] = { at = { 90, 100 }, power = { 90, 115 }, above = 3, bossAt = { 110, 115 }, bossPower = { 115, 120 } },
+    [1] = { at = { 90, 100 }, power = { 90, 115 }, above = 3, bossAt = { 105, 110 }, bossPower = { 105, 110 } },
     [2] = { at = { 100, 110 }, power = { 105, 130 }, above = 5, bossAt = { 115, 125 }, bossPower = { 125, 135 } },
 }
 local SEED_RAMP = { below = 1, bossRange = 2, rampFrom = 5, rampTo = 25 }
@@ -2785,7 +2798,7 @@ end
 bridge.write("hello", VERSION, PROTOCOL)
 if state.seed then bridge.write("seed", state.seed) end
 readInbox(true)
-log("version " .. VERSION .. " loaded from " .. MOD_DIR .. ", " .. state.applied .. " items already applied")
+log("version " .. VERSION .. " (build " .. bridge.build(MOD_DIR) .. ") loaded from " .. MOD_DIR .. ", " .. state.applied .. " items already applied")
 if randomizerWarning then log(randomizerWarning) end
 
 -- Fast check (0.1 s): inspect the chest dialog widget and trigger an immediate scan when a pop-up

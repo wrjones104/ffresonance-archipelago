@@ -7,6 +7,7 @@ from worlds.AutoWorld import WebWorld, World
 
 from . import items, locations
 from . import options as ffr_options
+from .version import world_build
 
 # The bridge protocol between the client and the in-game mod. The client refuses a mod that
 # reports an older one.
@@ -144,6 +145,7 @@ class FFResonanceWorld(World):
             **self.options.as_dict(*SLOT_OPTIONS),
             "goal": self.options.goal.current_key,
             "mod_protocol": MOD_PROTOCOL,
+            "world_build": world_build(),
             "open_world": True,
             "starting_party": self.starting_party,
             "final_boss_characters": self.final_boss_characters,

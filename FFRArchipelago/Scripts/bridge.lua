@@ -6,7 +6,7 @@
 --   ap_in.txt   client -> game
 --     item <index> <kind> <id> <count> <label>    kind: item | gil | vision | unit | flag | token (unused in game)
 --     msg  <text>                                 shown on screen, not stored
---     client <world version>                      the client that wrote the file
+--     client <world version> <build>              the client that wrote the file
 --     cfg blank <0|1>                             chest blanking
 --     cfg openworld <0|1>                         the open world start and continent locks
 --     cfg party <unit,unit,...>                   the starting party, leader first
@@ -34,6 +34,29 @@
 -- one twice grants nothing twice.
 
 local B = {}
+
+-- Round 74: the mod's version changes once per release, so its build (an FNV-1a hash of its
+-- scripts) tells test installs apart. Carriage returns are skipped: a CRLF and an LF copy match.
+-- tests/mod/test_main.py checks it against a Python copy of the same hash.
+B.SCRIPTS = { "main.lua", "game.lua", "bridge.lua", "field_items.lua" }
+
+function B.build(dir)
+    if B.buildId then return B.buildId end
+    local h = 2166136261
+    for _, name in ipairs(B.SCRIPTS) do
+        local f = io.open(dir .. "Scripts/" .. name, "rb")
+        if f then
+            local text = f:read("a")
+            f:close()
+            for i = 1, #text do
+                local c = text:byte(i)
+                if c ~= 13 then h = ((h ~ c) * 16777619) & 0xffffffff end
+            end
+        end
+    end
+    B.buildId = string.format("%08x", h)
+    return B.buildId
+end
 
 function B.init(dir)
     B.inPath = dir .. "ap_in.txt"

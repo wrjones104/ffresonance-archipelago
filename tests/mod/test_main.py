@@ -193,7 +193,9 @@ function G.CrossingSync(list) G.crossingLists[#G.crossingLists + 1] = list; retu
 function G.CrossingNear(list, range) return nil end
 function G.CrossingClear() G.crossingsCleared = true end
 G.AIRSHIP_FLAG, G.airshipSyncs, G.parks = 1431, {}, {}
-G.RADAR_ON_FLAG, G.RADAR_TIER_PROGRESS, G.RADAR_TIER_VALUES = 702, 49, { [2] = 40, [3] = 50 }
+G.RADAR_ON_FLAG, G.RADAR_TIER_PROGRESS, G.RADAR_FOUND_PROGRESS = 702, 49, 51
+G.RADAR_BANDS = { { level = 1, upTo = 13, steps = { 20, 30 } }, { level = 2, upTo = 22, steps = { 40 } },
+    { level = 3, upTo = 31, steps = { 50 } } }
 G.RADAR = {}
 for n = 1, 13 do G.RADAR[n] = { n = n, flag = 703 + n } end
 G.progress, G.radarPatches = {}, 0
@@ -1457,16 +1459,16 @@ tick(10)
 # Round 63: normal by default (the old expert). Party level 10 is a quarter of the way up the
 # ramp: centre 93% (9), power 96%. Round 63, later: the enemies' band is 1 under the centre and 3
 # over it on normal; the bosses' stays 2 each way. Round 72: normal's bosses came in, to 111%
-# (11) and 116% here
-assert calls() == ["clamp 8 12 true hp96 atk96 mag96; bosses 9 13 hp116"], calls()
+# (11) and 116% here. Round 74: and softer, 106% (11) and 106%
+assert calls() == ["clamp 8 12 true hp96 atk96 mag96; bosses 9 13 hp106"], calls()
 tick(10)
 assert len(calls()) == 1, "once"
 G.partyLv = 30
 tick(10)
-assert calls()[-1] == "clamp 29 33 true hp115 atk115 mag115; bosses 33 37 hp120", "the top of the ramp: centre 100% (30), power 115%; bosses 115% (35), 120%"
+assert calls()[-1] == "clamp 29 33 true hp115 atk115 mag115; bosses 31 35 hp110", "the top of the ramp: centre 100% (30), power 115%; bosses 110% (33), 110%"
 G.partyLv = 3
 tick(10)
-assert calls()[-1] == "clamp 2 6 true hp90 atk90 mag90; bosses 1 5 hp115", "below the ramp: centre 90% (3), power 90%; bosses 110%, 115%"
+assert calls()[-1] == "clamp 2 6 true hp90 atk90 mag90; bosses 1 5 hp105", "below the ramp: centre 90% (3), power 90%; bosses 105%, 105%"
 # Round 56: a new strength rescales at once. Round 63: expert is centre 100% (3), power 105%.
 # Round 72: expert's bosses are normal's old ones, 115% (3), 125%. Casual is the old normal:
 # centre 80% (2), power 75%; bosses 100%, 100%.
@@ -1479,7 +1481,7 @@ tick(10)
 assert calls()[-1] == "clamp 1 3 true hp75 atk75 mag75; bosses 1 5 hp100", calls()
 L.execute('commands["ffrap_set"]("ffrap_set", {"reset"})')
 tick(10)
-assert calls()[-1] == "clamp 2 6 true hp90 atk90 mag90; bosses 1 5 hp115", "back to normal"
+assert calls()[-1] == "clamp 2 6 true hp90 atk90 mag90; bosses 1 5 hp105", "back to normal"
 G.saveObj, G.saveTicks = "SD_OTHER", "600"     # a save in a slot the seed does not hold
 tick(30)
 assert calls()[-1].startswith("off "), calls()
@@ -1493,7 +1495,7 @@ G.chests = L.table()
 tick(12)
 G.story = 8000
 tick(10)
-assert calls() == ["clamp 8 12 true hp96 atk96 mag96; bosses 9 13 hp116"], calls()
+assert calls() == ["clamp 8 12 true hp96 atk96 mag96; bosses 9 13 hp106"], calls()
 L.execute('commands["ffrap_scale"]("ffrap_scale", {"off"})')
 G.partyLv = 30
 tick(30)
@@ -1660,8 +1662,11 @@ assert list(G.airshipSyncs.values())[-1] is False
 print("airship as an item: ok")
 
 # Round 72: the radar's 13 treasures. Its level is the Progressive Radars (item 27006) applied to
-# this save: one turns the radar on (flag 702), two set the quest step to 40, three to 50, never
-# lower. A treasure's check is its found flag (704 to 716).
+# this save. One turns the radar on (flag 702). A treasure's check is its found flag (704 to 716).
+# Round 74: the radar works only while its step (progress 49) matches the band of the found count
+# (progress 51): 20 or 30 up to 13, 40 up to 22, 50 up to 31. The step follows the found count, so
+# all three radars before any dig still give a working radar.
+FOUND_NONE, FOUND_AFTER_FIVE, FOUND_AFTER_NINE = 0, 14, 23
 inbox("seed\tS72r:0:1\ncfg\topenworld\t1\ncfg\tradar\t1\n", "w")
 L, G = boot5("SD_RADAR", "0", {})
 L.globals().G = G
@@ -1674,19 +1679,31 @@ G.chests = L.table()
 G.story = 8000
 tick(12)
 assert G.radarPatches >= 1, "the dig rows give the pop-up's stand-in"
-assert L.eval("G.radarFlags[702]") is None, "no radar yet"
+assert L.eval("G.radarFlags[702]") is None and L.eval("G.progress[49]") is None, "no radar yet"
 inbox("item\t0\titem\t27006\t1\tProgressive Radar\n")
 tick(12)
-assert L.eval("G.radarFlags[702]") is True and L.eval("G.progress[49]") is None, "level 1: the radar alone"
+assert L.eval("G.radarFlags[702]") is True and L.eval("G.progress[49]") == 20, "level 1: installed"
+L.execute("G.progress[49] = 30")    # the game's own step after the first dig: left alone
+tick(12)
+assert L.eval("G.progress[49]") == 30
+L.execute(f"G.progress[51] = {FOUND_AFTER_FIVE}")
+tick(12)
+assert L.eval("G.progress[49]") == 30, "level 1 past five treasures: off, as in the game"
 inbox("item\t1\titem\t27006\t1\tProgressive Radar\n")
 tick(12)
 assert L.eval("G.progress[49]") == 40
-L.execute("G.progress[49] = 45")    # the game's own quest step, past ours: left alone
+L.execute("G.progress[49] = 41")    # the merchant's in-between step would turn the radar off
 tick(12)
-assert L.eval("G.progress[49]") == 45
+assert L.eval("G.progress[49]") == 40
 inbox("item\t2\titem\t27006\t1\tProgressive Radar\n")
 tick(12)
+assert L.eval("G.progress[49]") == 40, "level 3 before the ninth treasure stays at 40"
+L.execute(f"G.progress[51] = {FOUND_AFTER_NINE}")
+tick(12)
 assert L.eval("G.progress[49]") == 50
+L.execute(f"G.progress[51] = {FOUND_NONE}; G.progress[49] = 0")
+tick(12)
+assert L.eval("G.progress[49]") == 20, "all three radars before any dig: the first band's step"
 L.execute("G.radarFlags[704] = true")
 tick(12)
 assert "check\tradar:1\n" in read("ap_out.txt") and "radar:2" not in read("ap_out.txt"), read("ap_out.txt")[-200:]
@@ -1989,3 +2006,26 @@ tick(2)
 assert list(G.bagAdds.values()) == [RUBY_FRAGMENT], list(G.bagAdds.values())
 assert any("Received Ruby Fragment" in x for x in logs()), logs()
 print("items wait for the field: ok")
+
+# Round 74: the build, a hash of the mod's scripts, tells test installs apart while the version
+# stays the same until a release. It is logged on load, and a CRLF copy gives the same build.
+def fnv_build(folder):
+    h = 2166136261
+    for name in ("main.lua", "game.lua", "bridge.lua", "field_items.lua"):
+        for byte in open(os.path.join(folder, "Scripts", name), "rb").read().replace(b"\r", b""):
+            h = ((h ^ byte) * 16777619) & 0xFFFFFFFF
+    return f"{h:08x}"
+
+
+L, G = boot(CAPTURE)
+build = fnv_build(WORK)
+assert any(f"version {VERSION} (build {build})" in x for x in list(L.eval("logged").values())), "logged on load"
+crlf = tempfile.mkdtemp(prefix="ffrap_crlf_")
+os.makedirs(os.path.join(crlf, "Scripts"))
+for name in ("main.lua", "game.lua", "bridge.lua", "field_items.lua"):
+    text = open(os.path.join(WORK, "Scripts", name), "rb").read().replace(b"\r\n", b"\n")
+    open(os.path.join(crlf, "Scripts", name), "wb").write(text.replace(b"\n", b"\r\n"))
+B = runtime()
+B.execute("bridge = require('bridge')")
+assert B.eval(f"bridge.build('{crlf.replace(os.sep, '/')}/')") == build, "a CRLF copy"
+print("build:", build, "ok")

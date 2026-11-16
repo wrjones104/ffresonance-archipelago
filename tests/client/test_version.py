@@ -1,11 +1,14 @@
 """The client's world_version(), from the world folder and from the built .apworld in
-custom_worlds, inside a scratch Archipelago copy. Also: start_session writes a `client` line."""
+custom_worlds, inside a scratch Archipelago copy. Also: start_session writes a `client` line.
+Round 74: and world_build(), "dev" from the folder and the stamped hash from the .apworld."""
 
+import json
 import os
 import shutil
 import subprocess
 import sys
 import tempfile
+import zipfile
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
@@ -17,14 +20,17 @@ REPO = str(paths.REPO)
 PY = str(paths.AP_PYTHON)
 VERSION = paths.world_version()
 subprocess.run([PY, str(paths.TOOLS / "build_apworld.py")], check=True, capture_output=True)
+with zipfile.ZipFile(paths.REPO / "dist" / "ff_resonance.apworld") as z:
+    BUILD = json.loads(z.read("ff_resonance/archipelago.json"))["build"]
+assert len(BUILD) == 8, BUILD
 
 # 1. the folder copy, refreshed from the repo
 dst = str(paths.install_world())
 code = r'''
 import os, sys, tempfile
 sys.path.insert(0, os.getcwd())
-from worlds.ff_resonance.client import world_version, FFResonanceContext
-print("VERSION", world_version())
+from worlds.ff_resonance.client import world_build, world_version, FFResonanceContext
+print("VERSION", world_version(), world_build())
 import asyncio
 async def main():
     folder = tempfile.mkdtemp()
@@ -46,9 +52,9 @@ asyncio.run(main())
 out = subprocess.run([PY, "-c", code], cwd=AP, capture_output=True, text=True)
 assert "CONFIG 1 1 1" in out.stdout, out.stdout + out.stderr
 print(out.stdout[-600:], out.stderr[-1500:] if out.returncode else "")
-assert f"VERSION {VERSION}" in out.stdout
-assert f"INBOX seed|S:0:1/cfg|blank|1/client|{VERSION}/" in out.stdout
-assert f"INBOX2 seed|S:0:1/cfg|blank|1/client|{VERSION}/client|{VERSION}/" in out.stdout
+assert f"VERSION {VERSION} dev" in out.stdout
+assert f"INBOX seed|S:0:1/cfg|blank|1/client|{VERSION}|dev/" in out.stdout
+assert f"INBOX2 seed|S:0:1/cfg|blank|1/client|{VERSION}|dev/client|{VERSION}|dev/" in out.stdout
 
 # 2. the built .apworld, loaded from custom_worlds with the folder copy moved away
 hold = os.path.join(tempfile.gettempdir(), "ffrap_world_hold")
@@ -65,11 +71,11 @@ sys.path.insert(0, os.getcwd())
 import worlds  # loads custom_worlds
 from worlds.ff_resonance import client
 print("FILE", client.__file__)
-print("VERSION", client.world_version())
+print("VERSION", client.world_version(), client.world_build())
 '''
     out = subprocess.run([PY, "-c", code2], cwd=AP, capture_output=True, text=True)
     print(out.stdout[-600:], out.stderr[-1500:] if out.returncode else "")
-    assert ".apworld" in out.stdout and f"VERSION {VERSION}" in out.stdout
+    assert ".apworld" in out.stdout and f"VERSION {VERSION} {BUILD}" in out.stdout
 finally:
     os.remove(os.path.join(cw, "ff_resonance.apworld"))
     shutil.move(hold, dst)

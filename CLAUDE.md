@@ -23,11 +23,13 @@ An Archipelago implementation for Final Fantasy Resonance (UE 5.6, game module `
 ## How we work
 
 - **Rounds.** Claude builds and tests off-line, then writes a round test plan in the README. The user installs and plays, and sends `UE4SS.log` (`[FFRAP]` lines), screenshots or recordings. Claude records the results in the README as "Round N (mod x.y.z, ...)", fixes what they show, and plans the next round.
-- **Versions.**
-  - The mod's version is `VERSION` in `main.lua`; bump it with each change the user installs.
-  - The world's version is `world_version` in `apworld/ff_resonance/archipelago.json`. When the world or client changes, bump it and rebuild the apworld. The user copies `dist/ff_resonance.apworld` into Archipelago's `custom_worlds` and generates a new seed.
+- **Versions (one bump per release, decided 2026-11-16).** Rounds between releases share one version, so players never see numbers jump between releases.
+  - The mod's version is `VERSION` in `main.lua`. The world's version is `world_version` in `apworld/ff_resonance/archipelago.json`.
+  - At the first change after a release, bump both to the next release's numbers. Then leave them alone until the user releases. Do not bump them each round.
+  - Builds tell rounds apart. The mod logs `version x.y.z (build <hash>)`, a hash of its scripts (`bridge.build`). The apworld's build is a hash of its files, stamped by `tools/build_apworld.py` and printed by it. The client logs it, puts it in slot data and warns when a seed's build is not its own. A test plan names the expected mod build and apworld build, and the first check is that the log shows them.
+  - When the world or client changes, rebuild the apworld. The user copies `dist/ff_resonance.apworld` into Archipelago's `custom_worlds` and generates a new seed.
   - Install steps in a test plan must say which of these to copy: `Scripts`, `Assets`, the apworld.
-  - **GitHub releases** (the user makes them): the tag is the apworld's `world_version`, and the title names both, such as "v0.27.0 (apworld 0.27.0, mod 0.58.0)". Every release gets a new world version: when only the mod changed, bump the world's patch number too and rebuild the apworld. A release ships the mod zip, the apworld and the template yaml together (decided 2026-11-14).
+  - **GitHub releases** (the user makes them): the tag is the apworld's `world_version`, and the title names both, such as "v0.27.0 (apworld 0.27.0, mod 0.58.0)". Every release gets a new world version: when only the mod changed in a cycle, the cycle's first bump still moves the world's patch number. A release ships the mod zip, the apworld and the template yaml together (decided 2026-11-14).
 - **Commits:**
   - Commit each finished round on `main` without asking, and say so in the reply.
   - Never push; the user pushes. The user also commits from other machines, so when they mention a commit, `git fetch` and fast-forward first.

@@ -18,7 +18,7 @@ Strategy guides from `ffresonance.wiki`, `allthings.how`, `gmtreks.com`, and `ke
 
 Archipelago `access_rule(state: CollectionState)` callbacks inspect which items and regions `state` currently holds; multiworld spheres are derived from those rules rather than passed into them as an integer. Without a progression proxy, starting on a late-game continent such as `Mysidia` would place `Salome` (Lv39, 200,000 HP, `Double Action`) or Awakening 3 passives (such as `Terra` Awk 3 `Ribbon`) in Sphere 1.
 
-To curve boss readiness and Vision Awakening depth across the seed without tracking individual `Magicite Shard` (`25000`), `Magicite` (`25001`), and `Magicite Cryst` (`25002`) chests as progression items, rules use three `CollectionState` proxies:
+To curve boss readiness across the seed, rules use these `CollectionState` counts. Round 74: Vision awakening counts Magicite itself. `Magicite Shard` (`25000`), `Magicite` (`25001`) and `Magicite Cryst` (`25002`) are progression items (skipping balancing), from chests, shinies, bosses and the radar.
 
 - `ContinentsUnlocked(state)`: number of reachable continents among the 9 continent regions (`Grandshelt`, `Lanzelt`, `Kolobos`, `Dirnado`, `Olderion`, `Zoldaad`, `Mysidia`, `Gronoa`, `Pharm`).
 - `PartyCount(state)`: number of available party members (starting roster plus collected character items, or `8` when `shuffle_party_members` is off).
@@ -26,12 +26,14 @@ To curve boss readiness and Vision Awakening depth across the seed without track
 
 ### Vision Awakening Curve
 
-| Vision Tier | Required Progression Proxy | What It Unlocks |
+Awakening level N costs one item of tier N (`DT_VisionUpgradeItemData`). Logic counts level N once the player has two of each tier up to N (`AWAKENING_COPIES` in `boss_logic.py`), since a fight's needs often come from two Visions. Until round 73, continents stood in for it (2, 4, and 5 with the Airship), and a tester met tier B bosses in logic with no Shard at all.
+
+| Vision Tier | Required Items | What It Unlocks |
 |---|---|---|
 | `Awk 0` | Own the Vision | Base active skills (`Cure`, `Esuna`, `Dispel`, tier-1 elemental skills) |
-| `Awk 1` | `ContinentsUnlocked >= 2` | First awakening passives and skills (50% elemental resistances on `Clive`, `Charlotte`, `Bartz`, `Camille`, `Cloud`, `Lightning`, `Tidus`; `Leah` `Cura`/`Esuna`; `Firion` Instant Death immunity) |
-| `Awk 2` | `ContinentsUnlocked >= 4` | Second awakening passives and skills (`Raise`, `Curaga`, `Reflect`, `Warrior of Light` 50% Dark resist, `Ayaka` Instant Death immunity) |
-| `Awk 3 / MR 7-9` | `ContinentsUnlocked >= 5` and `HasAirship` | Full elemental immunities and absorbs (`Clive`, `Charlotte`, `Cloud`, `Lightning`, `Tidus`, `Warrior of Light`, `Cecil`, `Sephiroth`), `Reraise`, `Esunaga`, `Terra` `Ribbon`, `Leah` `Auto-Cure`, Finish skills |
+| `Awk 1` | 2 `Magicite Shard` | First awakening passives and skills (50% elemental resistances on `Clive`, `Charlotte`, `Bartz`, `Camille`, `Cloud`, `Lightning`, `Tidus`; `Leah` `Cura`/`Esuna`; `Firion` Instant Death immunity) |
+| `Awk 2` | and 2 `Magicite` | Second awakening passives and skills (`Raise`, `Curaga`, `Reflect`, `Warrior of Light` 50% Dark resist, `Ayaka` Instant Death immunity) |
+| `Awk 3 / MR 7-9` | and 2 `Magicite Cryst` | Full elemental immunities and absorbs (`Clive`, `Charlotte`, `Cloud`, `Lightning`, `Tidus`, `Warrior of Light`, `Cecil`, `Sephiroth`), `Reraise`, `Esunaga`, `Terra` `Ribbon`, `Leah` `Auto-Cure`, Finish skills |
 
 ### Boss Tier Baselines
 
@@ -50,7 +52,8 @@ To curve boss readiness and Vision Awakening depth across the seed without track
   - A party member's skill counts when it is learned by the boss's own shipped level (the `level` column in `data/bosses.tsv`). Scaling puts the boss near the party's level, so this is the level the party is expected to have.
   - Gear counts when an open shop sells it and someone in the party can wear it. `SHOP_MAPS` in `tools/gen_apworld_data.py` lists the shops open at story 8000, by their names (town and chapter). Gear in the item pool never counts, so no gear becomes a progression item.
   - Consumables never count.
-- A Vision's awakening counts by the continents opened (section 2): 1 from two, 2 from four, 3 from five and the Airship.
+- A Vision's awakening counts by Magicite (section 2): two of each tier up to the level. Round 74; until then, by continents.
+- A boss with `Double Action` (or more actions a turn) needs one party member more than its tier, up to five (`MULTI_ACTION` in `boss_logic.py`, round 74). A tester's two-member party died on turn one or two against them.
 - Not counted yet: Vision Mastery Ranks, `DebuffResistance` effects (Ribbon, Light Veil, Preventive Care), and espers.
 - Found in the data, against this document: Pray targets one ally, not the party, so Fina's first group heal is Radiant Restoration at level 25. Belmodar is weak to Fire and Dark, not Water. The Shock Whip (10703) is a gun, and no open shop sells it. No open shop sells any elemental weapon at all; the shop gear that counts is accessories and armour for resistances and status immunity (Olderion's Amore and Olderion, Sian in Pharm, Mysidia, Lanzelt, Kolobos, and the airship's own shop). Section 5's battle group numbers do not match `data/bosses.tsv`, which the logic uses.
 - Changed from section 5's rules: Shoggoth takes Poison immunity where section 5 had `OR HasAirship`. Liquid Thunder needs Earth and the tier B healer; section 5's `OR Lightning (Vision)` is gone, as that Vision has no Earth attack.

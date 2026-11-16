@@ -6,7 +6,7 @@ from worlds.AutoWorld import call_all
 from test.general import gen_steps
 
 from ..data import AIRSHIP_ITEM, BOSSES, CHESTS, CHOCOBO_ITEM, NO_ROUTE, RADAR, RADAR_ITEM, RADAR_PARTS, CONTINENT_UNLOCKS, CRYSTALS, FRAGMENT_ITEM, ITEMS, NO_BOX, TABLET_SHINIES, PROGRESSION, SHINIES, SHUFFLE_ID_LIMIT, UNIT_ITEM_BASE
-from ..boss_logic import has_capability
+from ..boss_logic import awakening, has_capability
 from ..items import CLASSIFICATIONS, FILLER_CATEGORIES, FRAGMENT_NAME, item_name_groups
 from ..locations import GOAL_EVENT, LOCATION_KEY_TO_ID, SEPHIROTH, VICTORY
 from ..options import FinalBossFragments, Goal, TabletShardsRequired
@@ -50,7 +50,7 @@ class TestDefault(FFResonanceTestBase):
 
     def test_progression_items_are_progression(self) -> None:
         for item in self.multiworld.itempool:
-            if item.player == self.player and ITEMS[item.code]["category"] in ("party", "vision", "key", "continent"):
+            if item.player == self.player and ITEMS[item.code]["category"] in ("party", "vision", "key", "continent", "magicite"):
                 self.assertTrue(item.advancement, item.name)
 
     def test_goal_is_reachable(self) -> None:
@@ -97,24 +97,55 @@ class TestDefault(FFResonanceTestBase):
         or Earth resistance. Fina heals, Jake has Wind."""
         chest = self.multiworld.get_location("Fina's Psyche Chest 1", self.player)
         self.assertNotEqual(chest.progress_type, LocationProgressType.EXCLUDED)
+        # Round 74: Tower of Mysidia Chest 3, on the top floor, is past Tellus too (a tester's seed).
+        top = chest_location(self, "chest:3200:2")
         self.collect_by_name(["Mysidia Unlock", "Fina"])
+        self.assertTrue(chest_location(self, "chest:3200:0").can_reach(self.multiworld.state), "the tower's lower floors")
         self.assertFalse(chest.can_reach(self.multiworld.state), "no Wind")
+        self.assertFalse(top.can_reach(self.multiworld.state), "no Wind")
         self.collect_by_name(["Jake"])
         self.assertTrue(chest.can_reach(self.multiworld.state))
+        self.assertTrue(top.can_reach(self.multiworld.state))
+
+    def test_gronoa_plateau_is_behind_lux(self) -> None:
+        """Round 74 (a tester): Lux on the Rugged Mountain Path holds Gronoa's south-west plateau
+        (Duggle, Gronoa Shrine, Sanctissimus Shrine), and the airship cannot land there. Lux is
+        tier C: four party members, four continents, a group heal or a revive. She acts twice a
+        turn, so one member more."""
+        duggle = chest_location(self, "chest:2160:0")
+        self.collect_by_name(["Gronoa Unlock"])
+        self.assertTrue(chest_location(self, "chest:2150:0").can_reach(self.multiworld.state), "Gaberada's side")
+        self.assertTrue(chest_location(self, "chest:3230:0").can_reach(self.multiworld.state), "the path before Lux")
+        self.assertFalse(duggle.can_reach(self.multiworld.state), "the airship is no way past Lux")
+        self.collect_by_name(["Pharm Unlock", "Mysidia Unlock", "Fina", "Nichol"])
+        self.assertFalse(duggle.can_reach(self.multiworld.state), "four members")
+        self.collect_by_name(["Jake"])
+        self.assertTrue(duggle.can_reach(self.multiworld.state))
+
+    def test_pharm_plateau_is_behind_ignis(self) -> None:
+        """Round 74: Ignis at the top of Mt. Reizan (tier C) holds Lake Ryusei, the Forest Path and
+        the Wandering Lands. The mountain's own chests are below him."""
+        forest = chest_location(self, "chest:3271:0")
+        self.collect_by_name(["Pharm Unlock"])
+        self.assertTrue(chest_location(self, "chest:3260:2").can_reach(self.multiworld.state))
+        self.assertFalse(forest.can_reach(self.multiworld.state))
+        self.collect_by_name(["Gronoa Unlock", "Mysidia Unlock", "Fina", "Nichol"])
+        self.assertTrue(forest.can_reach(self.multiworld.state))
 
     def test_sanctissimus_is_behind_its_first_three_bosses(self) -> None:
         """Round 72: Sanctissimus Shrine's chests are past Archaeoaevis, Dad Bomb and Test Rider
         (tier C): four party members and four continents, on top of Gronoa. Round 73: and a group
-        heal or a revive, which Fina has from level 25."""
+        heal or a revive, which Fina has from level 25. Round 74: Dad Bomb, Test Rider and Lux (on
+        the way) act twice a turn, so five members."""
         chest = self.multiworld.get_location("Sanctissimus Shrine Chest 1", self.player)
         self.collect_by_name(["Gronoa Unlock", "Pharm Unlock", "Mysidia Unlock"])
-        self.collect_by_name(["Nichol", "Lid"])
+        self.collect_by_name(["Nichol", "Lid", "Jake"])
         self.assertFalse(chest.can_reach(self.multiworld.state), "no group heal or revive")
         self.remove_by_name(["Lid"])
         self.collect_by_name(["Fina"])
         self.assertTrue(chest.can_reach(self.multiworld.state))
         self.remove_by_name(["Nichol"])
-        self.assertFalse(chest.can_reach(self.multiworld.state), "three members are not enough")
+        self.assertFalse(chest.can_reach(self.multiworld.state), "four members are not enough")
 
     def test_zoldaad_dungeon_needs_its_key(self) -> None:
         chest = self.multiworld.get_location("Zoldaad Dungeon Chest 1", self.player)
@@ -127,6 +158,7 @@ class TestDefault(FFResonanceTestBase):
         slot_data = self.world.fill_slot_data()
         self.assertEqual(slot_data["goal"], "final_boss")
         self.assertEqual(slot_data["mod_protocol"], 2)
+        self.assertEqual(slot_data["world_build"], "dev", "round 74: a world run from its folder")
         self.assertEqual(slot_data["starting_party"], [1001, 1002])
         self.assertEqual(slot_data["starting_continent"], "Grandshelt")
         self.assertIs(slot_data["open_world"], True)
@@ -269,6 +301,19 @@ class TestDirnadoOnFoot(FFResonanceTestBase, real_defaults=True):
         self.assertFalse(self.reachable("Mt. Thunderclap: Liquid Thunder"))
         self.assertTrue(self.reachable("Dwarven Forge Chest 1"))
         self.assertTrue(self.reachable("Wind Shrine Chest 1"))
+
+
+class TestDragonsMawOnFoot(FFResonanceTestBase):
+    """Round 74 (a tester): on foot, Intangir (tier D) holds Dragon's Maw and the world map past its
+    north door. Tier D wants the Airship, and the Airship lands on the north side, so on foot
+    Dragon's Maw needs the Airship."""
+    options = {"start_with_airship": False, "starting_continent": "pharm"}
+
+    def test_dragons_maw_needs_the_airship(self) -> None:
+        chest = chest_location(self, "chest:3010:0")
+        self.assertFalse(chest.can_reach(self.multiworld.state))
+        self.collect_by_name(["Airship"])
+        self.assertTrue(chest.can_reach(self.multiworld.state))
 
 
 class TestUnshuffledVisions(FFResonanceTestBase):
@@ -511,13 +556,25 @@ class TestBossCapabilities(FFResonanceTestBase):
         self.collect_by_name(["Lid"])
         self.assertTrue(self.has("earth", EARLY_LEVEL), "Mechabo Kick")
 
-    def test_a_vision_awakens_with_continents(self) -> None:
-        """Leah's Esuna is at awakening 1, which needs a second continent."""
-        self.collect_by_name(["Leah (Vision)"])
+    def test_a_vision_awakens_with_magicite(self) -> None:
+        """Leah's Esuna is at awakening 1. Round 74: awakening 1 needs two Magicite Shards (one
+        for each of two Visions), not a second continent."""
+        self.collect_by_name(["Leah (Vision)", "Lanzelt Unlock", "Kolobos Unlock", "Dirnado Unlock"])
         self.assertTrue(self.has("heal", EARLY_LEVEL), "Cure at awakening 0")
-        self.assertFalse(self.has("cleanse", MAX_LEVEL))
-        self.collect_by_name(["Lanzelt Unlock"])
+        self.assertFalse(self.has("cleanse", MAX_LEVEL), "continents no longer stand in for Magicite")
+        self.collect(self.world.create_item("Magicite Shard"))
+        self.assertFalse(self.has("cleanse", MAX_LEVEL), "one Shard")
+        self.collect(self.world.create_item("Magicite Shard"))
         self.assertTrue(self.has("cleanse", MAX_LEVEL))
+
+    def test_awakening_goes_up_one_tier_at_a_time(self) -> None:
+        """A Magicite Cryst is awakening 3, which needs awakenings 1 and 2 first."""
+        for name in ("Magicite Cryst", "Magicite Cryst", "Magicite", "Magicite"):
+            self.collect(self.world.create_item(name))
+        self.assertEqual(awakening(self.world, self.multiworld.state), 0)
+        for _ in range(2):
+            self.collect(self.world.create_item("Magicite Shard"))
+        self.assertEqual(awakening(self.world, self.multiworld.state), 3)
 
     def test_shop_gear_counts_where_its_shop_is_open(self) -> None:
         """Insulated Gloves are sold in Sian, in Pharm. Gear in the item pool never counts."""
@@ -787,7 +844,8 @@ class TestData(FFResonanceTestBase):
         self.assertNotIn("Item 5", {info["name"] for info in ITEMS.values()})
 
     def test_shinies_come_from_the_game_files(self) -> None:
-        self.assertEqual(len(SHINIES), 92)
+        self.assertEqual(len(SHINIES), 94)     # round 74: two with a Magicite Shard
+        self.assertIn("shiny:1000:189", {s["key"] for s in SHINIES})
         self.assertTrue(all(s["region"] == "World Map" for s in SHINIES))
         unseen = sorted(int(s["key"].split(":")[2]) for s in SHINIES if not s["seen"])
         self.assertEqual(unseen, [70, 71, 84, 85, 86, 87, 88, 89, 91])

@@ -17,11 +17,13 @@ ITEM_NAME_TO_ID: dict[str, int] = {info["name"]: ap_id for ap_id, info in ITEMS.
 
 # Continent unlocks are what the logic reads. Party members, visions and key items are marked
 # progression too so future logic changes do not alter item IDs or classes.
-# Equipment is useful, so hints and fill treat it as worth something.
+# Equipment is useful, so hints and fill treat it as worth something. Round 74: Magicite awakens
+# Visions, and boss logic counts it (boss_logic.awakening). There are many copies, so it skips
+# balancing, as the counted Tablet Shards do.
 CLASSIFICATIONS = {
     "consumable": ItemClassification.filler,
     "equipment": ItemClassification.useful,
-    "magicite": ItemClassification.useful,
+    "magicite": ItemClassification.progression_skip_balancing,
     "shard": ItemClassification.useful,
     "gil": ItemClassification.filler,
     "party": ItemClassification.progression,

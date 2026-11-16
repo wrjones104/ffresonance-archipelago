@@ -26,9 +26,20 @@ GATE_BOSSES = {9051: ("B", 39)}
 BOSS_TIER = {int(b["key"].split(":")[1]): b["tier"] for b in BOSSES} | {g: t for g, (t, _) in GATE_BOSSES.items()}
 BOSS_LEVEL = {int(b["key"].split(":")[1]): b["level"] for b in BOSSES} | {g: lv for g, (_, lv) in GATE_BOSSES.items()}
 
-# Vision awakening depends on uncounted materials, so unlocked continents stand in for it
-# (docs/boss_logic.md, section 2): awakening 1 from 2, 2 from 4, 3 from 5 and the Airship.
-AWAKENING_CONTINENTS = ((5, 3), (4, 2), (2, 1))
+# Round 74: awakening level N costs one item of tier N (DT_VisionUpgradeItemData): a Magicite
+# Shard, a Magicite, a Magicite Cryst. A level counts once there are AWAKENING_COPIES of each tier
+# up to it, since a fight's needs often come from two Visions (a heal and an element). Until round
+# 73, unlocked continents stood in for it, and a tester met tier B bosses in logic with no Shard.
+AWAKENING_ITEMS = ("Magicite Shard", "Magicite", "Magicite Cryst")
+AWAKENING_COPIES = 2
+
+# Round 74 (a tester): a boss that acts twice a turn kills a small party before it can act. These
+# need one party member more than their tier, up to tier D's five (docs/boss_logic.md, section 5:
+# Double Action). Tier D's bosses are at five already.
+# Tier B: Pyroviper, Salome, Tellus (Tower of Mysidia), Behemoth. Tier C: Jotunn, Malboro Varietas,
+# Dad Bomb, Test Rider, Dragon, Gelidus, Lux, Elfdrit, Tellus (Wandering Lands).
+MULTI_ACTION = {9093, 9109, 9038, 9051, 9110, 9111, 9074, 9073, 9076, 9044, 9039, 9040, 9048}
+MULTI_ACTION_MOST = TIER_NEEDS["D"][0]
 
 # Each tier's baseline: from tier B a healer, from tier C a group heal or a revive.
 TIER_BASELINE: dict[str, Callable[[Callable[[str], bool]], bool]] = {
@@ -76,11 +87,12 @@ def has_airship(world: FFResonanceWorld, state: CollectionState) -> bool:
 
 
 def awakening(world: FFResonanceWorld, state: CollectionState) -> int:
-    continents = state.count_group("Continent Unlocks", world.player)
-    for needed, level in AWAKENING_CONTINENTS:
-        if continents >= needed and (level < 3 or has_airship(world, state)):
-            return level
-    return 0
+    level = 0
+    for name in AWAKENING_ITEMS:
+        if not state.has(name, world.player, AWAKENING_COPIES):
+            break
+        level += 1
+    return level
 
 
 def has_capability(world: FFResonanceWorld, state: CollectionState, capability: str, level: int) -> bool:
@@ -105,6 +117,8 @@ def boss_rule(world: FFResonanceWorld, group: int):
     shuffled) count as the most it can."""
     tier, level = BOSS_TIER[group], BOSS_LEVEL[group]
     members, continents, wants_airship = TIER_NEEDS[tier]
+    if group in MULTI_ACTION:
+        members = min(members + 1, MULTI_ACTION_MOST)
     player = world.player
     most = len(PARTY_MEMBERS) if world.options.shuffle_party_members else len(world.starting_party)
     extra = max(0, min(members, most) - len(world.starting_party))

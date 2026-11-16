@@ -17,7 +17,7 @@ The runner runs every test and prints `ok`, `FAIL` (with the last lines of outpu
 | `tools/dump_game` (build) | The game dump tool builds. Running it needs the game, so the tests only build it. Skipped without the .NET SDK. |
 | `client/test_session_key.py` | The client's session key with Archipelago 0.6.7 (seed name from `RoomInfo`). |
 | `client/test_scout.py` | Location scouting and the `scout` lines. |
-| `client/test_version.py` | The client's world version, from the folder and from the built `.apworld`. |
+| `client/test_version.py` | The client's world version and build, from the folder and from the built `.apworld`. |
 | `apworld/ff_resonance/test/` | The world's generation tests, in Archipelago's own framework. |
 
 The fakes stand in for the engine. They follow what the game showed in test rounds, so when the game surprises us, the fake changes too (for example, a template widget that is never drawn, round 22).

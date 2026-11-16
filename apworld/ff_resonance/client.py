@@ -18,9 +18,7 @@ from __future__ import annotations
 
 import asyncio
 import base64
-import json
 import os
-import pkgutil
 import re
 import sys
 from typing import Any
@@ -32,6 +30,7 @@ from NetUtils import ClientStatus, NetworkItem
 
 from .data import FRAGMENT_ITEM, ITEMS
 from .locations import LOCATION_KEY_TO_ID
+from .version import world_build, world_version
 
 LOCATION_ID_TO_KEY = {location_id: key for key, location_id in LOCATION_KEY_TO_ID.items()}
 
@@ -44,16 +43,6 @@ FINAL_GOAL = "final_boss"
 FINAL_BATTLE = 9056   # Rain against Sol, reported by the mod as `won 9056`
 ENDING_STORY = 9000   # the ending sets this after its scenes: the goal if the win was missed
 SHARD_ITEM = next(ap_id for ap_id, info in ITEMS.items() if info["name"] == "Tablet Shard")
-
-
-def world_version() -> str:
-    """The world_version from this package's archipelago.json. pkgutil reads it from a folder or
-    from inside an .apworld zip alike."""
-    try:
-        data = pkgutil.get_data(__package__ or "ff_resonance", "archipelago.json")
-        return str(json.loads(data.decode("utf-8")).get("world_version", "?")) if data else "?"
-    except (OSError, json.JSONDecodeError, UnicodeDecodeError):
-        return "?"
 
 
 def clean(text: Any) -> str:
@@ -174,7 +163,7 @@ class FFResonanceContext(CommonContext):
             self.goal_announced = False
             self.scouts_written = False
         # Record the client version for the mod's log.
-        self.write_line("client", world_version())
+        self.write_line("client", world_version(), world_build())
         self.out_offset = 0
         self.out_scope = None
 
@@ -369,6 +358,12 @@ class FFResonanceContext(CommonContext):
             self.lock_needs = (int(slot_data.get("final_boss_characters", 0)), int(slot_data.get("final_boss_visions", 0)),
                                int(slot_data.get("final_boss_fragments", 0)))
             self.lock_written = None
+            # Round 74: the version stays the same between releases, so a seed made with another
+            # test build of the apworld is told apart by its build.
+            seed_build = slot_data.get("world_build")
+            if seed_build and seed_build != world_build():
+                logger.warning(f"This seed was made with apworld build {seed_build}, and this client is build "
+                               f"{world_build()}. Use the same .apworld for both, or generate the seed again.")
             # AP 0.6.7 leaves seed_name unset, so fall back to the captured RoomInfo name.
             seed = getattr(self, "server_seed_name", None) or self.room_seed_name or self.seed_name
             if not seed:
@@ -489,7 +484,7 @@ def launch_client(*args: str) -> None:
 
     async def main(parsed) -> None:
         ctx = FFResonanceContext(parsed.connect, parsed.password, parsed.modfolder or default_mod_folder())
-        logger.info(f"Final Fantasy Resonance client, world version {world_version()}")
+        logger.info(f"Final Fantasy Resonance client, world version {world_version()} (build {world_build()})")
         if parsed.name:
             ctx.auth = parsed.name
         ctx.server_task = asyncio.create_task(server_loop(ctx), name="server loop")

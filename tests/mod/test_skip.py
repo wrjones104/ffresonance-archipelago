@@ -371,6 +371,11 @@ assert lua("G.BlankFieldItem(s1, true, true)") is False, "already blank"
 assert lua("G.BlankFieldItem(s2, false, true)") is True and lua("s2.actor.m_ItemId") == -1
 L.execute("s6 = shiny(20009, -1)")
 assert lua("G.BlankFieldItem(s6, true, true)") is False, "a key card stays"
+# Round 74: a shiny holding a Magicite Shard is a location, as Magicite chests are
+MAGICITE_SHARD = 25000
+L.execute(f"s7 = shiny({MAGICITE_SHARD}, -1)")
+assert lua("G.BlankFieldItem(s7, false, true)") is False, "shards only: it stays"
+assert lua("G.BlankFieldItem(s7, true, false)") is True and lua("s7.actor.m_ItemId") == -1
 # Round 45: a chest holding Magicite is blanked like the others; a key item's stays
 L.execute("""
 chestRows = { { mapId = 3030, ID = 1, ItemId = 25000, ItemNum = 1, Money = -1 }, { mapId = 2031, ID = 20, ItemId = 20016, ItemNum = 1, Money = -1 },
@@ -523,6 +528,21 @@ ok, detail = L.execute("return G.SyncStoryBossTrigger(say)")
 assert ok is True and lua("storyActors.BP_MapTransitionTrigger_C[1].mTransitionDataList[1].FlagCondition") == "!{flag:1241}&{flag:1441}"
 assert lua("storyActors.BP_MapTransitionTrigger_C[1].mTransitionDataList[1].isEventOnly") is True
 assert lua(pot) == 1241 and lua("talkRows.SubEv_C02_SymbolEnemy_Encount.encountGroupId") == 9012
+# Round 74: Tellus's door in the Nameless Ruins has a second entry that goes nowhere (map -1), so
+# once Tellus is won its first entry is a plain door again, to the upper floor (point 5000)
+L.execute("""storyActors.BP_MapTransitionTrigger_C[1].mTransitionDataList = arr({
+  { pointId = 5000, mapId = 3180, FlagCondition = "", isEventOnly = false,
+    EventList = arr({ { Condition = "{progress:0}==5070", EventId = nameOf("C05_510_01") } }) },
+  { pointId = -1, mapId = -1, FlagCondition = "", isEventOnly = false, EventList = arr({}) } })
+mockMap = 3180""")
+tellus = "storyActors.BP_MapTransitionTrigger_C[1].mTransitionDataList[1]"
+ok, detail = L.execute("return G.SyncStoryBossTrigger(say)")
+assert lua(tellus + ".FlagCondition") == "!{flag:1245}&{flag:1441}" and lua(tellus + ".isEventOnly") is True
+L.execute("sd.Progress.eventFlag[1246] = true")
+ok, detail = L.execute("return G.SyncStoryBossTrigger(say)")
+assert ok is True and "(won true)" in detail and "1 transitions" in detail, detail
+assert lua(tellus + ".FlagCondition") == "" and lua(tellus + ".isEventOnly") is False, "a door again"
+assert lua(tellus + ".EventList[1].Condition") == "!{flag:1245}", "the fight row no longer runs"
 L.execute("mockMap = 2050")
 ok, detail = L.execute("return G.SyncStoryBossTrigger(say)")
 assert ok is True and lua("storyActors.BP_MapUnit_NPC_C[2].m_VisiblFlagCondition") == "!{flag:1242}"

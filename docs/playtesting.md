@@ -727,6 +727,33 @@ World-map shinies verified as locations. Multiple crashes observed across differ
 
 **And (world 0.27.0):** `final_boss_fragments` defaults to 14 (from 4), and the template yaml (`apworld/Final Fantasy Resonance.yaml`) lists it. When the final boss lock asks for party members or visions, each one received shows its count in the item feed as the fragments do, such as "Jake (3/6)" or "Ifrit (5/12)". The starting party counts, and past the need only the count shows.
 
+**Round 74, a Discord tester's seed (mod 0.58.0, world 0.27.0, 2026-11-15).** The release v0.27.0, on the game's Normal with our Normal, with Lid and Sakura. The feedback is in `.reference/user_feedback_2026-11-15.txt`.
+- **The airship radar did nothing.** The mod set flag 702, but the radar works only while `DT_MapPingerData`'s condition holds: the radar's step `{progress:49}` must be 20 or 30 while the found count `{progress:51}` is 13 or less, 40 while it is 14 to 22, and 50 while it is 23 to 31. The game's install row (`SubEv_C05_TreasureRadar_04`) sets the step to 20. The mod left it at 0, and it would have set 40 and 50 without looking at the found count.
+- **Places past bosses were in logic.** The boss fights were gated right: off-line, with two members and every continent and Vision, only the seven tier A bosses were in logic. But only Fina's Psyche, Sanctissimus Shrine, the Crystal Tower's third section and Dirnado on foot had a rule for what lies past a boss. The tester had Tower of Mysidia Chest 3 (past Tellus), all of Dragon's Maw and the world map past it (past Intangir), and Gronoa past Lux in logic.
+- **Nameless Ruins Chest 4 could not be reached.** The stairs past Tellus had no loading zone. The mod made Tellus's door (`mTransitionDataList[1]`, to point 5000) "event only while flag 1245 is off". After the win the game took the door's second entry, which goes to map -1: nowhere. The Hunger's door has the same rewrite, but its second entry leads on.
+- **A Magicite Shard on the world map was not shuffled.** World Map Shinies 4 (Dirnado) and 189 (Pharm) hold one. Magicite was shuffled only from chests, a rule from round 45, before a shiny's reward could be replaced.
+- **No Magicite Shard came for hours, and bosses were in logic with 0-star Visions.** The pool had 12 Shards, 12 Magicite and 13 Crysts, and logic counted continents in place of Magicite.
+- **Two members could not beat the bosses that act twice a turn** (Lux, Intangir, the Sworn Six): "getting one shot on opening". The tester thinks four members for Pharm and Gronoa's bosses would be fair. Normal's bosses also felt too strong: Siren at level 44 and the Marauder at 42 beat a two-member party.
+- **Abandoned Cabin Chest 1 opened without the Cabin Key.** At story 8000 the cabin's door does not test the key (`{item:20033}` picks only the destination). Not changed: a note for when the key is shuffled for its own sake.
+- Known and not changed: the Research Center Ruins' key cards and the Zoldaad Throne Key are not locations yet.
+
+**Round 74, before play (mod 0.59.0, world 0.28.0): the fixes.**
+- **Versions.** From this round, the versions change once per release (the user's call): mod 0.59.0 and world 0.28.0 stay until the next one. A build tells test installs apart. The mod logs `version 0.59.0 (build <hash of its scripts>)`. `tools/build_apworld.py` stamps the apworld with a hash of its files. The client logs its build, writes it to the mod, and warns when a seed was made with another build (`world_build` in slot data).
+- **The radar (mod).** The mod sets the step from the radar level and the found count together (`game.RADAR_BANDS`). With too low a level for the band, it leaves the step alone, so the radar is off there, as in the game.
+- **Tellus's door (mod).** Once Tellus is won, the Nameless Ruins door is a plain door again, to the upper floor (`reopen` in `G.STORY_BOSSES`). Nameless Ruins Chest 4 is past Tellus in logic.
+- **Places past bosses (world), from the maps' positions.** `AFTER_BOSS` now covers every kind of location on its maps, bosses and sanctums too. New in `tools/gen_apworld_data.py`:
+  - Tower of Mysidia Chest 3 is past Tellus. It is on the top floor (z 11247), and the trigger is at z 10950.
+  - Earth Shrine Chests 4 to 6 (x 14900) are past Belmodar's triggers (x 11592 to 11767).
+  - `FAR_SIDE`: Lux holds Gronoa's south-west plateau, at z 1275 to 1710. That is the Town of Duggle, Gronoa Shrine, Sanctissimus Shrine, Necromonarch Cave and World Map Shinies 161 to 166. The airship does not help there. Gaberada's side is low, at z 610 to 880.
+  - Ignis, at the top of Mt. Reizan, holds Pharm's plateau (Lake Ryusei, the Forest Path, the Wandering Lands). All of the mountain's chests are below him.
+  - Intangir's blocking box (flag 928) is near Dragon's Maw's south door. On foot, Dragon's Maw and World Map Shiny 149 by its north door need Intangir or the Airship. Intangir is tier D, which wants the Airship anyway.
+  - Gear sold in a shop past a boss does not count in logic.
+  - 56 locations changed rule.
+- **Magicite (world and mod).** Shinies holding Magicite are locations, and the mod blanks them. Magicite is progression (skipping balancing, like the Tablet Shards). A Vision's awakening level N costs one item of tier N (`DT_VisionUpgradeItemData`): Shard, Magicite, Cryst. Logic counts awakening N once there are two of each tier up to N. Two, because a fight's needs often come from two Visions.
+- **Small parties (world).** The bosses that act twice a turn need one member more than their tier, up to five. In tier B these are Pyroviper, Salome, Tellus (Tower of Mysidia) and Behemoth. In tier C they are Jotunn, Malboro Varietas, Dad Bomb, Test Rider, Dragon, Gelidus, Lux, Elfdrit and Tellus (Wandering Lands).
+- **Normal's bosses (mod).** Their level went from 110-115% of the party's to 105-110%, and their power from 115-120% to 105-110%. Casual and Expert are unchanged.
+- Off-line: in the tester's case (two members, every continent and Vision, no Magicite), only the seven tier A bosses are in logic. Five seeds of the real defaults filled.
+
 ## Round 72 test plan (mod 0.57.1, world 0.24.1)
 
 **World 0.24.2 (during the round):** copy `dist/ff_resonance.apworld` and generate a new seed for the Liquid Thunder gate. The mod is unchanged.
@@ -774,3 +801,34 @@ Also, **is Felicitas's shop the one the data calls "ナシャト"?** If a town's
 **4. The Crystal Tower's Behemoth (mod 0.58.0, world 0.26.0, during the round).** Install: copy `FFRArchipelago/Scripts` and `dist/ff_resonance.apworld`, and generate a new seed. On entering the tower the log should say `behemoth: 3 assist hits set to 1 damage`. **In the fight, do the Water and Light support hits now deal 1 or 2 damage, and does the fight end only when your party wins it?** Note any other hit from the allies that still takes a big part of its HP. **Was Behemoth fair for a tier B party,** and was anything past it out of logic that you could reach without the fight?
 
 **5. Goal counters (world 0.27.0).** Install: copy `dist/ff_resonance.apworld` and generate a new seed; the mod is unchanged. **Does each party member and vision received show its count in the item feed, like the Crystal Fragments?**
+
+## Round 74 test plan (mod 0.59.0 build d8e6e426, world 0.28.0 build ddd8aeb4)
+
+**Install:** copy `FFRArchipelago/Scripts` and `dist/ff_resonance.apworld` into `custom_worlds`, and generate a new seed. The radar and door fixes also work on an older save.
+
+**0. The builds.** The log should say `version 0.59.0 (build d8e6e426)` on load, and `client: world version 0.28.0 (build ddd8aeb4)` once the client connects. The client says the same on start. **Do they match?** If not, an older copy is installed.
+
+**1. The radar.** Receive a Progressive Radar. The log says `radar: level 1 (flag 702 true, step 20, found 0)`. Fly over the sea.
+- **Does it ping, and can you dig Radar Treasure 1?**
+- After treasure 5 the radar should go quiet until a second radar comes (step 40). After treasure 9 it should go quiet until the third (step 50).
+- If all three radars come before any dig, the step should still start at 20.
+
+**2. The Nameless Ruins stairs.** Beat Tellus there, or go back on a save where he is beaten. **Do the stairs lead to the upper floor now, and is Chest 4 there?** Then **can you reach Odin's place** (the tester thought the stairs were the way)?
+
+**3. Places past bosses.** In Universal Tracker:
+- Tower of Mysidia Chest 3 should wait for Tellus's needs.
+- Duggle, Gronoa Shrine and Sanctissimus Shrine should wait for Lux's (five members, four continents, a group heal or a revive).
+- Lake Ryusei, the Forest Path and the Wandering Lands should wait for Ignis's.
+
+Some of these came from positions only. **Please check them in game:**
+- Is Dragon's Maw's south door the way in from most of Pharm, and do all seven chests and Shard 4 lie past Intangir's box?
+- What does the Rogue Magitek Weapon's box block?
+- Can the airship land on Pharm's plateau, by Lake Ryusei? If it can, the plateau needs Ignis or the Airship, as Dirnado does.
+- Are Earth Shrine Chests 4 to 6 past Belmodar?
+- Is Catacumba Cave (west Gronoa, low ground) on Gaberada's side?
+
+**4. Magicite.** **Do World Map Shinies 4 (Dirnado) and 189 (Pharm) send a check** and give the pop-up's item, not a Magicite Shard? **Do bosses stay out of logic until Magicite comes?**
+
+**5. Bosses on Normal.** **Do they feel fairer?** The double-action bosses now need one more member in logic, and Normal's bosses are a little lower and weaker. Note your party's size and levels for a fight that felt wrong either way.
+
+Send the `[FFRAP]` lines of the log and any crash folder.

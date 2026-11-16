@@ -43,7 +43,7 @@ OUT = os.path.join(ROOT, "apworld", "ff_resonance", "data.py")
 FIELD_ITEMS_LUA = os.path.join(ROOT, "FFRArchipelago", "Scripts", "field_items.lua")
 
 SHUFFLE_ID_LIMIT = 13000          # item ids at or above this never move (visions, key items)
-MAGICITE_IDS = (25000, 25002)     # except these, in chests (the mod blanks them too)
+MAGICITE_IDS = (25000, 25002)     # except these (the mod blanks them too)
 CRYSTAL_LOCATION_BASE = 3_000_000_000    # + the sanctum's map id
 TABLET_SHARD = 25004              # a shiny holding one is a location of its own kind (round 47)
 CONSUMABLE_LIMIT = 1000
@@ -93,11 +93,12 @@ def read_tsv(name):
 
 
 
-def item_kind(item_id: int, money: int, in_chest: bool = False) -> str | None:
+def item_kind(item_id: int, money: int) -> str | None:
     if item_id < 0:
         return "gil" if money > 0 else None
-    # Round 45: chests with Magicite are shuffled. Shinies wait until a shiny's reward can be replaced.
-    if in_chest and MAGICITE_IDS[0] <= item_id <= MAGICITE_IDS[1]:
+    # Round 45: chests with Magicite are shuffled. Round 74: shinies with Magicite too (two on the
+    # world map held a Magicite Shard that a tester found not shuffled).
+    if MAGICITE_IDS[0] <= item_id <= MAGICITE_IDS[1]:
         return "magicite"
     if item_id == TABLET_SHARD:
         return "shard"
@@ -166,7 +167,35 @@ AFTER_BOSS = {3210: [9038], 3211: [9038], 3212: [9038], 3250: [9075, 9074, 9073]
 # the room at y -125400, and that room's other door to the section around (8000, -58000). These
 # are the chests and shard there. The first two sections need only the way in (the user).
 AFTER_BOSS_KEYS = {9051: {"chest:3280:2", "chest:3280:5", "chest:3280:6", "chest:3280:7", "chest:3280:8",
-                          "shiny:3280:126"}}
+                          "shiny:3280:126"},
+                   # Round 74, from positions. Tower of Mysidia Chest 3 is on the top floor (z 11247), past
+                   # Tellus's trigger (z 10950); a tester found it in logic without Tellus.
+                   9038: {"chest:3200:2"},
+                   # Nameless Ruins Chest 4 is on the upper floor, up the stairs that Tellus's door is.
+                   9031: {"chest:3180:3"},
+                   # Earth Shrine Chests 4 to 6 (x 14900) are past Belmodar's triggers (x 11592 to 11767).
+                   9004: {"chest:3000:4", "chest:3000:5", "chest:3000:6"}}
+# Round 74: places past a boss fight on the world map. A tester found them in logic with a party
+# the boss would beat. Each entry gives the world-map doors on the boss's far side and more maps:
+# every location on those maps and on the maps their doors lead to is past the boss, and so are
+# the location keys given. "airship" is whether the airship can fly past the boss instead.
+FAR_SIDE = {
+    # Lux on the Rugged Mountain Path (map 3230) stands before its upper door (world-map door 37).
+    # Past her is Gronoa's south-west plateau at z 1275 to 1710: the Town of Duggle (door 38), Gronoa
+    # Shrine (39), Sanctissimus Shrine (40), Necromonarch Cave (99) and World Map Shinies 161 to 166.
+    # Gaberada's side is low, at z 610 to 880. The airship cannot land on the plateau (the tester).
+    9039: {"doors": {38, 39, 40, 99}, "maps": set(), "keys": {f"shiny:1000:{uid}" for uid in range(161, 167)},
+           "airship": False},
+    # Ignis at the top of Mt. Reizan (map 3260, z 5082) stands by its upper door (world-map door 29);
+    # all its chests are below him. Past him is Pharm's plateau at z 1110 to 1350: Lake Ryusei
+    # (door 30), the Wandering Lands (64) and the Forest Path (65, 66). Not known whether the airship
+    # lands there, so it does not count.
+    9046: {"doors": {30, 64, 65, 66}, "maps": set(), "keys": set(), "airship": False},
+    # Intangir's blocking box (flag 928) in Dragon's Maw is near its south door, the one most of Pharm
+    # walks to. The tester went through Dragon's Maw after beating Intangir, to World Map Shiny 149
+    # by the north door. The north side is reached from the air (data/airship_only.tsv).
+    7042: {"doors": set(), "maps": {3010}, "keys": {"shiny:1000:149"}, "airship": True},
+}
 # Places that on foot lie past a boss, which the airship flies over. Round 73 (the user): from
 # Dilmagia, where the Dirnado start and the ferry arrive, Liquid Thunder on Mt. Thunderclap's
 # summit blocks the way to the rest of Dirnado. Only Dilmagia (maps 2060 and 2061), Mt.
@@ -237,11 +266,10 @@ def continent_at(continents: dict[str, dict], x: float, y: float) -> str | None:
     return None
 
 
-def map_continents(continents: dict[str, dict]) -> dict[int, set[str]]:
-    """The continents each map is entered from: world-map exits by position, then the exit graph."""
-    reach: dict[int, set[str]] = collections.defaultdict(set)
+def read_exits() -> tuple[dict[int, tuple[float, float, list[int]]], dict[int, set[int]]]:
+    """The world map's doors (uid -> x, y, the maps it leads to) and the doors between other maps."""
+    world_doors: dict[int, tuple[float, float, list[int]]] = {}
     edges: dict[int, set[int]] = collections.defaultdict(set)
-    frontier: list[int] = []
     for r in read_tsv("game/transitions.tsv"):
         # Round 63: a door with a destination list goes to those maps, not to its toMap (the
         # sanctum doors on the world map all said 10200).
@@ -249,14 +277,23 @@ def map_continents(continents: dict[str, dict]) -> dict[int, set[str]]:
         if not targets and r["toMap"]:
             targets = [int(r["toMap"])]
         source = int(r["map"])
-        for target in targets:
-            if source == WORLD_MAP and target != WORLD_MAP and r["x"]:
-                place = continent_at(continents, float(r["x"]), float(r["y"]))
-                if place:
-                    reach[target].add(place)
-                    frontier.append(target)
-            elif source != WORLD_MAP and target != WORLD_MAP:
-                edges[source].add(target)
+        if source == WORLD_MAP and r["x"]:
+            world_doors[int(r["uid"])] = (float(r["x"]), float(r["y"]), [t for t in targets if t != WORLD_MAP])
+        elif source != WORLD_MAP:
+            edges[source] |= {t for t in targets if t != WORLD_MAP}
+    return world_doors, edges
+
+
+def map_continents(continents: dict[str, dict]) -> dict[int, set[str]]:
+    """The continents each map is entered from: world-map exits by position, then the exit graph."""
+    reach: dict[int, set[str]] = collections.defaultdict(set)
+    world_doors, edges = read_exits()
+    frontier: list[int] = []
+    for x, y, targets in world_doors.values():
+        place = continent_at(continents, x, y)
+        for target in targets if place else []:
+            reach[target].add(place)
+            frontier.append(target)
     while frontier:
         source = frontier.pop()
         for target in edges[source]:
@@ -264,6 +301,23 @@ def map_continents(continents: dict[str, dict]) -> dict[int, set[str]]:
                 reach[target] |= reach[source]
                 frontier.append(target)
     return reach
+
+
+def far_side_maps() -> dict[int, set[int]]:
+    """Each FAR_SIDE boss's maps: those it lists and those its world-map doors lead to, with
+    every map their doors lead to in turn."""
+    world_doors, edges = read_exits()
+    out: dict[int, set[int]] = {}
+    for group, side in FAR_SIDE.items():
+        found: set[int] = set()
+        frontier = list(side["maps"]) + [t for uid in side["doors"] for t in world_doors[uid][2]]
+        while frontier:
+            source = frontier.pop()
+            if source not in found:
+                found.add(source)
+                frontier += edges[source]
+        out[group] = found
+    return out
 
 
 def is_japanese(name: str) -> bool:
@@ -312,8 +366,8 @@ def main() -> None:
                 return next(iter(found))
         return region
 
-    def item_for(item_id: int, count: int, money: int, in_chest: bool = False) -> int | None:
-        kind = item_kind(item_id, money, in_chest)
+    def item_for(item_id: int, count: int, money: int) -> int | None:
+        kind = item_kind(item_id, money)
         if kind is None:
             return None
         if kind == "gil":
@@ -339,13 +393,11 @@ def main() -> None:
             no_route.append(f"chest:{map_id}:{chest_id}")
             continue
         item_id, count, money = int(r["ItemId"]), int(r["ItemNum"]), int(r["Money"])
-        ap_item = item_for(item_id, count, money, in_chest=True)
+        ap_item = item_for(item_id, count, money)
         entry = {"key": f"chest:{map_id}:{chest_id}", "place": chest_place(r["row"], map_id, maps),
                  "region": chest_region(r["row"]), "area": chest_area(map_id, r["row"]),
                  "open_world": True, "row": r["row"],
                  "id": CHEST_LOCATION_BASE + map_id * 1000 + chest_id, "vanilla": ap_item}
-        if map_id in AFTER_BOSS:
-            entry["after_boss"] = AFTER_BOSS[map_id]
         if (map_id, chest_id) in shards_for:
             entry["shards"] = shards_for[(map_id, chest_id)]
         (chests if ap_item is not None else kept_chests).append(entry)
@@ -386,8 +438,6 @@ def main() -> None:
             place = ascii_name((maps.get(map_id) or {}).get("name") or f"Map {map_id}")
             entry.update({"name": f"{place} Shard {uid}", "region": "Tablet Shards", "area": map_area(map_id),
                           "open_world": map_id not in NO_ROUTE_MAPS and holds_at_open_start(r.get("visible") or "")})
-            if map_id in AFTER_BOSS:
-                entry["after_boss"] = AFTER_BOSS[map_id]
             tablet_shinies.append(entry)
             continue
         (shinies if ap_item is not None else kept_shinies).append(entry)
@@ -422,14 +472,15 @@ def main() -> None:
                          "vision": int(r["vision"]) * 1000 + 1})
     crystals.sort(key=lambda e: e["id"])
     # Boss fights (data/bosses.tsv). A cave master's own reward (Magicite) goes into the pool.
-    bosses = []
+    bosses, boss_maps = [], {}
     for r in read_tsv("bosses.tsv"):
         group, map_id = int(r["group"]), int(r["map"])
+        boss_maps[f"boss:{group}"] = map_id
         # Round 69: a boss on the world map (the Antlion) names its place and continent itself.
         place = "Lanzelt Desert" if map_id == WORLD_MAP else ascii_name(maps[map_id]["name"])
         name = place if r["kind"] == "cave" else f"{place}: {r['name']}"
         reward = int(r["reward"]) if r["reward"] else 0
-        vanilla = item_for(reward, 1, 0, in_chest=True) if r["kind"] == "cave" else None
+        vanilla = item_for(reward, 1, 0) if r["kind"] == "cave" else None
         entry = {"key": f"boss:{group}", "name": name, "region": "Bosses", "area": r.get("area") or map_area(map_id),
                  "open_world": True, "id": BOSS_LOCATION_BASE + group, "vanilla": vanilla,
                  "fragment": r["kind"] == "story", "tier": r["tier"], "level": int(r["level"])}
@@ -442,9 +493,13 @@ def main() -> None:
     # does in a boss fight (data/game/capabilities.tsv, docs/boss_logic.md). Gear counts only
     # where an open shop sells it, never from the item pool (the user's call).
     shop_areas: dict[int, set[str]] = collections.defaultdict(set)
+    # Gear sold past a boss does not count: it could not help with that boss, and the rule would
+    # need itself.
+    far_side = far_side_maps()
+    past_a_boss = set(AFTER_BOSS).union(*far_side.values())
     for r in read_tsv("game/shops.tsv"):
         town = SHOP_MAPS.get(int(r["shop"]))
-        if town is not None and int(r["item"]) > 0:
+        if town is not None and town not in past_a_boss and int(r["item"]) > 0:
             shop_areas[int(r["item"])].add(AIRSHIP_AREA if town == AIRSHIP_SHOP else map_area(town))
     capabilities: dict[str, dict] = {}
     for r in read_tsv("game/capabilities.tsv"):
@@ -470,7 +525,7 @@ def main() -> None:
         n = int(r["n"])
         radar.append({"key": f"radar:{n}", "name": f"Radar Treasure {n}", "region": "Radar Treasures",
                       "area": OPEN_AREA, "open_world": True, "id": RADAR_LOCATION_BASE + n,
-                      "vanilla": item_for(int(r["reward"]), 1, 0, in_chest=True), "radar_tier": int(r["tier"]),
+                      "vanilla": item_for(int(r["reward"]), 1, 0), "radar_tier": int(r["tier"]),
                       "flag": int(r["found_flag"]), "row": r["row"], "airship": True})
     # A continent's unlock turns on its event flag; Ardra has no locations, so it has no unlock.
     # One name can cover two maps (the Earth Shrine), so a repeat gets its map id.
@@ -525,10 +580,29 @@ def main() -> None:
     for r in read_tsv("airship_only.tsv"):
         assert r["location"] in by_key, f"airship_only.tsv: no location {r['location']}"
         by_key[r["location"]]["airship"] = True
+    def location_map(key: str) -> int:
+        return boss_maps[key] if key.startswith("boss:") else int(key.split(":")[1])
+
+    # A map's gate fights (Sanctissimus Shrine's first three) are not past each other.
+    for key, entry in by_key.items():
+        groups = AFTER_BOSS.get(location_map(key), [])
+        if groups and key not in {f"boss:{g}" for g in groups}:
+            entry["after_boss"] = list(groups)
     for group, keys in AFTER_BOSS_KEYS.items():
         for key in keys:
             assert key in by_key, f"AFTER_BOSS_KEYS: no location {key}"
             by_key[key].setdefault("after_boss", []).append(group)
+    for group, side in FAR_SIDE.items():
+        for key in side["keys"]:
+            assert key in by_key, f"FAR_SIDE: no location {key}"
+        for key, entry in by_key.items():
+            if key == f"boss:{group}" or not (location_map(key) in far_side[group] or key in side["keys"]):
+                continue
+            if side["airship"]:
+                assert "past_boss" not in entry, f"{key} is past two bosses on foot"
+                entry["past_boss"] = group
+            else:
+                entry.setdefault("after_boss", []).append(group)
     for group, (area, near_maps, near_keys) in PAST_BOSS_ON_FOOT.items():
         for key, entry in by_key.items():
             kind, place = key.split(":")[:2]
