@@ -290,3 +290,32 @@ Along the same lines, I would also want an option for players to start with all 
 - **At story 8000 on our start,** flag 702 is off, so no pinger works. The three parts are key items in our pool that do nothing yet.
 - **Built (mod 0.57.0, world 0.24.0):** the 13 treasures are locations (found flags 704 to 716 as checks). Three Progressive Radars (item 27006, counted by the mod from the session's items) take the place of the three parts: one turns flag 702 on, two and three set `{progress:49}` to 40 and 50. They need the Airship. Their rewards go to the pool, and each dig row gives the pop-up's stand-in Potion. The pingers also chain: each needs the one before it found (`{progress:51}`, set by each dig row).
 - **Round 75 (mod 0.59.0, world 0.28.0):** the radar works (round 74), and each Progressive Radar now opens its whole tier at once. The mod holds the found count `{progress:51}` at the top of the radar's band (13, 22, 31), the threshold of the tier's last point. Mt. Reizan's Chest 3, which holds the Resonance Stone, is a location with the treasures on (`docs/playtesting.md`, round 75).
+
+## 33. The Mechabo upgrade quests cannot start
+
+**Known issue in v0.28.0 (found off-line, 2026-11-16).** The three Mechabo quests from Verun cannot be reached on our start. Verun never appears at the Dwarven Forge or on the airship. This goes with the other side-quest work.
+
+**Why:** the whole chain runs on one counter, `{progress:16}`. The story event `C02_219_02` ("Mechabo repair request") sets it to 10, and the skip never runs that event, so it stays at 0. Each Verun NPC is visible only while the counter is in its range (`m_VisiblFlagCondition`):
+
+| Map | NPC | Visible when | Quest and event rows |
+|---|---|---|---|
+| 2050 Dwarven Forge | 7 | 16 is 10 to 19 | Arise, Mechabo! (`C02_MechaboLvUp_00`, `_01`) |
+| 2050 Dwarven Forge | 0 | 16 is 20 to 70 | Mechabo Evolved (`_02` to `_06`), then `_07` |
+| 20001 Airship | 28 | 16 is 75 to 99 | Mechabo Unleashed (`_08` to `_10`) |
+
+**How the chain runs:**
+- Each material step is a delivery quest on quest board 1000 (`DT_Request_QuestData`, quests 1001 to 1007), shown when the counter is 10, 30, 40, 50, 60, 80 or 90.
+- The player brings 2 or 3 drops from normal enemies: Ipooh, Dhorme Chimera, Medusa, Destroyer, Sandworm, Mahadeva and Malbodoom. Delivering runs `_NN_ItemGet`, which sets flag 219.
+- Talking to Verun with flag 219 on runs the next row. That row clears 219 and moves the counter on by 10.
+- No other story test blocks it. "Arise, Mechabo!" needs story 2120 or later, and "Mechabo Unleashed" needs 5020 or later. Our start is 8000.
+- `C02_219_02` also sets flag 13, which `OPEN_WORLD_FEATURES` already sets.
+
+**Rewards:**
+- Lid (unit 1004) learns six abilities from the rows' `AbilitySettings`: Mechabo Tackle (404110), Overclock (404130), Mecha Fat Chocobo (404070), Mecha Behemoth (404060), Overclock Zero (404140) and Mecha Mog Scan (404120).
+- `_01` gives a Magicite Shard (25000), `_06` a Magicite (25001) and `_10` a Magicite Cryst (25002).
+
+**The likely fix:** set `{progress:16}` to 10 on the open start. Also set it on load when it reads 0, so existing saves get it. `G.SetProgressValue` already does this kind of write for the radar.
+
+**To find out:**
+- Whether the forge still plays Verun's first meeting, or goes straight to the repair request.
+- Whether the steps should be locations: the six abilities and three Magicite rewards, with logic for each material's enemy area. The steps also need Lid in logic if the abilities stay vanilla.
