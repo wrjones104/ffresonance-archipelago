@@ -2008,17 +2008,13 @@ assert any("Received Ruby Fragment" in x for x in logs()), logs()
 print("items wait for the field: ok")
 
 # Round 74: the build, a hash of the mod's scripts, tells test installs apart while the version
-# stays the same until a release. It is logged on load, and a CRLF copy gives the same build.
-def fnv_build(folder):
-    h = 2166136261
-    for name in ("main.lua", "game.lua", "bridge.lua", "field_items.lua"):
-        for byte in open(os.path.join(folder, "Scripts", name), "rb").read().replace(b"\r", b""):
-            h = ((h ^ byte) * 16777619) & 0xFFFFFFFF
-    return f"{h:08x}"
-
+# stays the same until a release. It is logged on load, and a CRLF copy gives the same build. The
+# Python copy of the hash is tools/package_release.py's, which names a release's mod build.
+sys.path.insert(0, str(paths.REPO / "tools"))
+from package_release import mod_build  # noqa: E402
 
 L, G = boot(CAPTURE)
-build = fnv_build(WORK)
+build = mod_build(Path(WORK))
 assert any(f"version {VERSION} (build {build})" in x for x in list(L.eval("logged").values())), "logged on load"
 crlf = tempfile.mkdtemp(prefix="ffrap_crlf_")
 os.makedirs(os.path.join(crlf, "Scripts"))
