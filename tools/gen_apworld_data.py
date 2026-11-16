@@ -62,6 +62,10 @@ RADAR_LOCATION_BASE = 5_000_000_000      # + the treasure's number
 RADAR_GAME_ID = 27006
 RADAR_ITEM = RADAR_GAME_ID * 1000 + 2
 RADAR_PARTS = [27006001, 27007001, 27008001]   # the three parts, which the Progressive Radar replaces
+# Round 75: Mt. Reizan's chest holds the Resonance Stone. With the radar's treasures on it is a
+# location, and the mod empties it; the pool gets a Potion in its place.
+RADAR_PART_GAME_IDS = {ap_id // 1000 for ap_id in RADAR_PARTS}
+POTION = 1
 # Round 69: the airship as an item is an event flag the mod gives the airship's spawn condition.
 # Its AP id is numbered like the continent unlocks, which are flags too.
 AIRSHIP_FLAG = 1431
@@ -383,7 +387,7 @@ def main() -> None:
         return ap_id
 
     shards_for = {(int(r["map"]), int(r["chest"])): int(r["shards"]) for r in read_tsv("game/shard_chests.tsv")}
-    chests, kept_chests, no_box, no_route = [], [], [], []
+    chests, kept_chests, radar_part_chests, no_box, no_route = [], [], [], [], []
     for r in read_tsv("game/chests.tsv"):
         map_id, chest_id = int(r["mapId"]), int(r["ID"])
         if not r["boxes"]:
@@ -400,6 +404,11 @@ def main() -> None:
                  "id": CHEST_LOCATION_BASE + map_id * 1000 + chest_id, "vanilla": ap_item}
         if (map_id, chest_id) in shards_for:
             entry["shards"] = shards_for[(map_id, chest_id)]
+        if item_id in RADAR_PART_GAME_IDS:
+            entry["vanilla"] = item_for(POTION, 1, -1)
+            entry["name"] = f"{entry.pop('place')} {ascii_name(names[item_id])} Chest"
+            radar_part_chests.append(entry)
+            continue
         (chests if ap_item is not None else kept_chests).append(entry)
 
     # Chests are numbered from 1 within each place name, in the order of their AP ids (map id,
@@ -518,8 +527,9 @@ def main() -> None:
                                                  "category": "vehicle"}
     items[RADAR_ITEM] = {"name": "Progressive Radar", "kind": "item", "game_id": RADAR_GAME_ID, "count": 1,
                          "category": "radar"}
-    # Round 72: the radar's treasures lie at sea, dug from the airship, in a fixed order: each
-    # pinger also needs the one before it found ({progress:51}). Their rewards join the pool.
+    # Round 72: the radar's treasures lie at sea, dug from the airship. In the game each pinger
+    # needs the one before it found ({progress:51}); round 75: the mod holds that count at the
+    # top of the radar's tier, so a tier opens at once. Their rewards join the pool.
     radar = []
     for r in read_tsv("radar.tsv"):
         n = int(r["n"])
@@ -534,7 +544,7 @@ def main() -> None:
         if counts[entry["name"]] > 1:
             entry["name"] = f"{entry['name']} (Map {entry['key'].split(':')[1]})"
     tablet_shinies.sort(key=lambda e: e["id"])
-    used_areas = {e["area"] for e in chests + shinies + crystals + tablet_shinies + bosses}
+    used_areas = {e["area"] for e in chests + radar_part_chests + shinies + crystals + tablet_shinies + bosses}
     unlocks: dict[str, int] = {}
     for name, continent in continents.items():
         if name in used_areas:
@@ -571,7 +581,7 @@ def main() -> None:
     chests.sort(key=lambda e: e["id"])
     shinies.sort(key=lambda e: e["id"])
     # Round 57: data/gates.tsv, by hand from play: the items a location needs (game item ids).
-    by_key = {e["key"]: e for e in chests + shinies + tablet_shinies}
+    by_key = {e["key"]: e for e in chests + radar_part_chests + shinies + tablet_shinies}
     for r in read_tsv("gates.tsv"):
         assert r["location"] in by_key, f"gates.tsv: no location {r['location']}"
         by_key[r["location"]]["needs"] = [int(i) * 1000 + 1 for i in r["needs"].split(",")]
@@ -609,7 +619,7 @@ def main() -> None:
             near = key in near_keys or (kind in ("chest", "shiny") and int(place) in near_maps)
             if entry["area"] == area and not near:
                 entry["past_boss"] = group
-    location_names = [e["name"] for e in chests + shinies + crystals + tablet_shinies + bosses + radar]
+    location_names = [e["name"] for e in chests + radar_part_chests + shinies + crystals + tablet_shinies + bosses + radar]
     assert len(location_names) == len(set(location_names)), "duplicate location names"
 
     write_field_items_lua()
@@ -640,6 +650,8 @@ def main() -> None:
         f.write("RADAR = " + pprint.pformat(radar, width=110, sort_dicts=True) + "\n\n")
         f.write(f"RADAR_ITEM = {RADAR_ITEM}\n")
         f.write(f"RADAR_PARTS = {RADAR_PARTS}\n\n")
+        f.write("# Chests holding a radar part: locations with the radar's treasures, a Potion in the pool\n")
+        f.write("RADAR_PART_CHESTS = " + pprint.pformat(radar_part_chests, width=110, sort_dicts=True) + "\n\n")
         f.write(f"AIRSHIP_ITEM = {CONTINENT_ITEM_BASE + AIRSHIP_FLAG}\n\n")
         f.write("# Chests and shinies that keep vanilla key items or valuables: not locations\n")
         f.write("KEPT_VANILLA = " + pprint.pformat(sorted(e["key"] for e in kept_chests + kept_shinies), width=110) + "\n\n")

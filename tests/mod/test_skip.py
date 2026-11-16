@@ -389,6 +389,13 @@ assert lua("G.BlankChests(true)") == 2
 assert lua("chestRows[1].ItemId") == -1 and lua("chestRows[1].Money") == 1, "Magicite is blanked"
 assert lua("chestRows[2].ItemId") == 20016, "a key item stays"
 assert lua("G.BlankChests(false)") == 2 and lua("chestRows[1].ItemId") == 25000, "and it comes back"
+# Round 75: with the radar's treasures on, Mt. Reizan's chest with the Resonance Stone is a location
+RESONANCE_STONE = 27007
+L.execute(f"chestRows[2].ItemId = {RESONANCE_STONE}")
+assert lua("G.BlankChests(true)") == 2 and lua("chestRows[2].ItemId") == RESONANCE_STONE, "radar off: the part stays"
+L.execute("G.BlankChests(false); G.blankRadarParts = true")
+assert lua("G.BlankChests(true)") == 3 and lua("chestRows[2].ItemId") == -1, "radar on: blanked"
+L.execute("G.BlankChests(false); G.blankRadarParts = false")
 # a member who joins later can be set to the party's level, above or below his own
 ok, detail = L.execute("return G.SetUnitLevel(1007, 12)")
 assert ok is True and detail == "level 12" and lua("unitLevels[1007]") == 12, detail
@@ -564,6 +571,30 @@ assert lua(gelidus + "[1].Condition") == "{progress:0}==1", "other entries stay"
 assert lua(pot) == 1249 and lua("talkRows.SubEv_C02_SymbolEnemy_Encount.encountGroupId") == 9044
 ok, detail = L.execute("return G.SyncStoryBossTrigger(say)")
 assert "1 triggers" in detail, "found again by the fight row's name"
+# Round 75: `size` is the zone's new scale. The zone is the actor's root, so the level's own scale
+# (the Forest Path's line across the path, 14.1 x 0.44 x 3) is replaced; 4 x 4 x 4 made it shorter.
+L.execute("""
+local function zone(event, extra)
+  local a = { IsValid = function() return true end, HasAnyInternalFlags = function() return false end,
+    HasAnyFlags = function() return false end, SetActorScale3D = function(s, v) s.size = v end,
+    m_EventList = arr({ { Condition = "x", EventId = nameOf(event), MoveInfo = { MoveTargetPoint = extra } } }) }
+  return a
+end
+storyActors.BP_MapGimmick_EventTrigger_C[2] = zone("C07_713_01", nil)
+storyActors.BP_MapGimmick_EventTrigger_C[3] = zone("C05_540_Retry", { IsValid = function() return true end })
+mockMap = 3271""")
+ok, detail = L.execute("return G.SyncStoryBossTrigger(say)")
+forest = "storyActors.BP_MapGimmick_EventTrigger_C[2]"
+assert lua(forest + ".size.X") == 20 and lua(forest + ".size.Y") == 6, "the line, wider and deeper"
+assert lua(forest + ".m_EventList[1].Condition") == "!{flag:1251}&{flag:1441}"
+assert "walk" not in detail, detail
+# Tellus in the Tower of Mysidia: the entry walks the player to a point east of the zone, and from
+# the zone's sides a stairway is in the way. The walk's target is cleared.
+L.execute("mockMap = 3200")
+ok, detail = L.execute("return G.SyncStoryBossTrigger(say)")
+mysidia = "storyActors.BP_MapGimmick_EventTrigger_C[3].m_EventList[1]"
+assert ok is True and detail.endswith("; walk off"), detail
+assert lua(mysidia + ".MoveInfo.MoveTargetPoint") is None and lua(mysidia + ".Condition") == "!{flag:1246}&{flag:1441}"
 L.execute("mockMap = 3060")
 ok, detail = L.execute("return G.SyncStoryBossTrigger(say)")
 assert ok is None and lua(pot) == 915, "off a story boss map, magic pot win row restores flag 915"

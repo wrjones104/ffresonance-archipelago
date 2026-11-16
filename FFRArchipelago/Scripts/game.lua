@@ -556,7 +556,9 @@ end
 local function BlankRow(row, on)
     if row.IsTrap == true then return false end
     local itemId = Int(row.ItemId) or -1
-    if itemId >= SHUFFLE_ID_LIMIT and not (itemId >= MAGICITE_FIRST and itemId <= MAGICITE_LAST) then return false end
+    local shuffled = itemId < SHUFFLE_ID_LIMIT or (itemId >= MAGICITE_FIRST and itemId <= MAGICITE_LAST)
+        or (G.blankRadarParts and G.RADAR_PARTS[itemId])
+    if not shuffled then return false end
     if on then
         Remember(row)
         if IsBlank(row) then return false end
@@ -2134,19 +2136,23 @@ G.STORY_BOSSES = {
     -- Tellus, Nameless Ruins: a door like The Hunger's. Its second entry goes nowhere (map -1), so
     -- after the win the first entry is a plain door again: the stairs to the upper floor (round 74).
     [3180] = { group = 9031, flag = 1245, event = "C05_510_01", point = 5000, kind = "transition", reopen = true },
-    -- Tellus, Tower of Mysidia
-    [3200] = { group = 9038, flag = 1246, event = "C05_540_Retry", kind = "list", class = "BP_MapGimmick_EventTrigger_C", field = "m_EventList" },
+    -- Tellus, Tower of Mysidia. The entry walks the player to a point east of the zone first; from
+    -- the zone's sides a stairway is in the way and the walk never ends (round 75). `nowalk` clears it.
+    [3200] = { group = 9038, flag = 1246, event = "C05_540_Retry", kind = "list", class = "BP_MapGimmick_EventTrigger_C", field = "m_EventList", nowalk = true },
     -- Lux, Rugged Mountain Path
     [3230] = { group = 9039, flag = 1247, event = "C06_611_01", kind = "list", class = "BP_MapGimmick_EventTrigger_C", field = "m_EventList" },
-    -- Elfdrit, Gronoa Shrine (enlarged trigger zone)
-    [3240] = { group = 9040, flag = 1248, event = "C06_616_01", kind = "list", class = "CPP_MapGimmick_EventTrigger", field = "m_EventList", scale = 4 },
+    -- Elfdrit, Gronoa Shrine. `size` is the zone's new scale. The zone is its actor's root, so the
+    -- level's own scale is replaced, not multiplied: round 73's 4 x 4 x 4 made the long, thin lines
+    -- shorter (2 x 25 x 2 here; round 75).
+    [3240] = { group = 9040, flag = 1248, event = "C06_616_01", kind = "list", class = "CPP_MapGimmick_EventTrigger", field = "m_EventList", size = { X = 6, Y = 30, Z = 4 } },
     -- Gelidus, Sanctissimus Shrine: an automatic door
     [3250] = { group = 9044, flag = 1249, event = "C06_627_01", kind = "list", class = "BP_MapTransitionTrigger_C", field = "m_EventList2" },
     -- Ignis, Mt. Reizan
     [3260] = { group = 9046, flag = 1250, event = "C07_707_01", kind = "list", class = "BP_MapGimmick_EventTrigger_C", field = "m_EventList" },
-    -- Tellus, Wandering Lands: enlarge the trigger zone on both 3270 (235, 102590) and 3271 (-1215, 40122)
-    [3270] = { group = 9048, flag = 1251, event = "C07_713_01", kind = "list", class = "BP_MapGimmick_EventTrigger_C", field = "m_EventList", scale = 4 },
-    [3271] = { group = 9048, flag = 1251, event = "C07_713_01", kind = "list", class = "BP_MapGimmick_EventTrigger_C", field = "m_EventList", scale = 4 },
+    -- Tellus, Wandering Lands (3270, the zone at 235, 102590, level scale 1 x 6.25 x 1) and the
+    -- Forest Path (3271, at -1215, 40122, a line across the path, 14.1 x 0.44 x 3).
+    [3270] = { group = 9048, flag = 1251, event = "C07_713_01", kind = "list", class = "BP_MapGimmick_EventTrigger_C", field = "m_EventList", size = { X = 6, Y = 10, Z = 4 } },
+    [3271] = { group = 9048, flag = 1251, event = "C07_713_01", kind = "list", class = "BP_MapGimmick_EventTrigger_C", field = "m_EventList", size = { X = 20, Y = 6, Z = 4 } },
 }
 local STORY_BOSS_EVENTS, STORY_BOSS_GROUPS = {}, {}
 for _, b in pairs(G.STORY_BOSSES) do
@@ -2334,7 +2340,7 @@ function G.SyncStoryBossTrigger(say)
             groupRows = groupRows + 1
         end)
     end
-    local triggers, transitions, npcs = 0, 0, 0
+    local triggers, transitions, npcs, walks = 0, 0, 0, ""
     if boss.kind == "trigger" then
         local ok, all = pcall(FindAllOf, "BP_MapGimmick_EventTrigger_C")
         for _, a in ipairs(ok and all or {}) do
@@ -2434,19 +2440,25 @@ function G.SyncStoryBossTrigger(say)
                             step("story boss: " .. boss.class .. " " .. boss.field .. "[" .. i .. "] -> " .. fightCond .. " / " .. STORY_BOSS_FIGHT)
                             list[i].Condition = fightCond
                             list[i].EventId = FName(STORY_BOSS_FIGHT)
-                            if boss.scale and not won then
-                                step("story boss: SetActorScale3D " .. boss.scale)
-                                a:SetActorScale3D({ X = boss.scale, Y = boss.scale, Z = boss.scale })
+                            if boss.size and not won then
+                                step(string.format("story boss: SetActorScale3D %s %s %s", boss.size.X, boss.size.Y, boss.size.Z))
+                                a:SetActorScale3D(boss.size)
                             end
                             triggers = triggers + 1
+                            if boss.nowalk then
+                                step("story boss: " .. boss.field .. "[" .. i .. "].MoveInfo.MoveTargetPoint -> none")
+                                pcall(function() list[i].MoveInfo.MoveTargetPoint = nil end)
+                                local target = list[i].MoveInfo.MoveTargetPoint
+                                walks = "; walk " .. ((target == nil or not target:IsValid()) and "off" or "kept")
+                            end
                         end
                     end
                 end)
             end
         end
     end
-    local detail = string.format("map %d group %d flag %d (won %s): %d fight, %d win, %d group rows; %d triggers, %d transitions, %d npcs",
-        mapId, boss.group, boss.flag, tostring(won), fightRows, winRows, groupRows, triggers, transitions, npcs)
+    local detail = string.format("map %d group %d flag %d (won %s): %d fight, %d win, %d group rows; %d triggers, %d transitions, %d npcs%s",
+        mapId, boss.group, boss.flag, tostring(won), fightRows, winRows, groupRows, triggers, transitions, npcs, walks)
     return true, detail
 end
 
@@ -3513,18 +3525,24 @@ function G.SetProgressValue(i, n)
     return G.ProgressValue(i)
 end
 
--- Airship radar treasures: 13 sea pinger points enabled by flag 702 (radar), gated sequentially by
--- found flags (704-716), {progress:49} (>= 40 for #6+, >= 50 for #10+), and {progress:51}. Each dig
--- row sets flag 703 and its found flag (used as the check), and sets {progress:51} to a fixed value.
+-- Airship radar treasures: 13 sea pinger points enabled by flag 702 (radar), each hidden by its
+-- found flag (704-716). Points 6 on need {progress:49} >= 40, 10 on >= 50. Each point also needs
+-- the found count {progress:51} at a threshold (point 2 >= 10, 3 >= 11 ... 13 >= 31), and each dig
+-- row sets the count to a fixed value (10, 11 ... 32), so in the game they come one at a time.
 -- The radar itself works only while DT_MapPingerData's condition holds: step {progress:49} must be
--- one of a band's steps while the found count {progress:51} is in that band (round 74). Installing
--- the radar sets step 20, and the first dig moves it to 30; the upgrades set 40 and 50.
+-- one of a band's steps while the found count is at most the band's `upTo` (round 74). A band's
+-- `upTo` is also the threshold of its last point, so the mod holds the count there: each
+-- Progressive Radar opens its whole tier at once (round 75). Band N is Progressive Radar N.
 G.RADAR_ON_FLAG, G.RADAR_TIER_PROGRESS, G.RADAR_FOUND_PROGRESS = 702, 49, 51
 G.RADAR_BANDS = {
-    { level = 1, upTo = 13, steps = { 20, 30 } },
-    { level = 2, upTo = 22, steps = { 40 } },
-    { level = 3, upTo = 31, steps = { 50 } },
+    { upTo = 13, steps = { 20, 30 } },
+    { upTo = 22, steps = { 40 } },
+    { upTo = 31, steps = { 50 } },
 }
+-- The radar's three parts (Magi-tenna, Resonance Stone, High-Power Generator). With the radar's
+-- treasures on, the Progressive Radars take their place, and Mt. Reizan's chest with the Resonance
+-- Stone is a location like any other chest: main.lua sets blankRadarParts (round 75).
+G.RADAR_PARTS, G.blankRadarParts = { [27006] = true, [27007] = true, [27008] = true }, false
 G.RADAR = {}
 for n = 1, 13 do G.RADAR[n] = { n = n, flag = 703 + n, row = string.format("SubEv_C05_TreasureRadar_01_%02d", n) } end
 

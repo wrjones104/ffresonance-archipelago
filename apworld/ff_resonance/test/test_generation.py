@@ -5,7 +5,7 @@ from worlds import AutoWorld
 from worlds.AutoWorld import call_all
 from test.general import gen_steps
 
-from ..data import AIRSHIP_ITEM, BOSSES, CHESTS, CHOCOBO_ITEM, NO_ROUTE, RADAR, RADAR_ITEM, RADAR_PARTS, CONTINENT_UNLOCKS, CRYSTALS, FRAGMENT_ITEM, ITEMS, NO_BOX, TABLET_SHINIES, PROGRESSION, SHINIES, SHUFFLE_ID_LIMIT, UNIT_ITEM_BASE
+from ..data import AIRSHIP_ITEM, BOSSES, CHESTS, CHOCOBO_ITEM, NO_ROUTE, RADAR, RADAR_ITEM, RADAR_PARTS, RADAR_PART_CHESTS, CONTINENT_UNLOCKS, CRYSTALS, FRAGMENT_ITEM, ITEMS, NO_BOX, TABLET_SHINIES, PROGRESSION, SHINIES, SHUFFLE_ID_LIMIT, UNIT_ITEM_BASE
 from ..boss_logic import awakening, has_capability
 from ..items import CLASSIFICATIONS, FILLER_CATEGORIES, FRAGMENT_NAME, item_name_groups
 from ..locations import GOAL_EVENT, LOCATION_KEY_TO_ID, SEPHIROTH, VICTORY
@@ -384,6 +384,13 @@ class TestRadarTreasures(FFResonanceTestBase):
         self.assertFalse(set(RADAR_PARTS) & set(pool))
         self.assertEqual(len(RADAR), 13)
 
+    def test_the_resonance_stone_chest_is_a_location(self) -> None:
+        # Round 75: Mt. Reizan's chest kept its vanilla Resonance Stone, so a tester found the
+        # radar part the Progressive Radars replace. The mod empties it; here it is a location.
+        names = {loc.name for loc in self.multiworld.get_locations(self.player)}
+        self.assertIn("Mt. Reizan Resonance Stone Chest", names)
+        self.assertEqual([c["key"] for c in RADAR_PART_CHESTS], ["chest:3260:3"])
+
     def test_tiers_and_the_airship(self) -> None:
         state = self.multiworld.state
         first, sixth, last = (self.multiworld.get_location(f"Radar Treasure {n}", self.player) for n in (1, 6, 13))
@@ -401,6 +408,13 @@ class TestRadarTreasures(FFResonanceTestBase):
 
     def test_slot_data(self) -> None:
         self.assertEqual(self.world.fill_slot_data()["include_radar_treasures"], 1)
+
+
+class TestRadarPartChestWithoutTreasures(FFResonanceTestBase):
+
+    def test_no_radar_no_chest(self) -> None:
+        names = {loc.name for loc in self.multiworld.get_locations(self.player)}
+        self.assertNotIn("Mt. Reizan Resonance Stone Chest", names)
 
 
 class TestShinies(FFResonanceTestBase):
@@ -433,6 +447,15 @@ class TestTabletShards(FFResonanceTestBase):
         self.assertTrue(last.can_reach(self.multiworld.state))
         first = chest_location(self, "chest:2031:0")
         self.assertEqual(first.progress_type, LocationProgressType.DEFAULT)
+
+    def test_shards_made_like_the_tracker_makes_them_count(self) -> None:
+        # Round 75: Universal Tracker makes each received item with create_item. Shards made that
+        # way were "useful", so it counted none, and Oblivion Palace left its logic.
+        last = chest_location(self, LAST_PALACE_CHEST)
+        self.collect_all_but(["Tablet Shard"])
+        for _ in range(PALACE_SHARDS):
+            self.collect(self.world.create_item("Tablet Shard"))
+        self.assertTrue(last.can_reach(self.multiworld.state))
 
 
 class TestCrystals(FFResonanceTestBase):
@@ -854,7 +877,7 @@ class TestData(FFResonanceTestBase):
         self.assertEqual(LOCATION_KEY_TO_ID["chest:2012:5"], 1_000_000_000 + 2012 * 1000 + 5)
         self.assertEqual(LOCATION_KEY_TO_ID[f"boss:{MARAUDER}"], 4_000_000_000 + MARAUDER)
         self.assertEqual(len(LOCATION_KEY_TO_ID), len(CHESTS) + len(SHINIES) + len(CRYSTALS) + len(TABLET_SHINIES)
-                         + len(BOSSES) + len(RADAR))
+                         + len(BOSSES) + len(RADAR) + len(RADAR_PART_CHESTS))
 
 
 class TestNoProgression(FFResonanceTestBase):

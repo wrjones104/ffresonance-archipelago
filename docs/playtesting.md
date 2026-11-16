@@ -802,6 +802,20 @@ Also, **is Felicitas's shop the one the data calls "ナシャト"?** If a town's
 
 **5. Goal counters (world 0.27.0).** Install: copy `dist/ff_resonance.apworld` and generate a new seed; the mod is unchanged. **Does each party member and vision received show its count in the item feed, like the Crystal Fragments?**
 
+**Round 75, in play (mod 0.59.0 on a world 0.26.0 seed, 2026-11-16).** The user's own seed.
+- **The radar works.** Treasures 1 to 9 were dug, and the step moved from 30 to 40 at treasure 5 as planned. But they came one at a time, in order, as in the game. The user wants each Progressive Radar to open its whole tier.
+- **The Resonance Stone came from a chest.** Mt. Reizan's Chest 3 (`chest:3260:3`) holds it in the game, and it was kept as vanilla (a key item, not shuffled). The pool itself has no radar parts with the radar's treasures on.
+- **Tellus in the Tower of Mysidia: stuck walking.** From the zone's east or west side, the character walked toward the fight and stopped at a stairway, for good. The zone's event entry (`C05_540_Retry`) walks the player to a target point first (`MoveInfo.MoveTargetPoint`, `CPP_MoveTargetPoint_2`). It hangs on the zone, 250 units east of its middle.
+- **Tellus in the Wandering Lands: never found.** The log shows 13 minutes in the Forest Path (map 3271) with the zone patched. The zone is a thin line across the path: its box, the actor's root, has the level scale 14.1 x 0.44 x 3. Round 73's "4 times bigger" was `SetActorScale3D(4, 4, 4)`, which replaces that scale: the line became a 256-unit box, a third as wide, that the player can walk past. Elfdrit's zone (2 x 25 x 2) and the Wandering Lands' (3270, 1 x 6.25 x 1) shrank the same way.
+- **Universal Tracker dropped Oblivion Palace from logic** though the user had plenty of shards. Tablet Shards were "useful" by category, and only the pool's copies were marked progression. Universal Tracker makes each received item with `create_item`, so it counted none.
+
+**Round 75, before play (mod 0.59.0, world 0.28.0, same versions): the fixes.**
+- **Radar tiers (mod).** Each pinger needs the found count `{progress:51}` at a threshold (point 2 at 10, 3 at 11, up to 13 at 31), and each dig sets it to its own number (10, 11 ... 32). The top of each band (13, 22, 31) is also the threshold of its tier's last point. The mod now holds the count at the top of the player's band, so every treasure of the tier shows at once. After a dig the next tick puts it back. The game's own part steps (`DT_MapAirShip`, which test the count at 14 and 23) never match now.
+- **The Resonance Stone chest (world and mod).** With the radar's treasures on, it is a location, "Mt. Reizan Resonance Stone Chest" (`RADAR_PART_CHESTS`), with a Potion in the pool for it. The mod empties it like any shuffled chest (`game.blankRadarParts`). The other two parts come from events of the radar's side quest, not from chests.
+- **Story boss zones (mod).** `size` in `G.STORY_BOSSES` is the zone's new scale, set from the level's own shape: the Forest Path 20 x 6 x 4, the Wandering Lands 6 x 10 x 4, Elfdrit 6 x 30 x 4.
+- **Tellus in the Tower of Mysidia (mod).** `nowalk` clears the entry's walk target, as most zones have none. The log line ends with `walk off` when it took, or `walk kept`.
+- **Tablet Shards (world).** The category is progression (skipping balancing), so every shard counts, in Universal Tracker too. In a seed nothing changes: all 99 were marked already.
+
 ## Round 74 test plan (mod 0.59.0 build d8e6e426, world 0.28.0 build ddd8aeb4)
 
 **Install:** copy `FFRArchipelago/Scripts` and `dist/ff_resonance.apworld` into `custom_worlds`, and generate a new seed. The radar and door fixes also work on an older save.
@@ -830,5 +844,27 @@ Some of these came from positions only. **Please check them in game:**
 **4. Magicite.** **Do World Map Shinies 4 (Dirnado) and 189 (Pharm) send a check** and give the pop-up's item, not a Magicite Shard? **Do bosses stay out of logic until Magicite comes?**
 
 **5. Bosses on Normal.** **Do they feel fairer?** The double-action bosses now need one more member in logic, and Normal's bosses are a little lower and weaker. Note your party's size and levels for a fight that felt wrong either way.
+
+Send the `[FFRAP]` lines of the log and any crash folder.
+
+## Round 75 test plan (mod 0.59.0 build 2dc8cf35, world 0.28.0 build ea6ac2e8)
+
+**Install:** copy `FFRArchipelago/Scripts`. For the Resonance Stone chest and the Tablet Shard fix, also copy `dist/ff_resonance.apworld` into `custom_worlds` and generate a new seed. The radar and boss zone fixes work on the old seed too.
+
+**0. The builds.** The log should say `version 0.59.0 (build 2dc8cf35)` on load, and with the new apworld `client: world version 0.28.0 (build ea6ac2e8)`.
+
+**1. The radar tiers.** With one Progressive Radar the log says `radar: level 1 (flag 702 true, step 20, found 13)`.
+- **Do treasures 1 to 5 all ping at once?** Dig one out of order, such as 3. The log shows found go to 12 and back to 13. **Do the rest still ping?**
+- With the second radar, found 22 and step 40: **do 6 to 9 ping too?** With the third, found 31 and step 50: **10 to 13?**
+
+**2. The Resonance Stone chest (new seed).** Open Mt. Reizan's Chest 3. **Does it send a check and show the pop-up, with no Resonance Stone?**
+
+**3. Tellus in the Tower of Mysidia.** Walk into the zone from the east or west side. The log line for map 3200 should end with `walk off`. **Does the fight start, with no walking?** If it says `walk kept`, the game did not take the change; tell me.
+
+**4. Tellus in the Forest Path (map 3271).** The zone is a line across the path near the north end, about 30 m west of the north exit (the door at 2215, 39680 that leads to the world map). The other one is in the Wandering Lands (map 3270), at the far north end (y 102590), next to where you come in from the second Wandering Lands map (3272). Either one is the fight, and winning it once counts. **Does walking through the Forest Path's north end start it now?** If not, `ffrap_status` near the spot, and the log, will help.
+
+**5. Elfdrit in Gronoa Shrine.** The zone is longer and deeper now. **Does it still start the fight where it did before?**
+
+**6. Oblivion Palace in Universal Tracker (new seed).** **Do the Palace's chests come into logic as shards come in, up to the 99-shard chest?**
 
 Send the `[FFRAP]` lines of the log and any crash folder.

@@ -164,7 +164,7 @@ class IncludeRadarTreasures(DefaultOnToggle):
     """
     The airship radar's 13 treasures, dug up at sea, are locations. Three Progressive Radars are
     items in their place: the first finds treasures 1 to 5, the second 6 to 9, the third 10 to 13.
-    The treasures come in order, and need the Airship.
+    Each radar opens all of its treasures at once. They need the Airship.
     """
     display_name = "Include Radar Treasures"
 

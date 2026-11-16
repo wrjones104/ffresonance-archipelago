@@ -4846,13 +4846,22 @@ RADAR = [{'airship': True,
 RADAR_ITEM = 27006002
 RADAR_PARTS = [27006001, 27007001, 27008001]
 
+# Chests holding a radar part: locations with the radar's treasures, a Potion in the pool
+RADAR_PART_CHESTS = [{'area': 'Pharm',
+  'id': 1003260003,
+  'key': 'chest:3260:3',
+  'name': 'Mt. Reizan Resonance Stone Chest',
+  'open_world': True,
+  'region': 'Pharm',
+  'row': 'Dng_09Pha_40_3',
+  'vanilla': 1001}]
+
 AIRSHIP_ITEM = 700001431
 
 # Chests and shinies that keep vanilla key items or valuables: not locations
 KEPT_VANILLA = ['chest:2031:20',
  'chest:2031:22',
  'chest:3230:2',
- 'chest:3260:3',
  'shiny:3001:80',
  'shiny:3220:32',
  'shiny:3220:33',

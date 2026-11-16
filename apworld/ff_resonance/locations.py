@@ -4,14 +4,14 @@ from typing import TYPE_CHECKING
 
 from BaseClasses import ItemClassification, Location, LocationProgressType, Region
 
-from .data import AIRSHIP_ITEM, BOSSES, CHESTS, CONTINENT_UNLOCKS, RADAR, RADAR_ITEM, CRYSTALS, FINAL_AREA, ITEMS, OPEN_AREA, SHINIES, TABLET_SHINIES
+from .data import AIRSHIP_ITEM, BOSSES, CHESTS, CONTINENT_UNLOCKS, RADAR, RADAR_ITEM, RADAR_PART_CHESTS, CRYSTALS, FINAL_AREA, ITEMS, OPEN_AREA, SHINIES, TABLET_SHINIES
 from .boss_logic import boss_rule
 from .items import FRAGMENT_NAME, GAME, FFResonanceItem, create_item, progression_ids
 
 if TYPE_CHECKING:
     from .world import FFResonanceWorld
 
-ALL_LOCATIONS = CHESTS + SHINIES + CRYSTALS + TABLET_SHINIES + BOSSES + RADAR
+ALL_LOCATIONS = CHESTS + SHINIES + CRYSTALS + TABLET_SHINIES + BOSSES + RADAR + RADAR_PART_CHESTS
 LOCATION_NAME_TO_ID: dict[str, int] = {loc["name"]: loc["id"] for loc in ALL_LOCATIONS}
 LOCATION_KEY_TO_ID: dict[str, int] = {loc["key"]: loc["id"] for loc in ALL_LOCATIONS}
 
@@ -90,8 +90,9 @@ def create_regions_and_locations(world: FFResonanceWorld) -> None:
         chosen += TABLET_SHINIES
     if world.options.include_bosses:
         chosen += BOSSES
+    # Round 75: with the radar's treasures on, a chest that held a radar part is a location too.
     if world.options.include_radar_treasures:
-        chosen += RADAR
+        chosen += RADAR + RADAR_PART_CHESTS
     excluded = world.options.excluded_regions.value
     in_pool = set(progression_ids(world))
 
@@ -129,7 +130,7 @@ def create_regions_and_locations(world: FFResonanceWorld) -> None:
         if "past_boss" in loc and on_foot:
             beat = boss_rule(world, loc["past_boss"])
             rules.append(lambda state, beat=beat: state.has(AIRSHIP, player) or beat(state))
-        # A radar treasure requires as many Progressive Radars as its tier; tiers only increase along the chain.
+        # A radar treasure requires as many Progressive Radars as its tier. The mod opens a whole tier at once.
         if "radar_tier" in loc:
             rules.append(lambda state, n=loc["radar_tier"]: state.has(RADAR_NAME, player, n))
         if rules:

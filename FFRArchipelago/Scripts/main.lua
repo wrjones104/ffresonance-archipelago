@@ -352,6 +352,7 @@ local function newSession(key)
     state.slots, state.slotItems, state.bindPending, state.live = {}, {}, false, nil
     state.scouts = {}
     seedCfg.party, seedCfg.finalboss, seedCfg.chocobo, seedCfg.airship, seedCfg.continent, seedCfg.radar = nil, nil, nil, nil, nil, nil
+    game.blankRadarParts = false
     if save.apObj ~= nil and save.apObj == save.obj and save.autoDone then save.reskip = true end
     save.obj = nil     -- judge the loaded save again for this session
     saveState()
@@ -389,6 +390,7 @@ local function readInbox(initial)
             seedCfg.airship = f[3] == "1"
         elseif f[1] == "cfg" and f[2] == "radar" then
             seedCfg.radar = f[3] == "1"
+            game.blankRadarParts = seedCfg.radar
         elseif f[1] == "cfg" and f[2] == "continent" then
             seedCfg.continent = f[3] and f[3]:lower()
         elseif f[1] == "cfg" and f[2] == "finalboss" then
@@ -2155,10 +2157,10 @@ airshipItemTick = function()
 end
 
 -- Progressive Radar level comes from counting Magi-tenna (27006) items received, because the
--- game only stores one copy of a key item. Level 1 sets flag 702. The radar's step ({progress:49})
--- must match the band the found count is in, so it is set from both (game.RADAR_BANDS). With too
--- low a level for the band the step is left as it is: the radar is off there, as in the game.
--- Keep state in one table for the 200-local limit.
+-- game only stores one copy of a key item. Level 1 sets flag 702. The found count ({progress:51})
+-- is held at the top of the level's band, which opens all of that tier's treasures at once; each
+-- dig sets it lower again, and the next tick puts it back. The radar's step ({progress:49}) is
+-- then set to the band's (game.RADAR_BANDS). Keep state in one table for the 200-local limit.
 local radar = { ITEM = 27006, logged = nil }
 function radar.level()
     local n = 0
@@ -2171,16 +2173,15 @@ end
 
 function radar.tick()
     local level = radar.level()
-    if level >= 1 and game.GetFlag(game.RADAR_ON_FLAG) == false then game.SetFlag(game.RADAR_ON_FLAG, true) end
+    local band = game.RADAR_BANDS[math.min(level, #game.RADAR_BANDS)]
     local now = game.ProgressValue(game.RADAR_TIER_PROGRESS)
     local found = game.ProgressValue(game.RADAR_FOUND_PROGRESS)
-    for _, band in ipairs(game.RADAR_BANDS) do
-        if now and found and found <= band.upTo then
-            local inBand = false
-            for _, step in ipairs(band.steps) do inBand = inBand or now == step end
-            if level >= band.level and not inBand then now = game.SetProgressValue(game.RADAR_TIER_PROGRESS, band.steps[1]) end
-            break
-        end
+    if band then
+        if game.GetFlag(game.RADAR_ON_FLAG) == false then game.SetFlag(game.RADAR_ON_FLAG, true) end
+        if found ~= band.upTo then found = game.SetProgressValue(game.RADAR_FOUND_PROGRESS, band.upTo) end
+        local inBand = false
+        for _, step in ipairs(band.steps) do inBand = inBand or now == step end
+        if not inBand then now = game.SetProgressValue(game.RADAR_TIER_PROGRESS, band.steps[1]) end
     end
     local line = string.format("radar: level %d (flag %d %s, step %s, found %s)", level, game.RADAR_ON_FLAG,
         tostring(game.GetFlag(game.RADAR_ON_FLAG)), tostring(now), tostring(found))

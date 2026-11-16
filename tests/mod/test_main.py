@@ -194,8 +194,7 @@ function G.CrossingNear(list, range) return nil end
 function G.CrossingClear() G.crossingsCleared = true end
 G.AIRSHIP_FLAG, G.airshipSyncs, G.parks = 1431, {}, {}
 G.RADAR_ON_FLAG, G.RADAR_TIER_PROGRESS, G.RADAR_FOUND_PROGRESS = 702, 49, 51
-G.RADAR_BANDS = { { level = 1, upTo = 13, steps = { 20, 30 } }, { level = 2, upTo = 22, steps = { 40 } },
-    { level = 3, upTo = 31, steps = { 50 } } }
+G.RADAR_BANDS = { { upTo = 13, steps = { 20, 30 } }, { upTo = 22, steps = { 40 } }, { upTo = 31, steps = { 50 } } }
 G.RADAR = {}
 for n = 1, 13 do G.RADAR[n] = { n = n, flag = 703 + n } end
 G.progress, G.radarPatches = {}, 0
@@ -1664,9 +1663,11 @@ print("airship as an item: ok")
 # Round 72: the radar's 13 treasures. Its level is the Progressive Radars (item 27006) applied to
 # this save. One turns the radar on (flag 702). A treasure's check is its found flag (704 to 716).
 # Round 74: the radar works only while its step (progress 49) matches the band of the found count
-# (progress 51): 20 or 30 up to 13, 40 up to 22, 50 up to 31. The step follows the found count, so
-# all three radars before any dig still give a working radar.
-FOUND_NONE, FOUND_AFTER_FIVE, FOUND_AFTER_NINE = 0, 14, 23
+# (progress 51): 20 or 30 up to 13, 40 up to 22, 50 up to 31. Round 75: the found count is held at
+# the top of the level's band, the threshold of its last treasure, so each radar opens its whole
+# tier at once. Each dig sets the count to its own number, and the next tick puts it back.
+TIER_ONE_OPEN, TIER_TWO_OPEN, TIER_THREE_OPEN = 13, 22, 31
+AFTER_FIRST_DIG, AFTER_FIFTH_DIG, AFTER_LAST_DIG = 10, 14, 32
 inbox("seed\tS72r:0:1\ncfg\topenworld\t1\ncfg\tradar\t1\n", "w")
 L, G = boot5("SD_RADAR", "0", {})
 L.globals().G = G
@@ -1683,27 +1684,26 @@ assert L.eval("G.radarFlags[702]") is None and L.eval("G.progress[49]") is None,
 inbox("item\t0\titem\t27006\t1\tProgressive Radar\n")
 tick(12)
 assert L.eval("G.radarFlags[702]") is True and L.eval("G.progress[49]") == 20, "level 1: installed"
-L.execute("G.progress[49] = 30")    # the game's own step after the first dig: left alone
+assert L.eval("G.progress[51]") == TIER_ONE_OPEN, "treasures 1 to 5 at once"
+L.execute(f"G.progress[49] = 30; G.progress[51] = {AFTER_FIRST_DIG}")    # the game's first dig
 tick(12)
-assert L.eval("G.progress[49]") == 30
-L.execute(f"G.progress[51] = {FOUND_AFTER_FIVE}")
+assert L.eval("G.progress[49]") == 30, "the game's own step in the band is left alone"
+assert L.eval("G.progress[51]") == TIER_ONE_OPEN, "a dig does not close the tier again"
+L.execute(f"G.progress[51] = {AFTER_FIFTH_DIG}")
 tick(12)
-assert L.eval("G.progress[49]") == 30, "level 1 past five treasures: off, as in the game"
+assert L.eval("G.progress[51]") == TIER_ONE_OPEN and L.eval("G.progress[49]") == 30, "level 1 stays in its band"
 inbox("item\t1\titem\t27006\t1\tProgressive Radar\n")
 tick(12)
-assert L.eval("G.progress[49]") == 40
+assert L.eval("G.progress[51]") == TIER_TWO_OPEN and L.eval("G.progress[49]") == 40
 L.execute("G.progress[49] = 41")    # the merchant's in-between step would turn the radar off
 tick(12)
 assert L.eval("G.progress[49]") == 40
 inbox("item\t2\titem\t27006\t1\tProgressive Radar\n")
 tick(12)
-assert L.eval("G.progress[49]") == 40, "level 3 before the ninth treasure stays at 40"
-L.execute(f"G.progress[51] = {FOUND_AFTER_NINE}")
+assert L.eval("G.progress[51]") == TIER_THREE_OPEN and L.eval("G.progress[49]") == 50
+L.execute(f"G.progress[51] = {AFTER_LAST_DIG}")
 tick(12)
-assert L.eval("G.progress[49]") == 50
-L.execute(f"G.progress[51] = {FOUND_NONE}; G.progress[49] = 0")
-tick(12)
-assert L.eval("G.progress[49]") == 20, "all three radars before any dig: the first band's step"
+assert L.eval("G.progress[51]") == TIER_THREE_OPEN, "treasure 13 first: the rest of tier 3 stays open"
 L.execute("G.radarFlags[704] = true")
 tick(12)
 assert "check\tradar:1\n" in read("ap_out.txt") and "radar:2" not in read("ap_out.txt"), read("ap_out.txt")[-200:]

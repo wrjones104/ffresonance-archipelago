@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 from BaseClasses import Item, ItemClassification
 from Options import OptionError
 
-from .data import AIRSHIP_ITEM, CHESTS, CHOCOBO_ITEM, RADAR_ITEM, RADAR_PARTS, CONTINENT_UNLOCKS, FRAGMENT_ITEM, ITEMS, PROGRESSION, UNIT_ITEM_BASE
+from .data import AIRSHIP_ITEM, CHOCOBO_ITEM, RADAR_ITEM, RADAR_PARTS, CONTINENT_UNLOCKS, FRAGMENT_ITEM, ITEMS, PROGRESSION, UNIT_ITEM_BASE
 
 if TYPE_CHECKING:
     from .world import FFResonanceWorld
@@ -19,12 +19,14 @@ ITEM_NAME_TO_ID: dict[str, int] = {info["name"]: ap_id for ap_id, info in ITEMS.
 # progression too so future logic changes do not alter item IDs or classes.
 # Equipment is useful, so hints and fill treat it as worth something. Round 74: Magicite awakens
 # Visions, and boss logic counts it (boss_logic.awakening). There are many copies, so it skips
-# balancing, as the counted Tablet Shards do.
+# balancing. Tablet Shards too: Oblivion Palace's chests and the shard goal count them. Round 75:
+# every shard is progression from create_item, as Universal Tracker makes its items that way and
+# counted none of the shards when only the pool's copies were marked.
 CLASSIFICATIONS = {
     "consumable": ItemClassification.filler,
     "equipment": ItemClassification.useful,
     "magicite": ItemClassification.progression_skip_balancing,
-    "shard": ItemClassification.useful,
+    "shard": ItemClassification.progression_skip_balancing,
     "gil": ItemClassification.filler,
     "party": ItemClassification.progression,
     "vision": ItemClassification.progression,
@@ -47,7 +49,6 @@ item_name_groups: dict[str, set[str]] = {
 
 FILLER_NAMES = sorted(item_name_groups["Consumables"])
 FILLER_CATEGORIES = {"consumable", "gil"}
-SHARDS_FOR_CHESTS = max(c.get("shards", 0) for c in CHESTS)
 STARTER_VISIONS = (13024001, 13045001)      # Tronn and Leah (Mitra story C01_014_03)
 
 
@@ -99,15 +100,6 @@ def create_all_items(world: FFResonanceWorld) -> None:
     for i in sorted(world.random.sample(filler_at, len(extra)), reverse=True):
         pool_ids.pop(i)
     pool = [create_item(world, ITEMS[ap_id]["name"]) for ap_id in pool_ids + extra]
-    # The logic counts only progression items, so just the shards the goal and Oblivion Palace's
-    # chests ask for are marked. The player can still finish with any shards: the client counts
-    # them all.
-    marked = SHARDS_FOR_CHESTS if world.options.include_tablet_shards else 0
-    if world.options.goal.value == world.options.goal.option_tablet_shards:
-        marked = max(marked, world.options.tablet_shards_required.value)
-    shards = [item for item in pool if item.name == "Tablet Shard"]
-    for item in shards[:marked]:
-        item.classification = ItemClassification.progression_skip_balancing
     unfilled = len(world.multiworld.get_unfilled_locations(world.player))
     pool += [world.create_filler() for _ in range(unfilled - len(pool))]
     world.multiworld.itempool += pool
