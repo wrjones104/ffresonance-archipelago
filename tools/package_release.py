@@ -79,6 +79,10 @@ def main() -> int:
     print(f"  apworld build {release['world_build']}, mod build {release['mod_build']}")
     if not (NOTES / f"v{world}.md").exists():
         print(f"  no release notes yet: docs/releases/v{world}.md")
+    # The template comes from the Launcher's "Generate Template Options", which writes the world's
+    # version into its requires block; an older one means it was not made again for this release.
+    if f"Final Fantasy Resonance: {world} " not in TEMPLATE.read_text(encoding="utf-8-sig"):
+        print(f"  the template yaml does not require world {world}: generate it again from the Launcher")
     return 0
 
 
