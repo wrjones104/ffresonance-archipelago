@@ -970,3 +970,14 @@ Send the `[FFRAP]` lines of the log and any crash folder.
 **6. If the game crashes:** send `Mods/FFRArchipelago/ap_trace.txt` with the crash folder and the log, before starting the game again (the next map load rewrites it). To test the ModSettings finding, turn off **Hint on map load** in the F10 panel, or set `ModSettings : 0` in `Mods/mods.txt` (this turns off only its Lua key binding; the Blueprint panel and its Toast stay), then go in and out of maps for a while.
 
 Send the `[FFRAP]` lines of the log and any crash folder.
+
+**Round 77 results (mod 0.60.0 build 08cabc86, world 0.29.0, 2026-11-17).** The user's own seed, levels 1 to 30, and a level 1 cheat-scaled run to the end.
+- **Save stamp:** it seems to work. Steam Cloud's servers had trouble that day, so the second-PC test waits.
+- **Grandshelt island:** not tried. Next round, with the players' feedback.
+- **Boss scaling:** much better. The party size cut works. Only levels 1 to 30 were played.
+- **Readable names:** the user set their own names in `data/location_names.tsv`. They are final for now.
+- **Mt. Thunderclap ladder:** no one climbs an invisible ladder. At the top of the cliff an Examine prompt lets the ladder down, as in the base game, and the player can then climb it. Only the ladder's mesh is missing. `ffrap_inspect BP_MapGimmick_StringLadder001_C` gave the first ladder of the class, uid 18 (`BP_MapGimmick_StringLadder_C_0`, lowered, no condition), not uid 20. Uid 20's `VisibleCondition` is `{flag:205}`, the flag Lid's payment sets (event `C02_205`, story 2040). On an open start flag 205 is off, so the mesh stays hidden. Setting flag 205 would also lower the shortcut from the start, so it is not done. A cosmetic issue, left for later.
+- **Wind Shrine Chest 1 and Waterfall Way Chest 5:** reachable. The players missed them.
+- **Nameless Ruins Tellus:** the fight starts on the first pass now.
+- **The final duel without Rain:** it worked, and the goal was sent. This was on a level 1 run with cheat scaling, so a normal levelled save is still to be tried.
+- **Crashes:** two, both in the ModSettings Lua mod (see above). It is a known conflict in the README and the playtester guide.

@@ -45,6 +45,8 @@ def rows() -> dict[str, dict]:
 # The user's name wins, and survives the generator rewriting the file.
 table = rows()
 table[SHINY_167]["name"] = OWN_NAME
+for n in (85, 86, 91):
+    table[f"shiny:1000:{n}"]["name"] = ""
 with open(NAMES, "w", encoding="utf-8", newline="\n") as f:
     w = csv.DictWriter(f, fieldnames=gen.NAMES_COLUMNS, delimiter="\t", lineterminator="\n")
     w.writeheader()
