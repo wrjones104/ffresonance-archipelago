@@ -927,11 +927,18 @@ Send the `[FFRAP]` lines of the log and any crash folder.
 - **The skip waits for the client (mod).** The automatic prologue skip runs only once a seed line has come in this run (or with `ffrap_openstart on`). Until then it says once: "connect the client to this seed. The prologue skip waits for it". The story holds at 1005, so connecting late works. The title notice says the same when no client has written yet.
 - **A deleted `ap_in.txt` is written again (client).** While connected, the client checks that the file exists and, if not, writes the seed, the settings, every item from index 0 and the scouts again. The mod already rereads a new file from the top and applies items by index, so nothing is granted twice.
 
-## Round 77 test plan (mod 0.60.0 build a659ff7d, world 0.29.0 build 08eba742)
+**Round 77, a crash (mod 0.60.0 build a659ff7d, 2026-11-17 10:30).** On a new seed (Zoldaad start), about a second after walking from Zoldaad Castle's courtyard (2111) into the castle (3160).
+- `UECC-...D8790B61`: an access violation in UE4SS's `FName::ToString`, reading 0x100, from a UObject handle's `__index` in a game-thread Lua loop (`process_simple_actions`), one Lua `pcall` deep. The same signature as round 71's second crash.
+- The last mod lines are the map change and `chest blanking: 0 rows`. Nothing else ran that logs.
+- **The stack does not say which mod's loop it was.** FFRS_QoL was on too (MapMarkers 1), with eight game-thread loops (`gameLoop`), and its HUD keeps widgets from tick to tick and asks them `IsValid()` (`hudWidget`); its own comment says they "may be garbage collected" after a map change. That is the pattern that crashed this mod in round 71. Round 71's crashes had no other mods in, so this mod is not cleared either.
+
+**Round 77, third build (mod 0.60.0 build 08cabc86):** for 12 ticks (6 s) after each map load, `ap_trace.txt` gets a line before each step of the mod's two loops (`map load`, `tick`, `items`, `loot`, ..., `tick done`). After a crash, a last line without its `done` names this mod's step; a `done` as the last line means the crash was in another mod's loop.
+
+## Round 77 test plan (mod 0.60.0 build 08cabc86, world 0.29.0 build 08eba742)
 
 **Install:** copy `FFRArchipelago/Scripts`, and copy `dist/ff_resonance.apworld` into `custom_worlds`. Close the client before deleting anything in the mod folder (it now writes `ap_in.txt` again if you do not), and start it again after. Generate a new seed for the names and logic. The mod parts also work on a 0.28.0 seed. Keep `ap_state.txt` this time.
 
-**0. The builds.** The log should say `version 0.60.0 (build a659ff7d)`, and the client `world version 0.29.0 (build 08eba742)`.
+**0. The builds.** The log should say `version 0.60.0 (build 08cabc86)`, and the client `world version 0.29.0 (build 08eba742)`.
 
 **1. The save stamp.**
 1. Load your linked save from round 76 with the new mod. The log should say `stamp: N items` once, N the items you have. Save the game.
@@ -950,5 +957,7 @@ Send the `[FFRAP]` lines of the log and any crash folder.
 - **Wind Shrine Chest 1 and Waterfall Way Chest 5:** if you go there, a screenshot of what stops you.
 - **Nameless Ruins Tellus:** if the fight starts only on a second pass, send the log from entering the map to the fight.
 - **The final duel without Rain:** if you reach the tower top without Rain, say what happens in the 1-v-1.
+
+**6. If the game crashes:** send `Mods/FFRArchipelago/ap_trace.txt` with the crash folder and the log, before starting the game again (the next map load rewrites it). To tell the two mods apart, play a while with FFRS_QoL off (rename its `enabled.txt`), going in and out of maps.
 
 Send the `[FFRAP]` lines of the log and any crash folder.

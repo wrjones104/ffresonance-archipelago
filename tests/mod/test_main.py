@@ -1378,6 +1378,19 @@ assert G.hookPlace is True, "the seed turns the locks on, even over an old saved
 L.execute('commands["ffrap_lock"]("ffrap_lock", {"off"})')
 L.execute("loadMapHook(nil, worldParam)")
 assert G.hookPlace is False, "an explicit off wins"
+# Round 77: after a map load, ap_trace.txt names each step of the loops for a few ticks, so a crash
+# shows whether this mod's loop was running and where
+trace = read("ap_trace.txt").splitlines()
+assert trace[0].endswith("map load"), trace
+L.execute("tickFn()")
+trace = read("ap_trace.txt").splitlines()
+steps = [line.split(" ", 3)[3] for line in trace[1:]]
+assert steps[0] == "tick" and steps[-1] == "tick done" and "items" in steps and "loot" in steps, steps
+TRACE_TICKS = 12                                 # state.TRACE_TICKS in main.lua
+for _ in range(TRACE_TICKS + 3):
+    L.execute("tickFn()")
+done = read("ap_trace.txt").count("tick done")
+assert done == TRACE_TICKS, ("the trace stops after its ticks", done)
 L.execute('commands["ffrap_lock"]("ffrap_lock", {"on"})')
 assert "continentlocks\t1\n" in read("ap_state.txt")
 open(path("ap_in.txt"), "w", encoding="utf-8", newline="\n").close()

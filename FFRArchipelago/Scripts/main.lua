@@ -206,6 +206,21 @@ local state = {
     apNewGame = false, -- the Archipelago title entry was just chosen: the next new game is one
 }
 
+-- Round 77: a crash about a second after a map change, in a game-thread Lua loop (FName::ToString
+-- on a freed object, as in round 71). The stack does not say which mod's loop: FFRS_QoL runs eight.
+-- For TRACE_TICKS ticks after each map load, ap_trace.txt gets a line before each step of our
+-- loops. After a crash, a last line without its "done" names the step; a "done" last means it was
+-- not this mod's loop.
+state.TRACE_TICKS, state.traceLeft = 12, 0
+function state.mark(step)
+    if state.traceLeft <= 0 then return end
+    local f = io.open(MOD_DIR .. "ap_trace.txt", "a")
+    if f then
+        f:write(os.date("%H:%M:%S"), " tick ", state.ticks, " ", step, "\n")
+        f:close()
+    end
+end
+
 -- The loaded save, and whether it is the session's. Not kept across game restarts: save data
 -- objects are new each run.
 local save = {
@@ -1357,13 +1372,17 @@ end
 
 local function tick()
     state.ticks = state.ticks + 1
+    state.mark("inbox")
     readInbox(false)
+    state.mark("title")
     titleTick()
     feedClock = state.ticks * TICK_MS / 1000
     if game.InGame() then
+        state.mark("feed")
         pcall(flushFeed)
         pcall(game.FeedTick, feedClock)
     end
+    state.mark("menu")
     if titleReady or game.InGame() then pcall(menuTick) end
     -- Apply the seed's airship spawn condition before a map loads so a new game starts hidden if needed.
     if state.ticks % LOCKS_EVERY == 0 then
@@ -1385,25 +1404,31 @@ local function tick()
             end
         end
         if state.inGameTicks > SETTLE_TICKS then
+            state.mark("follow save")
             followSave()
             if state.bindPending then
                 state.bindPending = false
                 bindLoaded()
             end
+            state.mark("skip")
             autoSkip()
             if save.reskip and save.ok and save.slot ~= nil then
                 save.reskip = false
                 skipped = save.obj
                 runSkip(save.slot, "automatic")
             end
+            state.mark("pop-up, gates")
             pcall(popupTick)
             pcall(gateTick)
             if bossTest.group then pcall(bossTest.tick) end
+            state.mark("scale, settings")
             if state.ticks % STATUS_EVERY == 0 then pcall(scaleTick) end
             if state.ticks % STATUS_EVERY == 0 then pcall(settingsTick) end
+            state.mark("extras, locks")
             if state.ticks % LOCKS_EVERY == 0 then pcall(seedExtrasTick) end
             if state.ticks % LOCKS_EVERY == 0 then pcall(locksTick) end
             if state.ticks % STATUS_EVERY == 0 and seedCfg.openworld and game.OnField() then pcall(game.SyncSlotLevel) end
+            state.mark("patches")
             if seedCfg.openworld and state.ticks % LOCKS_EVERY == 0 then
                 local newSave = shopSave ~= save.obj
                 local okShop, blocked, rows = pcall(game.VisionShopGuard, newSave)
@@ -1439,6 +1464,7 @@ local function tick()
             end
             -- Chests and shinies are still recorded in seen.tsv for any save; scanLoot reports
             -- them only for the session's save (see opened).
+            state.mark("loot")
             if state.ticks % CHEST_EVERY == 0 then scanLoot() end
             -- Crystal checks report by the flag set when their event finishes.
             if seedCfg.crystals and sessionSave() and state.ticks % CHEST_EVERY == 0 then
@@ -1448,14 +1474,17 @@ local function tick()
                     end
                 end
             end
+            state.mark("bosses")
             if state.ticks % CHEST_EVERY == 0 then scanBosses() end
             if state.ticks % PRIME_EVERY == 0 then pcall(game.PrimePopup) end
             if sessionSave() then
+                state.mark("items")
                 applyItems()
                 if state.seed and save.ok then
                     local okStamp, err = pcall(save.writeStamp, state.ticks % LOCKS_EVERY == 0)
                     if not okStamp then log("stamp: " .. tostring(err)) end
                 end
+                state.mark("story")
                 watchStory()
                 if state.syncPending then
                     state.syncPending = false
@@ -2789,6 +2818,12 @@ end)
 -- Re-apply continent locks on map load so saves loaded in the air cannot land prematurely.
 if RegisterLoadMapPostHook then
     local okHook, errHook = pcall(RegisterLoadMapPostHook, function(_, world)
+        local trace = io.open(MOD_DIR .. "ap_trace.txt", "w")
+        if trace then
+            trace:write(os.date("%H:%M:%S"), " tick ", state.ticks, " map load\n")
+            trace:close()
+        end
+        state.traceLeft = state.TRACE_TICKS
         pcall(game.ForgetObjects)
         local okRun, placed, why = pcall(function() return game.ContinentMapLoaded(world:get(), locksOn()) end)
         if not okRun then
@@ -2879,8 +2914,11 @@ end
 -- the main tick runs on the game thread, causing race-condition crashes on shared Lua state.
 local function every(ms, name, fn)
     local function run()
+        state.mark(name)
         local ok, err = pcall(fn)
         if not ok then log(name .. " error: " .. tostring(err)) end
+        state.mark(name .. " done")
+        if name == "tick" and state.traceLeft > 0 then state.traceLeft = state.traceLeft - 1 end
     end
     if LoopInGameThreadWithDelay then
         LoopInGameThreadWithDelay(ms, run)
