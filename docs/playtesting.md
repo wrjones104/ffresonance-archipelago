@@ -940,6 +940,8 @@ Send the `[FFRAP]` lines of the log and any crash folder.
 - The log's last lines are BPModLoaderMod spawning the level's mod actors, ModSettings' last.
 - **The likely cause is ModSettings' Lua (`Mods/ModSettings/Scripts/main.lua`), as round 63 suspected.** On each new hint strip (`WBP_ModSettingsHint`, shown at every level load), `NameBothKeys` queues callbacks at 50, 200, 800 and 2000 ms. Each runs `pcall(function() if not hint:IsValid() ...)` from `ExecuteInGameThread`: one `pcall` deep, as on the stack. When the hint is freed before a callback runs, `hint:IsValid()` reads freed memory. Round 63's deck crash and round 71's two crashes had the same shape and timing, and ModSettings was in `mods.txt` then too.
 - The fix is in ModSettings: keep the hint's path (`hint:GetFullName()`) and find it again with `StaticFindObject` in each callback, as this mod does since round 72.
+- **From the ModSettings Blueprints (dumped off-line with its pak beside the game's):** `ModActor`'s BeginPlay creates the hint when the panel's **Hint on map load** toggle (`HintOnLoad`, on by default) is on, adds it to the viewport, and removes it after a `Delay`. The actor keeps it in its ubergraph frame, so that hint may not be freed in the 2 s. A second cause fits as well: the ModSettings Lua runs its `ExecuteWithDelay` callbacks on UE4SS's async thread, and they call `ExecuteInGameThread` in the same Lua state that the game thread runs. That is the race that crashed this mod at random in round 29. `BP_ModSettings.Toast` also removes every hint on screen and makes a new one, held only by the viewport.
+- **This mod cannot patch it.** Each UE4SS Lua mod has its own Lua state, so this mod cannot reach ModSettings' callbacks. The only lever is to turn off ModSettings' `HintOnLoad` toggle, which is the player's choice in another mod, is saved, and leaves the thread race in place. The user's call: list it as a known conflict. The README and the playtester guide say to turn off **Hint on map load** (F10), or to set `ModSettings : 0` in `mods.txt`.
 
 ## Round 77 test plan (mod 0.60.0 build 08cabc86, world 0.29.0 build 08eba742)
 
@@ -965,6 +967,6 @@ Send the `[FFRAP]` lines of the log and any crash folder.
 - **Nameless Ruins Tellus:** if the fight starts only on a second pass, send the log from entering the map to the fight.
 - **The final duel without Rain:** if you reach the tower top without Rain, say what happens in the 1-v-1.
 
-**6. If the game crashes:** send `Mods/FFRArchipelago/ap_trace.txt` with the crash folder and the log, before starting the game again (the next map load rewrites it). To test the ModSettings finding, set `ModSettings : 0` in `Mods/mods.txt` (this turns off only its Lua key binding; the Blueprint panel and its Toast stay), then go in and out of maps for a while.
+**6. If the game crashes:** send `Mods/FFRArchipelago/ap_trace.txt` with the crash folder and the log, before starting the game again (the next map load rewrites it). To test the ModSettings finding, turn off **Hint on map load** in the F10 panel, or set `ModSettings : 0` in `Mods/mods.txt` (this turns off only its Lua key binding; the Blueprint panel and its Toast stay), then go in and out of maps for a while.
 
 Send the `[FFRAP]` lines of the log and any crash folder.

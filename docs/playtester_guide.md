@@ -32,6 +32,7 @@ Download the `FFRArchipelago` mod zip and `ff_resonance.apworld` from the [lates
 
 - Most other mods have not been tested alongside this mod; use other mods at your own risk.
 - If you have it, make sure `FFRRandomizer` is disabled. If you use `FFRS_QoL` for map markers, leave its encounter rate at `1` and turn off its EXP, Gil, MRP, and encounter overrides so they do not conflict with `FFRArchipelago`.
+- Known conflict: the `ModSettings` Lua mod (`Mods/ModSettings`) can crash the game a second or two after a map change. Turn off **Hint on map load** in its F10 panel, or set `ModSettings : 0` in `Mods/mods.txt`.
 - Connect the **Final Fantasy Resonance Client** to the server before starting a new game, and start the run from **New Game (Archipelago)** on the title screen (not the regular **New Game**).
 - You can change EXP, Gil, MRP, random encounters, encounter rate, enemy scaling, and scaling strength (`Casual`, `Normal`, `Expert`) at any time in **Options > Gameplay** at the bottom of the list. Note that `AP: Scaling strength` stacks with the game's own difficulty setting.
 

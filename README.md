@@ -27,6 +27,10 @@ Disable `FFRRandomizer` if you have it installed (delete or rename its `enabled.
 
 If you have `FFRS_QoL` installed alongside `TreasureMinimap` for map markers, leave `FFRS_QoL`'s encounter rate at `1` and disable its EXP, Gil, MRP, and encounter overrides so it does not fight with `FFRArchipelago`.
 
+Known conflict: the `ModSettings` UE4SS Lua mod (`Mods/ModSettings`, from FFR Modding Tools) can crash the game a second or two after a map change. The crash happens with or without `FFRArchipelago`, and this mod cannot prevent it. To avoid it, do one of these:
+- Turn off **Hint on map load** in the ModSettings panel (F10). Without the hint strip, its Lua queues no timers at each map change.
+- Set `ModSettings : 0` in `Mods/mods.txt`. This turns off only its Lua key binding. The `ModSettings` Blueprint mod and its title-screen toasts still work.
+
 ## Installation
 
 Download the latest `FFRArchipelago` mod zip and `ff_resonance.apworld` from the [latest GitHub release](https://github.com/wrjones104/ffresonance-archipelago/releases/latest).
