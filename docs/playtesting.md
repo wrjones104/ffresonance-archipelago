@@ -934,6 +934,13 @@ Send the `[FFRAP]` lines of the log and any crash folder.
 
 **Round 77, third build (mod 0.60.0 build 08cabc86):** for 12 ticks (6 s) after each map load, `ap_trace.txt` gets a line before each step of the mod's two loops (`map load`, `tick`, `items`, `loot`, ..., `tick done`). After a crash, a last line without its `done` names this mod's step; a `done` as the last line means the crash was in another mod's loop.
 
+**Round 77, a second crash (mod 0.60.0 build 08cabc86, 2026-11-17 13:07), with FFRS_QoL off.** Going from the world map (1000) into the dungeon 3050, within a second or two of the load.
+- `UECC-...E3BA7FB5`: the same stack as the first, `FName::ToString` reading 0x100 from a UObject handle's `__index`, in `process_simple_actions`, one Lua `pcall` deep.
+- `ap_trace.txt` ends `map load`, `fast tick`, `fast tick done`. This mod's loops were not running when the game crashed.
+- The log's last lines are BPModLoaderMod spawning the level's mod actors, ModSettings' last.
+- **The likely cause is ModSettings' Lua (`Mods/ModSettings/Scripts/main.lua`), as round 63 suspected.** On each new hint strip (`WBP_ModSettingsHint`, shown at every level load), `NameBothKeys` queues callbacks at 50, 200, 800 and 2000 ms. Each runs `pcall(function() if not hint:IsValid() ...)` from `ExecuteInGameThread`: one `pcall` deep, as on the stack. When the hint is freed before a callback runs, `hint:IsValid()` reads freed memory. Round 63's deck crash and round 71's two crashes had the same shape and timing, and ModSettings was in `mods.txt` then too.
+- The fix is in ModSettings: keep the hint's path (`hint:GetFullName()`) and find it again with `StaticFindObject` in each callback, as this mod does since round 72.
+
 ## Round 77 test plan (mod 0.60.0 build 08cabc86, world 0.29.0 build 08eba742)
 
 **Install:** copy `FFRArchipelago/Scripts`, and copy `dist/ff_resonance.apworld` into `custom_worlds`. Close the client before deleting anything in the mod folder (it now writes `ap_in.txt` again if you do not), and start it again after. Generate a new seed for the names and logic. The mod parts also work on a 0.28.0 seed. Keep `ap_state.txt` this time.
@@ -958,6 +965,6 @@ Send the `[FFRAP]` lines of the log and any crash folder.
 - **Nameless Ruins Tellus:** if the fight starts only on a second pass, send the log from entering the map to the fight.
 - **The final duel without Rain:** if you reach the tower top without Rain, say what happens in the 1-v-1.
 
-**6. If the game crashes:** send `Mods/FFRArchipelago/ap_trace.txt` with the crash folder and the log, before starting the game again (the next map load rewrites it). To tell the two mods apart, play a while with FFRS_QoL off (rename its `enabled.txt`), going in and out of maps.
+**6. If the game crashes:** send `Mods/FFRArchipelago/ap_trace.txt` with the crash folder and the log, before starting the game again (the next map load rewrites it). To test the ModSettings finding, set `ModSettings : 0` in `Mods/mods.txt` (this turns off only its Lua key binding; the Blueprint panel and its Toast stay), then go in and out of maps for a while.
 
 Send the `[FFRAP]` lines of the log and any crash folder.
