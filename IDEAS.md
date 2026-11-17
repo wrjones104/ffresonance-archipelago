@@ -191,6 +191,8 @@ The chapter-by-chapter progression (party, vehicles, gates, Visions, Espers) is 
 - **To see a gift:** watch `CPP_TalkEventManager.m_ObtainItemList` while an event runs. When it holds items, the event is a gift, and the manager says which event it is.
 - **To blank a gift:** the talk event tables are data tables, like the chest table (`CDT_TalkEventData_Prod` is a composite). Their `ObtainItemList` rows can be emptied the same way.
 
+**Side quests (2026-11-17):** planned in [docs/side_quests.md](docs/side_quests.md) (idea 36). Free-talk gifts stay here.
+
 **To find out:** whether emptying a row's `ObtainItemList` stops the gift and leaves the event's text as it was; and, for open world, which gifts are still there at story 9000 (docs/open_world.md, section 6).
 
 **Off-line pass (round 48):** side quests use their own counters (`{progress:15}==10`), not the main story's. 74 gift rows fall into about 20 quests. 11 of those have a start trigger in `gimmicks.tsv`, and no story test blocks any of the 11 at story 8000. This pass ignored flags and quest counters, and quests started by an NPC are not in that table. Mod 0.29.0's crystals already use `ObtainItemList:Empty()` on a talk row, so the blanking is proven.
@@ -293,7 +295,7 @@ Along the same lines, I would also want an option for players to start with all 
 
 ## 33. The Mechabo upgrade quests cannot start
 
-**Known issue in v0.28.0 (found off-line, 2026-11-16).** The three Mechabo quests from Verun cannot be reached on our start. Verun never appears at the Dwarven Forge or on the airship. This goes with the other side-quest work.
+**Known issue in v0.28.0 (found off-line, 2026-11-16).** The three Mechabo quests from Verun cannot be reached on our start. Verun never appears at the Dwarven Forge or on the airship. This goes with the other side-quest work ([docs/side_quests.md](docs/side_quests.md), idea 36).
 
 **Why:** the whole chain runs on one counter, `{progress:16}`. The story event `C02_219_02` ("Mechabo repair request") sets it to 10, and the skip never runs that event, so it stays at 0. Each Verun NPC is visible only while the counter is in its range (`m_VisiblFlagCondition`):
 
@@ -345,3 +347,12 @@ Along the same lines, I would also want an option for players to start with all 
 **The likely fix:** write the count, and a short tag of the seed, into the save. Unused event flags as bits are one way: 20 flags count to a million items, and 16 more hold a hash of the seed key. The game saves them with everything else, so Steam Cloud carries them to the other PC. On load, a save whose tag matches the session is the session's, with the count it holds. `ap_state.txt` stays as a fallback for saves from before.
 
 **Built (round 77, mod 0.60.0):** 12 count flags (1414 to 1419, 1430, 1432 to 1436) and 11 tag flags (1437 to 1439, 1442 to 1449). The tag is FNV-1a of the session key folded to 1 to 2047. On load, a save whose tag is the session's is linked with its count, before `ap_state.txt` is asked; a save stamped by another seed is not linked even when `ap_state.txt` lists its slot. The mod writes the stamp whenever the applied count changes, in the same tick as the grant, so a save the game makes holds both together. A save from before 0.60.0 has no stamp and is judged by `ap_state.txt` as before, then stamped.
+
+## 36. Side quests as locations
+
+**From the user, 2026-11-17.** Side-quest rewards in the pool. The plan is [docs/side_quests.md](docs/side_quests.md).
+
+**Off-line pass (2026-11-17, before round 78):**
+- The game's quest log (`DT_RequestData`) has 33 quests with English names, accept tests, completion tests and prizes. 31 become locations in the first pass; Battle at the Big Bridge and Iron Splitter go with the bosses.
+- Each quest runs on its own counter. Quest-item gift rows move the counter, and the next step tests the counter, not the item. So 11 quest items in our key-item pool unlock nothing: Dew of Reprieve, Viscus Vitae, Rushroom, Pure Water, Convalescence Draught, Super Salubrious Salad Stem, Portrait of Dario, Dario's Letter, Ruby Fragment, Broken Sword Hilt and Blade (20020, 20023 to 20032). They leave the pool and stay vanilla (decided with the user).
+- Every quest's start holds at story 8000 except the Mechabo quests (idea 33).

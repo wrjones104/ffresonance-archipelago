@@ -90,12 +90,12 @@ Filled from progression.md and IDEAS.md idea 5.
 | Radar: Resonance Stone | 27007 | tier 2 world-map treasures | unknown | no | |
 | Radar: High-Power Generator | 27008 | tier 3 world-map treasures | unknown | no | |
 | Gaia Hammer (field skill) | unknown | the sealing stone in Grandshelt Desert, to Titan | unknown (from Colosseum, proofs 29000-29003) | no | |
-| White Jade Stone | 20005 | Holy, which clears the Bog of No Return: western Gronoa, Odin | unknown | no | |
+| White Jade Stone | 20005 | Holy, which clears the Bog of No Return: western Gronoa, Odin | no item test in the data (2026-11-17) | no | |
 | Lab Key Cards 1-3 | 20009-20011 | Research Center Ruins | unknown | no | |
 | Tunnel Key | 20008 | probably the Zoldaad tunnels | unknown | no | |
 | Dungeon Key, Throne Room Key | 20019, 20021 | Zoldaad Castle | unknown | no | |
-| Ruby Fragment (x3) | 20030 | Carbuncle | unknown | no | |
-| Broken Sword Hilt, Blade | 20031, 20032 | Odin (Iron Splitter) | unknown | no | |
+| Ruby Fragment (x3) | 20030 | Carbuncle | the quest's counter, not the item (side_quests.md, section 2) | no | |
+| Broken Sword Hilt, Blade | 20031, 20032 | Odin (Iron Splitter) | the quest's counter, not the item (side_quests.md, section 2) | no | |
 | Tablet Shards | 25004 | the Tablet Shard turn-in (idea 1) | unknown | 99 confirmed in data dump | |
 | Party members | units 1001-1008 (guests: 1013 Ignis, 1014 Alluvion, 1016 Charlotte) | battle strength; maybe story events | the story expects them | yes (rounds 30 & 32) | |
 | Blocker passes (our own) | new | the choke points we block (idea 16) | the mod, since the gate is ours | no: needs idea 16 first | |

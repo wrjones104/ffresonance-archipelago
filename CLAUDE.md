@@ -18,6 +18,7 @@ An Archipelago implementation for Final Fantasy Resonance (UE 5.6, game module `
   - `docs/logic.md`: the progression logic design (in progress).
   - `docs/open_world.md`: the open world design (the main direction since round 30): the cleared state, gates, enemy scaling.
   - `docs/bosses.md`: boss fights as locations, Crystal Fragments, and how the story bosses come back.
+  - `docs/side_quests.md`: side quests as locations, and which quest items the game tests.
   - `DISCLOSURE.md`: the AI disclosure. Keep it accurate.
 
 ## How we work
