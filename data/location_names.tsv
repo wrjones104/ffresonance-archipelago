@@ -1,116 +1,9 @@
-key	current	suggested	name	note
-shiny:1000:1	World Map Shiny 1	Kolobos - Shiny NE of Kolobos Sanctum		
-shiny:1000:3	World Map Shiny 3	Grandshelt - Shiny S of Grandshelt, the Royal Capital		
-shiny:1000:4	World Map Shiny 4	Dirnado - Shiny W of Dirnado Sanctum		
-shiny:1000:5	World Map Shiny 5	Dirnado - Shiny near Dirnado Sanctum		duplicate
-shiny:1000:7	World Map Shiny 7	Dirnado - Shiny S of Mt. Thunderclap		
-shiny:1000:11	World Map Shiny 11	Lanzelt - Shiny SE of Oblivion Palace		duplicate
-shiny:1000:21	World Map Shiny 21	Kolobos - Shiny W of Town of Felicitas		
-shiny:1000:22	World Map Shiny 22	Kolobos - Shiny E of Town of Felicitas		nearest door 3628 units away
-shiny:1000:24	World Map Shiny 24	Dirnado - Shiny SE of Shoggoth Cave		
-shiny:1000:25	World Map Shiny 25	Dirnado - Shiny near Dirnado Sanctum		duplicate
-shiny:1000:26	World Map Shiny 26	Dirnado - Shiny NE of Mobliz Shipyard		
-shiny:1000:27	World Map Shiny 27	Pharm - Shiny W of Tartarosaurus Cave		
-shiny:1000:30	World Map Shiny 30	Olderion - Shiny near Rukh Cave		
-shiny:1000:31	World Map Shiny 31	Olderion - Shiny near Olderion Sanctum		duplicate
-shiny:1000:32	World Map Shiny 32	Olderion - Shiny SE of Rukh Cave		
-shiny:1000:33	World Map Shiny 33	Olderion - Shiny NW of Cave of Waters		
-shiny:1000:34	World Map Shiny 34	Olderion - Shiny E of Cave of Waters		
-shiny:1000:35	World Map Shiny 35	Olderion - Shiny near Olderion Sanctum		duplicate
-shiny:1000:36	World Map Shiny 36	Olderion - Shiny NE of Cave of Waters		
-shiny:1000:37	World Map Shiny 37	Olderion - Shiny near Mindflayer Cave		
-shiny:1000:39	World Map Shiny 39	Olderion - Shiny N of Lake Dorr		
-shiny:1000:45	World Map Shiny 45	Zoldaad - Shiny E of Mozul Station		
-shiny:1000:46	World Map Shiny 46	Zoldaad - Shiny NE of Capital Station		
-shiny:1000:47	World Map Shiny 47	Zoldaad - Shiny SE of Capital Station		
-shiny:1000:48	World Map Shiny 48	Zoldaad - Shiny N of Rebel Hideout		
-shiny:1000:49	World Map Shiny 49	Zoldaad - Shiny SE of Gogmagog Cave		
-shiny:1000:50	World Map Shiny 50	Zoldaad - Shiny W of Pyroviper Cave		duplicate
-shiny:1000:51	World Map Shiny 51	Zoldaad - Shiny SW of Pyroviper Cave		
-shiny:1000:52	World Map Shiny 52	Zoldaad - Shiny SW of Mozul Station		nearest door 2955 units away
-shiny:1000:53	World Map Shiny 53	Zoldaad - Shiny E of Capital Station		nearest door 3012 units away
-shiny:1000:54	World Map Shiny 54	Zoldaad - Shiny SE of Infernal Hollow		
-shiny:1000:55	World Map Shiny 55	Zoldaad - Shiny near Rebel Hideout		
-shiny:1000:56	World Map Shiny 56	Zoldaad - Shiny near Pyroviper Cave		
-shiny:1000:57	World Map Shiny 57	Zoldaad - Shiny S of Quarry Cave		nearest door 5448 units away
-shiny:1000:58	World Map Shiny 58	Zoldaad - Shiny W of Pyroviper Cave		nearest door 4331 units away; duplicate
-shiny:1000:68	World Map Shiny 68	Olderion - Shiny NW of Malboro Varietas Cave		
-shiny:1000:70	World Map Shiny 70	Mysidia - Shiny near Mysidia Sanctum		
-shiny:1000:71	World Map Shiny 71	Mysidia - Shiny NW of Mysidia Sanctum		
-shiny:1000:82	World Map Shiny 82	Dirnado - Shiny S of Dwarven Forge		
-shiny:1000:83	World Map Shiny 83	Dirnado - Shiny NE of Dirnado Sanctum		
-shiny:1000:84	World Map Shiny 84	Mysidia - Shiny near Nameless Ruins		
-shiny:1000:85	World Map Shiny 85	Mysidia - Shiny near Salome Cave		duplicate
-shiny:1000:86	World Map Shiny 86	Mysidia - Shiny near Salome Cave		duplicate
-shiny:1000:87	World Map Shiny 87	Mysidia - Shiny W of Mysidia, the Magiapolis		
-shiny:1000:88	World Map Shiny 88	Mysidia - Shiny E of Jotunn Cave		
-shiny:1000:89	World Map Shiny 89	Mysidia - Shiny W of Jotunn Cave		
-shiny:1000:91	World Map Shiny 91	Mysidia - Shiny near Salome Cave		duplicate
-shiny:1000:94	World Map Shiny 94	Lanzelt - Shiny SE of Village of Kol		
-shiny:1000:95	World Map Shiny 95	Lanzelt - Shiny near Lanzelt Sanctum		
-shiny:1000:96	World Map Shiny 96	Lanzelt - Shiny W of Village of Kol		
-shiny:1000:97	World Map Shiny 97	Lanzelt - Shiny SE of Oblivion Palace		nearest door 2770 units away; duplicate
-shiny:1000:98	World Map Shiny 98	Lanzelt - Shiny S of Village of Kol		
-shiny:1000:99	World Map Shiny 99	Grandshelt - Shiny E of Town of Mitra		
-shiny:1000:100	World Map Shiny 100	Grandshelt - Shiny SE of Town of Mitra		
-shiny:1000:102	World Map Shiny 102	Grandshelt - Shiny SW of Grandshelt, the Royal Capital		
-shiny:1000:104	World Map Shiny 104	Grandshelt - Shiny near Grandshelt Sanctum		
-shiny:1000:105	World Map Shiny 105	Grandshelt - Shiny SW of Earth Shrine		
-shiny:1000:127	World Map Shiny 127	Lanzelt - Shiny NE of Village of Kol		nearest door 2723 units away
-shiny:1000:128	World Map Shiny 128	Grandshelt - Shiny NE of Grandshelt, the Royal Capital		duplicate
-shiny:1000:130	World Map Shiny 130	Kolobos - Shiny SE of Town of Felicitas		nearest door 3044 units away
-shiny:1000:136	World Map Shiny 136	Grandshelt - Shiny NE of Grandshelt, the Royal Capital		duplicate
-shiny:1000:137	World Map Shiny 137	Grandshelt - Shiny E of Grandshelt, the Royal Capital		
-shiny:1000:139	World Map Shiny 139	Pharm - Shiny W of Abandoned Cabin		duplicate
-shiny:1000:143	World Map Shiny 143	Olderion - Shiny SW of Olderion Sanctum		
-shiny:1000:144	World Map Shiny 144	Olderion - Shiny W of Olderion Sanctum		
-shiny:1000:145	World Map Shiny 145	Olderion - Shiny E of Olderion Sanctum		
-shiny:1000:148	World Map Shiny 148	Pharm - Shiny S of Abandoned Cabin		nearest door 2800 units away
-shiny:1000:149	World Map Shiny 149	Pharm - Shiny near Dragon’s Maw		
-shiny:1000:150	World Map Shiny 150	Grandshelt - Shiny NW of Town of Mitra		
-shiny:1000:154	World Map Shiny 154	Gronoa - Shiny W of Bladerain Stele		
-shiny:1000:155	World Map Shiny 155	Gronoa - Shiny E of Research Center Ruins		
-shiny:1000:156	World Map Shiny 156	Gronoa - Shiny SW of Humbaba Cave		
-shiny:1000:157	World Map Shiny 157	Gronoa - Shiny E of Gaberada, the Undertown		
-shiny:1000:158	World Map Shiny 158	Gronoa - Shiny NW of Research Center Ruins		
-shiny:1000:159	World Map Shiny 159	Gronoa - Shiny near Rugged Mountain Path		
-shiny:1000:160	World Map Shiny 160	Gronoa - Shiny NW of Gaberada, the Undertown		
-shiny:1000:161	World Map Shiny 161	Gronoa - Shiny NE of Town of Duggle		
-shiny:1000:162	World Map Shiny 162	Gronoa - Shiny NE of Gronoa Shrine		
-shiny:1000:163	World Map Shiny 163	Gronoa - Shiny S of Gronoa Shrine		
-shiny:1000:164	World Map Shiny 164	Gronoa - Shiny NW of Sanctissimus Shrine		
-shiny:1000:165	World Map Shiny 165	Gronoa - Shiny E of Rugged Mountain Path		
-shiny:1000:166	World Map Shiny 166	Gronoa - Shiny near Necromonarch Cave		
-shiny:1000:167	World Map Shiny 167	Gronoa - Shiny NW of Rugged Mountain Path		
-shiny:1000:169	World Map Shiny 169	Lanzelt - Shiny N of Lanzelt Sanctum		
-shiny:1000:178	World Map Shiny 178	Pharm - Shiny E of Town of Sian		
-shiny:1000:179	World Map Shiny 179	Pharm - Shiny NE of Town of Sian		
-shiny:1000:180	World Map Shiny 180	Pharm - Shiny SE of Town of Sian		
-shiny:1000:181	World Map Shiny 181	Pharm - Shiny W of Mt. Reizan		
-shiny:1000:182	World Map Shiny 182	Pharm - Shiny SW of Town of Sian		
-shiny:1000:185	World Map Shiny 185	Pharm - Shiny NE of Malboro Menace Cave		nearest door 2924 units away; duplicate
-shiny:1000:186	World Map Shiny 186	Pharm - Shiny NE of Malboro Menace Cave		duplicate
-shiny:1000:187	World Map Shiny 187	Pharm - Shiny W of Abandoned Cabin		duplicate
-shiny:1000:188	World Map Shiny 188	Pharm - Shiny N of Mt. Reizan		
-shiny:1000:189	World Map Shiny 189	Pharm - Shiny NW of Town of Sian		
-radar:1	Radar Treasure 1	Olderion - Radar Treasure NW of Cave of Waters		tier 1
-radar:2	Radar Treasure 2	Gronoa - Radar Treasure E of Rugged Mountain Path		tier 1
-radar:3	Radar Treasure 3	Zoldaad - Radar Treasure SE of Mozul Station		tier 1
-radar:4	Radar Treasure 4	Pharm - Radar Treasure SW of Abandoned Cabin		tier 1
-radar:5	Radar Treasure 5	Mysidia - Radar Treasure E of Nameless Ruins		tier 1
-radar:6	Radar Treasure 6	Dirnado - Radar Treasure S of Dirnado Sanctum		tier 2
-radar:7	Radar Treasure 7	Grandshelt - Radar Treasure E of Lost Cave		tier 2
-radar:8	Radar Treasure 8	Pharm - Radar Treasure W of Titanoraidos Cave		tier 2
-radar:9	Radar Treasure 9	Zoldaad - Radar Treasure S of Gogmagog Cave		tier 2
-radar:10	Radar Treasure 10	Sea - Radar Treasure SE of Salome Cave		tier 3
-radar:11	Radar Treasure 11	Sea - Radar Treasure NW of Sea Sanctum		tier 3
-radar:12	Radar Treasure 12	Sea - Radar Treasure SW of Mt. Reizan		tier 3
-radar:13	Radar Treasure 13	Sea - Radar Treasure NE of Cavern of Swords		tier 3
-chest:2000:0	Town of Mitra Chest 1	Town of Mitra - Ether Chest 1		
+key	old	suggested	name	note
+chest:2000:0	Town of Mitra Chest 1	Town of Mitra - Ether Chest 1		same place as another
 chest:2000:1	Town of Mitra Chest 2	Town of Mitra - Phoenix Down Chest		
 chest:2000:2	Town of Mitra Chest 3	Town of Mitra - Tent Chest		
 chest:2000:3	Town of Mitra Chest 4	Town of Mitra - Phoenix Down x3 Chest		
-chest:2000:4	Town of Mitra Chest 5	Town of Mitra - Ether Chest 2		
+chest:2000:4	Town of Mitra Chest 5	Town of Mitra - Ether Chest 2		same place as another
 chest:2001:0	Grandshelt, the Royal Capital Chest 1	Grandshelt, the Royal Capital - Phoenix Down x3 Chest		
 chest:2001:2	Grandshelt, the Royal Capital Chest 2	Grandshelt, the Royal Capital - 400 Gil Chest		
 chest:2012:0	Grandshelt Castle Chest 1	Grandshelt Castle - Hoodwink Garb Chest		
@@ -119,8 +12,8 @@ chest:2012:6	Grandshelt Castle Chest 3	Grandshelt Castle - Phoenix Down x2 Chest
 chest:2012:7	Grandshelt Castle Chest 4	Grandshelt Castle - Black Garb Chest		
 chest:2012:8	Grandshelt Castle Chest 5	Grandshelt Castle - Mist Turbo Ether Chest		
 chest:2012:9	Grandshelt Castle Chest 6	Grandshelt Castle - Mist Hi-Potion x2 Chest		
-chest:2015:3	Commercial District Chest 1	Commercial District - 300 Gil Chest 1		
-chest:2015:4	Commercial District Chest 2	Commercial District - 300 Gil Chest 2		
+chest:2015:3	Commercial District Chest 1	Commercial District - 300 Gil Chest 1		same place as another
+chest:2015:4	Commercial District Chest 2	Commercial District - 300 Gil Chest 2		same place as another
 chest:2015:5	Commercial District Chest 3	Commercial District - Healing Spring Chest		
 chest:2020:0	Village of Kol Chest 1	Village of Kol - Tent Chest		
 chest:2020:1	Village of Kol Chest 2	Village of Kol - Antidote Herb x3 Chest		
@@ -128,11 +21,11 @@ chest:2030:0	Grandport Harbor Chest 1	Grandport Harbor - Smoke Bomb x2 Chest
 chest:2030:1	Grandport Harbor Chest 2	Grandport Harbor - Lightning Scroll I x2 Chest		
 chest:2031:0	Oblivion Palace Chest 1	Oblivion Palace - Vitality Charm Chest		
 chest:2031:1	Oblivion Palace Chest 2	Oblivion Palace - Earrings Chest		
-chest:2031:2	Oblivion Palace Chest 3	Oblivion Palace - Magicite Shard Chest 1		
+chest:2031:2	Oblivion Palace Chest 3	Oblivion Palace - Magicite Shard Chest 1		same place as another
 chest:2031:3	Oblivion Palace Chest 4	Oblivion Palace - Stagger Ring Chest		
 chest:2031:4	Oblivion Palace Chest 5	Oblivion Palace - Dreadwing Mallet Chest		
 chest:2031:5	Oblivion Palace Chest 6	Oblivion Palace - Compound Bow Chest		
-chest:2031:6	Oblivion Palace Chest 7	Oblivion Palace - Magicite Shard Chest 2		
+chest:2031:6	Oblivion Palace Chest 7	Oblivion Palace - Magicite Shard Chest 2		same place as another
 chest:2031:7	Oblivion Palace Chest 8	Oblivion Palace - Astral Jacket Chest		
 chest:2031:8	Oblivion Palace Chest 9	Oblivion Palace - Cure Drop Chest		
 chest:2031:9	Oblivion Palace Chest 10	Oblivion Palace - Celaeno Fragments Chest		
@@ -157,8 +50,8 @@ chest:2050:0	Dwarven Forge Chest 1	Dwarven Forge - Phoenix Down x3 Chest
 chest:2050:1	Dwarven Forge Chest 2	Dwarven Forge - Headband Chest		
 chest:2050:2	Dwarven Forge Chest 3	Dwarven Forge - Sledgehammer Chest		
 chest:2060:0	Dilmagia, the Machinopolis Chest 1	Dilmagia, the Machinopolis - Insulated Gloves Chest		
-chest:2060:1	Dilmagia, the Machinopolis Chest 2	Dilmagia, the Machinopolis - 500 Gil Chest 1		
-chest:2060:2	Dilmagia, the Machinopolis Chest 3	Dilmagia, the Machinopolis - 500 Gil Chest 2		
+chest:2060:1	Dilmagia, the Machinopolis Chest 2	Dilmagia, the Machinopolis - 500 Gil Chest 1		same place as another
+chest:2060:2	Dilmagia, the Machinopolis Chest 3	Dilmagia, the Machinopolis - 500 Gil Chest 2		same place as another
 chest:2061:3	Dirnado Shipyard Chest 1	Dirnado Shipyard - 500 Gil Chest		
 chest:2061:4	Dirnado Shipyard Chest 2	Dirnado Shipyard - Anti-Magic Gear Chest		
 chest:2070:0	Olderion, the Aquapolis Chest 1	Olderion, the Aquapolis - Rock Piercer Chest		
@@ -296,6 +189,7 @@ chest:3250:1	Sanctissimus Shrine Chest 2	Sanctissimus Shrine - Hero's Blade Ches
 chest:3260:0	Mt. Reizan Chest 1	Mt. Reizan - X-Ether x2 Chest		
 chest:3260:1	Mt. Reizan Chest 2	Mt. Reizan - Magicite Cryst Chest		
 chest:3260:2	Mt. Reizan Chest 3	Mt. Reizan - Analysis Hammer Chest		
+chest:3260:3	Mt. Reizan Resonance Stone Chest	Mt. Reizan - Resonance Stone Chest		
 chest:3271:0	Forest Path Chest 1	Forest Path - Megalixir Chest		
 chest:3271:1	Forest Path Chest 2	Forest Path - Chef's Knife x2 Chest		
 chest:3272:0	Wandering Lands Chest 1	Wandering Lands - Elixir Chest		
@@ -312,159 +206,209 @@ chest:3280:8	Crystal Tower Chest 9	Crystal Tower - Hastur Long Barrel Chest
 chest:3280:9	Crystal Tower Chest 10	Crystal Tower - Laevateinn Chest		
 chest:3280:10	Crystal Tower Chest 11	Crystal Tower - Chef's Knife x2 Chest		
 chest:10031:0	Quarry Cave Chest 1	Quarry Cave - Ancient Accessory Chest		
-chest:3260:3	Mt. Reizan Resonance Stone Chest	Mt. Reizan - Resonance Stone Chest		
-shiny:2015:4	Commercial District Shard 4	Commercial District - Tablet Shard 4		needs a spot in town
-shiny:2016:2	Colosseum Shard 2	Colosseum - Tablet Shard 2		needs a spot in town
-shiny:2020:5	Village of Kol Shard 5	Village of Kol - Tablet Shard 5		needs a spot in town
-shiny:2030:8	Grandport Harbor Shard 8	Grandport Harbor - Tablet Shard 8		needs a spot in town
-shiny:2030:9	Grandport Harbor Shard 9	Grandport Harbor - Tablet Shard 9		needs a spot in town
-shiny:2040:8	Town of Felicitas Shard 8	Town of Felicitas - Tablet Shard 8		needs a spot in town
-shiny:2040:9	Town of Felicitas Shard 9	Town of Felicitas - Tablet Shard 9		needs a spot in town
-shiny:2050:5	Dwarven Forge Shard 5	Dwarven Forge - Tablet Shard 5		needs a spot in town
-shiny:2050:6	Dwarven Forge Shard 6	Dwarven Forge - Tablet Shard 6		needs a spot in town
-shiny:2060:5	Dilmagia, the Machinopolis Shard 5	Dilmagia, the Machinopolis - Tablet Shard 5		needs a spot in town
-shiny:2060:6	Dilmagia, the Machinopolis Shard 6	Dilmagia, the Machinopolis - Tablet Shard 6		needs a spot in town
-shiny:2061:12	Shipyard Shard 12	Shipyard - Tablet Shard 12		needs a spot in town
-shiny:2061:13	Shipyard Shard 13	Shipyard - Tablet Shard 13		needs a spot in town
-shiny:2070:26	Olderion, the Aquapolis Shard 26	Olderion, the Aquapolis - Tablet Shard 26		needs a spot in town
-shiny:2070:27	Olderion, the Aquapolis Shard 27	Olderion, the Aquapolis - Tablet Shard 27		needs a spot in town
-shiny:2070:28	Olderion, the Aquapolis Shard 28	Olderion, the Aquapolis - Tablet Shard 28		needs a spot in town
-shiny:2070:29	Olderion, the Aquapolis Shard 29	Olderion, the Aquapolis - Tablet Shard 29		needs a spot in town
-shiny:2090:6	Town of Amore Shard 6	Town of Amore - Tablet Shard 6		needs a spot in town
-shiny:2090:7	Town of Amore Shard 7	Town of Amore - Tablet Shard 7		needs a spot in town
-shiny:2100:2	Mozul Station Shard 2	Mozul Station - Tablet Shard 2		needs a spot in town
-shiny:2102:1	Capital Station Shard 1	Capital Station - Tablet Shard 1		needs a spot in town
-shiny:2111:4	Zoldaad Castle Plaza Shard 4	Zoldaad Castle Plaza - Tablet Shard 4		needs a spot in town
-shiny:2113:4	Imperial Residences Shard 4	Imperial Residences - Tablet Shard 4		needs a spot in town
-shiny:2114:2	Slums Shard 2	Slums - Tablet Shard 2		needs a spot in town
-shiny:2120:10	Rebel Hideout Shard 10	Rebel Hideout - Tablet Shard 10		needs a spot in town
-shiny:2120:11	Rebel Hideout Shard 11	Rebel Hideout - Tablet Shard 11		needs a spot in town
-shiny:2130:16	Mysidia, the Magiapolis Shard 16	Mysidia, the Magiapolis - Tablet Shard 16		needs a spot in town
-shiny:2130:17	Mysidia, the Magiapolis Shard 17	Mysidia, the Magiapolis - Tablet Shard 17		needs a spot in town
-shiny:2130:18	Mysidia, the Magiapolis Shard 18	Mysidia, the Magiapolis - Tablet Shard 18		needs a spot in town
-shiny:2140:3	Village of Sunioo Shard 3	Village of Sunioo - Tablet Shard 3		needs a spot in town
-shiny:2140:4	Village of Sunioo Shard 4	Village of Sunioo - Tablet Shard 4		needs a spot in town
-shiny:2150:9	Gaberada, the Undertown Shard 9	Gaberada, the Undertown - Tablet Shard 9		needs a spot in town
-shiny:2160:3	Town of Duggle Shard 3	Town of Duggle - Tablet Shard 3		needs a spot in town
-shiny:2170:4	Town of Sian Shard 4	Town of Sian - Tablet Shard 4		needs a spot in town
-shiny:2180:0	Lake Ryusei Shard 0	Lake Ryusei - Tablet Shard 0		needs a spot in town
-shiny:3010:4	Dragon's Maw Shard 4	Dragon's Maw - Tablet Shard 4		needs a spot in town
-shiny:3030:6	Siren's Tower Shard 6	Siren's Tower - Tablet Shard 6		needs a spot in town
-shiny:3030:7	Siren's Tower Shard 7	Siren's Tower - Tablet Shard 7		needs a spot in town
-shiny:3030:8	Siren's Tower Shard 8	Siren's Tower - Tablet Shard 8		needs a spot in town
-shiny:3031:0	Cavern of Swords Shard 0	Cavern of Swords - Tablet Shard 0		needs a spot in town
-shiny:3040:14	Kolobos Ruins Shard 14	Kolobos Ruins - Tablet Shard 14		needs a spot in town
-shiny:3040:15	Kolobos Ruins Shard 15	Kolobos Ruins - Tablet Shard 15		needs a spot in town
-shiny:3050:21	Mt. Thunderclap Shard 21	Mt. Thunderclap - Tablet Shard 21		needs a spot in town
-shiny:3050:22	Mt. Thunderclap Shard 22	Mt. Thunderclap - Tablet Shard 22		needs a spot in town
-shiny:3050:23	Mt. Thunderclap Shard 23	Mt. Thunderclap - Tablet Shard 23		needs a spot in town
-shiny:3060:71	Mobliz Shipyard Shard 71	Mobliz Shipyard - Tablet Shard 71		needs a spot in town
-shiny:3060:78	Mobliz Shipyard Shard 78	Mobliz Shipyard - Tablet Shard 78		needs a spot in town
-shiny:3060:79	Mobliz Shipyard Shard 79	Mobliz Shipyard - Tablet Shard 79		needs a spot in town
-shiny:3070:59	Wind Shrine Shard 59	Wind Shrine - Tablet Shard 59		needs a spot in town
-shiny:3070:60	Wind Shrine Shard 60	Wind Shrine - Tablet Shard 60		needs a spot in town
-shiny:3070:61	Wind Shrine Shard 61	Wind Shrine - Tablet Shard 61		needs a spot in town
-shiny:3080:38	Cave of Waters Shard 38	Cave of Waters - Tablet Shard 38		needs a spot in town
-shiny:3080:39	Cave of Waters Shard 39	Cave of Waters - Tablet Shard 39		needs a spot in town
-shiny:3080:40	Cave of Waters Shard 40	Cave of Waters - Tablet Shard 40		needs a spot in town
-shiny:3100:11	Waterfall Way Shard 11	Waterfall Way - Tablet Shard 11		needs a spot in town
-shiny:3100:12	Waterfall Way Shard 12	Waterfall Way - Tablet Shard 12		needs a spot in town
-shiny:3100:13	Waterfall Way Shard 13	Waterfall Way - Tablet Shard 13		needs a spot in town
-shiny:3110:58	Water Shrine Shard 58	Water Shrine - Tablet Shard 58		needs a spot in town
-shiny:3110:59	Water Shrine Shard 59	Water Shrine - Tablet Shard 59		needs a spot in town
-shiny:3110:60	Water Shrine Shard 60	Water Shrine - Tablet Shard 60		needs a spot in town
-shiny:3130:45	Weapons Factory Shard 45	Weapons Factory - Tablet Shard 45		needs a spot in town
-shiny:3130:46	Weapons Factory Shard 46	Weapons Factory - Tablet Shard 46		needs a spot in town
-shiny:3140:10	Underground Tunnel Shard 10	Underground Tunnel - Tablet Shard 10		needs a spot in town
-shiny:3140:11	Underground Tunnel Shard 11	Underground Tunnel - Tablet Shard 11		needs a spot in town
-shiny:3150:2	Dungeon Shard 2	Dungeon - Tablet Shard 2		needs a spot in town
-shiny:3150:3	Dungeon Shard 3	Dungeon - Tablet Shard 3		needs a spot in town
-shiny:3160:10	Zoldaad Castle Shard 10	Zoldaad Castle - Tablet Shard 10		needs a spot in town
-shiny:3160:11	Zoldaad Castle Shard 11	Zoldaad Castle - Tablet Shard 11		needs a spot in town
-shiny:3180:13	Nameless Ruins Shard 13	Nameless Ruins - Tablet Shard 13		needs a spot in town
-shiny:3180:14	Nameless Ruins Shard 14	Nameless Ruins - Tablet Shard 14		needs a spot in town
-shiny:3190:25	Arcane Library Shard 25	Arcane Library - Tablet Shard 25		needs a spot in town
-shiny:3190:26	Arcane Library Shard 26	Arcane Library - Tablet Shard 26		needs a spot in town
-shiny:3200:4	Tower of Mysidia Shard 4	Tower of Mysidia - Tablet Shard 4		needs a spot in town
-shiny:3200:5	Tower of Mysidia Shard 5	Tower of Mysidia - Tablet Shard 5		needs a spot in town
-shiny:3200:6	Tower of Mysidia Shard 6	Tower of Mysidia - Tablet Shard 6		needs a spot in town
-shiny:3200:7	Tower of Mysidia Shard 7	Tower of Mysidia - Tablet Shard 7		needs a spot in town
-shiny:3210:26	Fina's Psyche Shard 26	Fina's Psyche - Tablet Shard 26		needs a spot in town
-shiny:3211:3	Fina's Psyche Shard 3	Fina's Psyche - Tablet Shard 3		needs a spot in town
-shiny:3211:4	Fina's Psyche Shard 4 (Map 3211)	Fina's Psyche - Tablet Shard 4 (Map 3211)		needs a spot in town
-shiny:3212:4	Fina's Psyche Shard 4 (Map 3212)	Fina's Psyche - Tablet Shard 4 (Map 3212)		needs a spot in town
-shiny:3220:34	Research Center Ruins Shard 34	Research Center Ruins - Tablet Shard 34		needs a spot in town
-shiny:3220:35	Research Center Ruins Shard 35	Research Center Ruins - Tablet Shard 35		needs a spot in town
-shiny:3220:36	Research Center Ruins Shard 36	Research Center Ruins - Tablet Shard 36		needs a spot in town
-shiny:3230:6	Rugged Mountain Path Shard 6	Rugged Mountain Path - Tablet Shard 6		needs a spot in town
-shiny:3230:7	Rugged Mountain Path Shard 7	Rugged Mountain Path - Tablet Shard 7		needs a spot in town
-shiny:3240:8	Gronoa Shrine Shard 8	Gronoa Shrine - Tablet Shard 8		needs a spot in town
-shiny:3240:9	Gronoa Shrine Shard 9	Gronoa Shrine - Tablet Shard 9		needs a spot in town
-shiny:3240:10	Gronoa Shrine Shard 10	Gronoa Shrine - Tablet Shard 10		needs a spot in town
-shiny:3250:82	Sanctissimus Shrine Shard 82	Sanctissimus Shrine - Tablet Shard 82		needs a spot in town
-shiny:3250:84	Sanctissimus Shrine Shard 84	Sanctissimus Shrine - Tablet Shard 84		needs a spot in town
-shiny:3260:7	Mt. Reizan Shard 7	Mt. Reizan - Tablet Shard 7		needs a spot in town
-shiny:3260:8	Mt. Reizan Shard 8	Mt. Reizan - Tablet Shard 8		needs a spot in town
-shiny:3271:1	Forest Path Shard 1	Forest Path - Tablet Shard 1		needs a spot in town
-shiny:3271:2	Forest Path Shard 2	Forest Path - Tablet Shard 2		needs a spot in town
-shiny:3272:0	Wandering Lands Shard 0	Wandering Lands - Tablet Shard 0		needs a spot in town
-shiny:3272:1	Wandering Lands Shard 1	Wandering Lands - Tablet Shard 1		needs a spot in town
-shiny:3280:124	Crystal Tower Shard 124	Crystal Tower - Tablet Shard 124		needs a spot in town
-shiny:3280:125	Crystal Tower Shard 125	Crystal Tower - Tablet Shard 125		needs a spot in town
-shiny:3280:126	Crystal Tower Shard 126	Crystal Tower - Tablet Shard 126		needs a spot in town
-boss:7042	Dragon's Maw: Intangir	Dragon's Maw: Intangir		already readable
-boss:7057	Dragon's Maw: Rogue Magitek Weapon	Dragon's Maw: Rogue Magitek Weapon		already readable
-boss:9004	Earth Shrine: Belmodar	Earth Shrine: Belmodar		already readable
-boss:9012	Kolobos Ruins: The Hunger	Kolobos Ruins: The Hunger		already readable
-boss:9013	Siren's Tower: Siren	Siren's Tower: Siren		already readable
-boss:9014	Dwarven Forge: Mom Bomb	Dwarven Forge: Mom Bomb		already readable
-boss:9017	Wind Shrine: Aether	Wind Shrine: Aether		already readable
-boss:9031	Nameless Ruins: Tellus	Nameless Ruins: Tellus		already readable
-boss:9038	Tower of Mysidia: Tellus	Tower of Mysidia: Tellus		already readable
-boss:9039	Rugged Mountain Path: Lux	Rugged Mountain Path: Lux		already readable
-boss:9040	Gronoa Shrine: Elfdrit	Gronoa Shrine: Elfdrit		already readable
-boss:9044	Sanctissimus Shrine: Gelidus	Sanctissimus Shrine: Gelidus		already readable
-boss:9046	Mt. Reizan: Ignis	Mt. Reizan: Ignis		already readable
-boss:9048	Forest Path: Tellus	Forest Path: Tellus		already readable
-boss:9060	Lanzelt Desert: Antlion	Lanzelt Desert: Antlion		already readable
-boss:9071	Sanctissimus Shrine: Arch Gargoyles	Sanctissimus Shrine: Arch Gargoyles		already readable
-boss:9072	Sanctissimus Shrine: Yakhanati	Sanctissimus Shrine: Yakhanati		already readable
-boss:9073	Sanctissimus Shrine: Test Rider	Sanctissimus Shrine: Test Rider		already readable
-boss:9074	Sanctissimus Shrine: Dad Bomb	Sanctissimus Shrine: Dad Bomb		already readable
-boss:9075	Sanctissimus Shrine: Archaeoaevis	Sanctissimus Shrine: Archaeoaevis		already readable
-boss:9076	Sanctissimus Shrine: Dragon	Sanctissimus Shrine: Dragon		already readable
-boss:9079	Marauder Cave	Marauder Cave		already readable
-boss:9080	Shoggoth Cave	Shoggoth Cave		already readable
-boss:9083	Mt. Thunderclap: Liquid Thunder	Mt. Thunderclap: Liquid Thunder		already readable
-boss:9084	Rukh Cave	Rukh Cave		already readable
-boss:9085	Mindflayer Cave	Mindflayer Cave		already readable
-boss:9088	Nameless Ruins: Liquid Flame	Nameless Ruins: Liquid Flame		already readable
-boss:9089	Nameless Ruins: Iron Giant	Nameless Ruins: Iron Giant		already readable
-boss:9093	Pyroviper Cave	Pyroviper Cave		already readable
-boss:9094	Gogmagog Cave	Gogmagog Cave		already readable
-boss:9109	Salome Cave	Salome Cave		already readable
-boss:9110	Jotunn Cave	Jotunn Cave		already readable
-boss:9111	Malboro Varietas Cave	Malboro Varietas Cave		already readable
-boss:9112	Tartarosaurus Cave	Tartarosaurus Cave		already readable
-boss:9113	Catacumba Cave	Catacumba Cave		already readable
-boss:9114	Necromonarch Cave	Necromonarch Cave		already readable
-boss:9115	Humbaba Cave	Humbaba Cave		already readable
-boss:9116	Titanoraidos Cave	Titanoraidos Cave		already readable
-boss:9117	Malboro Menace Cave	Malboro Menace Cave		already readable
-boss:9138	Whirlpool Hollow: Sephiroth	Whirlpool Hollow: Sephiroth		already readable
-crystal:10200	Sanctum of Light (Tidus)	Sanctum of Light (Tidus)		already readable
-crystal:10201	Sanctum of Light (Terra)	Sanctum of Light (Terra)		already readable
-crystal:10202	Sanctum of Light (Noctis)	Sanctum of Light (Noctis)		already readable
-crystal:10203	Sanctum of Light (Warrior of Light)	Sanctum of Light (Warrior of Light)		already readable
-crystal:10205	Sanctum of Light (Firion)	Sanctum of Light (Firion)		already readable
-crystal:10206	Sanctum of Light (Zidane)	Sanctum of Light (Zidane)		already readable
-crystal:10207	Sanctum of Light (Onion Knight)	Sanctum of Light (Onion Knight)		already readable
-crystal:10208	Sanctum of Light (Cloud)	Sanctum of Light (Cloud)		already readable
-crystal:10209	Sanctum of Light (Squall)	Sanctum of Light (Squall)		already readable
-crystal:10210	Sanctum of Light (Shantotto)	Sanctum of Light (Shantotto)		already readable
-crystal:10211	Sanctum of Light (Cecil)	Sanctum of Light (Cecil)		already readable
-crystal:10212	Sanctum of Light (Y'shtola)	Sanctum of Light (Y'shtola)		already readable
-crystal:10213	Sanctum of Light (Bartz)	Sanctum of Light (Bartz)		already readable
-crystal:10214	Sanctum of Light (Lightning)	Sanctum of Light (Lightning)		already readable
-crystal:10215	Sanctum of Light (Vaan)	Sanctum of Light (Vaan)		already readable
-crystal:10216	Sanctum of Light (Clive)	Sanctum of Light (Clive)		already readable
+shiny:1000:1	World Map Shiny 1	Kolobos - Shiny NE of Sanctum of Terra		
+shiny:1000:3	World Map Shiny 3	Grandshelt - Shiny S of Grandshelt, the Royal Capital		
+shiny:1000:4	World Map Shiny 4	Dirnado - Shiny W of Sanctum of Onion Knight		
+shiny:1000:5	World Map Shiny 5	Dirnado - Shiny near Sanctum of Onion Knight		
+shiny:1000:7	World Map Shiny 7	Dirnado - Shiny S of Mt. Thunderclap		
+shiny:1000:11	World Map Shiny 11	Lanzelt - Shiny SE of Oblivion Palace 1		same place as another
+shiny:1000:21	World Map Shiny 21	Kolobos - Shiny W of Town of Felicitas		
+shiny:1000:22	World Map Shiny 22	Kolobos - Shiny NE of Kolobos Ruins		nearest door 2793 units away
+shiny:1000:24	World Map Shiny 24	Dirnado - Shiny SE of Shoggoth Cave		
+shiny:1000:25	World Map Shiny 25	Dirnado - Shiny near Sanctum of Noctis		
+shiny:1000:26	World Map Shiny 26	Dirnado - Shiny NE of Mobliz Shipyard		
+shiny:1000:27	World Map Shiny 27	Pharm - Shiny W of Tartarosaurus Cave		
+shiny:1000:30	World Map Shiny 30	Olderion - Shiny near Rukh Cave		
+shiny:1000:31	World Map Shiny 31	Olderion - Shiny near Sanctum of Tidus		
+shiny:1000:32	World Map Shiny 32	Olderion - Shiny SE of Rukh Cave		
+shiny:1000:33	World Map Shiny 33	Olderion - Shiny NW of Cave of Waters		
+shiny:1000:34	World Map Shiny 34	Olderion - Shiny E of Cave of Waters		
+shiny:1000:35	World Map Shiny 35	Olderion - Shiny near Sanctum of Squall		
+shiny:1000:36	World Map Shiny 36	Olderion - Shiny NE of Cave of Waters		
+shiny:1000:37	World Map Shiny 37	Olderion - Shiny near Mindflayer Cave		
+shiny:1000:39	World Map Shiny 39	Olderion - Shiny N of Lake Dorr		
+shiny:1000:45	World Map Shiny 45	Zoldaad - Shiny near Sanctum of Shantotto		
+shiny:1000:46	World Map Shiny 46	Zoldaad - Shiny NE of Capital Station		
+shiny:1000:47	World Map Shiny 47	Zoldaad - Shiny SE of Capital Station		
+shiny:1000:48	World Map Shiny 48	Zoldaad - Shiny NE of Sanctum of Cecil		
+shiny:1000:49	World Map Shiny 49	Zoldaad - Shiny SE of Gogmagog Cave		
+shiny:1000:50	World Map Shiny 50	Zoldaad - Shiny W of Pyroviper Cave 1		same place as another
+shiny:1000:51	World Map Shiny 51	Zoldaad - Shiny SW of Pyroviper Cave		
+shiny:1000:52	World Map Shiny 52	Zoldaad - Shiny N of Sanctum of Cecil		nearest door 2948 units away
+shiny:1000:53	World Map Shiny 53	Zoldaad - Shiny NW of Sanctum of Cecil		
+shiny:1000:54	World Map Shiny 54	Zoldaad - Shiny SE of Infernal Hollow		
+shiny:1000:55	World Map Shiny 55	Zoldaad - Shiny near Rebel Hideout		
+shiny:1000:56	World Map Shiny 56	Zoldaad - Shiny near Pyroviper Cave		
+shiny:1000:57	World Map Shiny 57	Zoldaad - Shiny S of Quarry Cave		nearest door 5448 units away
+shiny:1000:58	World Map Shiny 58	Zoldaad - Shiny W of Pyroviper Cave 2		nearest door 4331 units away; same place as another
+shiny:1000:68	World Map Shiny 68	Olderion - Shiny NW of Malboro Varietas Cave		
+shiny:1000:70	World Map Shiny 70	Mysidia - Shiny near Sanctum of Bartz		
+shiny:1000:71	World Map Shiny 71	Mysidia - Shiny NW of Sanctum of Vaan		
+shiny:1000:82	World Map Shiny 82	Dirnado - Shiny S of Dwarven Forge		
+shiny:1000:83	World Map Shiny 83	Dirnado - Shiny NE of Sanctum of Zidane		
+shiny:1000:84	World Map Shiny 84	Mysidia - Shiny near Nameless Ruins		
+shiny:1000:85	World Map Shiny 85	Mysidia - Shiny near Salome Cave 1		same place as another
+shiny:1000:86	World Map Shiny 86	Mysidia - Shiny near Salome Cave 2		same place as another
+shiny:1000:87	World Map Shiny 87	Mysidia - Shiny W of Mysidia, the Magiapolis		
+shiny:1000:88	World Map Shiny 88	Mysidia - Shiny E of Jotunn Cave		
+shiny:1000:89	World Map Shiny 89	Mysidia - Shiny W of Jotunn Cave		
+shiny:1000:91	World Map Shiny 91	Mysidia - Shiny near Salome Cave 3		same place as another
+shiny:1000:94	World Map Shiny 94	Lanzelt - Shiny SE of Village of Kol		
+shiny:1000:95	World Map Shiny 95	Lanzelt - Shiny near Sanctum of Cloud		
+shiny:1000:96	World Map Shiny 96	Lanzelt - Shiny W of Village of Kol		
+shiny:1000:97	World Map Shiny 97	Lanzelt - Shiny SE of Oblivion Palace 2		nearest door 2770 units away; same place as another
+shiny:1000:98	World Map Shiny 98	Lanzelt - Shiny S of Village of Kol		
+shiny:1000:99	World Map Shiny 99	Grandshelt - Shiny E of Town of Mitra		
+shiny:1000:100	World Map Shiny 100	Grandshelt - Shiny SE of Town of Mitra		
+shiny:1000:102	World Map Shiny 102	Grandshelt - Shiny SW of Grandshelt, the Royal Capital		
+shiny:1000:104	World Map Shiny 104	Grandshelt - Shiny near Sanctum of Clive		
+shiny:1000:105	World Map Shiny 105	Grandshelt - Shiny SW of Earth Shrine		
+shiny:1000:127	World Map Shiny 127	Grandshelt - Shiny SE of Whirlpool Hollow		
+shiny:1000:128	World Map Shiny 128	Grandshelt - Shiny NE of Grandshelt, the Royal Capital 1		same place as another
+shiny:1000:130	World Map Shiny 130	Kolobos - Shiny E of Kolobos Ruins		
+shiny:1000:136	World Map Shiny 136	Grandshelt - Shiny NE of Grandshelt, the Royal Capital 2		same place as another
+shiny:1000:137	World Map Shiny 137	Grandshelt - Shiny E of Grandshelt, the Royal Capital		
+shiny:1000:139	World Map Shiny 139	Pharm - Shiny W of Abandoned Cabin 1		same place as another
+shiny:1000:143	World Map Shiny 143	Olderion - Shiny SW of Sanctum of Firion		
+shiny:1000:144	World Map Shiny 144	Olderion - Shiny W of Sanctum of Firion		
+shiny:1000:145	World Map Shiny 145	Olderion - Shiny E of Sanctum of Firion		
+shiny:1000:148	World Map Shiny 148	Pharm - Shiny S of Abandoned Cabin		nearest door 2800 units away
+shiny:1000:149	World Map Shiny 149	Pharm - Shiny near Dragon's Maw		
+shiny:1000:150	World Map Shiny 150	Grandshelt - Shiny NW of Town of Mitra		
+shiny:1000:154	World Map Shiny 154	Gronoa - Shiny W of Bladerain Stele		
+shiny:1000:155	World Map Shiny 155	Gronoa - Shiny E of Research Center Ruins		
+shiny:1000:156	World Map Shiny 156	Gronoa - Shiny SW of Humbaba Cave		
+shiny:1000:157	World Map Shiny 157	Gronoa - Shiny E of Gaberada, the Undertown		
+shiny:1000:158	World Map Shiny 158	Gronoa - Shiny NW of Research Center Ruins		
+shiny:1000:159	World Map Shiny 159	Gronoa - Shiny near Rugged Mountain Path		
+shiny:1000:160	World Map Shiny 160	Gronoa - Shiny NW of Gaberada, the Undertown		
+shiny:1000:161	World Map Shiny 161	Gronoa - Shiny NE of Town of Duggle		
+shiny:1000:162	World Map Shiny 162	Gronoa - Shiny NE of Gronoa Shrine		
+shiny:1000:163	World Map Shiny 163	Gronoa - Shiny S of Gronoa Shrine		
+shiny:1000:164	World Map Shiny 164	Gronoa - Shiny NW of Sanctissimus Shrine		
+shiny:1000:165	World Map Shiny 165	Gronoa - Shiny E of Rugged Mountain Path		
+shiny:1000:166	World Map Shiny 166	Gronoa - Shiny near Necromonarch Cave		
+shiny:1000:167	World Map Shiny 167	Gronoa - Shiny NW of Rugged Mountain Path		
+shiny:1000:169	World Map Shiny 169	Lanzelt - Shiny N of Sanctum of WoL		
+shiny:1000:178	World Map Shiny 178	Pharm - Shiny E of Town of Sian		
+shiny:1000:179	World Map Shiny 179	Pharm - Shiny NE of Town of Sian		
+shiny:1000:180	World Map Shiny 180	Pharm - Shiny SE of Town of Sian		
+shiny:1000:181	World Map Shiny 181	Pharm - Shiny W of Mt. Reizan		
+shiny:1000:182	World Map Shiny 182	Pharm - Shiny SW of Town of Sian		
+shiny:1000:185	World Map Shiny 185	Pharm - Shiny NE of Malboro Menace Cave 1		nearest door 2924 units away; same place as another
+shiny:1000:186	World Map Shiny 186	Pharm - Shiny NE of Malboro Menace Cave 2		same place as another
+shiny:1000:187	World Map Shiny 187	Pharm - Shiny W of Abandoned Cabin 2		same place as another
+shiny:1000:188	World Map Shiny 188	Pharm - Shiny N of Mt. Reizan		
+shiny:1000:189	World Map Shiny 189	Pharm - Shiny NW of Town of Sian		
+shiny:2015:4	Commercial District Shard 4	Commercial District - Tablet Shard		where in the place: needs a person
+shiny:2016:2	Colosseum Shard 2	Colosseum - Tablet Shard		where in the place: needs a person
+shiny:2020:5	Village of Kol Shard 5	Village of Kol - Tablet Shard		where in the place: needs a person
+shiny:2030:8	Grandport Harbor Shard 8	Grandport Harbor - Tablet Shard 1		where in the place: needs a person
+shiny:2030:9	Grandport Harbor Shard 9	Grandport Harbor - Tablet Shard 2		where in the place: needs a person
+shiny:2040:8	Town of Felicitas Shard 8	Town of Felicitas - Tablet Shard 1		where in the place: needs a person
+shiny:2040:9	Town of Felicitas Shard 9	Town of Felicitas - Tablet Shard 2		where in the place: needs a person
+shiny:2050:5	Dwarven Forge Shard 5	Dwarven Forge - Tablet Shard 1		where in the place: needs a person
+shiny:2050:6	Dwarven Forge Shard 6	Dwarven Forge - Tablet Shard 2		where in the place: needs a person
+shiny:2060:5	Dilmagia, the Machinopolis Shard 5	Dilmagia, the Machinopolis - Tablet Shard 1		where in the place: needs a person
+shiny:2060:6	Dilmagia, the Machinopolis Shard 6	Dilmagia, the Machinopolis - Tablet Shard 2		where in the place: needs a person
+shiny:2061:12	Shipyard Shard 12	Shipyard - Tablet Shard 1		where in the place: needs a person
+shiny:2061:13	Shipyard Shard 13	Shipyard - Tablet Shard 2		where in the place: needs a person
+shiny:2070:26	Olderion, the Aquapolis Shard 26	Olderion, the Aquapolis - Tablet Shard 1		where in the place: needs a person
+shiny:2070:27	Olderion, the Aquapolis Shard 27	Olderion, the Aquapolis - Tablet Shard 2		where in the place: needs a person
+shiny:2070:28	Olderion, the Aquapolis Shard 28	Olderion, the Aquapolis - Tablet Shard 3		where in the place: needs a person
+shiny:2070:29	Olderion, the Aquapolis Shard 29	Olderion, the Aquapolis - Tablet Shard 4		where in the place: needs a person
+shiny:2090:6	Town of Amore Shard 6	Town of Amore - Tablet Shard 1		where in the place: needs a person
+shiny:2090:7	Town of Amore Shard 7	Town of Amore - Tablet Shard 2		where in the place: needs a person
+shiny:2100:2	Mozul Station Shard 2	Mozul Station - Tablet Shard		where in the place: needs a person
+shiny:2102:1	Capital Station Shard 1	Capital Station - Tablet Shard		where in the place: needs a person
+shiny:2111:4	Zoldaad Castle Plaza Shard 4	Zoldaad Castle Plaza - Tablet Shard		where in the place: needs a person
+shiny:2113:4	Imperial Residences Shard 4	Imperial Residences - Tablet Shard		where in the place: needs a person
+shiny:2114:2	Slums Shard 2	Slums - Tablet Shard		where in the place: needs a person
+shiny:2120:10	Rebel Hideout Shard 10	Rebel Hideout - Tablet Shard 1		where in the place: needs a person
+shiny:2120:11	Rebel Hideout Shard 11	Rebel Hideout - Tablet Shard 2		where in the place: needs a person
+shiny:2130:16	Mysidia, the Magiapolis Shard 16	Mysidia, the Magiapolis - Tablet Shard 1		where in the place: needs a person
+shiny:2130:17	Mysidia, the Magiapolis Shard 17	Mysidia, the Magiapolis - Tablet Shard 2		where in the place: needs a person
+shiny:2130:18	Mysidia, the Magiapolis Shard 18	Mysidia, the Magiapolis - Tablet Shard 3		where in the place: needs a person
+shiny:2140:3	Village of Sunioo Shard 3	Village of Sunioo - Tablet Shard 1		where in the place: needs a person
+shiny:2140:4	Village of Sunioo Shard 4	Village of Sunioo - Tablet Shard 2		where in the place: needs a person
+shiny:2150:9	Gaberada, the Undertown Shard 9	Gaberada, the Undertown - Tablet Shard		where in the place: needs a person
+shiny:2160:3	Town of Duggle Shard 3	Town of Duggle - Tablet Shard		where in the place: needs a person
+shiny:2170:4	Town of Sian Shard 4	Town of Sian - Tablet Shard		where in the place: needs a person
+shiny:2180:0	Lake Ryusei Shard 0	Lake Ryusei - Tablet Shard		where in the place: needs a person
+shiny:3010:4	Dragon's Maw Shard 4	Dragon's Maw - Tablet Shard		where in the place: needs a person
+shiny:3030:6	Siren's Tower Shard 6	Siren's Tower - Tablet Shard 1		where in the place: needs a person
+shiny:3030:7	Siren's Tower Shard 7	Siren's Tower - Tablet Shard 2		where in the place: needs a person
+shiny:3030:8	Siren's Tower Shard 8	Siren's Tower - Tablet Shard 3		where in the place: needs a person
+shiny:3031:0	Cavern of Swords Shard 0	Cavern of Swords - Tablet Shard		where in the place: needs a person
+shiny:3040:14	Kolobos Ruins Shard 14	Kolobos Ruins - Tablet Shard 1		where in the place: needs a person
+shiny:3040:15	Kolobos Ruins Shard 15	Kolobos Ruins - Tablet Shard 2		where in the place: needs a person
+shiny:3050:21	Mt. Thunderclap Shard 21	Mt. Thunderclap - Tablet Shard 1		where in the place: needs a person
+shiny:3050:22	Mt. Thunderclap Shard 22	Mt. Thunderclap - Tablet Shard 2		where in the place: needs a person
+shiny:3050:23	Mt. Thunderclap Shard 23	Mt. Thunderclap - Tablet Shard 3		where in the place: needs a person
+shiny:3060:71	Mobliz Shipyard Shard 71	Mobliz Shipyard - Tablet Shard 1		where in the place: needs a person
+shiny:3060:78	Mobliz Shipyard Shard 78	Mobliz Shipyard - Tablet Shard 2		where in the place: needs a person
+shiny:3060:79	Mobliz Shipyard Shard 79	Mobliz Shipyard - Tablet Shard 3		where in the place: needs a person
+shiny:3070:59	Wind Shrine Shard 59	Wind Shrine - Tablet Shard 1		where in the place: needs a person
+shiny:3070:60	Wind Shrine Shard 60	Wind Shrine - Tablet Shard 2		where in the place: needs a person
+shiny:3070:61	Wind Shrine Shard 61	Wind Shrine - Tablet Shard 3		where in the place: needs a person
+shiny:3080:38	Cave of Waters Shard 38	Cave of Waters - Tablet Shard 1		where in the place: needs a person
+shiny:3080:39	Cave of Waters Shard 39	Cave of Waters - Tablet Shard 2		where in the place: needs a person
+shiny:3080:40	Cave of Waters Shard 40	Cave of Waters - Tablet Shard 3		where in the place: needs a person
+shiny:3100:11	Waterfall Way Shard 11	Waterfall Way - Tablet Shard 1		where in the place: needs a person
+shiny:3100:12	Waterfall Way Shard 12	Waterfall Way - Tablet Shard 2		where in the place: needs a person
+shiny:3100:13	Waterfall Way Shard 13	Waterfall Way - Tablet Shard 3		where in the place: needs a person
+shiny:3110:58	Water Shrine Shard 58	Water Shrine - Tablet Shard 1		where in the place: needs a person
+shiny:3110:59	Water Shrine Shard 59	Water Shrine - Tablet Shard 2		where in the place: needs a person
+shiny:3110:60	Water Shrine Shard 60	Water Shrine - Tablet Shard 3		where in the place: needs a person
+shiny:3130:45	Weapons Factory Shard 45	Weapons Factory - Tablet Shard 1		where in the place: needs a person
+shiny:3130:46	Weapons Factory Shard 46	Weapons Factory - Tablet Shard 2		where in the place: needs a person
+shiny:3140:10	Underground Tunnel Shard 10	Underground Tunnel - Tablet Shard 1		where in the place: needs a person
+shiny:3140:11	Underground Tunnel Shard 11	Underground Tunnel - Tablet Shard 2		where in the place: needs a person
+shiny:3150:2	Dungeon Shard 2	Dungeon - Tablet Shard 1		where in the place: needs a person
+shiny:3150:3	Dungeon Shard 3	Dungeon - Tablet Shard 2		where in the place: needs a person
+shiny:3160:10	Zoldaad Castle Shard 10	Zoldaad Castle - Tablet Shard 1		where in the place: needs a person
+shiny:3160:11	Zoldaad Castle Shard 11	Zoldaad Castle - Tablet Shard 2		where in the place: needs a person
+shiny:3180:13	Nameless Ruins Shard 13	Nameless Ruins - Tablet Shard 1		where in the place: needs a person
+shiny:3180:14	Nameless Ruins Shard 14	Nameless Ruins - Tablet Shard 2		where in the place: needs a person
+shiny:3190:25	Arcane Library Shard 25	Arcane Library - Tablet Shard 1		where in the place: needs a person
+shiny:3190:26	Arcane Library Shard 26	Arcane Library - Tablet Shard 2		where in the place: needs a person
+shiny:3200:4	Tower of Mysidia Shard 4	Tower of Mysidia - Tablet Shard 1		where in the place: needs a person
+shiny:3200:5	Tower of Mysidia Shard 5	Tower of Mysidia - Tablet Shard 2		where in the place: needs a person
+shiny:3200:6	Tower of Mysidia Shard 6	Tower of Mysidia - Tablet Shard 3		where in the place: needs a person
+shiny:3200:7	Tower of Mysidia Shard 7	Tower of Mysidia - Tablet Shard 4		where in the place: needs a person
+shiny:3210:26	Fina's Psyche Shard 26	Fina's Psyche - Tablet Shard 1		where in the place: needs a person
+shiny:3211:3	Fina's Psyche Shard 3	Fina's Psyche - Tablet Shard 2		where in the place: needs a person
+shiny:3211:4	Fina's Psyche Shard 4 (Map 3211)	Fina's Psyche - Tablet Shard 3		where in the place: needs a person
+shiny:3212:4	Fina's Psyche Shard 4 (Map 3212)	Fina's Psyche - Tablet Shard 4		where in the place: needs a person
+shiny:3220:34	Research Center Ruins Shard 34	Research Center Ruins - Tablet Shard 1		where in the place: needs a person
+shiny:3220:35	Research Center Ruins Shard 35	Research Center Ruins - Tablet Shard 2		where in the place: needs a person
+shiny:3220:36	Research Center Ruins Shard 36	Research Center Ruins - Tablet Shard 3		where in the place: needs a person
+shiny:3230:6	Rugged Mountain Path Shard 6	Rugged Mountain Path - Tablet Shard 1		where in the place: needs a person
+shiny:3230:7	Rugged Mountain Path Shard 7	Rugged Mountain Path - Tablet Shard 2		where in the place: needs a person
+shiny:3240:8	Gronoa Shrine Shard 8	Gronoa Shrine - Tablet Shard 1		where in the place: needs a person
+shiny:3240:9	Gronoa Shrine Shard 9	Gronoa Shrine - Tablet Shard 2		where in the place: needs a person
+shiny:3240:10	Gronoa Shrine Shard 10	Gronoa Shrine - Tablet Shard 3		where in the place: needs a person
+shiny:3250:82	Sanctissimus Shrine Shard 82	Sanctissimus Shrine - Tablet Shard 1		where in the place: needs a person
+shiny:3250:84	Sanctissimus Shrine Shard 84	Sanctissimus Shrine - Tablet Shard 2		where in the place: needs a person
+shiny:3260:7	Mt. Reizan Shard 7	Mt. Reizan - Tablet Shard 1		where in the place: needs a person
+shiny:3260:8	Mt. Reizan Shard 8	Mt. Reizan - Tablet Shard 2		where in the place: needs a person
+shiny:3271:1	Forest Path Shard 1	Forest Path - Tablet Shard 1		where in the place: needs a person
+shiny:3271:2	Forest Path Shard 2	Forest Path - Tablet Shard 2		where in the place: needs a person
+shiny:3272:0	Wandering Lands Shard 0	Wandering Lands - Tablet Shard 1		where in the place: needs a person
+shiny:3272:1	Wandering Lands Shard 1	Wandering Lands - Tablet Shard 2		where in the place: needs a person
+shiny:3280:124	Crystal Tower Shard 124	Crystal Tower - Tablet Shard 1		where in the place: needs a person
+shiny:3280:125	Crystal Tower Shard 125	Crystal Tower - Tablet Shard 2		where in the place: needs a person
+shiny:3280:126	Crystal Tower Shard 126	Crystal Tower - Tablet Shard 3		where in the place: needs a person
+radar:1	Radar Treasure 1	Olderion - Radar Treasure NW of Cave of Waters		
+radar:2	Radar Treasure 2	Gronoa - Radar Treasure E of Rugged Mountain Path		nearest door 2618 units away
+radar:3	Radar Treasure 3	Zoldaad - Radar Treasure S of Sanctum of Shantotto		
+radar:4	Radar Treasure 4	Pharm - Radar Treasure SW of Abandoned Cabin		
+radar:5	Radar Treasure 5	Mysidia - Radar Treasure E of Nameless Ruins		
+radar:6	Radar Treasure 6	Dirnado - Radar Treasure S of Sanctum of Noctis		
+radar:7	Radar Treasure 7	Grandshelt - Radar Treasure E of Lost Cave		
+radar:8	Radar Treasure 8	Pharm - Radar Treasure W of Titanoraidos Cave		nearest door 3747 units away
+radar:9	Radar Treasure 9	Zoldaad - Radar Treasure S of Gogmagog Cave		nearest door 3127 units away
+radar:10	Radar Treasure 10	Sea - Radar Treasure SE of Salome Cave		nearest door 10706 units away
+radar:11	Radar Treasure 11	Sea - Radar Treasure NW of Sanctum of Tidus		nearest door 5701 units away
+radar:12	Radar Treasure 12	Sea - Radar Treasure SW of Mt. Reizan		nearest door 12202 units away
+radar:13	Radar Treasure 13	Sea - Radar Treasure N of Whirlpool Hollow		nearest door 5849 units away

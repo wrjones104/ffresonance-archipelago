@@ -332,6 +332,8 @@ Along the same lines, I would also want an option for players to start with all 
 
 **What a person should do:** read through a generated list, fix the weak ones and name the tablet shards. A TSV of `key`, current name and suggested name, with an empty column for the user's name, does it. Names come from the generator (`tools/gen_apworld_data.py`) with the user's column as an override. The first draft is `data/location_names.tsv` (469 rows; 17 duplicates and 10 shinies far from any door are marked in `note`). Nothing reads it yet.
 
+**Built (round 77, world 0.29.0):** `tools/gen_apworld_data.py` names every chest, shiny, Tablet Shard and radar treasure this way and rewrites `data/location_names.tsv` each run, keeping the `name` column. A filled `name` wins. Repeats are numbered ("Mysidia - Shiny near Salome Cave 1" to 3). Sanctum doors name their sanctum ("near Sanctum of Onion Knight"). The `old` column keeps round 76's names, for players with old yaml lists. Tablet Shards are numbered within their place, so they still want a person.
+
 **What it changes:** location ids stay the same, so the client, the mod and old seeds keep working. Players' yaml lists (`exclude_locations` and the like) that use the old names stop matching. Do it once, before the full release.
 
 ## 35. Keep the received-items count in the save
@@ -342,4 +344,4 @@ Along the same lines, I would also want an option for players to start with all 
 
 **The likely fix:** write the count, and a short tag of the seed, into the save. Unused event flags as bits are one way: 20 flags count to a million items, and 16 more hold a hash of the seed key. The game saves them with everything else, so Steam Cloud carries them to the other PC. On load, a save whose tag matches the session is the session's, with the count it holds. `ap_state.txt` stays as a fallback for saves from before.
 
-**To find out:** a range of event flags no row reads or sets (`gimmicks.tsv`, talk and event rows), and that the game keeps flags above the story's range.
+**Built (round 77, mod 0.60.0):** 12 count flags (1414 to 1419, 1430, 1432 to 1436) and 11 tag flags (1437 to 1439, 1442 to 1449). The tag is FNV-1a of the session key folded to 1 to 2047. On load, a save whose tag is the session's is linked with its count, before `ap_state.txt` is asked; a save stamped by another seed is not linked even when `ap_state.txt` lists its slot. The mod writes the stamp whenever the applied count changes, in the same tick as the grant, so a save the game makes holds both together. A save from before 0.60.0 has no stamp and is judged by `ap_state.txt` as before, then stamped.

@@ -25,7 +25,7 @@ Download the `FFRArchipelago` mod zip and `ff_resonance.apworld` from the [lates
 
 1. Install a UE 5.6 build of [UE4SS](https://github.com/UE4SS-RE/RE-UE4SS/releases) into `...\FINAL FANTASY RESONANCE\FFRS\Binaries\Win64\` if you do not already have it (see the [README](../README.md#1-install-ue4ss) for details).
 2. Extract the `FFRArchipelago` zip into `...\FINAL FANTASY RESONANCE\FFRS\Binaries\Win64\ue4ss\Mods\` so `enabled.txt`, `Scripts/`, and `Assets/` sit directly inside `Mods\FFRArchipelago\`.
-3. If you are updating an existing install, delete `ap_in.txt`, `ap_out.txt`, and `ap_state.txt` from `Mods\FFRArchipelago\` before starting a new seed (keep `seen.tsv` if present).
+3. If you are updating in the middle of a seed, replace `Scripts` and `Assets` only. Before a new seed you can delete `ap_in.txt`, `ap_out.txt`, and `ap_state.txt` from `Mods\FFRArchipelago\` (keep `seen.tsv` if present). From mod 0.60.0 a save records its seed and items, so it works on another PC without `/bind`.
 4. Install `ff_resonance.apworld` by double-clicking it or copying it into your Archipelago `custom_worlds` folder, overwriting any previous version.
 
 ## Before you start

@@ -49,7 +49,7 @@
 -- follows the save slots the linked game is saved to. While any other save is loaded, the mod
 -- grants nothing, reports nothing and leaves the chests vanilla.
 
-local VERSION = "0.59.0"
+local VERSION = "0.60.0"
 local PROTOCOL = 2        -- the bridge protocol; the apworld's MOD_PROTOCOL
 
 local MOD_DIR = (debug.getinfo(1, "S").source:gsub("^@", ""):gsub("\\", "/"):match("^(.*/)Scripts/[^/]+$"))
@@ -218,6 +218,28 @@ local save = {
     autoDone = false,  -- the automatic skip was tried (or given up) for this game
     ok = false,        -- true when this is the session's save
 }
+
+-- Keeps the save stamp (game.WriteSaveStamp) equal to the applied count. Flags written now are in
+-- the next save the game makes, with the items granted in the same tick. Checked again now and
+-- then, in case the game loaded its save data again under the same object.
+function save.writeStamp(force)
+    local want = tostring(save.obj) .. "|" .. state.applied .. "|" .. state.seed
+    if save.stamped == want and not force then return end
+    if state.applied > game.STAMP_MAX then
+        if save.stamped ~= "full" then log("stamp: " .. state.applied .. " items is past what the stamp holds") end
+        save.stamped = "full"
+        return
+    end
+    local wrote, why = game.WriteSaveStamp(state.applied, game.SeedTag(state.seed))
+    if wrote == nil then
+        if save.stampWhy ~= why then log("stamp: not written (" .. tostring(why) .. ")") end
+        save.stampWhy = why
+        return
+    end
+    save.stampWhy = nil
+    if wrote > 0 then log("stamp: " .. state.applied .. " items (" .. wrote .. " flags)") end
+    save.stamped = want
+end
 
 -- True when the loaded save belongs to the current session (any save counts when running without a session).
 local function sessionSave()
@@ -857,6 +879,10 @@ local function judgeSave()
     if not state.seed then setOk(true); return end
     -- The same save the count was for, still loaded (the mod was reloaded): keep the count.
     local same = state.live ~= nil and state.live == (tostring(save.obj) .. "|" .. tostring(save.ticks))
+    local stampCount, stampTag = game.ReadSaveStamp()
+    local ours = stampTag ~= nil and stampTag == game.SeedTag(state.seed)
+    -- A save stamped by another seed is not the session's, whatever ap_state.txt says of its slot.
+    local foreign = stampTag ~= nil and stampTag ~= 0 and not ours
     if save.apObj ~= nil and save.apObj == save.obj then
         -- Started from the Archipelago title entry: it joins the session even when the session
         -- has other saves already. It holds none of the session's items yet. It may have
@@ -867,7 +893,14 @@ local function judgeSave()
         saveState()
         -- Log only (no on-screen notice), since the player explicitly chose the Archipelago entry.
         log("Archipelago: this new game is linked to the seed")
-    elseif save.slot ~= nil and state.slots[save.slot] then
+    elseif ours then
+        -- The stamp travels with the save: another PC, or ap_state.txt deleted on an update.
+        setOk(true)
+        log("save is stamped with this seed: it holds " .. stampCount .. " items")
+        if not same then setApplied(stampCount, "the save's stamp") end
+        if save.slot ~= nil then linkSlot(save.slot, state.applied) end
+        saveState()
+    elseif save.slot ~= nil and state.slots[save.slot] and not foreign then
         setOk(true)
         log("save slot " .. save.slot .. " is the session's save")
         -- Legacy state files without a per-slot count retain the previous applied count.
@@ -1405,6 +1438,10 @@ local function tick()
             if state.ticks % PRIME_EVERY == 0 then pcall(game.PrimePopup) end
             if sessionSave() then
                 applyItems()
+                if state.seed and save.ok then
+                    local okStamp, err = pcall(save.writeStamp, state.ticks % LOCKS_EVERY == 0)
+                    if not okStamp then log("stamp: " .. tostring(err)) end
+                end
                 watchStory()
                 if state.syncPending then
                     state.syncPending = false
@@ -2296,7 +2333,9 @@ local SEED_SCALES = {
     [1] = { at = { 90, 100 }, power = { 90, 115 }, above = 3, bossAt = { 105, 110 }, bossPower = { 105, 110 } },
     [2] = { at = { 100, 110 }, power = { 105, 130 }, above = 5, bossAt = { 115, 125 }, bossPower = { 125, 135 } },
 }
-local SEED_RAMP = { below = 1, bossRange = 2, rampFrom = 5, rampTo = 25 }
+-- Round 77: bosses lose `emptySlotCut` % power for each empty slot of the `slots` in the party.
+-- Small parties were wiped by bosses' opening attacks and ran short of turns.
+local SEED_RAMP = { below = 1, bossRange = 2, rampFrom = 5, rampTo = 25, slots = 4, emptySlotCut = 12 }
 
 local function seedScale()
     return SEED_SCALES[setting("strength")] or SEED_SCALES[1]
@@ -2313,13 +2352,16 @@ local function seedScaleToParty()
     local s = seedScale()
     local at, power = ramp(s.at, lv), ramp(s.power, lv)
     local bossAt, bossPower = ramp(s.bossAt, lv), ramp(s.bossPower, lv)
+    local size = #(game.PartyIds() or {})
+    local empty = math.max(0, SEED_RAMP.slots - size)
+    bossPower = math.floor(bossPower * (100 - SEED_RAMP.emptySlotCut * empty) / 100 + 0.5)
     local a, b, c = game.LevelBand(lv, SEED_RAMP.below, at, s.above)
     local ba, bb, bc = game.LevelBand(lv, SEED_RAMP.bossRange, bossAt)
-    log(string.format("scale: party level %d (%s), strength %s: enemies centre %d (%d%%), %d to %d, power %d%%; bosses centre %d (%d%%), power %d%%",
-        lv, detail, STRENGTH_NAMES[setting("strength")] or "?", c, at, math.max(1, a), b, power, bc, bossAt, bossPower))
+    log(string.format("scale: party level %d (%s), strength %s: enemies centre %d (%d%%), %d to %d, power %d%%; bosses centre %d (%d%%), power %d%% (%d in the party)",
+        lv, detail, STRENGTH_NAMES[setting("strength")] or "?", c, at, math.max(1, a), b, power, bc, bossAt, bossPower, size))
     local bossKnobs = { hp = bossPower, attack = bossPower, magic = bossPower }
     local n, err = applyScale("clamp", a, b, true, { hp = power, attack = power, magic = power }, { a = ba, b = bb, knobs = bossKnobs })
-    return n, err, lv
+    return n, err, lv, size
 end
 
 -- What follow does when the party's level changes, or the table has been written over.
@@ -2340,14 +2382,14 @@ local function seedScaleTick()
     -- A new strength from the Options screen rescales at once.
     if scaleFollow and scaleFollow.seed and scaleFollow.strength ~= setting("strength") then scaleFollow = nil end
     if scaleFollow or (game.StoryCounter() or 0) < game.OPEN_START.story then return end
-    local n, err, lv = seedScaleToParty()
+    local n, err, lv, size = seedScaleToParty()
     if n == nil then
         if not seedScaleFailed then log("scale: the seed's scaling failed: " .. tostring(err)) end
         seedScaleFailed = true
         return
     end
     seedScaleOn = true
-    scaleFollow = { seed = true, last = lv, strength = setting("strength") }
+    scaleFollow = { seed = true, last = lv, size = size, strength = setting("strength") }
     log("scale: the seed's scaling is on, following the party's level")
 end
 
@@ -2369,9 +2411,11 @@ scaleTick = function()
     local f = scaleFollow
     if not f then return end
     local lv = game.PartyLevel()
-    if not lv or lv == f.last then return end
-    log("scale: party level " .. tostring(f.last) .. " -> " .. lv)
-    f.last = lv
+    -- The seed's scaling also follows the party's size (round 77).
+    local size = f.seed and #(game.PartyIds() or {}) or nil
+    if not lv or (lv == f.last and size == f.size) then return end
+    log("scale: party level " .. tostring(f.last) .. " -> " .. lv .. (size and (", " .. size .. " in the party") or ""))
+    f.last, f.size = lv, size
     followRescale(f)
 end
 

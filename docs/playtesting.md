@@ -844,6 +844,16 @@ Also, **is Felicitas's shop the one the data calls "ナシャト"?** If a town's
 | World Map Shiny 167 in logic on a Gronoa start with no airship. | At x 19347, y -19766, the Gronoa NW peninsula. Add it to `data/airship_only.tsv` after a check of the walk. |
 | Nameless Ruins Chests 2 and 5 (Magicite, Tyr's Armor) and Shard 14 need both Liquid Flame (9088) and Iron Giant (9089). | Add `after_boss` for both. |
 
+**Round 77, before play (mod 0.60.0 build 8ef015af, world 0.29.0 build e63e4438):** the first cycle after v0.28.0, so both versions moved.
+- **Save stamp (mod).** The save keeps its seed's tag and the applied count in event flags 1414 to 1449 (IDEAS 35). A save loaded on another PC, or after `ap_state.txt` is deleted, links itself and gets only what it lacks. Log lines: `save is stamped with this seed: it holds N items`, and `stamp: N items (k flags)` when it is written.
+- **Grandshelt island (mod and world).** The Grandshelt/Lanzelt line moves from y 17500 to y 16700 for x 12700 to 15400, from Grandshelt's landscape tiles (`docs/open_world.md`). World Map Shiny 127 is on Grandshelt now.
+- **Scaling (mod).** Bosses take HP from a curve fitted to the game's own bosses (Siren at 57: about 320,000, was 2,434,404). Defence grows by the curve's factor to the power 0.75. Bosses lose 12% power per empty party slot of four (`docs/open_world.md`).
+- **Logic (world).** World Map Shiny 167 needs the airship. Nameless Ruins Chests 2, 4 and 5, Shard 14 and Tellus need Liquid Flame and Iron Giant: the blocking bases at y -11975 (flag 527) and y -15996 (flag 526) stand before them.
+- **Readable names (world).** Every chest, shiny, Tablet Shard and radar treasure has a new name (IDEAS 34). `data/location_names.tsv` has the old and new names. Ids are unchanged, so a seed generated on 0.28.0 keeps working with the new client.
+- **Found off-line, for the probes below:**
+  - The invisible ladder in Mt. Thunderclap is `BP_MapGimmick_StringLadder_C_2` (uid 20) in `Dng_04Dir_40_01_GD`. Its `VisibleCondition` and `m_FlagCondition` are both `{flag:205}`, the flag Lid's paid shortcut sets. Hidden, its ladder part (`BP_MapGimmickLadder_C_2`) is still climbable. Uids 18 and 19 are rope ladders with no condition and `interactType` Check: the kind you let down from the top. Uid 20 may behave the same with its `VisibleCondition` cleared.
+  - Wind Shrine Chest 1 (now "Wind Shrine - Mist Hi-Potion Chest") is at z 5270 by the lift at (13600, 37000); Waterfall Way Chest 5 ("Waterfall Way - Aquatic Veil Chest") is at (310, -16290) by in-map warp 9. Nothing in the data closes either.
+
 ## Round 74 test plan (mod 0.59.0 build d8e6e426, world 0.28.0 build ddd8aeb4)
 
 **Install:** copy `FFRArchipelago/Scripts` and `dist/ff_resonance.apworld` into `custom_worlds`, and generate a new seed. The radar and door fixes also work on an older save.
@@ -906,5 +916,31 @@ Send the `[FFRAP]` lines of the log and any crash folder.
 **1. Boss zones on the first pass.** Go to a boss you have not fought, with no shiny or chest on the way: Tellus in the Forest Path, Elfdrit, Lux or Ignis. The story boss line should end with `1 zones turned on`. **Does the fight start the first time you walk into the zone?**
 
 **2. Tellus's name (new seed).** **Does the Forest Path's fight send "Forest Path: Tellus"?**
+
+Send the `[FFRAP]` lines of the log and any crash folder.
+
+## Round 77 test plan (mod 0.60.0 build 8ef015af, world 0.29.0 build e63e4438)
+
+**Install:** copy `FFRArchipelago/Scripts`, and copy `dist/ff_resonance.apworld` into `custom_worlds`. Generate a new seed for the names and logic. The mod parts also work on a 0.28.0 seed. Keep `ap_state.txt` this time.
+
+**0. The builds.** The log should say `version 0.60.0 (build 8ef015af)`, and the client `world version 0.29.0 (build e63e4438)`.
+
+**1. The save stamp.**
+1. Load your linked save from round 76 with the new mod. The log should say `stamp: N items` once, N the items you have. Save the game.
+2. Close the game, rename `ap_state.txt` to `ap_state.old.txt`, start the game and connect. Load the same save. **Does it link by itself (`save is stamped with this seed`) and grant nothing again?**
+3. If you have a second PC with Steam Cloud, load the save there. **Same question.**
+4. Put `ap_state.old.txt` back afterwards if you like; it is no longer needed for stamped saves.
+
+**2. Grandshelt island.** With Lanzelt open and Grandshelt locked, fly over the land at the north end of the stone bridge (around World Map Shiny 127). **Is the shadow red there?** Then check that landing on Lanzelt's coast south of the bridge still works.
+
+**3. Boss scaling.** Fight a boss you know well, and note the party size. The scale line in the log ends with `(n in the party)`; **is n the number in your battle party?** (If it counts reserve members too, the cut never applies.) Change the party size on the field; the log should show a new scale line. **Do bosses feel right on HP? Do physical skills keep up with magic?** Libra on a late boss gives the HP to compare with Siren's 2,434,404.
+
+**4. Readable names.** **Are the new names in the client and Universal Tracker easy to find in game?** Note any that send you to the wrong place. `data/location_names.tsv` has a `name` column for your own names.
+
+**5. Probes for next round (when you pass by):**
+- **Mt. Thunderclap ladder:** stand by Lid's shortcut ladder (the invisible one) and run `ffrap_inspect BP_MapGimmick_StringLadder001_C`. Then the same at the top of the climb. Send the log lines.
+- **Wind Shrine Chest 1 and Waterfall Way Chest 5:** if you go there, a screenshot of what stops you.
+- **Nameless Ruins Tellus:** if the fight starts only on a second pass, send the log from entering the map to the fight.
+- **The final duel without Rain:** if you reach the tower top without Rain, say what happens in the 1-v-1.
 
 Send the `[FFRAP]` lines of the log and any crash folder.

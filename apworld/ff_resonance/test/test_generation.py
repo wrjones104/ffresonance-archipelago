@@ -12,6 +12,9 @@ from ..locations import GOAL_EVENT, LOCATION_KEY_TO_ID, SEPHIROTH, VICTORY
 from ..options import FinalBossFragments, Goal, TabletShardsRequired
 from . import FFResonanceTestBase
 
+# Round 77: location names are readable now; tests that pick a place by its number use the key.
+NAME_OF_KEY = {loc["key"]: loc["name"] for loc in CHESTS + SHINIES + RADAR + TABLET_SHINIES + RADAR_PART_CHESTS}
+
 ARTIFACT_IDS = (30000, 30018)    # DT_ArtifactItemData's rows
 LAST_PALACE_CHEST = "chest:2031:24"   # Oblivion Palace's 4-Star Chamber: all 99 shards
 PALACE_SHARDS = 99
@@ -69,7 +72,7 @@ class TestDefault(FFResonanceTestBase):
     def test_each_unlock_opens_its_continent(self) -> None:
         self.collect_by_name(["Pharm Unlock"])
         self.assertTrue(self.multiworld.state.can_reach_region("Pharm", self.player))
-        self.assertTrue(self.multiworld.get_location("Dragon's Maw Chest 1", self.player).can_reach(self.multiworld.state))
+        self.assertTrue(self.multiworld.get_location("Dragon's Maw - Magicite Cryst Chest", self.player).can_reach(self.multiworld.state))
         self.assertFalse(self.multiworld.state.can_reach_region("Gronoa", self.player))
 
     def test_places_with_no_route_are_not_locations(self) -> None:
@@ -84,18 +87,18 @@ class TestDefault(FFResonanceTestBase):
         names = {loc.name for loc in self.multiworld.get_locations(self.player)}
         self.assertNotIn("Grandshelt Castle Chest 8", names)
         self.assertNotIn("Old Town, Olderion Chest 1", names)
-        residences = self.multiworld.get_location("Imperial Residences Chest 1", self.player)
+        residences = self.multiworld.get_location("Imperial Residences - Phoenix Pinion Chest", self.player)
         self.assertEqual(residences.progress_type, LocationProgressType.DEFAULT)
         self.assertEqual(residences.parent_region.name, "Zoldaad")
         # Round 44 walked into the Earth Shrine's inner part and opened its chests.
-        self.assertNotEqual(self.multiworld.get_location("Earth Shrine Chest 1", self.player).progress_type,
+        self.assertNotEqual(self.multiworld.get_location("Earth Shrine - Phoenix Down Chest", self.player).progress_type,
                             LocationProgressType.EXCLUDED)
 
     def test_fina_psyche_is_behind_tellus(self) -> None:
         """Round 71: Fina's Psyche is reached past Tellus (Tower of Mysidia, tier B): a third party
         member and two continents, on top of Mysidia. Round 73: and Wind, a healer, and a group heal
         or Earth resistance. Fina heals, Jake has Wind."""
-        chest = self.multiworld.get_location("Fina's Psyche Chest 1", self.player)
+        chest = self.multiworld.get_location("Fina's Psyche - Mist Hi-Potion x2 Chest", self.player)
         self.assertNotEqual(chest.progress_type, LocationProgressType.EXCLUDED)
         # Round 74: Tower of Mysidia Chest 3, on the top floor, is past Tellus too (a tester's seed).
         top = chest_location(self, "chest:3200:2")
@@ -137,7 +140,7 @@ class TestDefault(FFResonanceTestBase):
         (tier C): four party members and four continents, on top of Gronoa. Round 73: and a group
         heal or a revive, which Fina has from level 25. Round 74: Dad Bomb, Test Rider and Lux (on
         the way) act twice a turn, so five members."""
-        chest = self.multiworld.get_location("Sanctissimus Shrine Chest 1", self.player)
+        chest = self.multiworld.get_location("Sanctissimus Shrine - Whip of Affliction Chest", self.player)
         self.collect_by_name(["Gronoa Unlock", "Pharm Unlock", "Mysidia Unlock"])
         self.collect_by_name(["Nichol", "Lid", "Jake"])
         self.assertFalse(chest.can_reach(self.multiworld.state), "no group heal or revive")
@@ -148,7 +151,7 @@ class TestDefault(FFResonanceTestBase):
         self.assertFalse(chest.can_reach(self.multiworld.state), "four members are not enough")
 
     def test_zoldaad_dungeon_needs_its_key(self) -> None:
-        chest = self.multiworld.get_location("Zoldaad Dungeon Chest 1", self.player)
+        chest = self.multiworld.get_location("Zoldaad Dungeon - Turbo Ether Chest", self.player)
         self.collect_by_name(["Zoldaad Unlock"])
         self.assertFalse(chest.can_reach(self.multiworld.state))
         self.collect_by_name(["Dungeon Key"])
@@ -228,8 +231,8 @@ class TestAirshipItem(FFResonanceTestBase):
         self.collect_by_name(["Airship"])
         state = self.multiworld.state
         for n in (1, 2, 4, 5, 10, 11):
-            self.assertTrue(self.multiworld.get_location(f"Crystal Tower Chest {n}", self.player).can_reach(state), n)
-        third = [self.multiworld.get_location(f"Crystal Tower Chest {n}", self.player) for n in (3, 6, 7, 8, 9)]
+            self.assertTrue(self.multiworld.get_location(NAME_OF_KEY[f"chest:3280:{n - 1}"], self.player).can_reach(state), n)
+        third = [self.multiworld.get_location(NAME_OF_KEY[f"chest:3280:{n - 1}"], self.player) for n in (3, 6, 7, 8, 9)]
         self.assertFalse(any(chest.can_reach(state) for chest in third))
         self.assertFalse(self.multiworld.get_location(GOAL_EVENT, self.player).can_reach(state))
         self.collect_all_but([])
@@ -243,7 +246,7 @@ class TestAirshipOnlyShinies(FFResonanceTestBase):
         """Round 73 (the user): four world map shinies in Olderion are reached only from the air."""
         self.collect_by_name(["Lanzelt Unlock", "Olderion Unlock"])
         self.assertTrue(self.multiworld.state.can_reach_region("Olderion", self.player), "by the bridge and the ferry")
-        shinies = [self.multiworld.get_location(f"World Map Shiny {n}", self.player) for n in (36, 39, 68, 145)]
+        shinies = [self.multiworld.get_location(NAME_OF_KEY[f"shiny:1000:{n}"], self.player) for n in (36, 39, 68, 145)]
         self.assertFalse(any(shiny.can_reach(self.multiworld.state) for shiny in shinies))
         self.collect_by_name(["Airship"])
         self.assertTrue(all(shiny.can_reach(self.multiworld.state) for shiny in shinies))
@@ -278,11 +281,11 @@ class TestDirnadoOnFoot(FFResonanceTestBase, real_defaults=True):
         return self.multiworld.get_location(name, self.player).can_reach(self.multiworld.state)
 
     def test_only_dilmagia_at_first(self) -> None:
-        self.assertTrue(self.reachable("Dilmagia, the Machinopolis Chest 1"))
-        self.assertTrue(self.reachable("Dirnado Shipyard Chest 1"))
-        self.assertTrue(self.reachable("Mt. Thunderclap Shard 22"))
-        for name in ("Mt. Thunderclap: Liquid Thunder", "Mt. Thunderclap Chest 1", "Dwarven Forge Chest 1",
-                     "Dwarven Forge: Mom Bomb", "World Map Shiny 5", "Sanctum of Light (Zidane)"):
+        self.assertTrue(self.reachable("Dilmagia, the Machinopolis - Insulated Gloves Chest"))
+        self.assertTrue(self.reachable("Dirnado Shipyard - 500 Gil Chest"))
+        self.assertTrue(self.reachable("Mt. Thunderclap - Tablet Shard 2"))
+        for name in ("Mt. Thunderclap: Liquid Thunder", "Mt. Thunderclap - 800 Gil Chest", "Dwarven Forge - Phoenix Down x3 Chest",
+                     "Dwarven Forge: Mom Bomb", "Dirnado - Shiny near Sanctum of Onion Knight", "Sanctum of Light (Zidane)"):
             self.assertFalse(self.reachable(name), name)
 
     def test_liquid_thunder_opens_the_rest(self) -> None:
@@ -292,15 +295,15 @@ class TestDirnadoOnFoot(FFResonanceTestBase, real_defaults=True):
         self.collect_by_name(["Lanzelt Unlock"])
         self.assertFalse(self.reachable("Mt. Thunderclap: Liquid Thunder"), "no healer")
         self.collect_by_name(["Leah (Vision)"])
-        for name in ("Mt. Thunderclap: Liquid Thunder", "Dwarven Forge Chest 1", "Wind Shrine Chest 1",
+        for name in ("Mt. Thunderclap: Liquid Thunder", "Dwarven Forge - Phoenix Down x3 Chest", "Wind Shrine - Mist Hi-Potion Chest",
                      "Sanctum of Light (Zidane)"):
             self.assertTrue(self.reachable(name), name)
 
     def test_the_airship_flies_over_it(self) -> None:
         self.collect_by_name(["Airship"])
         self.assertFalse(self.reachable("Mt. Thunderclap: Liquid Thunder"))
-        self.assertTrue(self.reachable("Dwarven Forge Chest 1"))
-        self.assertTrue(self.reachable("Wind Shrine Chest 1"))
+        self.assertTrue(self.reachable("Dwarven Forge - Phoenix Down x3 Chest"))
+        self.assertTrue(self.reachable("Wind Shrine - Mist Hi-Potion Chest"))
 
 
 class TestDragonsMawOnFoot(FFResonanceTestBase):
@@ -388,12 +391,12 @@ class TestRadarTreasures(FFResonanceTestBase):
         # Round 75: Mt. Reizan's chest kept its vanilla Resonance Stone, so a tester found the
         # radar part the Progressive Radars replace. The mod empties it; here it is a location.
         names = {loc.name for loc in self.multiworld.get_locations(self.player)}
-        self.assertIn("Mt. Reizan Resonance Stone Chest", names)
+        self.assertIn("Mt. Reizan - Resonance Stone Chest", names)
         self.assertEqual([c["key"] for c in RADAR_PART_CHESTS], ["chest:3260:3"])
 
     def test_tiers_and_the_airship(self) -> None:
         state = self.multiworld.state
-        first, sixth, last = (self.multiworld.get_location(f"Radar Treasure {n}", self.player) for n in (1, 6, 13))
+        first, sixth, last = (self.multiworld.get_location(NAME_OF_KEY[f"radar:{n}"], self.player) for n in (1, 6, 13))
         radars = self.get_items_by_name("Progressive Radar")
         self.collect(radars[0])
         self.assertFalse(first.can_reach(state), "they lie at sea: the Airship first")
@@ -414,7 +417,7 @@ class TestRadarPartChestWithoutTreasures(FFResonanceTestBase):
 
     def test_no_radar_no_chest(self) -> None:
         names = {loc.name for loc in self.multiworld.get_locations(self.player)}
-        self.assertNotIn("Mt. Reizan Resonance Stone Chest", names)
+        self.assertNotIn("Mt. Reizan - Resonance Stone Chest", names)
 
 
 class TestShinies(FFResonanceTestBase):
@@ -898,12 +901,20 @@ class TestNames(FFResonanceTestBase):
 
     def test_locations_are_named_after_the_game_maps(self) -> None:
         names = {c["key"]: c["name"] for c in CHESTS}
-        self.assertEqual(names["chest:2020:1"], "Village of Kol Chest 2")
-        self.assertEqual(names["chest:3000:1"], "Earth Shrine Chest 1")   # row 0 has no box
-        self.assertEqual(names["chest:3001:0"], "Earth Shrine Chest 7")   # one place over two maps
-        self.assertEqual(names["chest:2001:0"], "Grandshelt, the Royal Capital Chest 1")
-        self.assertEqual(names["chest:3150:0"], "Zoldaad Dungeon Chest 1")
+        self.assertEqual(names["chest:2020:1"], "Village of Kol - Antidote Herb x3 Chest")
+        self.assertEqual(names["chest:3000:1"], "Earth Shrine - Phoenix Down Chest")   # row 0 has no box
+        self.assertEqual(names["chest:3001:0"], "Earth Shrine - Potion Chest")   # one place over two maps
+        self.assertEqual(names["chest:2001:0"], "Grandshelt, the Royal Capital - Phoenix Down x3 Chest")
+        self.assertEqual(names["chest:3150:0"], "Zoldaad Dungeon - Turbo Ether Chest")
         self.assertTrue(all(name.isascii() for name in names.values()))
+        # Round 77: world-map spots by continent, compass point and nearest door
+        shiny = {s["key"]: s["name"] for s in SHINIES}
+        self.assertEqual(shiny["shiny:1000:167"], "Gronoa - Shiny NW of Rugged Mountain Path")
+        self.assertEqual(NAME_OF_KEY["radar:2"], "Gronoa - Radar Treasure E of Rugged Mountain Path")
+        self.assertEqual(NAME_OF_KEY["chest:3260:3"], "Mt. Reizan - Resonance Stone Chest")
+        self.assertTrue(NAME_OF_KEY["shiny:3180:14"].startswith("Nameless Ruins - Tablet Shard"))
+        every = [loc["name"] for loc in CHESTS + SHINIES + RADAR + TABLET_SHINIES + RADAR_PART_CHESTS + BOSSES + CRYSTALS]
+        self.assertEqual(len(every), len(set(every)))
         self.assertEqual({c["region"] for c in CHESTS if c["key"].startswith("chest:2020:")}, {"Lanzelt"})
 
     def test_progression_items(self) -> None:

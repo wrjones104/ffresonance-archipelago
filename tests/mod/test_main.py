@@ -159,6 +159,15 @@ function G.SetUnitLevel(id, level) G.leveled = { id = id, level = level }; retur
 function G.PartyLevel() return G.partyLv or 7, "1001:7" end
 function G.StoryCounter() return G.story end
 function G.SetFlag() return "ok", "" end
+-- Round 77: the save stamp, one per save object (a save's flags go where the save goes)
+G.STAMP_MAX, G.stamps, G.stampWrites = 4095, {}, 0
+function G.SeedTag(key) local h = 0; for i = 1, #key do h = (h * 31 + key:byte(i)) % 2047 end; return h + 1 end
+function G.ReadSaveStamp() local s = G.stamps[G.saveObj] or { 0, 0 }; return s[1], s[2] end
+function G.WriteSaveStamp(count, tag)
+  local s = G.stamps[G.saveObj]
+  if s and s[1] == count and s[2] == tag then return 0 end
+  G.stamps[G.saveObj] = { count, tag }; G.stampWrites = G.stampWrites + 1; return 1
+end
 G.blankCalls = {}
 function G.BlankChests(on) G.blankCalls[#G.blankCalls + 1] = on return 0 end
 G.saveObj, G.saveTicks, G.slotOf = 'SD_1', '0', {}
@@ -725,6 +734,35 @@ tick(8)
 assert [g for g in G.log.values() if g.startswith("item")] == [], list(G.log.values())
 assert G.log is not None
 print("per-save items: ok")
+
+# 7b. Round 77: the save stamp. A pre-release player updated the mod (and deleted ap_state.txt,
+# as the install steps said) or moved to another PC, had to bind again, and got every item twice.
+# Now the save says which seed it belongs to and how many items it holds.
+SEED_KEY = "S77:0:1"
+FOUR_ITEMS = ("item\t0\titem\t100\t1\tA\nitem\t1\titem\t101\t1\tB\n"
+              "item\t2\titem\t102\t1\tC\nitem\t3\titem\t103\t1\tD\n")
+os.remove(path("ap_state.txt"))
+L, G = boot5("SD_V", "1400", {"1400": 3})
+tick = lambda k: [L.execute("tickFn()") for _ in range(k)]
+G.story = 1030
+G.stamps["SD_V"] = L.table_from({1: 3, 2: G.SeedTag(SEED_KEY)})      # stamped elsewhere: 3 items
+inbox(f"seed\t{SEED_KEY}\nclient\t0.1.3\n" + FOUR_ITEMS, "w")
+tick(8)
+assert grants() == ["item103x1"], "only the item the save lacks: " + str(grants())
+assert G.stamps["SD_V"][1] == 4, "the stamp follows the items granted"
+assert state_slots() == "3", state_slots()
+# a save in a slot the session knows, but stamped by another seed (the slot was reused): paused
+G.slotOf = L.table_from({"1400": 3, "1500": 3})
+G.stamps["SD_W"] = L.table_from({1: 2, 2: G.SeedTag("S8:0:1")})
+n = len(grants())
+load(G, "SD_W", "1500")
+assert grants()[n:] == [], grants()[n:]
+assert G.stamps["SD_W"][1] == 2, "another seed's stamp is left alone"
+# a plain new game while the session has a save: paused, and a save that is not the session's
+# never gets a stamp
+load(G, "SD_X", "0")
+assert G.stamps["SD_X"] is None, "no stamp on a save that is not the session's"
+print("save stamp: ok")
 
 # 8. the title entry (0.7.3): entry 5 becomes New Game and marks the game
 G.titleOk = True
@@ -1429,6 +1467,8 @@ print("vision screen exit: ok")
 # not the seed's goes back. A seed that is not an open world start is left alone.
 SCALE_STUB = """
 G.scaleCalls, G.partyLv, G.onField = {}, 10, true
+G.party = { 1001, 1002, 1003, 1004 }
+function G.PartyIds() return G.party end
 function G.PartyLevel() return G.partyLv, "1001:" .. G.partyLv end
 function G.LevelBand(lv, range, at, above)
   local c = math.max(1, math.floor(lv * (at or 100) / 100 + 0.5))
@@ -1481,6 +1521,19 @@ assert calls()[-1] == "clamp 1 3 true hp75 atk75 mag75; bosses 1 5 hp100", calls
 L.execute('commands["ffrap_set"]("ffrap_set", {"reset"})')
 tick(10)
 assert calls()[-1] == "clamp 2 6 true hp90 atk90 mag90; bosses 1 5 hp105", "back to normal"
+# Round 77: bosses lose 12% power for each empty slot of four. Two in the party: 105% x 76%.
+G.party = L.table_from([1001, 1002])
+tick(10)
+assert calls()[-1] == "clamp 2 6 true hp90 atk90 mag90; bosses 1 5 hp80", calls()
+G.party = L.table_from([1001])
+tick(10)
+assert calls()[-1] == "clamp 2 6 true hp90 atk90 mag90; bosses 1 5 hp67", "one in the party: 105% x 64%"
+n = len(calls())
+tick(10)
+assert len(calls()) == n, "no rescale while nothing changes"
+G.party = L.table_from([1001, 1002, 1003, 1004])
+tick(10)
+assert calls()[-1] == "clamp 2 6 true hp90 atk90 mag90; bosses 1 5 hp105", calls()
 G.saveObj, G.saveTicks = "SD_OTHER", "600"     # a save in a slot the seed does not hold
 tick(30)
 assert calls()[-1].startswith("off "), calls()

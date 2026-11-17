@@ -33,6 +33,7 @@ Ids are derived from the game's own keys, so they never change between data refr
 
 import collections
 import csv
+import math
 import os
 import pprint
 import re
@@ -177,6 +178,12 @@ AFTER_BOSS_KEYS = {9051: {"chest:3280:2", "chest:3280:5", "chest:3280:6", "chest
                    9038: {"chest:3200:2"},
                    # Nameless Ruins Chest 4 is on the upper floor, up the stairs that Tellus's door is.
                    9031: {"chest:3180:3"},
+                   # Round 77 (a pre-release player): the Nameless Ruins' south half is past both barriers,
+                   # the blocking bases at y -11975 (flag 527, Iron Giant) and y -15996 (flag 526, Liquid
+                   # Flame). Chest 2 and Shard 14 are at y -27000, and Tellus's door at y -25500. Chest 5,
+                   # the safe by the entrance, opens from the statue puzzle, whose Abyss statue is past them.
+                   **{group: {"chest:3180:1", "chest:3180:3", "chest:3180:4", "shiny:3180:14", "boss:9031"}
+                      for group in (9088, 9089)},
                    # Earth Shrine Chests 4 to 6 (x 14900) are past Belmodar's triggers (x 11592 to 11767).
                    9004: {"chest:3000:4", "chest:3000:5", "chest:3000:6"}}
 # Round 74: places past a boss fight on the world map. A tester found them in logic with a party
@@ -322,6 +329,90 @@ def far_side_maps() -> dict[int, set[int]]:
                 frontier += edges[source]
         out[group] = found
     return out
+
+
+# Round 77: names a player can find (IDEAS.md idea 34). data/location_names.tsv lists every
+# location: the old name, the generated one, and a `name` column for the user, which wins when it
+# is filled in. The generator rewrites the file and keeps that column. Ids do not change.
+NAMES_FILE = "location_names.tsv"
+NAMES_COLUMNS = ["key", "old", "suggested", "name", "note"]
+# A world-map spot is "near" a door within this many units, else a compass point from it.
+NEAR_DOOR = 600
+FAR_FROM_DOORS = 2500
+COMPASS = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"]
+
+
+def compass(dx: float, dy: float) -> str:
+    """The world map's +X is north and +Y east (World Map Shiny 167 sits on Gronoa's NW peninsula)."""
+    return COMPASS[int((math.degrees(math.atan2(dy, dx)) % 360 + 22.5) // 45) % 8]
+
+
+def world_spot(x: float, y: float, doors: list[tuple[str, float, float]],
+               continents: dict[str, dict]) -> tuple[str, str, float]:
+    """The continent, a place by the nearest door ("NW of Rugged Mountain Path") and its distance."""
+    land = continent_at(continents, x, y) or "Sea"
+    dist, name, dx, dy = min((math.dist((x, y), (mx, my)), n, x - mx, y - my) for n, mx, my in doors)
+    if name == "Sanctum of Light":
+        name = f"{continent_at(continents, x - dx, y - dy) or 'Sea'} Sanctum"
+    return land, (f"near {name}" if dist <= NEAR_DOOR else f"{compass(dx, dy)} of {name}"), dist
+
+
+def readable_names(chests: list[dict], radar_part_chests: list[dict], shinies: list[dict],
+                   tablet_shinies: list[dict], radar: list[dict], items: dict[int, dict],
+                   maps: dict[int, dict], continents: dict[str, dict]) -> None:
+    """Gives each chest, shiny, Tablet Shard and radar treasure its readable name, in place."""
+    doors = []
+    for x, y, targets in read_exits()[0].values():
+        named = [ascii_name(maps[t]["name"]) for t in targets if t in maps and maps[t]["name"] not in ("", "Field")]
+        if named:
+            doors.append((named[0], x, y))
+    spots = {f"shiny:{r['map']}:{r['uid']}": (float(r["x"]), float(r["y"]))
+             for r in read_tsv("game/field_items.tsv") if r["kind"] == "shiny" and r["x"]}
+    spots.update({f"radar:{r['n']}": (float(r["x"]), float(r["y"])) for r in read_tsv("radar.tsv")})
+
+    suggested: dict[str, tuple[str, str]] = {}    # key -> (name, note)
+    for entry in chests:
+        place = entry["name"].rsplit(" Chest ", 1)[0]
+        suggested[entry["key"]] = (f"{place} - {items[entry['vanilla']]['name']} Chest", "")
+    places = {ascii_name(m["name"]) for m in maps.values()}
+    for entry in radar_part_chests:
+        # "Mt. Reizan Resonance Stone Chest": the longest map name it starts with is the place.
+        words = entry["name"].removesuffix(" Chest")
+        place = max((p for p in places if words.startswith(p + " ")), key=len)
+        item = words[len(place) + 1:]
+        suggested[entry["key"]] = (f"{place} - {item} Chest", "")
+    for entry in shinies + radar:
+        kind = "Shiny" if entry in shinies else "Radar Treasure"
+        land, where, dist = world_spot(*spots[entry["key"]], doors, continents)
+        note = f"nearest door {dist:.0f} units away" if dist > FAR_FROM_DOORS else ""
+        suggested[entry["key"]] = (f"{land} - {kind} {where}", note)
+    by_place: dict[str, list[dict]] = collections.defaultdict(list)
+    for entry in sorted(tablet_shinies, key=lambda e: e["id"]):
+        by_place[entry["name"].rsplit(" Shard ", 1)[0]].append(entry)
+    for place, entries in by_place.items():
+        for n, entry in enumerate(entries, start=1):
+            number = f" {n}" if len(entries) > 1 else ""
+            suggested[entry["key"]] = (f"{place} - Tablet Shard{number}", "where in the place: needs a person")
+
+    # Names that come out the same are numbered, in id order.
+    everything = sorted(chests + radar_part_chests + shinies + tablet_shinies + radar, key=lambda e: e["id"])
+    counts = collections.Counter(suggested[e["key"]][0] for e in everything)
+    seen: collections.Counter = collections.Counter()
+    for entry in everything:
+        name, note = suggested[entry["key"]]
+        if counts[name] > 1:
+            seen[name] += 1
+            suggested[entry["key"]] = (f"{name} {seen[name]}", (note + "; " if note else "") + "same place as another")
+
+    path = os.path.join(DATA, NAMES_FILE)
+    chosen = {r["key"]: r["name"].strip() for r in read_tsv(NAMES_FILE)} if os.path.exists(path) else {}
+    with open(path, "w", encoding="utf-8", newline="\n") as f:
+        f.write("\t".join(NAMES_COLUMNS) + "\n")
+        for entry in everything:
+            name, note = suggested[entry["key"]]
+            own = chosen.get(entry["key"], "")
+            f.write("\t".join([entry["key"], entry["name"], name, own, note]) + "\n")
+            entry["name"] = own or name
 
 
 def is_japanese(name: str) -> bool:
@@ -619,6 +710,7 @@ def main() -> None:
             near = key in near_keys or (kind in ("chest", "shiny") and int(place) in near_maps)
             if entry["area"] == area and not near:
                 entry["past_boss"] = group
+    readable_names(chests, radar_part_chests, shinies, tablet_shinies, radar, items, maps, continents)
     location_names = [e["name"] for e in chests + radar_part_chests + shinies + crystals + tablet_shinies + bosses + radar]
     assert len(location_names) == len(set(location_names)), "duplicate location names"
 

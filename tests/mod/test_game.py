@@ -952,18 +952,33 @@ print("party members and HasVision: ok")
 import math
 CURVE = {"MaxHitPoint": (0.3675, 0.08917), "Attack": (0.3207, 0.02946), "Intelligence": (0.5644, 0.03269),
          "Defence": (0.7752, 0.00867), "Experience": (-0.0647, 0.12967)}
-def ratio(stat, f, t):
-    b, c = CURVE[stat]
+# Round 77: Defence grows at the curve's factor to the power 0.75; bosses' HP has its own curve.
+DEFENCE_GROWTH = 0.75
+BOSS_CURVE = {"MaxHitPoint": (0.91163, 0.02766)}
+def ratio(stat, f, t, curves=None):
+    b, c = (curves or {}).get(stat) or CURVE[stat]
     f, t = max(1, min(f, 70)), max(1, min(t, 70))
-    return (t / f) ** b * math.exp(c * (t - f))
+    r = (t / f) ** b * math.exp(c * (t - f))
+    return r ** DEFENCE_GROWTH if stat == "Defence" and r > 1 else r
 def scaled(v, stat, f, t, knob=100):
     return max(1, math.floor(v * ratio(stat, f, t) * knob / 100 + 0.5))
+def scaled_boss(v, f, t):
+    return max(1, math.floor(v * ratio("MaxHitPoint", f, t, BOSS_CURVE) + 0.5))
 st = L.eval("G.ScaledStats({ Level = 1, MaxHitPoint = 68, MaxBreakPoint = 50, Attack = 30, Defence = 30,"
             " Intelligence = 15, Mind = 30, Agility = 13, Experience = 12, Money = 20 }, 11)")
 assert st.Level == 11 and st.MaxHitPoint == scaled(68, "MaxHitPoint", 1, 11), dict(st)
 assert st.Attack == scaled(30, "Attack", 1, 11) and st.Defence == scaled(30, "Defence", 1, 11), dict(st)
 # round 31's case: the Soldier (level 30, attack 189) pulled to level 3 now has about a level 3
 # enemy's attack (the shipped ones have 45), not 56
+# Round 77: Siren (level 11, 20,000 HP) at level 57 had 2,434,404 HP on the enemy curve. On the
+# bosses' curve she has about 320,000, near the game's own level-50 bosses (130,000 to 250,000).
+SIREN = "{ Level = 11, MaxHitPoint = 20000, Defence = 70 }"
+siren = L.eval(f"G.ScaledStats({SIREN}, 57, nil, G.BOSS_CURVE)")
+assert siren.MaxHitPoint == scaled_boss(20000, 11, 57) and 300000 < siren.MaxHitPoint < 340000, siren.MaxHitPoint
+assert L.eval(f"G.ScaledStats({SIREN}, 57)").MaxHitPoint > 2000000, "the enemy curve, for comparison"
+assert siren.Defence == scaled(70, "Defence", 11, 57) and siren.Defence < 70 * 4, siren.Defence
+assert L.eval("G.ScaledStats({ Level = 40, Defence = 300 }, 10)").Defence == scaled(300, "Defence", 40, 10), \
+    "scaling down is as before"
 down3 = L.eval("G.ScaledStats({ Level = 30, MaxHitPoint = 1000, Attack = 189, Experience = 30 }, 3)")
 assert 38 <= down3.Attack <= 46 and down3.Attack == scaled(189, "Attack", 30, 3), dict(down3)
 # the knobs: hp moves HP, attack moves Attack, magic moves Intelligence, nothing else
@@ -1032,7 +1047,7 @@ n, _, lines = L.execute("return G.ScaleEnemies('clamp', 5, 15, true, { hp = 50 }
 assert n == 2 and L.eval("unitRows.bat.MaxHitPoint") == scaled(68, "MaxHitPoint", 1, 5, 50), n
 # Round 49: bosses can have their own band and knobs
 L.execute("G.ScaleEnemies('clamp', 1, 3, true, { hp = 50 }, { a = 20, b = 20, knobs = { hp = 100 } })")
-assert L.eval("unitRows.boss.Level") == 20 and L.eval("unitRows.boss.MaxHitPoint") == scaled(2000, "MaxHitPoint", 4, 20)
+assert L.eval("unitRows.boss.Level") == 20 and L.eval("unitRows.boss.MaxHitPoint") == scaled_boss(2000, 4, 20)
 assert L.eval("unitRows.bat.Level") == 1 and L.eval("unitRows.bat.MaxHitPoint") == scaled(68, "MaxHitPoint", 1, 1, 50)
 n, _, lines = L.execute("return G.ScaleEnemies('clamp', 5, 15, true, { hp = 50 })")[:3]
 # a line per changed row, for scale.txt
@@ -1082,7 +1097,7 @@ unitRows.hunger = {{ ID = {THE_HUNGER}, Category = 2, Name = FText("The Hunger")
 groupRows.hunger = {{ ID = {HUNGER_GROUP}, ap = 0, UnitIdList = {{ {THE_HUNGER} }} }}""")
 _, sample, _ = L.execute("return G.ScaleEnemies('clamp', 2, 3, true, { hp = 50 }, { a = 6, b = 6, knobs = { hp = 100 } })")[:3]
 assert "units in boss groups" in sample, sample
-assert L.eval("unitRows.hunger.Level") == 6 and L.eval("unitRows.hunger.MaxHitPoint") == scaled(HUNGER_HP, "MaxHitPoint", HUNGER_LEVEL, 6), "the boss band"
+assert L.eval("unitRows.hunger.Level") == 6 and L.eval("unitRows.hunger.MaxHitPoint") == scaled_boss(HUNGER_HP, HUNGER_LEVEL, 6), "the boss band"
 boss_exp = int(1350 * L.eval(f"G.CurveRatio('Experience', 14, {HUNGER_LEVEL})") + 0.5)
 assert L.eval("unitRows.hunger.Experience") == max(1, int(boss_exp * L.eval(f"G.CurveRatio('Experience', {HUNGER_LEVEL}, 6)") + 0.5))
 assert L.eval("unitRows.bat.Level") == 2, "a plain enemy keeps the enemies' band"
@@ -1103,7 +1118,7 @@ groupRows.brawler = {{ ID = {BRAWLER_1}, ap = 0, UnitIdList = {{ {DARK_FANG} }} 
 groupRows.fledgling = {{ ID = {FLEDGLING_1}, ap = 0, UnitIdList = {{ {WYVERN} }} }}""")
 _, sample, _ = L.execute("return G.ScaleEnemies('clamp', 2, 3, true, { hp = 50 }, { a = 6, b = 6, knobs = { hp = 100 } })")[:3]
 assert "1 in the Arena" in sample, sample
-assert L.eval("unitRows.fang.Level") == 6 and L.eval("unitRows.fang.MaxHitPoint") == scaled(ARENA_HP, "MaxHitPoint", ARENA_LEVEL, 6), "the boss band"
+assert L.eval("unitRows.fang.Level") == 6 and L.eval("unitRows.fang.MaxHitPoint") == scaled_boss(ARENA_HP, ARENA_LEVEL, 6), "the boss band"
 assert L.eval("unitRows.fang.Experience") == 0, "the Arena pays in items"
 assert L.eval("unitRows.wyvern.Level") == 3, "a Fledgling battle's field enemy keeps the enemies' band"
 L.execute("unitRows.fang = nil; unitRows.wyvern = nil; groupRows.brawler = nil; groupRows.fledgling = nil")
@@ -1389,7 +1404,8 @@ G.CurrentMap = function() return G.WORLD_MAP end
 fakePC.GetFName = function() return fname(fakePCName or "PC_1") end
 """)
 BOXES = sum(len(c["boxes"]) for c in L.eval("G.CONTINENTS").values())
-assert BOXES == 21 and len(L.eval("G.CONTINENTS")) == 10
+# Round 77: 24 boxes; Grandshelt takes the land at the stone bridge's north end from Lanzelt.
+assert BOXES == 24 and len(L.eval("G.CONTINENTS")) == 10
 # Round 41: boxes wait for the controller to settle (a world still arriving lost its first set)
 SETTLE = L.eval("G.CONTINENT_SETTLE")
 def sync():
@@ -1449,7 +1465,7 @@ placed, why = L.execute("return G.ContinentMapLoaded(hookWorld, true)")
 assert len(placed) == 9 and L.eval("spawnCount") == before + BOXES - 3, (len(placed), L.eval("spawnCount") - before)
 placed, removed, line = sync()
 assert len(placed) == 0 and L.eval("spawnCount") == before + BOXES - 3, "the sync adopts the hook's boxes"
-assert line and "18 boxes" in line, line
+assert line and f"{BOXES - 3} boxes" in line, line
 # Round 67: a walking crossing holds while either side is locked and goes once both are open.
 # A map load forgets it, and the next sync places it again.
 L.execute("""crossingList = { { a = 'grandshelt', b = 'lanzelt', x = 14000, y = 17600, z = 120, yaw = 90, scale = 3 },
@@ -1820,3 +1836,32 @@ assert L.eval("G.CurrentMap()") == 2000, "the new map's manager"
 assert L.eval("touchedFreed") is False, "the old one is never touched: in the game that is a crash pcall cannot catch"
 L.execute("FindFirstOf = savedFindFirstOf; G.ForgetObjects()")
 print("kept objects as paths: ok")
+
+# Round 77: the save stamp. A save keeps how many of the session's items it holds, and its seed's
+# tag, in event flags, so it is known on another PC and after ap_state.txt is deleted.
+L.execute("""
+stampFlags, stampSets = {}, 0
+savedGetFlag2, savedSetFlag2 = G.GetFlag, G.SetFlag
+G.GetFlag = function(i) return stampFlags[i] == true end
+G.SetFlag = function(i, on) stampFlags[i] = on; stampSets = stampSets + 1; return "ok", "" end
+""")
+SESSION_KEY = "AP_12345678901234567890:0:1"
+OTHER_KEY = "AP_98765432109876543210:0:1"
+tag = L.eval(f'G.SeedTag("{SESSION_KEY}")')
+assert 1 <= tag <= 2047 and tag == L.eval(f'G.SeedTag("{SESSION_KEY}")'), tag
+assert tag != L.eval(f'G.SeedTag("{OTHER_KEY}")'), "two seeds get two tags"
+assert L.execute("local c, t = G.ReadSaveStamp(); return c, t") == (0, 0), "a save with no stamp"
+RECEIVED = 437
+assert L.eval(f"G.WriteSaveStamp({RECEIVED}, {tag})") > 0
+assert L.execute("local c, t = G.ReadSaveStamp(); return c, t") == (RECEIVED, tag)
+assert L.eval(f"G.WriteSaveStamp({RECEIVED}, {tag})") == 0, "flags already right are not written again"
+assert L.eval(f"G.WriteSaveStamp({RECEIVED + 1}, {tag})") >= 1
+assert L.execute("local c, t = G.ReadSaveStamp(); return c, t") == (RECEIVED + 1, tag)
+assert L.eval("G.STAMP_MAX") == 4095
+used = set(L.eval("G.STAMP_COUNT_FLAGS").values()) | set(L.eval("G.STAMP_TAG_FLAGS").values())
+assert len(used) == 23 and not used & {L.eval("G.AIRSHIP_FLAG"), L.eval("G.BOSS_TEST_FLAG"), L.eval("G.STORY_BOSS_READY_FLAG")}
+assert not used & {c["flag"] for c in L.eval("G.CONTINENTS").values()}, "no continent lock flag"
+L.execute("G.GetFlag = function() return nil end")
+assert L.eval("G.ReadSaveStamp()") is None, "no flag library: no stamp"
+L.execute("G.GetFlag, G.SetFlag = savedGetFlag2, savedSetFlag2")
+print("save stamp: ok")

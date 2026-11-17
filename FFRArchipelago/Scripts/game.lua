@@ -368,6 +368,58 @@ function G.SetFlag(i, on)
     return "ok", "flag " .. i .. " = " .. tostring(on)
 end
 
+-- The save stamp (round 77): how many of the session's items a save holds, and a tag of the
+-- session's seed, kept in the save as event flags. ap_state.txt is per PC and was deleted on
+-- updates, so a save moved to another PC or kept across an update was bound again and got every
+-- item twice. The game's data reads no flag from 1414 to 1449 (round 40); 1420 to 1431, 1440
+-- and 1441 are taken. 12 bits count to 4095 items, and 11 bits give 2047 tags (0 is no stamp).
+G.STAMP_COUNT_FLAGS = { 1414, 1415, 1416, 1417, 1418, 1419, 1430, 1432, 1433, 1434, 1435, 1436 }
+G.STAMP_TAG_FLAGS = { 1437, 1438, 1439, 1442, 1443, 1444, 1445, 1446, 1447, 1448, 1449 }
+G.STAMP_MAX = (1 << #G.STAMP_COUNT_FLAGS) - 1
+
+-- FNV-1a of the session key, folded to 1 .. 2047.
+function G.SeedTag(key)
+    local h = 2166136261
+    for i = 1, #key do
+        h = ((h ~ key:byte(i)) * 16777619) & 0xFFFFFFFF
+    end
+    return h % ((1 << #G.STAMP_TAG_FLAGS) - 1) + 1
+end
+
+-- Returns the loaded save's count and tag, or nil when a flag cannot be read.
+function G.ReadSaveStamp()
+    local function bits(flags)
+        local n = 0
+        for i, flag in ipairs(flags) do
+            local on = G.GetFlag(flag)
+            if on == nil then return nil end
+            if on then n = n | (1 << (i - 1)) end
+        end
+        return n
+    end
+    local count, tag = bits(G.STAMP_COUNT_FLAGS), bits(G.STAMP_TAG_FLAGS)
+    if count == nil or tag == nil then return nil end
+    return count, tag
+end
+
+-- Writes the flags that differ from `count` and `tag`. Returns how many it wrote, or nil and why.
+function G.WriteSaveStamp(count, tag)
+    local wrote = 0
+    for _, set in ipairs({ { G.STAMP_COUNT_FLAGS, count }, { G.STAMP_TAG_FLAGS, tag } }) do
+        for i, flag in ipairs(set[1]) do
+            local want = (set[2] >> (i - 1)) & 1 == 1
+            local now = G.GetFlag(flag)
+            if now == nil then return nil, "flag library not loaded" end
+            if now ~= want then
+                local code, detail = G.SetFlag(flag, want)
+                if code ~= "ok" then return nil, detail end
+                wrote = wrote + 1
+            end
+        end
+    end
+    return wrote
+end
+
 -- -------------------------------------------------------------------------------------------
 -- Chests
 -- -------------------------------------------------------------------------------------------
@@ -3375,6 +3427,14 @@ G.ENEMY_CURVE = {
     BattleMRP = { 0.0689, 0.06162 },
 }
 G.CURVE_TOP = 70
+-- Round 77: bosses take HP from a curve fitted to the game's own bosses up to level 60 (102 rows
+-- of 5,000 to 600,000 HP). The enemy curve is much steeper: Siren (level 11, 20,000 HP) scaled to
+-- 57 had 2,434,404 HP, where the game's level-50 bosses have 130,000 to 250,000. This one gives
+-- her about 320,000.
+G.BOSS_CURVE = { MaxHitPoint = { 0.91163, 0.02766 } }
+-- Round 77: Defence grows as the curve's factor to this power, when it grows. Physical skills fell
+-- behind magic late in a run. Scaling down is left as it was.
+G.DEFENCE_GROWTH = 0.75
 local GROWTH_ORDER = { "MaxHitPoint", "MaxBreakPoint", "Attack", "Defence", "Intelligence", "Mind",
                        "Agility", "Experience", "Money" }
 -- Tuning multipliers: `hp` scales HP, `attack` scales Attack, `magic` scales Intelligence.
@@ -3413,26 +3473,29 @@ end
 G.MAX_LEVEL = 99
 
 -- How much a stat grows from level `from` to level `to` (a factor; 1 when they are equal).
-function G.CurveRatio(stat, from, to)
-    local k = G.ENEMY_CURVE[stat]
+-- `curves` (optional) replaces ENEMY_CURVE's entries for the stats it has.
+function G.CurveRatio(stat, from, to, curves)
+    local k = (curves and curves[stat]) or G.ENEMY_CURVE[stat]
     if not k then return 1 end
     from = math.max(1, math.min(from, G.CURVE_TOP))
     to = math.max(1, math.min(to, G.CURVE_TOP))
-    return (to / from) ^ k[1] * math.exp(k[2] * (to - from))
+    local ratio = (to / from) ^ k[1] * math.exp(k[2] * (to - from))
+    if stat == "Defence" and ratio > 1 then ratio = ratio ^ G.DEFENCE_GROWTH end
+    return ratio
 end
 
 -- The stats of a unit moved from its own level to `level`. Pure: `orig` holds Level and the
 -- stats in ENEMY_CURVE. `knobs` (optional) holds percentages: hp (MaxHitPoint), attack
 -- (Attack) and magic (Intelligence), 100 when missing. A stat that is 0 stays 0, and no other stat goes
--- below 1.
-function G.ScaledStats(orig, level, knobs)
+-- below 1. `curves` goes to CurveRatio (G.BOSS_CURVE for bosses).
+function G.ScaledStats(orig, level, knobs, curves)
     knobs = knobs or {}
     local out = { Level = level }
     for _, k in ipairs(GROWTH_ORDER) do
         local v = orig[k] or 0
         if v > 0 then
             local knob = KNOB_STATS[k] and knobs[KNOB_STATS[k]] or 100
-            out[k] = math.max(1, math.floor(v * G.CurveRatio(k, orig.Level, level) * knob / 100 + 0.5))
+            out[k] = math.max(1, math.floor(v * G.CurveRatio(k, orig.Level, level, curves) * knob / 100 + 0.5))
         else
             out[k] = v
         end
@@ -3661,7 +3724,8 @@ function G.ScaleEnemies(mode, a, b, withBosses, knobs, bossBand)
                             base.Experience = math.floor(BOSS_EXP * G.CurveRatio("Experience", BOSS_EXP_LEVEL, orig.Level) + 0.5)
                         end
                         local band = (isBoss and bossBand) or { a = a, b = b, knobs = knobs }
-                        want = G.ScaledStats(base, G.ScaledLevel(orig.Level, mode, band.a, band.b), band.knobs)
+                        want = G.ScaledStats(base, G.ScaledLevel(orig.Level, mode, band.a, band.b), band.knobs,
+                                             isBoss and G.BOSS_CURVE or nil)
                     end
                     wanted[id] = want.Level
                     local diff = false
@@ -4216,10 +4280,13 @@ end
 -- Boxes on the airship's shadow ignore list show the red no-landing shadow and block landing across
 -- boarding; map transitions destroy spawned boxes, so ContinentSync re-creates them on world-map loads.
 -- Each continent lock maps to an unused event flag (1420-1429; off = locked, on = open).
+-- Round 77: Grandshelt's own landscape reaches south to y 16367 at x 12782 to 15373, the land at
+-- the north end of the stone bridge (13684, 16599) with World Map Shiny 127. It was in Lanzelt's
+-- box, so a player landed there without Grandshelt's unlock. Grandshelt now starts at y 16700 there.
 G.WORLD_MAP = 1000
 G.CONTINENTS = {
-    { name = "grandshelt", flag = 1420, boxes = { { 8400, 17500, 20600, 24000 } } },
-    { name = "lanzelt", flag = 1421, boxes = { { 7050, 9050, 18200, 13650 }, { 8400, 13650, 18200, 17500 }, { 10350, 8300, 18200, 9050 } } },
+    { name = "grandshelt", flag = 1420, boxes = { { 8400, 17500, 20600, 24000 }, { 12700, 16700, 15400, 17500 } } },
+    { name = "lanzelt", flag = 1421, boxes = { { 7050, 9050, 18200, 13650 }, { 8400, 13650, 18200, 16700 }, { 10350, 8300, 18200, 9050 }, { 8400, 16700, 12700, 17500 }, { 15400, 16700, 18200, 17500 } } },
     { name = "kolobos", flag = 1422, boxes = { { 1860, 9700, 7000, 13650 }, { 1860, 13650, 8350, 20200 } } },
     { name = "dirnado", flag = 1423, boxes = { { 10350, -3600, 23100, 6400 } } },
     { name = "olderion", flag = 1424, boxes = { { -3300, -5050, 10300, 8950 }, { -3300, -7400, 3300, -5050 }, { -6120, -2650, -3300, 6050 } } },

@@ -45,7 +45,7 @@ Skip this step if you already have a UE 5.6 build of UE4SS installed (for exampl
 1. Extract the `FFRArchipelago` zip from the latest release into your game's UE4SS `Mods` directory so the `FFRArchipelago` folder (containing `enabled.txt`, `Scripts/`, and `Assets/`) sits at:
    `...\FINAL FANTASY RESONANCE\FFRS\Binaries\Win64\ue4ss\Mods\FFRArchipelago`
    Make sure there is no extra nested folder (such as `Mods\FFRArchipelago\FFRArchipelago\`).
-2. If you are updating from an older version of the mod, delete `ap_in.txt`, `ap_out.txt`, and `ap_state.txt` from that folder before starting a new seed. Keep `seen.tsv` if present.
+2. Updating in the middle of a seed: replace `Scripts` and `Assets` and keep the rest of the folder. Starting a new seed: you can delete `ap_in.txt`, `ap_out.txt`, and `ap_state.txt` first, and keep `seen.tsv`. From mod 0.60.0, a save records its seed and the items it holds, so it also works on another PC without `/bind`.
 
 ### 3. Install the Archipelago world
 
