@@ -319,3 +319,27 @@ Along the same lines, I would also want an option for players to start with all 
 **To find out:**
 - Whether the forge still plays Verun's first meeting, or goes straight to the repair request.
 - Whether the steps should be locations: the six abilities and three Magicite rewards, with logic for each material's enemy area. The steps also need Lid in logic if the abilities stay vanilla.
+
+## 34. Location names a player can find
+
+**From the user, 2026-11-17.** "World Map Shiny 167" says nothing about where to look. Players asked during the pre-release.
+
+**What the data gives without a person (a prototype, 2026-11-17):**
+- **World-map shinies (94) and radar treasures (13):** each has x and y. The world map has 99 doors with a named destination (`transitions.tsv` to `maps.tsv`) and the continent boxes (`data/continents.tsv`). Nearest door plus a compass point gives, for example, Shiny 167 "Gronoa, NW of Rugged Mountain Path", which matches the user's screenshot. The axes are +X north, +Y east. Weak spots: five or more doors are all "Sanctum of Light", and a few shinies are 3000 or more units from any door.
+- **Chests (206):** the place name is there already, and a dungeon is mostly one map, so there are no floor names. The chest's vanilla item makes a name: "Wind Shrine - Armor of Gales Chest". Only 4 of 206 share an item with another chest in the same place.
+- **Tablet Shards (99):** a town's map name, with the uid as the number. A position inside the town (north, plaza) needs a person or landmarks we do not have.
+- **Bosses and crystals:** already readable.
+
+**What a person should do:** read through a generated list, fix the weak ones and name the tablet shards. A TSV of `key`, current name and suggested name, with an empty column for the user's name, does it. Names come from the generator (`tools/gen_apworld_data.py`) with the user's column as an override. The first draft is `data/location_names.tsv` (469 rows; 17 duplicates and 10 shinies far from any door are marked in `note`). Nothing reads it yet.
+
+**What it changes:** location ids stay the same, so the client, the mod and old seeds keep working. Players' yaml lists (`exclude_locations` and the like) that use the old names stop matching. Do it once, before the full release.
+
+## 35. Keep the received-items count in the save
+
+**From the pre-release, 2026-11-16.** After a mod update, and on a second PC, players had to `/bind` again and got every item a second time.
+
+**Why:** the applied count (`state.applied`, `slotItems`) and the seed key live only in `ap_state.txt`, beside the mod. The install steps say to delete it on an update. A save bound by `/bind` with no count starts at 0 and gets everything.
+
+**The likely fix:** write the count, and a short tag of the seed, into the save. Unused event flags as bits are one way: 20 flags count to a million items, and 16 more hold a hash of the seed key. The game saves them with everything else, so Steam Cloud carries them to the other PC. On load, a save whose tag matches the session is the session's, with the count it holds. `ap_state.txt` stays as a fallback for saves from before.
+
+**To find out:** a range of event flags no row reads or sets (`gimmicks.tsv`, talk and event rows), and that the game keeps flags above the story's range.

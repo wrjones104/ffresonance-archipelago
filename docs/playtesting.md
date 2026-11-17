@@ -828,6 +828,22 @@ Also, **is Felicitas's shop the one the data calls "ナシャト"?** If a town's
 - **Zones on the first pass (mod).** For a boss zone (an `EventTrigger` class) not yet won, the mod sets `m_GimmickCondition` to 0 with `SetGimmickCondition` when it is not 0. The log's story boss line ends with `1 zones turned on` when it did. Doors are left alone.
 - **Tellus's place (world and mod).** The fight is the Forest Path's: the location is "Forest Path: Tellus" (map 3271 in `data/bosses.tsv`), with the same id and rules. The Wandering Lands zone (3270) is left to the story, which never runs it at story 8000.
 
+**Round 77, public pre-release feedback (v0.28.0: mod 0.59.0 build 1c03b1ed, world 0.28.0 build 6df97dd3, 2026-11-16).** Several Discord players. Mostly positive: the run works end to end. The notes are in `.reference/2026-11-16_feedback/`. What each report points to, from a first look at the data:
+
+| Report | First look |
+|---|---|
+| A player climbs an invisible ladder in Mt. Thunderclap (3050). In the story Lid's paid shortcut puts a ladder there; unpaid, you let it down from the top. | The user wants the ladder there but up, to let down from the top; if not, gone. `gimmicks.tsv` shows no ladder gimmick on 3050, so it is probably a mesh or a gimmick in another class. Find the ladder's actor and what the payment sets. |
+| After a mod update, and on a second PC, the save needs `/bind` again, and every item already received comes again. | The applied count lives only in `ap_state.txt` (per PC), and the install steps say to delete it on an update. A newly bound save starts at 0. Fix: keep the count and a seed tag in the save itself (IDEAS 35). |
+| What happens in the final 1-v-1 with Sol when Rain is not in the party? | Not tested. Rain (1001) is the default first party member but can be left out or be a pool item. Test with `ffrap_story` at the tower top; if it breaks, give Rain to the party with fixed gear for that fight. |
+| Nameless Ruins: Tellus's zone fired only after walking past and back. | Round 76's first-pass fix covers `EventTrigger` zones. The Nameless Ruins fight is on a door (`reopen`, round 74), which that fix leaves alone. Needs the log. |
+| A player landed on the island between Grandshelt and Lanzelt without Grandshelt Unlock. | Every landing point is in a continent box, but the boxes leave a gap at x 18200 to 20600 below y 17500 (Lanzelt ends at x 18200, Grandshelt starts at y 17500). Likely the island. Needs its position. |
+| Late bosses have far too much HP (Siren, level 57: 2,434,404 HP). | `stat * growth^(levels)` compounds. Cap the boss HP growth above level 20 or so. |
+| Physical skills fall behind magic. | Scale enemy Defence less steeply. |
+| Small parties are wiped by opening attacks. | Cut boss power by a set % for each empty party slot. |
+| Wind Shrine Chest 1 (vanilla Mist Hi-Potion) and Waterfall Way Chest 5 (Aquatic Veil) in logic but out of reach. | One report each. Find each chest's position and what stands in front of it. |
+| World Map Shiny 167 in logic on a Gronoa start with no airship. | At x 19347, y -19766, the Gronoa NW peninsula. Add it to `data/airship_only.tsv` after a check of the walk. |
+| Nameless Ruins Chests 2 and 5 (Magicite, Tyr's Armor) and Shard 14 need both Liquid Flame (9088) and Iron Giant (9089). | Add `after_boss` for both. |
+
 ## Round 74 test plan (mod 0.59.0 build d8e6e426, world 0.28.0 build ddd8aeb4)
 
 **Install:** copy `FFRArchipelago/Scripts` and `dist/ff_resonance.apworld` into `custom_worlds`, and generate a new seed. The radar and door fixes also work on an older save.
