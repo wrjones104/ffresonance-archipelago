@@ -107,6 +107,7 @@ class FFResonanceContext(CommonContext):
         self.goal_kind = "story_checkpoint"
         self.shards_needed = 99
         self.items_written = 0                # item lines already in ap_in.txt for this session
+        self.slot_data: dict = {}             # the Connected packet's, to write the seed's settings again
         self.out_offset = 0
         self.out_scope: str | None = None     # the seed key the ap_out.txt lines being read belong to
         self.max_story = 0
@@ -166,6 +167,19 @@ class FFResonanceContext(CommonContext):
         self.write_line("client", world_version(), world_build())
         self.out_offset = 0
         self.out_scope = None
+
+    def restore_session_file(self) -> bool:
+        """Round 77: ap_in.txt deleted while connected (the user cleared it for a new seed with the
+        client open) left the mod with no seed line, and its new game started without the seed.
+        Writes the session again: seed, settings, every item from index 0, and the scouts."""
+        if os.path.exists(self.in_path) or not os.path.isdir(self.mod_folder):
+            return False
+        logger.info("ap_in.txt was deleted; writing this seed's session to it again.")
+        self.start_session()
+        self.write_config(self.slot_data)
+        self.lock_written = None
+        self.scout_locations()
+        return True
 
     def write_config(self, slot_data: dict) -> None:
         """The seed's start settings, for the mod's next Archipelago new game. Written once."""
@@ -351,6 +365,7 @@ class FFResonanceContext(CommonContext):
             self.room_seed_name = args.get("seed_name")
         elif cmd == "Connected":
             slot_data = args.get("slot_data") or {}
+            self.slot_data = slot_data
             self.goal = int(slot_data.get("goal_story_checkpoint", 8050))
             self.goal_kind = str(slot_data.get("goal", "story_checkpoint"))    # default for legacy seeds without "goal"
             self.shards_needed = int(slot_data.get("tablet_shards_required", 99))
@@ -404,6 +419,7 @@ async def game_loop(ctx: FFResonanceContext) -> None:
     while not ctx.exit_event.is_set():
         try:
             if ctx.session_key is not None and ctx.slot is not None:
+                ctx.restore_session_file()
                 ctx.write_new_items()
                 ctx.write_lock()
                 checks, story = ctx.read_new_output()

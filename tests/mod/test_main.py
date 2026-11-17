@@ -833,6 +833,29 @@ assert len(list(G.logos.values())) >= 1 and list(G.logos.values())[0].endswith("
 G.ready = True
 print("archipelago new game: ok")
 
+# Round 77: the user deleted ap_in.txt for a new seed and chose Archipelago before the client had
+# connected. The skip ran for the old seed in ap_state.txt, with no open world: chapter 1. Now
+# the skip waits until the client has written a seed line this run.
+os.remove(path("ap_in.txt"))
+L, G = boot5("SD_TITLE", "0", {})
+L.execute("logged = {}; print = function(s) logged[#logged + 1] = tostring(s) end")
+tick = lambda k: [L.execute("tickFn()") for _ in range(k)]
+G.titleOk, G.story, G.slotOf = True, 1000, L.table_from({})
+tick(7)
+L.execute("p6 = { v = 5 }; function p6:get() return self.v end; function p6:set(x) self.v = x end")
+L.eval('hooks["/Script/mucha.CPP_VM_Title:ExecuteEntry"]')(None, L.eval("p6"))
+runs = G.skipRuns
+load(G, "SD_AP2", "0")
+G.story, G.saveTicks, G.slotOf = 1005, "4000", L.table_from({"4000": 0})
+tick(20)
+assert G.skipRuns == runs, "no skip without the client"
+waits = [m for m in L.eval("logged").values() if "prologue skip waits" in m]
+assert len(waits) == 2, waits      # the title's notice and the field's, once each
+inbox("seed\tS77W:0:1\ncfg\topenworld\t1\n", "w")
+tick(10)
+assert G.skipRuns == runs + 1, "the client connected: the skip runs"
+print("skip waits for the client: ok")
+
 # 10. the item feed (0.11.2): one line per item in game; queued while the HUD is away; a long
 # queue shows its last lines and how many more; off sends messages to the Toast again
 def feed():

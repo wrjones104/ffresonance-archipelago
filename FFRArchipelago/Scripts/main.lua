@@ -104,7 +104,10 @@ local openArrival = nil      -- ffrap_openstart dock|air|event, kept once the us
 local continentLocks = nil   -- ffrap_lock on|off, kept once the user picks one; the seed's until then
 -- What the seed says about the start (the client's cfg lines). Not saved: ap_in.txt is read again
 -- at every start, and the seed that wrote it is the only thing that decides these.
-local seedCfg = { openworld = false, party = nil, shinies = false, crystals = false, shards = false, bosses = false }
+-- `heard`: a seed line came in this run (ap_in.txt holds the session the client last wrote).
+-- Without it the seed's settings are unknown, and state.seed may be an older seed's.
+local seedCfg = { openworld = false, party = nil, shinies = false, crystals = false, shards = false, bosses = false,
+                  heard = false }
 local function openStartOn() return openStart or seedCfg.openworld end
 -- A seed with the airship as an item (`cfg airship 0`) starts on foot on its starting continent
 -- (`cfg continent`); otherwise the player starts in the airship by the Crystal Tower.
@@ -388,6 +391,7 @@ local function readInbox(initial)
     for _, f in ipairs(bridge.readNew()) do
         if f[1] == "seed" and f[2] and f[2] ~= "" then
             if f[2] ~= state.seed then newSession(f[2]) end
+            seedCfg.heard = true
         elseif f[1] == "cfg" and f[2] == "blank" then
             local want = f[3] == "1"
             if want ~= state.blank then
@@ -964,6 +968,7 @@ local function followSave()
             state.apNewGame = false
             if save.slot == nil and story and story <= NEW_GAME_STORY then
                 save.apObj, save.apSlot, save.reskip, save.autoWait, save.autoDone = obj, nil, false, 0, false
+                save.waitNoted = false
                 log("an Archipelago new game")
             end
         elseif save.apSlot ~= nil and save.slot == save.apSlot then
@@ -1014,8 +1019,8 @@ local function hookTitle()
             if t == game.TITLE_ARCHIPELAGO then
                 state.apNewGame = true
                 pcall(function() inType:set(game.TITLE_NEW_GAME) end)
-                notify(state.seed and "Archipelago: starting a new game for the seed"
-                    or "Archipelago: starting a new game (connect the client to link it to a seed)")
+                notify((seedCfg.heard or openStart) and "Archipelago: starting a new game for the seed"
+                    or "Archipelago: starting a new game. Connect the client now: the prologue skip waits for it")
                 -- Log when skipped because open-world mode is off.
                 log("title: open world start is " .. (openStartOn() and "on" or "off") .. " (ffrap_openstart or the seed)")
             end
@@ -1158,6 +1163,15 @@ local function autoSkip()
     if story > game.SKIP_FROM_MAX then
         save.autoDone = true
         log("skip: the story is past " .. game.SKIP_FROM_MAX .. ", so the prologue is not skipped")
+        return
+    end
+    -- Round 77: with no client this run, the skip went to chapter 1 for an older seed's session.
+    -- The story holds at 1005 until the player moves on, so the skip can wait for the client.
+    if not seedCfg.heard and not openStart then
+        if not save.waitNoted then
+            save.waitNoted = true
+            notify("Archipelago: connect the client to this seed. The prologue skip waits for it")
+        end
         return
     end
     save.autoWait = save.autoWait + 1

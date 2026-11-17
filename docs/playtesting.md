@@ -919,11 +919,19 @@ Send the `[FFRAP]` lines of the log and any crash folder.
 
 Send the `[FFRAP]` lines of the log and any crash folder.
 
-## Round 77 test plan (mod 0.60.0 build 8ef015af, world 0.29.0 build e63e4438)
+**Round 77, first try (mod 0.60.0 build 8ef015af, world 0.29.0 build e63e4438, 2026-11-17).** The user's own new seed.
+- **The Archipelago new game started in chapter 1, at the Earth Cave.** The log said `open world start is off`. The user had deleted `ap_in.txt` for the new seed while the client was open and connected. The client writes the seed line once, on connecting, so the mod never heard of the new seed. It took the old seed from `ap_state.txt`, with no settings, and ran the plain prologue skip.
+- The old save read "not linked to the seed": right, as it is the old seed's. Steam Cloud upload errors at the same time were IPv6 connections failing on Steam's side (`Steam/logs/cloud_log.txt`, "failed to issue"), not the save.
 
-**Install:** copy `FFRArchipelago/Scripts`, and copy `dist/ff_resonance.apworld` into `custom_worlds`. Generate a new seed for the names and logic. The mod parts also work on a 0.28.0 seed. Keep `ap_state.txt` this time.
+**Round 77, second build (mod 0.60.0 build a659ff7d, world 0.29.0 build 08eba742):**
+- **The skip waits for the client (mod).** The automatic prologue skip runs only once a seed line has come in this run (or with `ffrap_openstart on`). Until then it says once: "connect the client to this seed. The prologue skip waits for it". The story holds at 1005, so connecting late works. The title notice says the same when no client has written yet.
+- **A deleted `ap_in.txt` is written again (client).** While connected, the client checks that the file exists and, if not, writes the seed, the settings, every item from index 0 and the scouts again. The mod already rereads a new file from the top and applies items by index, so nothing is granted twice.
 
-**0. The builds.** The log should say `version 0.60.0 (build 8ef015af)`, and the client `world version 0.29.0 (build e63e4438)`.
+## Round 77 test plan (mod 0.60.0 build a659ff7d, world 0.29.0 build 08eba742)
+
+**Install:** copy `FFRArchipelago/Scripts`, and copy `dist/ff_resonance.apworld` into `custom_worlds`. Close the client before deleting anything in the mod folder (it now writes `ap_in.txt` again if you do not), and start it again after. Generate a new seed for the names and logic. The mod parts also work on a 0.28.0 seed. Keep `ap_state.txt` this time.
+
+**0. The builds.** The log should say `version 0.60.0 (build a659ff7d)`, and the client `world version 0.29.0 (build 08eba742)`.
 
 **1. The save stamp.**
 1. Load your linked save from round 76 with the new mod. The log should say `stamp: N items` once, N the items you have. Save the game.
