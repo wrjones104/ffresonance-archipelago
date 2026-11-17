@@ -1,8 +1,8 @@
 from dataclasses import dataclass
 
-from Options import Choice, DefaultOnToggle, OptionGroup, OptionSet, PerGameCommonOptions, Range, Visibility
+from Options import Choice, DefaultOnToggle, OptionGroup, OptionSet, PerGameCommonOptions, Range, Toggle, Visibility
 
-from .data import BOSSES, CHESTS, CRYSTALS, RADAR, SHINIES, TABLET_SHINIES
+from .data import BOSSES, CHESTS, CRYSTALS, RADAR, SHINIES, SIDE_QUESTS, TABLET_SHINIES
 
 
 class Goal(Choice):
@@ -169,6 +169,15 @@ class IncludeRadarTreasures(DefaultOnToggle):
     display_name = "Include Radar Treasures"
 
 
+class IncludeSideQuests(Toggle):
+    """
+    The rewards of 28 quests from the game's quest log are locations: the character quests, the
+    vision quests, the town quests and Mog Tag. A quest's own fetch items (Ruby Fragments, Viscus
+    Vitae and the like) stay where they are, since the game tests the quest's progress, not them.
+    """
+    display_name = "Include Side Quests"
+
+
 class PriorityBosses(DefaultOnToggle):
     """
     The cave masters and the two Dragon's Maw bosses are priority locations: the generator puts
@@ -184,7 +193,8 @@ class ExcludedRegions(OptionSet):
     this for areas you do not want to play.
     """
     display_name = "Excluded Regions"
-    valid_keys = sorted({loc["region"] for loc in CHESTS + SHINIES + CRYSTALS + TABLET_SHINIES + BOSSES + RADAR})
+    valid_keys = sorted({loc["region"] for loc in CHESTS + SHINIES + CRYSTALS + TABLET_SHINIES + BOSSES + RADAR
+                          + SIDE_QUESTS})
 
 
 class ShufflePartyMembers(DefaultOnToggle):
@@ -248,6 +258,7 @@ class FFResonanceOptions(PerGameCommonOptions):
     include_tablet_shards: IncludeTabletShards
     include_bosses: IncludeBosses
     include_radar_treasures: IncludeRadarTreasures
+    include_side_quests: IncludeSideQuests
     priority_bosses: PriorityBosses
     excluded_regions: ExcludedRegions
     shuffle_party_members: ShufflePartyMembers
@@ -260,6 +271,6 @@ option_groups = [
     OptionGroup("Start", [StartingContinent, StartingRoster, StartingCharacter1, StartingCharacter2,
                           StartingCharacter3, StartingCharacter4, StartWithChocobo,
                           StartWithAirship]),
-    OptionGroup("Locations", [IncludeRadarTreasures, PriorityBosses, ExcludedRegions]),
+    OptionGroup("Locations", [IncludeRadarTreasures, IncludeSideQuests, PriorityBosses, ExcludedRegions]),
     OptionGroup("Items", [ShufflePartyMembers, ShuffleVisions, ShuffleKeyItems]),
 ]

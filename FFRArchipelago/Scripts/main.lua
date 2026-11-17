@@ -49,7 +49,7 @@
 -- follows the save slots the linked game is saved to. While any other save is loaded, the mod
 -- grants nothing, reports nothing and leaves the chests vanilla.
 
-local VERSION = "0.60.0"
+local VERSION = "0.61.0"
 local PROTOCOL = 2        -- the bridge protocol; the apworld's MOD_PROTOCOL
 
 local MOD_DIR = (debug.getinfo(1, "S").source:gsub("^@", ""):gsub("\\", "/"):match("^(.*/)Scripts/[^/]+$"))
@@ -392,6 +392,7 @@ local function newSession(key)
     state.slots, state.slotItems, state.bindPending, state.live = {}, {}, false, nil
     state.scouts = {}
     seedCfg.party, seedCfg.finalboss, seedCfg.chocobo, seedCfg.airship, seedCfg.continent, seedCfg.radar = nil, nil, nil, nil, nil, nil
+    seedCfg.quests = nil
     game.blankRadarParts = false
     if save.apObj ~= nil and save.apObj == save.obj and save.autoDone then save.reskip = true end
     save.obj = nil     -- judge the loaded save again for this session
@@ -432,6 +433,8 @@ local function readInbox(initial)
         elseif f[1] == "cfg" and f[2] == "radar" then
             seedCfg.radar = f[3] == "1"
             game.blankRadarParts = seedCfg.radar
+        elseif f[1] == "cfg" and f[2] == "quests" then
+            seedCfg.quests = f[3] == "1"
         elseif f[1] == "cfg" and f[2] == "continent" then
             seedCfg.continent = f[3] and f[3]:lower()
         elseif f[1] == "cfg" and f[2] == "finalboss" then
@@ -688,6 +691,17 @@ local function scanBosses()
                 log("check " .. key)
                 local s = state.scouts[key]
                 if s then popup = { text = popupText(s), key = key, tries = BOSS_POPUP_TRIES } end
+            end
+        end
+    end
+    -- A side quest's check: its counter at or past the value its reward row writes. The pop-up
+    -- comes with the reward row, at the end of the quest's last scene.
+    if seedCfg.quests and sessionSave() then
+        for _, q in ipairs(game.QUESTS) do
+            if (game.ProgressValue(q.counter) or 0) >= q.value and report("check", q.key) then
+                log("check " .. q.key)
+                local s = state.scouts[q.key]
+                if s then popup = { text = popupText(s), key = q.key, tries = BOSS_POPUP_TRIES } end
             end
         end
     end
@@ -1444,6 +1458,10 @@ local function tick()
                 if newSave and seedCfg.radar then
                     local okRadar, written = pcall(game.RadarPatch)
                     log("radar: " .. tostring(written) .. " treasure rewards set to the pop-up's stand-in" .. (okRadar and "" or " (failed)"))
+                end
+                if newSave and seedCfg.quests then
+                    local okQuests, written = pcall(game.QuestsPatch)
+                    log("quests: " .. tostring(written) .. " reward rows set to the pop-up's stand-in" .. (okQuests and "" or " (failed: " .. tostring(written) .. ")"))
                 end
                 -- In open-world seeds, one Antlion defeat permanently clears the sandpit path between Kol and Grandport.
                 if newSave then
@@ -2281,6 +2299,10 @@ seedExtrasTick = function()
     pcall(finalLockTick)
     if seedSave and seedCfg.airship == false then pcall(airshipItemTick) end
     if seedSave and seedCfg.radar and sessionSave() then pcall(radar.tick) end
+    if seedSave and game.ProgressValue(game.MECHABO.counter) == 0 then
+        game.SetProgressValue(game.MECHABO.counter, game.MECHABO.start)
+        log("mechabo: progress " .. game.MECHABO.counter .. " set to " .. game.MECHABO.start .. " (Verun's repair request)")
+    end
     if seedSave and game.CurrentMap() == game.SHIPYARD_MAP then
         local woke = game.WakeShipyardElevators()
         if woke > 0 and not shipyardLogged then log("shipyard: " .. woke .. " stopped elevators turned on") end

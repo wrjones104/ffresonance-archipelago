@@ -24,7 +24,7 @@ ROOT = build_apworld.ROOT
 MOD = ROOT / "FFRArchipelago"
 TEMPLATE = ROOT / "apworld" / "Final Fantasy Resonance.yaml"
 NOTES = ROOT / "docs" / "releases"
-MOD_SCRIPTS = ("main.lua", "game.lua", "bridge.lua", "field_items.lua")   # B.SCRIPTS in bridge.lua
+MOD_SCRIPTS = ("main.lua", "game.lua", "bridge.lua", "field_items.lua", "quests.lua")   # B.SCRIPTS in bridge.lua
 
 
 def mod_build(folder: Path) -> str:

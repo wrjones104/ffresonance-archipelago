@@ -981,3 +981,30 @@ Send the `[FFRAP]` lines of the log and any crash folder.
 - **Nameless Ruins Tellus:** the fight starts on the first pass now.
 - **The final duel without Rain:** it worked, and the goal was sent. This was on a level 1 run with cheat scaling, so a normal levelled save is still to be tried.
 - **Crashes:** two, both in the ModSettings Lua mod (see above). It is a known conflict in the README and the playtester guide.
+
+## Round 78 test plan (mod 0.61.0 build d9576a0a, world 0.30.0 build 33c2ffa5)
+
+Side quests as locations (`docs/side_quests.md`) and the Mechabo start (IDEAS.md idea 33).
+
+**Install:** copy `FFRArchipelago/Scripts` (it has a new file, `quests.lua`), and copy `dist/ff_resonance.apworld` into `custom_worlds`. Generate a new seed with `include_side_quests: true` in the yaml (it is off by default). Keep `shuffle_visions` on.
+
+**0. The builds.** The log should say `version 0.61.0 (build d9576a0a)`, and the client `world version 0.30.0 (build 33c2ffa5)`. On the first load of the seed's save the log should say `quests: N reward rows set to the pop-up's stand-in`. There are 43 rows, and N may be twice that, as the game holds the rows in two tables.
+
+**1. Rear Support, Ahoy! (Grandport Harbor, Lanzelt; short).** Talk to Zile, deliver the 4 Turbo Ethers at the quest board, and finish the quest.
+- **Does the reward pop-up show the Archipelago item?** The log should say `check quest:13`.
+- **Do you still get the 500 gil, and no Magicite Shard?**
+
+**2. A vision quest.** Any of The Shield of the Weak (Charlotte, Grandshelt), Victoria Revivified (Mysidia) or Errand's End (Amelia, after Token Legacy). At the end: **does the pop-up show the Archipelago item, with no vision and no Magicite from the quest?** The vision should come only when its Archipelago item arrives.
+
+**3. Secrets Unearthed (Chloe, Felicitas), if you pass by.** At the end: **is the pop-up the Archipelago item, and does the Magicite Shard still come with it?**
+
+**4. Mechabo (Dwarven Forge, Dirnado).** The log should say `mechabo: progress 16 set to 10` once on the seed's save. **Is Verun at the forge?** Does talking to him play his first meeting, or go straight to the repair request? **Does "Arise, Mechabo!" show in the quest log?** These three quests are not locations yet.
+
+**5. Probes, when you pass by:**
+- **The Phantom Train and the Weapons Factory** (Zoldaad): can you get in on our start? The Call from Beyond (from the Imperial Residences) and O General! My General! need them.
+- **Mog Tag (Mysidia):** one catch gives a check (`quest:34`); the next two tiers give `quest:35` and `quest:36`.
+- **Any quest:** note any whose reward came out wrong: the vanilla item, two pop-ups, or none.
+
+**6. If the game crashes** in a quest's reward scene, send the crash folder, the log and `Mods/FFRArchipelago/ap_trace.txt`. The vision quests' rows are rebuilt from an empty list, the step most likely to go wrong.
+
+Send the `[FFRAP]` lines of the log.

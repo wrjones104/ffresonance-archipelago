@@ -1,0 +1,479 @@
+counter	value	row	map	level	actor	uid	x	y	z	start	visible	condition	chain	fights	gifts
+1	10	ChrEv_0010_001_01	20002	Town_00Com_03_01	BP_MapUnit_NPC_C	1	720	635	100	ChrEv_0010_001_01	{progress:0}>=7090 & ({progress:1}==0 | {progress:1}>=40)	{progress:1}==0			
+1	20	ChrEv_0010_002_01	2012	Town_01Gra_21_01	BP_MapUnit_NPC_C	1	5280	0	500	ChrEv_0010_002_01		{progress:1}==10&{progress:6}!=30			
+1	20	ChrEv_0010_002_01	2012	Town_01Gra_21_01	BP_MapUnit_NPC_C	1	5280	0	500	choice_Rain_DarkFina		{progress:1}==10&{progress:6}==30			
+1	30	ChrEv_0010_003_01	2000	Town_01Gra_20	BP_MapUnit_NPC_C	15	-1118	3345	92	ChrEv_0010_003_01		{progress:1}==20			
+1	40	ChrEv_0010_004_01	3100	Dng_05Old_43_01	BP_MapGimmick_FieldItem_C	7	510	18295	32	ChrEv_0010_004_01	{progress:1}==30	{progress:1}==30			
+1	50	ChrEv_0010_005_02	20002	Town_00Com_03_01	BP_MapUnit_NPC_C	1	720	635	100	ChrEv_0010_005_01	{progress:0}>=7090 & ({progress:1}==0 | {progress:1}>=40)	{progress:1}==40			12050:1
+2	10	ChrEv_0020_001_01	2150	Town_08Gro_01_01	BP_MapGimmick_InteractEventTrigger_C	8	-1510	26620	590	ChrEv_0020_001_01	{progress:2}==0&{progress:0}>=6999	{progress:2}==0&{progress:0}>=6999			
+2	20	ChrEv_0020_002_01	2150	Town_08Gro_01_01	BP_MapUnit_NPC_C	3	3705	1441	180	ChrEv_0020_002_01	{progress:2}==10				
+2	30	ChrEv_0020_003_03	1000	Wld	BP_MapUnit_NPC_Field_C	12	8063	-1640	-15	ChrEv_0020_003_Encount	{progress:2}==20	{progress:2}==20		9901	
+2	40	ChrEv_0020_004_01	2150	Town_08Gro_01_01	BP_MapUnit_NPC_C	4	3498	1013	200	ChrEv_0020_004_01	{progress:2}==30				
+2	50	ChrEv_0020_005_01	10001	Dng_01Gra_44_01	BP_MapGimmick_InteractEventTrigger_C	2	5260	-45	75	ChrEv_0020_005_01	{progress:2}==40	{progress:2}==40			12051:1
+3	10	ChrEv_0030_001_01	2130	Town_07Mys_01_01	BP_MapUnit_NPC_C	0	10913	-231	500	ChrEv_0030_001_01	{progress:0}>=6000&{progress:3}==0	{progress:0}>=6000&{progress:3}==0			
+3	20	ChrEv_0030_002_01	3000	Dng_01Gra_40	BP_MapGimmick_InteractEventTrigger_C	3	12030	15	-600	ChrEv_0030_002_01		{progress:3}==10			
+3	30	ChrEv_0030_003_01	3030	Dng_02Lan_40_01	BP_MapGimmick_InteractEventTrigger_C	15	9395	-10	17850	ChrEv_0030_003_01		{progress:3}==20			
+3	40	ChrEv_0030_004_01	2070	Town_05Old_01_01	BP_MapGimmick_InteractEventTrigger_C	84	3870	5	115	ChrEv_0030_004_01		{progress:3}==30			
+3	50	ChrEv_0030_005_01	2080	Town_05Old_20_01	CPP_MapGimmick_InteractEventTrigger	1	-43266	1037	79	ChrEv_0030_005_01	{progress:0}>=3210	{progress:3}==40			12052:1
+4	10	ChrEv_0040_001_01	2061	Town_04Dir_02_01	BP_MapUnit_NPC_C	17	5895	-1046	908	ChrEv_0040_001_01	{progress:0}>=5010&{progress:4}==0	{progress:0}>=5000&{progress:4}==0			
+4	20	ChrEv_0040_002_01	3060	Dng_04Dir_41_01	BP_MapGimmick_FieldItem_C	53	4316	10099	1785	ChrEv_0040_002_01	{progress:4}==10	{progress:4}==10			
+4	30	ChrEv_0040_003_01	2061	Town_04Dir_02_01	BP_MapGimmick_InteractEventTrigger_C	10	6595	4386	1664	ChrEv_0040_003_01	{progress:4}==20	{progress:4}==20			
+4	40	ChrEv_0040_005_02	20001	Town_00Com_01	BP_MapUnit_NPC_C	0	2827	261	406	ChrEv_0040_004_01		{progress:4}==30		9902	
+4	50	ChrEv_0040_006_01	2061	Town_04Dir_02_01	BP_MapUnit_NPC_C	0	5895	-1046	908	ChrEv_0040_006_01	{progress:4}==40	{progress:4}==40			12053:1
+5	10	ChrEv_0050_001_01	2070	Town_05Old_01_01	BP_MapUnit_NPC_C	6	10619	3101	220	ChrEv_0050_001_01	{progress:0}>=5000&{progress:5}==0	{progress:0}>=5000&{progress:5}==0			
+5	20	ChrEv_0050_002_01	2070	Town_05Old_01_01	BP_MapUnit_NPC_C	39	2605	6206	250	ChrEv_0050_002_01	{progress:5}==10	{progress:5}==10			
+5	30	ChrEv_0050_003_01	2080	Town_05Old_20_01	CPP_MapGimmick_InteractEventTrigger	0	-43266	-188	79	ChrEv_0050_003_01		{progress:5}==20			
+5	40	ChrEv_0050_004_02	1000	Wld	BP_MapUnit_NPC_Field_C	13	-2792	3577	0	ChrEv_0050_004_Trigger	{progress:5}==30	{progress:5}==30		9906	
+5	50	ChrEv_0050_005_01	3080	Dng_05Old_40_01	BP_MapUnit_NPC_C	1	1245	39	100	ChrEv_0050_005_01	{progress:5}==40	{progress:5}==40			
+5	60	ChrEv_0050_006_01	2080	Town_05Old_20_01	CPP_MapGimmick_InteractEventTrigger	0	-43266	-188	79	ChrEv_0050_006_01		{progress:5}==50			12054:1
+6	10	ChrEv_0060_001_01	2011	Town_01Gra_02_01	BP_MapUnit_NPC_C	5	2829	279	100	ChrEv_0060_001_01	{progress:0}>=5310&{progress:6}==0	{progress:0}>=5310&{progress:6}==0			
+6	10	ChrEv_0060_001_01	2013	Town_01Gra_03	BP_MapUnit_NPC_C	0	2878	317	100	ChrEv_0060_001_01	{progress:0}>=5310&{progress:6}==0	{progress:0}>=5310&{progress:6}==0			
+6	20	ChrEv_0060_003_01	2015	Town_01Gra_04_01	BP_MapUnit_NPC_C	9	24703	10280	-300	ChrEv_0060_002_01	{progress:6}==10&!{flag:606}	!{flag:606}&{progress:6}==10	{flag:607}		
+6	20	ChrEv_0060_003_01	2016	Town_01Gra_05_01	BP_MapGimmick_FieldItem_C	1	28178	-6825	532	ChrEv_0060_002_02	!{flag:607}&{progress:6}==10	!{flag:607}&{progress:6}==10	{flag:606}		
+6	30	ChrEv_0060_004_01	2012	Town_01Gra_21_01	BP_MapGimmick_FieldItem_C	0	-11562	-3212	1212	ChrEv_0060_004_01	{progress:6}==20	{progress:6}==20			
+6	40	ChrEv_0060_005_01	2012	Town_01Gra_21_01	BP_MapUnit_NPC_C	1	5280	0	500	ChrEv_0060_005_01		{progress:6}==30&{progress:1}!=10			
+6	40	ChrEv_0060_005_01	2012	Town_01Gra_21_01	BP_MapUnit_NPC_C	1	5280	0	500	choice_Rain_DarkFina		{progress:1}==10&{progress:6}==30			
+6	40	ChrEv_0060_005_02	2012	Town_01Gra_21_01	BP_MapUnit_NPC_C	1	5280	0	500	ChrEv_0060_005_01		{progress:6}==30&{progress:1}!=10			
+6	40	ChrEv_0060_005_02	2012	Town_01Gra_21_01	BP_MapUnit_NPC_C	1	5280	0	500	choice_Rain_DarkFina		{progress:1}==10&{progress:6}==30			
+6	50	ChrEv_0060_006_01	20002	Town_00Com_03_01	BP_MapUnit_NPC_C	0	-363	-934	100	ChrEv_0060_006_01	{progress:0}>=5080 & {progress:0}<8050	{progress:6}==40			12056:1
+7	10	ChrEv_0070_001_02	2000	Town_01Gra_20	BP_MapUnit_NPC_C	29	-740	13350	96	Inn_Orders			{money}>={accommodationFee}&{progress:0}>=5060&{progress:7}==0		
+7	10	ChrEv_0070_001_02	2015	Town_01Gra_04_01	BP_MapUnit_NPC_C	37	-713	13699	96	Inn_Orders			{money}>={accommodationFee}&{progress:0}>=5060&{progress:7}==0		
+7	10	ChrEv_0070_001_02	2016	Town_01Gra_05_01_EV_02	BP_MapUnit_NPC_C	9	-3355	71344	100	Inn_Orders			{money}>={accommodationFee}&{progress:0}>=5060&{progress:7}==0		
+7	10	ChrEv_0070_001_02	2020	Town_02Lan_20_01	BP_MapUnit_NPC_C	10	-2302	19634	103	Inn_Orders		{progress:0}!=1140	{money}>={accommodationFee}&{progress:0}>=5060&{progress:7}==0		
+7	10	ChrEv_0070_001_02	2030	Town_02Lan_21_01	BP_MapUnit_NPC_C	3	-725	13387	97	Inn_Orders			{money}>={accommodationFee}&{progress:0}>=5060&{progress:7}==0		
+7	10	ChrEv_0070_001_02	2040	Town_03Kol_20_01	BP_MapUnit_NPC_C	8	-1194	3423	3100	Inn_Orders			{money}>={accommodationFee}&{progress:0}>=5060&{progress:7}==0		
+7	10	ChrEv_0070_001_02	2050	Town_04Dir_20_01	BP_MapUnit_NPC_C	23	8244	2015	-1909	Inn_Orders			{money}>={accommodationFee}&{progress:0}>=5060&{progress:7}==0		
+7	10	ChrEv_0070_001_02	2060	Town_04Dir_01_04	BP_MapUnit_NPC_C	10	-1274	29929	2105	Inn_Orders			{money}>={accommodationFee}&{progress:0}>=5060&{progress:7}==0		
+7	10	ChrEv_0070_001_02	2070	Town_05Old_01_01	BP_MapUnit_NPC_C	16	461	57643	102	Inn_Orders		{progress:0}!=3120	{money}>={accommodationFee}&{progress:0}>=5060&{progress:7}==0		
+7	10	ChrEv_0070_001_02	2090	Town_05Old_21_01	BP_MapUnit_NPC_C	18	279	26844	594	Inn_Orders			{money}>={accommodationFee}&{progress:0}>=5060&{progress:7}==0		
+7	10	ChrEv_0070_001_02	2110	Town_06Zol_01_01	BP_MapUnit_NPC_C	7	504	20169	100	Inn_Orders			{money}>={accommodationFee}&{progress:0}>=5060&{progress:7}==0		
+7	10	ChrEv_0070_001_02	2120	Town_06Zol_21_01	BP_MapUnit_NPC_C	14	1410	2985	-299	Inn_Orders		{progress:0}!=4120	{money}>={accommodationFee}&{progress:0}>=5060&{progress:7}==0		
+7	10	ChrEv_0070_001_02	2140	Town_07Mys_20	BP_MapUnit_NPC_C	6	-3239	41646	100	Inn_Orders			{money}>={accommodationFee}&{progress:0}>=5060&{progress:7}==0		
+7	10	ChrEv_0070_001_02	2150	Town_08Gro_01_01	BP_MapUnit_NPC_C	12	-1362	26821	605	Inn_Orders			{money}>={accommodationFee}&{progress:0}>=5060&{progress:7}==0		
+7	10	ChrEv_0070_001_02	2160	Town_08Gro_20_01	BP_MapUnit_NPC_C	3	-3831	38740	100	Inn_Orders			{money}>={accommodationFee}&{progress:0}>=5060&{progress:7}==0		
+7	10	ChrEv_0070_001_02	2170	Town_09Pha_01_01	BP_MapUnit_NPC_C	11	82	29551	2245	Inn_Orders			{money}>={accommodationFee}&{progress:0}>=5060&{progress:7}==0		
+7	20	ChrEv_0070_002_01	2114	Town_06Zol_05_01	BP_MapUnit_NPC_C	0	399	517	100	ChrEv_0070_002_01	{progress:7}==10	{progress:7}==10			
+7	30	ChrEv_0070_003_02	2102	Town_06Zol_23_01	CPP_MapGimmick_InteractEventTrigger	0	1220	-22	112	ChrEv_0070_003_01		{progress:7}==20			
+7	40	ChrEv_0070_004_01	2102	Town_06Zol_23_01	CPP_MapGimmick_InteractEventTrigger	0	1220	-22	112	ChrEv_0070_003_01		{progress:7}==20			
+7	45	ChrEv_0070_005_1st	2101	Town_06Zol_22_01	BP_MapGimmick_FieldItem_C	0	-921	2605	33	ChrEv_0070_005_Item	{progress:7}==40&!{flag:543}|{progress:7}==45&!{flag:543}	{progress:7}==40&!{flag:543}|{progress:7}==45&!{flag:543}	!{flag:544}		
+7	45	ChrEv_0070_005_1st	2101	Town_06Zol_22_01	BP_MapUnit_NPC_C	3	-891	-2185	101	ChrEv_0070_005_NPC		{progress:7}==40|{progress:7}==45	!{flag:543}		
+7	50	ChrEv_0070_005_01	2101	Town_06Zol_22_01	BP_MapGimmick_FieldItem_C	0	-921	2605	33	ChrEv_0070_005_Item	{progress:7}==40&!{flag:543}|{progress:7}==45&!{flag:543}	{progress:7}==40&!{flag:543}|{progress:7}==45&!{flag:543}	{flag:544}		
+7	50	ChrEv_0070_005_01	2101	Town_06Zol_22_01	BP_MapUnit_NPC_C	3	-891	-2185	101	ChrEv_0070_005_NPC		{progress:7}==40|{progress:7}==45	{flag:543}		
+7	60	ChrEv_0070_006_01	3160	Dng_06Zol_44_01	BP_MapUnit_NPC_C	14	47918	0	500	ChrEv_0070_006_01	{progress:0}>=5010 &( {progress:37}<=10 |  {progress:37}>=50 )	{progress:7}==50			12047:1
+8	10	ChrEv_0080_001_01	2130	Town_07Mys_01_01	BP_MapUnit_NPC_C	29	12235	-4134	153	ChrEv_0080_001_01	{progress:0}>=5999&{progress:8}==0	{progress:0}>=5999&{progress:8}==0			
+8	20	ChrEv_0080_002_01	3190	Dng_07Mys_42_01	BP_MapGimmick_InteractEventTrigger_C	38	31960	46765	11312	ChrEv_0080_002_01	{progress:8}==10	{progress:8}==10			
+8	30	ChrEv_0080_003_03	3200	Dng_07Mys_43_01	BP_MapGimmick_InteractEventTrigger_C	0	6580	0	10860	ChrEv_0080_003_01		{progress:8}==20			
+8	40	ChrEv_0080_004_03	1000	Wld	BP_MapGimmick_FieldItem_C	0	15475	9422	-10	ChrEv_0080_004_fede	{progress:8}==30	{progress:8}==30			
+8	50	ChrEv_0080_005_03	2130	Town_07Mys_01_01	BP_MapGimmick_InteractEventTrigger_C	28	26315	7650	4950	ChrEv_0080_005_01	{progress:8}==40	{progress:8}==40			12055:1
+12	10	Summon620_Ramuh_Rumor_Dialog	2060	Town_04Dir_01_01	BP_MapUnit_NPC_C	16	1177	1170	100	Summon620_Ramuh_01			{progress:12}==0		
+12	10	Summon620_Ramuh_Rumor_Dialog	2060	Town_04Dir_01_04	BP_MapUnit_NPC_C	19	1177	1170	100	Summon620_Ramuh_01		!{flag:92}	{progress:12}==0		
+12	20	Summon620_Ramuh_03	3050	Dng_04Dir_40_01	CPP_MapGimmick_EventTrigger	10	14140	-1639	1632	Summon620_Ramuh_02		{progress:12}==0&!{flag:12}|{progress:12}==10&!{flag:12}		9908	
+13	10	Summon680_Titan_Rumor_Dialog	2030	Town_02Lan_21_01	BP_MapUnit_NPC_C	8	2468	-1736	700	Summon680_Titan_01	{progress:0}>=1240	!{flag:96}	{progress:13}==0		
+13	20	Summon680_Titan_03_02	1000	Wld_02Lan	BP_MapGimmick_BreakObjectByNPC001_C	168	13174	12186	183	Summon680_Titan_03_01_Trigger	{progress:13}==0|{progress:13}==10	{item:10499}==1&{progress:13}==0|{item:10499}==1&{progress:13}==10	!{flag:12}		13506:1
+13	20	Summon680_Titan_03_02_NF	1000	Wld_02Lan	BP_MapGimmick_BreakObjectByNPC001_C	168	13174	12186	183	Summon680_Titan_03_01_Trigger	{progress:13}==0|{progress:13}==10	{item:10499}==1&{progress:13}==0|{item:10499}==1&{progress:13}==10	{flag:12}		13506:1
+13	30	Summon680_Titan_04	1000	Wld_02Lan	BP_MapGimmick_BreakObjectByNPC001_C	168	13174	12186	183	Summon680_Titan_03_01_Trigger	{progress:13}==0|{progress:13}==10	{item:10499}==1&{progress:13}==0|{item:10499}==1&{progress:13}==10	{flag:12}	9909	
+13	30	Summon680_Titan_04_01	1000	Wld_02Lan	BP_MapGimmick_BreakObjectByNPC001_C	168	13174	12186	183	Summon680_Titan_03_01_Trigger	{progress:13}==0|{progress:13}==10	{item:10499}==1&{progress:13}==0|{item:10499}==1&{progress:13}==10	{flag:12}	9909	
+15	10	C01_018_01	3020	Dng_01Gra_42_01	BP_MapTransitionTrigger_C	4	-37934	7	240	C01_018_01		{progress:0}==1100			
+15	20	SubEv_C01_Castle_02	3020	Dng_01Gra_42_01	BP_MapGimmick_EventTrigger_C	15	-30819	-5567	52	SubEv_C01_Castle_01		{progress:15}==10		9008	4:3
+15	30	SubEv_C01_Castle_04	3020	Dng_01Gra_42_01	BP_MapGimmick_EventTrigger_C	2	-29868	6002	942	SubEv_C01_Castle_03		{progress:15}==20		9916	
+15	40	SubEv_C01_Castle_06	3020	Dng_01Gra_42_01	BP_MapGimmick_EventTrigger_C	6	-12807	457	824	SubEv_C01_Castle_05		{progress:15}==30		9007	
+16	10	C02_219_02	2050	Town_04Dir_20_01	CPP_MapGimmick_EventTrigger	0	8915	-4000	-2005	C02_219_02		{progress:16}==0&{progress:0}==2120			
+16	20	C02_MechaboLvUp_01	2050	Town_04Dir_20_01	BP_MapUnit_NPC_C	0	9235	-1870	-1715	C02_MechaboLvUp_01	{progress:16}>=20&{progress:16}<=70	{progress:16}==10&{flag:219}			25000:1
+16	20	C02_MechaboLvUp_01	2050	Town_04Dir_20_01	BP_MapUnit_NPC_C	7	9550	-3200	-1909	C02_MechaboLvUp_01	{progress:16}>=10&{progress:16}<20	{progress:16}==10&{flag:219}			25000:1
+16	30	C02_MechaboLvUp_02	2050	Town_04Dir_20_01	BP_MapUnit_NPC_C	0	9235	-1870	-1715	C02_MechaboLvUp_02	{progress:16}>=20&{progress:16}<=70	{progress:16}==20			
+16	30	C02_MechaboLvUp_02	2050	Town_04Dir_20_01	BP_MapUnit_NPC_C	7	9550	-3200	-1909	C02_MechaboLvUp_02	{progress:16}>=10&{progress:16}<20	{progress:16}==20			
+16	40	C02_MechaboLvUp_03	2050	Town_04Dir_20_01	BP_MapUnit_NPC_C	0	9235	-1870	-1715	C02_MechaboLvUp_03	{progress:16}>=20&{progress:16}<=70	{progress:16}==30&{flag:219}			
+16	40	C02_MechaboLvUp_03	2050	Town_04Dir_20_01	BP_MapUnit_NPC_C	7	9550	-3200	-1909	C02_MechaboLvUp_03	{progress:16}>=10&{progress:16}<20	{progress:16}==30&{flag:219}			
+16	50	C02_MechaboLvUp_04	2050	Town_04Dir_20_01	BP_MapUnit_NPC_C	0	9235	-1870	-1715	C02_MechaboLvUp_04	{progress:16}>=20&{progress:16}<=70	{progress:16}==40&{flag:219}			
+16	50	C02_MechaboLvUp_04	2050	Town_04Dir_20_01	BP_MapUnit_NPC_C	7	9550	-3200	-1909	C02_MechaboLvUp_04	{progress:16}>=10&{progress:16}<20	{progress:16}==40&{flag:219}			
+16	60	C02_MechaboLvUp_05	2050	Town_04Dir_20_01	BP_MapUnit_NPC_C	0	9235	-1870	-1715	C02_MechaboLvUp_05	{progress:16}>=20&{progress:16}<=70	{progress:16}==50&{flag:219}			
+16	60	C02_MechaboLvUp_05	2050	Town_04Dir_20_01	BP_MapUnit_NPC_C	7	9550	-3200	-1909	C02_MechaboLvUp_05	{progress:16}>=10&{progress:16}<20	{progress:16}==50&{flag:219}			
+16	70	C02_MechaboLvUp_06	2050	Town_04Dir_20_01	BP_MapUnit_NPC_C	0	9235	-1870	-1715	C02_MechaboLvUp_06	{progress:16}>=20&{progress:16}<=70	{progress:16}==60&{flag:219}			25001:1
+16	70	C02_MechaboLvUp_06	2050	Town_04Dir_20_01	BP_MapUnit_NPC_C	7	9550	-3200	-1909	C02_MechaboLvUp_06	{progress:16}>=10&{progress:16}<20	{progress:16}==60&{flag:219}			25001:1
+16	75	C02_MechaboLvUp_07	2050	Town_04Dir_20_01	BP_MapUnit_NPC_C	0	9235	-1870	-1715	C02_MechaboLvUp_07	{progress:16}>=20&{progress:16}<=70	{progress:16}==70&{progress:0}>=5020			
+16	75	C02_MechaboLvUp_07	2050	Town_04Dir_20_01	BP_MapUnit_NPC_C	7	9550	-3200	-1909	C02_MechaboLvUp_07	{progress:16}>=10&{progress:16}<20	{progress:16}==70			
+16	80	C02_MechaboLvUp_08	20001	Town_00Com_01	BP_MapUnit_NPC_C	28	2830	490	406	C02_MechaboLvUp_08	{progress:16}>=75 & {progress:16}<100	{progress:16}==75			
+16	90	C02_MechaboLvUp_09	20001	Town_00Com_01	BP_MapUnit_NPC_C	28	2830	490	406	C02_MechaboLvUp_09	{progress:16}>=75 & {progress:16}<100	{progress:16}==80&{flag:219}			
+16	100	C02_MechaboLvUp_10	20001	Town_00Com_01	BP_MapUnit_NPC_C	28	2830	490	406	C02_MechaboLvUp_10	{progress:16}>=75 & {progress:16}<100	{progress:16}==90&{flag:219}			25002:1
+17	10	Summon670_Odin_02	10060	Dng_08Gro_44	BP_MapGimmick_InteractEventTrigger_C	0	6415	-1010	35	Summon670_Odin_02		{progress:17}==0			20031:1
+17	20	Summon670_Odin_03	1000	Wld	BP_MapGimmick_InteractEventTrigger_C	193	16685	-17063	1329	Summon670_Odin_03		{progress:17}==10|{progress:17}==20			
+17	30	Summon670_Odin_03_END	1000	Wld	BP_MapGimmick_InteractEventTrigger_C	193	16685	-17063	1329	Summon670_Odin_03		{progress:17}==10|{progress:17}==20		9913	20032:1
+17	40	Summon670_Odin_04	3180	Dng_07Mys_41_01	BP_MapUnit_NPC_C	3	1910	-33695	300	Summon670_Odin_04	{progress:17}>=10&{progress:17}<=30	{progress:17}==30			
+18	10	Summon630_Ifrit_Rumor_Dialog	2110	Town_06Zol_01_01	BP_MapUnit_NPC_C	5	305	19450	102	Summon630_Ifrit_01_01		{progress:18}==0|{progress:18}==10	{progress:18}==0		
+18	20	Summon630_Ifrit_04_01	1000	Wld	BP_MapTransitionTrigger_C	49	-11624	15843	1374	Summon630_Ifrit_02_Choice	{progress:18}<=10	{progress:18}<=10	{flag:12} {flag:12}	9910	
+18	20	Summon630_Ifrit_04_F	1000	Wld	BP_MapTransitionTrigger_C	49	-11624	15843	1374	Summon630_Ifrit_02_Choice	{progress:18}<=10	{progress:18}<=10	{flag:12} !{flag:12}	9910	
+18	20	Summon630_Ifrit_04_NF	1000	Wld	BP_MapTransitionTrigger_C	49	-11624	15843	1374	Summon630_Ifrit_02_Choice	{progress:18}<=10	{progress:18}<=10	{flag:12} {flag:12}	9910	
+20	10	Summon640_Shiva_Rumor_Dialog	2140	Town_07Mys_20	BP_MapUnit_NPC_C	20	-3566	42559	100	Summon640_Shiva_01		!{flag:95}	{progress:20}==0		
+20	20	Summon640_Shiva_02_Quit	1000	Wld_07Mys_01	BP_MapGimmick_EventTrigger_C	142	-18899	-11853	151	Summon640_Shiva_02_Retry_Trigger	{progress:20}<=20	{progress:20}==20	!{flag:12}		
+20	20	Summon640_Shiva_02_Quit_NF	1000	Wld_07Mys_01	BP_MapGimmick_EventTrigger_C	142	-18899	-11853	151	Summon640_Shiva_02_Retry_Trigger	{progress:20}<=20	{progress:20}==20	{flag:12}		
+20	30	Summon640_Shiva_03_01	1000	Wld_07Mys_01	BP_MapGimmick_EventTrigger_C	142	-18899	-11853	151	Summon640_Shiva_02_Retry_Trigger	{progress:20}<=20	{progress:20}==20	{flag:12} {flag:12}	9911	
+20	30	Summon640_Shiva_03_F	1000	Wld_07Mys_01	BP_MapGimmick_EventTrigger_C	142	-18899	-11853	151	Summon640_Shiva_02_Retry_Trigger	{progress:20}<=20	{progress:20}==20	{flag:12} !{flag:12}	9911	
+20	30	Summon640_Shiva_03_NF	1000	Wld_07Mys_01	BP_MapGimmick_EventTrigger_C	142	-18899	-11853	151	Summon640_Shiva_02_Retry_Trigger	{progress:20}<=20	{progress:20}==20	{flag:12} {flag:12}	9911	
+24	10	SubEv_C09_UltimaWeapon_02	20001	Town_00Com_01	BP_MapUnit_NPC_C	0	2827	261	406	SubEv_C09_UltimaWeapon_02		{progress:0}>=8040&{progress:24}==0 & {progress:4}!=30			
+24	20	SubEv_C09_UltimaWeapon_03	1000	Wld_11Adr	BP_MapUnit_NPC_Field_C	8	-21390	20070	-196	SubEv_C09_UltimaWeapon_03	{progress:24}==10	{progress:24}==10			
+24	30	SubEv_C09_UltimaWeapon_04_GetItem													12095:1
+25	10	DT_Town_010Gra_20_0930_1													
+25	20	DT_Town_010Gra_20_Item													
+25	30	DT_Town_010Gra_20_0930_3													12003:1
+28	10	SubEv_C01_Zairu_01	2030	Town_02Lan_21_01	BP_MapUnit_NPC_C	12	500	-8600	300	SubEv_C01_Zairu_01	{progress:28}<=0&{progress:0}>=1240	{progress:28}==0&{progress:0}>=1240			
+28	10	SubEv_C01_Zairu_01	2030	Town_02Lan_21_01	BP_MapUnit_NPC_C	31	735	-8855	300	SubEv_C01_Zairu_01	{progress:28}==10&{progress:0}>=1240	{progress:28}==0&{progress:0}>=1240			
+28	20	SubEv_C01_Zairu_02	2030	Town_02Lan_21_01	BP_MapUnit_NPC_C	13	-355	-3723	300	SubEv_C01_Zairu_02	{progress:28}<=30	{progress:28}==10			
+28	30	SubEv_C01_Zairu_03													
+28	40	SubEv_C01_Zairu_04	2030	Town_02Lan_21_01	BP_MapUnit_NPC_C	13	-355	-3723	300	SubEv_C01_Zairu_04	{progress:28}<=30	{progress:28}==30			25000:1 -1:500
+30	10	SubEv_C01_Chloe_02_END	2040	Town_03Kol_20_01	BP_MapUnit_NPC_C	9	-1073	3763	7100	SubEv_C01_Chloe_01_Retry	{progress:50}==0|{progress:50}==30	{progress:30}==10			
+30	20	SubEv_C01_Chloe_02	2040	Town_03Kol_20_01	BP_MapUnit_NPC_C	9	-1073	3763	7100	SubEv_C01_Chloe_01	{progress:50}==0|{progress:50}==30	{progress:30}==0			
+30	20	SubEv_C01_Chloe_02	2040	Town_03Kol_20_01	BP_MapUnit_NPC_C	9	-1073	3763	7100	SubEv_C01_Chloe_01_Retry	{progress:50}==0|{progress:50}==30	{progress:30}==10			
+30	30	SubEv_C01_Chloe_03_01_01	1000	Wld	BP_MapGimmick_FieldItem_C	116	6614	15820	38	SubEv_C01_Chloe_03_01_01	{progress:30}>=20&!{flag:141}	{progress:30}==20&!{flag:141}			
+30	30	SubEv_C01_Chloe_03_02_01	1000	Wld	BP_MapGimmick_FieldItem_C	113	4364	15600	53	SubEv_C01_Chloe_03_02_01	{progress:30}>=20&!{flag:142}	{progress:30}==20&!{flag:142}			
+30	30	SubEv_C01_Chloe_03_03_01	1000	Wld	BP_MapGimmick_FieldItem_C	115	2769	11677	188	SubEv_C01_Chloe_03_03_01	{progress:30}>=20&!{flag:143}	{progress:30}==20&!{flag:143}			
+30	40	SubEv_C01_Chloe_03_01_02	1000	Wld	BP_MapGimmick_FieldItem_C	116	6614	15820	38	SubEv_C01_Chloe_03_01_02	{progress:30}>=20&!{flag:141}	{progress:30}==30&!{flag:141}			
+30	40	SubEv_C01_Chloe_03_02_02	1000	Wld	BP_MapGimmick_FieldItem_C	113	4364	15600	53	SubEv_C01_Chloe_03_02_02	{progress:30}>=20&!{flag:142}	{progress:30}==30&!{flag:142}			
+30	40	SubEv_C01_Chloe_03_03_02	1000	Wld	BP_MapGimmick_FieldItem_C	115	2769	11677	188	SubEv_C01_Chloe_03_03_02	{progress:30}>=20&!{flag:143}	{progress:30}==30&!{flag:143}			
+30	80	SubEv_C01_Chloe_03_01_END	1000	Wld	BP_MapGimmick_FieldItem_C	116	6614	15820	38	SubEv_C01_Chloe_03_01_END	{progress:30}>=20&!{flag:141}	{progress:30}==40&!{flag:141}			
+30	80	SubEv_C01_Chloe_03_02_END	1000	Wld	BP_MapGimmick_FieldItem_C	113	4364	15600	53	SubEv_C01_Chloe_03_02_END	{progress:30}>=20&!{flag:142}	{progress:30}==40&!{flag:142}			
+30	80	SubEv_C01_Chloe_03_03_END	1000	Wld	BP_MapGimmick_FieldItem_C	115	2769	11677	188	SubEv_C01_Chloe_03_03_END	{progress:30}>=20&!{flag:143}	{progress:30}==40&!{flag:143}			
+30	90	SubEv_C01_Chloe_04	2040	Town_03Kol_20_01	BP_MapUnit_NPC_C	9	-1073	3763	7100	SubEv_C01_Chloe_04	{progress:50}==0|{progress:50}==30	{progress:30}==80			12032:1 25000:1
+31	10	SubEv_C01_Rain_01	2011	Town_01Gra_02_01	BP_MapUnit_NPC_C	16	2449	-235	100	SubEv_C01_Rain_01	!({progress:31}>=10&{progress:31}<60)	{progress:31}==0			
+31	20	SubEv_C01_Rain_02	2020	Town_02Lan_20_01	BP_MapUnit_NPC_C	9	7300	5613	110	SubEv_C01_Rain_02	{progress:31}>=10&{progress:31}!=20&{progress:31}!=60&{progress:31}<=60	{progress:31}==10			
+31	30	SubEv_C01_Rain_03	3001	Dng_01Gra_43	BP_MapGimmick_FieldItem_C	80	-4120	-789	-189	SubEv_C01_Rain_03	{progress:31}==20	{progress:31}==20			
+31	40	SubEv_C01_Rain_04_03	2020	Town_02Lan_20_01	BP_MapUnit_NPC_C	9	7300	5613	110	SubEv_C01_Rain_04_01	{progress:31}>=10&{progress:31}!=20&{progress:31}!=60&{progress:31}<=60	{progress:31}==30			
+31	50	SubEv_C01_Rain_ItemGet	1000	Wld	BP_MapUnit_NPC_Field_C	1	13443	16503	84	SubEv_C01_Rain_Encount	{progress:31}==40	{progress:31}==40		9081	20020:1
+31	60	SubEv_C01_Rain_05	2020	Town_02Lan_20_01	BP_MapUnit_NPC_C	9	7300	5613	110	SubEv_C01_Rain_05	{progress:31}>=10&{progress:31}!=20&{progress:31}!=60&{progress:31}<=60	{progress:31}==50			10128:1 -1:500
+31	70	SubEv_C01_Rain_06	2011	Town_01Gra_02_01	BP_MapUnit_NPC_C	22	2449	-389	100	SubEv_C01_Rain_06	{progress:31}>=60	{progress:31}==60			
+32	10	SubEv_C02_Roy_01	2050	Town_04Dir_20_01	BP_MapUnit_NPC_C	16	7859	-1090	-1909	SubEv_C02_Roy_01	{progress:0}>=2120 & {progress:32}<30	{progress:32}==0			
+32	20	SubEv_C02_Roy_02	3060	Dng_04Dir_41_01	CPP_MapGimmick_InteractEventTrigger	0	2717	-1611	0	SubEv_C02_Roy_02		{progress:32}==10			
+32	30	SubEv_C02_Roy_03	2061	Town_04Dir_02_01	BP_MapUnit_NPC_C	9	6354	-6400	100	SubEv_C02_Roy_03		{progress:32}==20			
+32	40	SubEv_C02_Roy_04	2050	Town_04Dir_20_01	BP_MapUnit_NPC_C	10	7835	-1090	-1909	SubEv_C02_Roy_04	{progress:32}>=30	{progress:32}==30			25000:1 -1:800
+33	10	SubEv_C01_Lasswell_01	2030	Town_02Lan_21_01	BP_MapUnit_NPC_C	24	2527	-3959	700	SubEv_C01_Lasswell_01	({progress:33}==0&{progress:0}>=1210)|{progress:33}==20	{progress:33}==0&{progress:0}>=1210			
+33	20	SubEv_C01_Lasswell_02_01	2040	Town_03Kol_20_01	BP_MapUnit_NPC_C	3	-1155	7748	5100	SubEv_C01_Lasswell_02_01	{progress:33}==10	{progress:33}==10			
+33	20	SubEv_C01_Lasswell_02_03	2040	Town_03Kol_20_01	BP_MapUnit_NPC_C	3	-1155	7748	5100	SubEv_C01_Lasswell_02_01	{progress:33}==10	{progress:33}==10			
+33	30	SubEv_C01_Lasswell_03	2030	Town_02Lan_21_01	BP_MapUnit_NPC_C	24	2527	-3959	700	SubEv_C01_Lasswell_03	({progress:33}==0&{progress:0}>=1210)|{progress:33}==20	{progress:33}==20			
+33	40	SubEv_C01_Lasswell_04_02	3040	Dng_03Kol_40_01	BP_MapUnit_NPC_C	1	5732	1794	500	SubEv_C01_Lasswell_04_01	{progress:33}==30	{progress:33}==30		9082	
+33	50	SubEv_C01_Lasswell_05	2040	Town_03Kol_20_01	BP_MapUnit_NPC_C	20	-999	7862	5100	SubEv_C01_Lasswell_05	{progress:33}>=40	{progress:33}==40			10227:1 -1:500
+34	10	SubEv_C02_Silvia_01	2060	Town_04Dir_01_04	BP_MapUnit_NPC_C	16	7064	3280	100	SubEv_C02_Silvia_01	{progress:34}<=20	{progress:34}==0			
+34	10	SubEv_C02_Silvia_01_NPC	2060	Town_04Dir_01_04	BP_MapUnit_NPC_C	16	7064	3280	100	SubEv_C02_Silvia_01_NPC	{progress:34}<=20	{progress:34}==10			
+34	20	SubEv_C02_Silvia_02	3050	Dng_04Dir_40_01	BP_MapGimmick_InteractEventTrigger_C	8	3680	4160	495	SubEv_C02_Silvia_02	{progress:34}==10|{progress:53}==20	{progress:34}==10			
+34	30	SubEv_C02_Silvia_03	2060	Town_04Dir_01_04	BP_MapUnit_NPC_C	16	7064	3280	100	SubEv_C02_Silvia_03	{progress:34}<=20	{progress:34}==20			
+34	40	SubEv_C02_Silvia_04	2050	Town_04Dir_20_01	BP_MapUnit_NPC_C	24	6156	-4586	-1909	SubEv_C02_Silvia_04	{progress:34}==30	{progress:34}==30			25000:1 -1:800
+35	10	SubEv_C03_Mercedes_01	2090	Town_05Old_21_01	BP_MapUnit_NPC_C	10	5127	503	608	SubEv_C03_Mercedes_01		{progress:35}==0&{progress:0}>=3150			
+35	20	SubEv_C03_Mercedes_02_02	1000	Wld	BP_MapGimmick_InteractEventTrigger_C	64	6690	-65	-40	SubEv_C03_Mercedes_02_Trigger	{progress:35}==10	{progress:35}==10		9086	
+35	30	SubEv_C03_Mercedes_03	1000	Wld	BP_MapGimmick_InteractEventTrigger_C	64	6690	-65	-40	SubEv_C03_Mercedes_02_Trigger	{progress:35}==10	{progress:35}==10		9086	
+35	40	SubEv_C03_Mercedes_04	2070	Town_05Old_01_01	BP_MapUnit_NPC_C	33	3265	5525	250	SubEv_C03_Mercedes_04		{progress:35}==30			
+35	50	SubEv_C03_Mercedes_05	3100	Dng_05Old_43_01	BP_MapUnit_NPC_C	0	-1121	-4503	100	SubEv_C03_Mercedes_05	{progress:35}==40	{progress:35}==40			25000:1 -1:1500
+36	10	ChrEv_0410_001_01	2113	Town_06Zol_04_01	BP_MapUnit_NPC_C	5	238	-665	100	ChrEv_0410_001_01	{progress:0}>=5000&{progress:36}==0	{progress:36}==0&{progress:0}>=5000			
+36	20	ChrEv_0410_002_02	1000	Wld	BP_MapGimmick_InteractEventTrigger_C	5000	-12413	17128	642	ChrEv_0410_002_01	{progress:36}==10	{progress:36}==10			
+36	21	ChrEv_0410_003_1st	3121	Dng_06Zol_47	BP_MapUnit_NPC_C	1	-448	4515	104	ChrEv_0410_003_NPC01		!{flag:423}	{progress:36}==20		
+36	21	ChrEv_0410_003_1st	3121	Dng_06Zol_47	BP_MapUnit_NPC_C	2	509	2357	104	ChrEv_0410_003_NPC04		!{flag:426}	{progress:36}==20		
+36	21	ChrEv_0410_003_1st	3121	Dng_06Zol_47	BP_MapUnit_NPC_C	3	-421	1439	104	ChrEv_0410_003_NPC02		!{flag:424}	{progress:36}==20		
+36	21	ChrEv_0410_003_1st	3121	Dng_06Zol_47	BP_MapUnit_NPC_C	4	610	3953	104	ChrEv_0410_003_NPC03		{progress:36}<=49&!{flag:425}	{progress:36}==20		
+36	22	ChrEv_0410_003_2nd	3121	Dng_06Zol_47	BP_MapUnit_NPC_C	1	-448	4515	104	ChrEv_0410_003_NPC01		!{flag:423}	{progress:36}==21		
+36	22	ChrEv_0410_003_2nd	3121	Dng_06Zol_47	BP_MapUnit_NPC_C	2	509	2357	104	ChrEv_0410_003_NPC04		!{flag:426}	{progress:36}==21		
+36	22	ChrEv_0410_003_2nd	3121	Dng_06Zol_47	BP_MapUnit_NPC_C	3	-421	1439	104	ChrEv_0410_003_NPC02		!{flag:424}	{progress:36}==21		
+36	22	ChrEv_0410_003_2nd	3121	Dng_06Zol_47	BP_MapUnit_NPC_C	4	610	3953	104	ChrEv_0410_003_NPC03		{progress:36}<=49&!{flag:425}	{progress:36}==21		
+36	23	ChrEv_0410_003_3rd	3121	Dng_06Zol_47	BP_MapUnit_NPC_C	1	-448	4515	104	ChrEv_0410_003_NPC01		!{flag:423}	{progress:36}==22		
+36	23	ChrEv_0410_003_3rd	3121	Dng_06Zol_47	BP_MapUnit_NPC_C	2	509	2357	104	ChrEv_0410_003_NPC04		!{flag:426}	{progress:36}==22		
+36	23	ChrEv_0410_003_3rd	3121	Dng_06Zol_47	BP_MapUnit_NPC_C	3	-421	1439	104	ChrEv_0410_003_NPC02		!{flag:424}	{progress:36}==22		
+36	23	ChrEv_0410_003_3rd	3121	Dng_06Zol_47	BP_MapUnit_NPC_C	4	610	3953	104	ChrEv_0410_003_NPC03		{progress:36}<=49&!{flag:425}	{progress:36}==22		
+36	30	ChrEv_0410_003_01	3121	Dng_06Zol_47	BP_MapUnit_NPC_C	1	-448	4515	104	ChrEv_0410_003_NPC01		!{flag:423}	{progress:36}==23		
+36	30	ChrEv_0410_003_01	3121	Dng_06Zol_47	BP_MapUnit_NPC_C	2	509	2357	104	ChrEv_0410_003_NPC04		!{flag:426}	{progress:36}==23		
+36	30	ChrEv_0410_003_01	3121	Dng_06Zol_47	BP_MapUnit_NPC_C	3	-421	1439	104	ChrEv_0410_003_NPC02		!{flag:424}	{progress:36}==23		
+36	30	ChrEv_0410_003_01	3121	Dng_06Zol_47	BP_MapUnit_NPC_C	4	610	3953	104	ChrEv_0410_003_NPC03		{progress:36}<=49&!{flag:425}	{progress:36}==23		
+36	40	ChrEv_0410_004_01	3121	Dng_06Zol_47	BP_MapTransitionTrigger_C	1	0	700	100	ChrEv_0410_004_01		({progress:36}==30)&({progress:36}==30)			
+36	41	ChrEv_0410_004_1st	3121	Dng_06Zol_47	BP_MapUnit_NPC_C	5	613	-1383	104	ChrEv_0410_004_NPC01		{progress:36}<50&!{flag:427}	{progress:36}==40		
+36	41	ChrEv_0410_004_1st	3121	Dng_06Zol_47	BP_MapUnit_NPC_C	6	597	-3011	107	ChrEv_0410_004_NPC02		{progress:36}<50&!{flag:428}	{progress:36}==40		
+36	50	ChrEv_0410_005_choice2_true	3121	Dng_06Zol_47	BP_MapUnit_NPC_C	5	613	-1383	104	ChrEv_0410_004_NPC01		{progress:36}<50&!{flag:427}	{progress:36}==41		
+36	50	ChrEv_0410_005_choice2_true	3121	Dng_06Zol_47	BP_MapUnit_NPC_C	6	597	-3011	107	ChrEv_0410_004_NPC02		{progress:36}<50&!{flag:428}	{progress:36}==41		
+36	60	ChrEv_0410_007_02	3121	Dng_06Zol_47	BP_MapUnit_NPC_C	4	610	3953	104	ChrEv_0410_006_01		{progress:36}==50		9095	25001:1 13033:1
+37	10	ChrEv_0340_001_01	2110	Town_06Zol_01_01	CPP_MapGimmick_InteractEventTrigger	5	1191	651	150	ChrEv_0340_001_01		{progress:7}>=60&{progress:37}==0			
+37	20	ChrEv_0340_002_01	3160	Dng_06Zol_44_01	BP_MapUnit_NPC_C	14	47918	0	500	ChrEv_0340_002_01	{progress:0}>=5010 &( {progress:37}<=10 |  {progress:37}>=50 )	{progress:37}==10			
+37	30	ChrEv_0340_003_01	2070	Town_05Old_01_01	BP_MapUnit_NPC_C	0	485	-2933	221	ChrEv_0340_003_01	{progress:37}==20	{progress:37}==20			
+37	40	ChrEv_0340_004_01	3100	Dng_05Old_43_01	BP_MapUnit_NPC_C	1	2890	5370	1066	ChrEv_0340_004_01	{progress:37}==30	{progress:37}==30			
+37	50	ChrEv_0340_005_01	2110	Town_06Zol_01_01	CPP_MapGimmick_InteractEventTrigger	5	1191	651	150	ChrEv_0340_005_01		{progress:37}==40			25001:1 13017:1
+38	10	ChrEv_2810_001_01	2060	Town_04Dir_01_04	BP_MapUnit_NPC_C	3	1622	456	100	ChrEv_2810_001_01	{progress:0}>=5010&{progress:38}>=0 &{progress:38}<40	{progress:0}>=5010&{progress:38}==0			
+38	20	ChrEv_2810_002_01	2061	Town_04Dir_02_01	BP_MapUnit_NPC_C	18	3479	946	900	ChrEv_2810_002_01	{progress:38}==10|{progress:38}==30	{progress:38}==10			
+38	21	ChrEv_2810_1st	2020	Town_02Lan_20_01	BP_MapUnit_NPC_C	4	6954	6858	88	ChrEv_2810_005_01	{progress:38}>=20 & {progress:38}<40	{progress:38}>=20&{progress:38}<30&!{flag:218}	{progress:38}==20		
+38	21	ChrEv_2810_1st	2060	Town_04Dir_01_04	BP_MapUnit_NPC_C	21	7083	4790	100	ChrEv_2810_003_01	{progress:38}>=20 & {progress:38}<40	{progress:38}>=20&{progress:38}<30&!{flag:216}	{progress:38}==20		
+38	21	ChrEv_2810_1st	2120	Town_06Zol_21_01	BP_MapUnit_NPC_C	17	29	395	101	ChrEv_2810_004_01		{progress:38}>=20&{progress:38}<30&!{flag:217}	{progress:38}==20		
+38	22	ChrEv_2810_2nd	2020	Town_02Lan_20_01	BP_MapUnit_NPC_C	4	6954	6858	88	ChrEv_2810_005_01	{progress:38}>=20 & {progress:38}<40	{progress:38}>=20&{progress:38}<30&!{flag:218}	{progress:38}==21		
+38	22	ChrEv_2810_2nd	2060	Town_04Dir_01_04	BP_MapUnit_NPC_C	21	7083	4790	100	ChrEv_2810_003_01	{progress:38}>=20 & {progress:38}<40	{progress:38}>=20&{progress:38}<30&!{flag:216}	{progress:38}==21		
+38	22	ChrEv_2810_2nd	2120	Town_06Zol_21_01	BP_MapUnit_NPC_C	17	29	395	101	ChrEv_2810_004_01		{progress:38}>=20&{progress:38}<30&!{flag:217}	{progress:38}==21		
+38	30	ChrEv_2810_006_01	2020	Town_02Lan_20_01	BP_MapUnit_NPC_C	4	6954	6858	88	ChrEv_2810_005_01	{progress:38}>=20 & {progress:38}<40	{progress:38}>=20&{progress:38}<30&!{flag:218}	{progress:38}==22		
+38	30	ChrEv_2810_006_01	2060	Town_04Dir_01_04	BP_MapUnit_NPC_C	21	7083	4790	100	ChrEv_2810_003_01	{progress:38}>=20 & {progress:38}<40	{progress:38}>=20&{progress:38}<30&!{flag:216}	{progress:38}==22		
+38	30	ChrEv_2810_006_01	2120	Town_06Zol_21_01	BP_MapUnit_NPC_C	17	29	395	101	ChrEv_2810_004_01		{progress:38}>=20&{progress:38}<30&!{flag:217}	{progress:38}==22		
+38	40	ChrEv_2810_007_03_03	2061	Town_04Dir_02_01	BP_MapUnit_NPC_C	18	3479	946	900	ChrEv_2810_007_2nd	{progress:38}==10|{progress:38}==30	{progress:38}==30&{flag:220}			25001:1 13080:1
+38	40	ChrEv_2810_007_03_03	2061	Town_04Dir_02_01	BP_MapUnit_NPC_C	18	3479	946	900	ChrEv_2810_007_Start	{progress:38}==10|{progress:38}==30	{progress:38}==30&!{flag:220}			25001:1 13080:1
+38	50	C06_AileenWeapon_01	20002	Town_00Com_03_01	BP_MapUnit_NPC_C	5	1435	-810	238	C06_AileenWeapon_01	{progress:38}>=40	{progress:38}==40&{progress:0}<6000			
+38	60	C06_AileenWeapon_02	20002	Town_00Com_03_01	BP_MapUnit_NPC_C	5	1435	-810	238	C06_AileenWeapon_02	{progress:38}>=40	({progress:38}==40|{progress:38}==50) & {progress:0}>=6000			
+38	70	C06_AileenWeapon_06_complete	20002	Town_00Com_03_01	BP_MapUnit_NPC_C	5	1435	-810	238	C06_AileenWeapon_02	{progress:38}>=40	({progress:38}==40|{progress:38}==50) & {progress:0}>=6000	{item:20016}>=1 {item:10690}==0 {item:10890}==0 {item:10190}==1		
+38	70	C06_AileenWeapon_06_complete	20002	Town_00Com_03_01	BP_MapUnit_NPC_C	5	1435	-810	238	C06_AileenWeapon_05	{progress:38}>=40	{progress:38}==60 & {item:20016}>=1	{item:10690}==0 {item:10890}==0 {item:10190}==1		
+39	10	ChrEv_2280_001_01	2130	Town_07Mys_01_01	BP_MapUnit_NPC_C	24	16493	4759	270	ChrEv_2280_001_01	{progress:39}==0&{progress:0}>=5060	{progress:39}==0			
+39	20	ChrEv_2280_002_01	2130	Town_07Mys_01_01	BP_MapUnit_NPC_C	25	-2440	27325	2200	ChrEv_2280_002_01	{progress:39}==10	{progress:39}==10			
+39	30	ChrEv_2280_003_01	3213	Dng_07Mys_49_01	BP_MapUnit_NPC_C	0	6057	-1204	100	ChrEv_2280_003_01	{progress:39}>=20 & {progress:39}<50	{progress:39}==20			
+39	40	ChrEv_2280_004_001	1000	Wld	BP_MapUnit_NPC_Field_C	9	-9970	-2037	9	ChrEv_2280_004_encount	{progress:39}==30			9107	
+39	40	ChrEv_2280_004_encount	1000	Wld	BP_MapUnit_NPC_Field_C	9	-9970	-2037	9	ChrEv_2280_004_encount	{progress:39}==30				
+39	50	ChrEv_2280_005_01	2130	Town_07Mys_01_01	BP_MapGimmick_InteractEventTrigger_C	12	20775	-75	5440	ChrEv_2280_005_01	{progress:39}==40	{progress:39}==40			13027:1 25001:1
+40	10	ChrEv_0470_001_01	2030	Town_02Lan_21_01	BP_MapUnit_NPC_C	27	-3145	-6659	310	ChrEv_0470_001_01	{progress:0}>=7000&{progress:40}==0	{progress:0}>=7000&{progress:40}==0			
+40	11	ChrEv_0470_002_1st	2012	Town_01Gra_21_01	BP_MapUnit_NPC_C	16	-11430	-2885	1280	ChrEv_0470_002_01	{progress:40}>=10&{progress:40}<20	{progress:40}>=10&{progress:40}<20&!{flag:148}	{progress:40}==10		
+40	11	ChrEv_0470_002_1st	2012	Town_01Gra_21_01	BP_MapUnit_NPC_C	17	-13441	-6988	500	ChrEv_0470_002_02	{progress:40}>=10&{progress:40}<20	{progress:40}>=10&{progress:40}<20&!{flag:149}	{progress:40}==10		
+40	11	ChrEv_0470_002_1st	2012	Town_01Gra_21_01	BP_MapGimmick_FieldItem_C	6	-10996	6335	1299	ChrEv_0470_002_03	{progress:40}>=10&{progress:40}<20&!{flag:150}	{progress:40}>=10&{progress:40}<20&!{flag:150}	{progress:40}==10		
+40	12	ChrEv_0470_002_2nd	2012	Town_01Gra_21_01	BP_MapUnit_NPC_C	16	-11430	-2885	1280	ChrEv_0470_002_01	{progress:40}>=10&{progress:40}<20	{progress:40}>=10&{progress:40}<20&!{flag:148}	{progress:40}==11		
+40	12	ChrEv_0470_002_2nd	2012	Town_01Gra_21_01	BP_MapUnit_NPC_C	17	-13441	-6988	500	ChrEv_0470_002_02	{progress:40}>=10&{progress:40}<20	{progress:40}>=10&{progress:40}<20&!{flag:149}	{progress:40}==11		
+40	12	ChrEv_0470_002_2nd	2012	Town_01Gra_21_01	BP_MapGimmick_FieldItem_C	6	-10996	6335	1299	ChrEv_0470_002_03	{progress:40}>=10&{progress:40}<20&!{flag:150}	{progress:40}>=10&{progress:40}<20&!{flag:150}	{progress:40}==11		
+40	20	ChrEv_0470_002_04	2012	Town_01Gra_21_01	BP_MapUnit_NPC_C	16	-11430	-2885	1280	ChrEv_0470_002_01	{progress:40}>=10&{progress:40}<20	{progress:40}>=10&{progress:40}<20&!{flag:148}	{flag:149}&{flag:150}		
+40	20	ChrEv_0470_002_04	2012	Town_01Gra_21_01	BP_MapUnit_NPC_C	17	-13441	-6988	500	ChrEv_0470_002_02	{progress:40}>=10&{progress:40}<20	{progress:40}>=10&{progress:40}<20&!{flag:149}	{flag:148}&{flag:150}		
+40	20	ChrEv_0470_002_04	2012	Town_01Gra_21_01	BP_MapGimmick_FieldItem_C	6	-10996	6335	1299	ChrEv_0470_002_03	{progress:40}>=10&{progress:40}<20&!{flag:150}	{progress:40}>=10&{progress:40}<20&!{flag:150}	{flag:148}&{flag:149}		
+40	20	ChrEv_0470_002_fade	2012	Town_01Gra_21_01	BP_MapUnit_NPC_C	16	-11430	-2885	1280	ChrEv_0470_002_01	{progress:40}>=10&{progress:40}<20	{progress:40}>=10&{progress:40}<20&!{flag:148}	{flag:149}&{flag:150}		
+40	20	ChrEv_0470_002_fade	2012	Town_01Gra_21_01	BP_MapUnit_NPC_C	17	-13441	-6988	500	ChrEv_0470_002_02	{progress:40}>=10&{progress:40}<20	{progress:40}>=10&{progress:40}<20&!{flag:149}	{flag:148}&{flag:150}		
+40	20	ChrEv_0470_002_fade	2012	Town_01Gra_21_01	BP_MapGimmick_FieldItem_C	6	-10996	6335	1299	ChrEv_0470_002_03	{progress:40}>=10&{progress:40}<20&!{flag:150}	{progress:40}>=10&{progress:40}<20&!{flag:150}	{flag:148}&{flag:149}		
+40	30	ChrEv_0470_004_01	3040	Dng_03Kol_40_01	BP_MapUnit_NPC_C	0	8030	12855	-300	ChrEv_0470_003_01	{progress:40}==20	{progress:40}==20		9104	
+40	40	ChrEv_0470_005_02	3031	Dng_02Lan_44	BP_MapUnit_NPC_C	0	4751	0	100	ChrEv_0470_005_01	{progress:40}==30	{progress:40}==30		9105	
+40	50	ChrEv_0470_006_01	2011	Town_01Gra_02_01	BP_MapUnit_NPC_C	1	10844	-279	380	ChrEv_0470_006_01	{progress:40}==40	{progress:40}==40			25002:1 13060:1
+41	10	SubEv_C03_TreatmentGirl_01	2070	Town_05Old_01_01	BP_MapUnit_NPC_C	47	10086	6195	1140	SubEv_C03_TreatmentGirl_01	{progress:0}>=3042&{progress:41}<=40	{progress:41}==0			
+41	10	SubEv_C03_TreatmentGirl_01	2070	Town_05Old_01_01	BP_MapUnit_NPC_C	48	10086	6195	1140	SubEv_C03_TreatmentGirl_01	{progress:41}==50	{progress:41}==0			
+41	20	SubEv_C03_TreatmentGirl_02	2070	Town_05Old_01_01	BP_MapUnit_NPC_C	41	254	-4400	220	SubEv_C03_TreatmentGirl_02	{progress:41}>=10	{progress:41}==10			
+41	30	SubEv_C03_TreatmentGirl_04_Clear	1000	Wld	BP_MapGimmick_FieldItem_C	184	-2660	-974	143	SubEv_C03_TreatmentGirl_04_A01	{progress:41}==20&!{flag:322}		{flag:323}		
+41	30	SubEv_C03_TreatmentGirl_04_Clear	3080	Dng_05Old_40_01	BP_MapGimmick_InteractEventTrigger_C	55	1746	13328	-168	SubEv_C03_TreatmentGirl_04_B02	{progress:41}==20&!{flag:323}	{progress:41}==20&!{flag:323}	{flag:322}		
+41	40	SubEv_C03_TreatmentGirl_03_02	1000	Wld	BP_MapUnit_NPC_Field_C	15	-1017	2575	1	SubEv_C03_TreatmentGirl_03_01	{progress:41}==20	{progress:41}==20		9119	20023:1
+41	40	SubEv_C03_TreatmentGirl_05	2070	Town_05Old_01_01	BP_MapUnit_NPC_C	41	254	-4400	220	SubEv_C03_TreatmentGirl_05	{progress:41}>=10	{progress:41}==30			20026:1
+41	40	SubEv_C03_TreatmentGirl_06_Buy	11000	Town_05Old_22_01	BP_MapUnit_NPC_C	0	-628	-248	100	SubEv_C03_TreatmentGirl_06_01	{progress:41}==20|{progress:41}==30&{flag:324}|{progress:41}==40&{flag:324}	{progress:41}==20&!{flag:324}	{money}>=50000		20027:1
+41	40	SubEv_C03_TreatmentGirl_06_Buy	11000	Town_05Old_22_01	BP_MapUnit_NPC_C	0	-628	-248	100	SubEv_C03_TreatmentGirl_06_Retry	{progress:41}==20|{progress:41}==30&{flag:324}|{progress:41}==40&{flag:324}	{progress:41}==20&{flag:324}	{money}>=50000		20027:1
+41	50	SubEv_C03_TreatmentGirl_08_Clear	2070	Town_05Old_01_01	BP_MapUnit_NPC_C	47	10086	6195	1140	SubEv_C03_TreatmentGirl_08_01	{progress:0}>=3042&{progress:41}<=40	{progress:41}==40&{flag:321}			25000:1 -1:1500
+41	50	SubEv_C03_TreatmentGirl_08_Clear	2070	Town_05Old_01_01	BP_MapUnit_NPC_C	47	10086	6195	1140	SubEv_C03_TreatmentGirl_08_02	{progress:0}>=3042&{progress:41}<=40	{progress:41}==40&{flag:322}&{flag:323}			25000:1 -1:1500
+41	50	SubEv_C03_TreatmentGirl_08_Clear	2070	Town_05Old_01_01	BP_MapUnit_NPC_C	47	10086	6195	1140	SubEv_C03_TreatmentGirl_08_03	{progress:0}>=3042&{progress:41}<=40	{progress:41}==40&{flag:325}			25000:1 -1:1500
+41	50	SubEv_C03_TreatmentGirl_08_Clear	2070	Town_05Old_01_01	BP_MapUnit_NPC_C	48	10086	6195	1140	SubEv_C03_TreatmentGirl_08_01	{progress:41}==50	{progress:41}==40&{flag:321}			25000:1 -1:1500
+41	50	SubEv_C03_TreatmentGirl_08_Clear	2070	Town_05Old_01_01	BP_MapUnit_NPC_C	48	10086	6195	1140	SubEv_C03_TreatmentGirl_08_03	{progress:41}==50	{progress:41}==40&{flag:325}			25000:1 -1:1500
+42	10	SubEv_C04_Spy_01	2120	Town_06Zol_21_01	BP_MapUnit_NPC_C	18	1014	-628	101	SubEv_C04_Spy_01	{progress:0}>=5000	{progress:42}==0			20028:1
+42	11	SubEv_C04_Spy_02_1st	2110	Town_06Zol_01_01	BP_MapUnit_NPC_C	15	248	953	100	SubEv_C04_Spy_02_02	{progress:42}>=10&{progress:42}<20	{progress:42}>=10&{progress:42}<20&!{flag:446}	{progress:42}==10		
+42	11	SubEv_C04_Spy_02_1st	2113	Town_06Zol_04_01	BP_MapUnit_NPC_C	0	957	527	100	SubEv_C04_Spy_02_01	{progress:42}>=10&{progress:42}<20	{progress:42}>=10&{progress:42}<20&!{flag:445}	{progress:42}==10		
+42	12	SubEv_C04_Spy_02_2nd	2110	Town_06Zol_01_01	BP_MapUnit_NPC_C	15	248	953	100	SubEv_C04_Spy_02_02	{progress:42}>=10&{progress:42}<20	{progress:42}>=10&{progress:42}<20&!{flag:446}	{progress:42}==11		
+42	12	SubEv_C04_Spy_02_2nd	2113	Town_06Zol_04_01	BP_MapUnit_NPC_C	0	957	527	100	SubEv_C04_Spy_02_01	{progress:42}>=10&{progress:42}<20	{progress:42}>=10&{progress:42}<20&!{flag:445}	{progress:42}==11		
+42	20	SubEv_C04_Spy_02_03	2114	Town_06Zol_05_01	BP_MapUnit_NPC_C	6	155	42	100	SubEv_C04_Spy_02_03	{progress:42}>=10&{progress:42}<=60	{progress:42}>=10&{progress:42}<20			
+42	30	SubEv_C04_Spy_03_01	2114	Town_06Zol_05_01	BP_MapGimmick_InteractEventTrigger_C	1	-150	-545	39	SubEv_C04_Spy_03_01		{progress:42}==20			
+42	31	SubEv_C04_Spy_03_001	2110	Town_06Zol_01_01	BP_MapGimmick_InteractEventTrigger_C	6	-60	350	25	SubEv_C04_Spy_03_02	!{flag:435}	!{flag:435}&{progress:42}>=30&{progress:42}<40	!{flag:436}|!{flag:437}|!{flag:438}|!{flag:439} {progress:42}==30		
+42	31	SubEv_C04_Spy_03_001	2110	Town_06Zol_01_01	BP_MapGimmick_InteractEventTrigger_C	7	2800	-1400	25	SubEv_C04_Spy_03_03	!{flag:436}	!{flag:436}&{progress:42}>=30&{progress:42}<40	!{flag:435}|!{flag:437}|!{flag:438}|!{flag:439} {progress:42}==30		
+42	31	SubEv_C04_Spy_03_001	2111	Town_06Zol_02_01	BP_MapGimmick_InteractEventTrigger_C	3	90	0	29	SubEv_C04_Spy_03_06	!{flag:439}	!{flag:439}&{progress:42}>=30&{progress:42}<40	!{flag:435}|!{flag:436}|!{flag:437}|!{flag:438} {progress:42}==30		
+42	31	SubEv_C04_Spy_03_001	2112	Town_06Zol_03_01	BP_MapGimmick_InteractEventTrigger_C	1	-165	365	35	SubEv_C04_Spy_03_04	!{flag:437}	!{flag:437}&{progress:42}>=30&{progress:42}<40	!{flag:435}|!{flag:436}|!{flag:438}|!{flag:439} {progress:42}==30		
+42	31	SubEv_C04_Spy_03_001	2113	Town_06Zol_04_01	BP_MapGimmick_InteractEventTrigger_C	2	0	0	35	SubEv_C04_Spy_03_05	!{flag:438}	!{flag:438}&{progress:42}>=30&{progress:42}<40	!{flag:435}|!{flag:436}|!{flag:437}|!{flag:439} {progress:42}==30		
+42	32	SubEv_C04_Spy_03_002	2110	Town_06Zol_01_01	BP_MapGimmick_InteractEventTrigger_C	6	-60	350	25	SubEv_C04_Spy_03_02	!{flag:435}	!{flag:435}&{progress:42}>=30&{progress:42}<40	!{flag:436}|!{flag:437}|!{flag:438}|!{flag:439} {progress:42}==31		
+42	32	SubEv_C04_Spy_03_002	2110	Town_06Zol_01_01	BP_MapGimmick_InteractEventTrigger_C	7	2800	-1400	25	SubEv_C04_Spy_03_03	!{flag:436}	!{flag:436}&{progress:42}>=30&{progress:42}<40	!{flag:435}|!{flag:437}|!{flag:438}|!{flag:439} {progress:42}==31		
+42	32	SubEv_C04_Spy_03_002	2111	Town_06Zol_02_01	BP_MapGimmick_InteractEventTrigger_C	3	90	0	29	SubEv_C04_Spy_03_06	!{flag:439}	!{flag:439}&{progress:42}>=30&{progress:42}<40	!{flag:435}|!{flag:436}|!{flag:437}|!{flag:438} {progress:42}==31		
+42	32	SubEv_C04_Spy_03_002	2112	Town_06Zol_03_01	BP_MapGimmick_InteractEventTrigger_C	1	-165	365	35	SubEv_C04_Spy_03_04	!{flag:437}	!{flag:437}&{progress:42}>=30&{progress:42}<40	!{flag:435}|!{flag:436}|!{flag:438}|!{flag:439} {progress:42}==31		
+42	32	SubEv_C04_Spy_03_002	2113	Town_06Zol_04_01	BP_MapGimmick_InteractEventTrigger_C	2	0	0	35	SubEv_C04_Spy_03_05	!{flag:438}	!{flag:438}&{progress:42}>=30&{progress:42}<40	!{flag:435}|!{flag:436}|!{flag:437}|!{flag:439} {progress:42}==31		
+42	33	SubEv_C04_Spy_03_003	2110	Town_06Zol_01_01	BP_MapGimmick_InteractEventTrigger_C	6	-60	350	25	SubEv_C04_Spy_03_02	!{flag:435}	!{flag:435}&{progress:42}>=30&{progress:42}<40	!{flag:436}|!{flag:437}|!{flag:438}|!{flag:439} {progress:42}==32		
+42	33	SubEv_C04_Spy_03_003	2110	Town_06Zol_01_01	BP_MapGimmick_InteractEventTrigger_C	7	2800	-1400	25	SubEv_C04_Spy_03_03	!{flag:436}	!{flag:436}&{progress:42}>=30&{progress:42}<40	!{flag:435}|!{flag:437}|!{flag:438}|!{flag:439} {progress:42}==32		
+42	33	SubEv_C04_Spy_03_003	2111	Town_06Zol_02_01	BP_MapGimmick_InteractEventTrigger_C	3	90	0	29	SubEv_C04_Spy_03_06	!{flag:439}	!{flag:439}&{progress:42}>=30&{progress:42}<40	!{flag:435}|!{flag:436}|!{flag:437}|!{flag:438} {progress:42}==32		
+42	33	SubEv_C04_Spy_03_003	2112	Town_06Zol_03_01	BP_MapGimmick_InteractEventTrigger_C	1	-165	365	35	SubEv_C04_Spy_03_04	!{flag:437}	!{flag:437}&{progress:42}>=30&{progress:42}<40	!{flag:435}|!{flag:436}|!{flag:438}|!{flag:439} {progress:42}==32		
+42	33	SubEv_C04_Spy_03_003	2113	Town_06Zol_04_01	BP_MapGimmick_InteractEventTrigger_C	2	0	0	35	SubEv_C04_Spy_03_05	!{flag:438}	!{flag:438}&{progress:42}>=30&{progress:42}<40	!{flag:435}|!{flag:436}|!{flag:437}|!{flag:439} {progress:42}==32		
+42	34	SubEv_C04_Spy_03_004	2110	Town_06Zol_01_01	BP_MapGimmick_InteractEventTrigger_C	6	-60	350	25	SubEv_C04_Spy_03_02	!{flag:435}	!{flag:435}&{progress:42}>=30&{progress:42}<40	!{flag:436}|!{flag:437}|!{flag:438}|!{flag:439} {progress:42}==33		
+42	34	SubEv_C04_Spy_03_004	2110	Town_06Zol_01_01	BP_MapGimmick_InteractEventTrigger_C	7	2800	-1400	25	SubEv_C04_Spy_03_03	!{flag:436}	!{flag:436}&{progress:42}>=30&{progress:42}<40	!{flag:435}|!{flag:437}|!{flag:438}|!{flag:439} {progress:42}==33		
+42	34	SubEv_C04_Spy_03_004	2111	Town_06Zol_02_01	BP_MapGimmick_InteractEventTrigger_C	3	90	0	29	SubEv_C04_Spy_03_06	!{flag:439}	!{flag:439}&{progress:42}>=30&{progress:42}<40	!{flag:435}|!{flag:436}|!{flag:437}|!{flag:438} {progress:42}==33		
+42	34	SubEv_C04_Spy_03_004	2112	Town_06Zol_03_01	BP_MapGimmick_InteractEventTrigger_C	1	-165	365	35	SubEv_C04_Spy_03_04	!{flag:437}	!{flag:437}&{progress:42}>=30&{progress:42}<40	!{flag:435}|!{flag:436}|!{flag:438}|!{flag:439} {progress:42}==33		
+42	34	SubEv_C04_Spy_03_004	2113	Town_06Zol_04_01	BP_MapGimmick_InteractEventTrigger_C	2	0	0	35	SubEv_C04_Spy_03_05	!{flag:438}	!{flag:438}&{progress:42}>=30&{progress:42}<40	!{flag:435}|!{flag:436}|!{flag:437}|!{flag:439} {progress:42}==33		
+42	40	SubEv_C04_Spy_03_07	2110	Town_06Zol_01_01	BP_MapGimmick_InteractEventTrigger_C	6	-60	350	25	SubEv_C04_Spy_03_02	!{flag:435}	!{flag:435}&{progress:42}>=30&{progress:42}<40	{flag:436}&{flag:437}&{flag:438}&{flag:439}		
+42	40	SubEv_C04_Spy_03_07	2110	Town_06Zol_01_01	BP_MapGimmick_InteractEventTrigger_C	7	2800	-1400	25	SubEv_C04_Spy_03_03	!{flag:436}	!{flag:436}&{progress:42}>=30&{progress:42}<40	{flag:435}&{flag:437}&{flag:438}&{flag:439}		
+42	40	SubEv_C04_Spy_03_07	2111	Town_06Zol_02_01	BP_MapGimmick_InteractEventTrigger_C	3	90	0	29	SubEv_C04_Spy_03_06	!{flag:439}	!{flag:439}&{progress:42}>=30&{progress:42}<40	{flag:435}&{flag:436}&{flag:437}&{flag:438}		
+42	40	SubEv_C04_Spy_03_07	2112	Town_06Zol_03_01	BP_MapGimmick_InteractEventTrigger_C	1	-165	365	35	SubEv_C04_Spy_03_04	!{flag:437}	!{flag:437}&{progress:42}>=30&{progress:42}<40	{flag:435}&{flag:436}&{flag:438}&{flag:439}		
+42	40	SubEv_C04_Spy_03_07	2113	Town_06Zol_04_01	BP_MapGimmick_InteractEventTrigger_C	2	0	0	35	SubEv_C04_Spy_03_05	!{flag:438}	!{flag:438}&{progress:42}>=30&{progress:42}<40	{flag:435}&{flag:436}&{flag:437}&{flag:439}		
+42	50	SubEv_C04_Spy_04	2112	Town_06Zol_03_01	BP_MapUnit_NPC_C	12	313	730	100	SubEv_C04_Spy_04	{progress:42}>=10&{progress:42}<=60	{progress:42}==40			
+42	60	SubEv_C04_Spy_04_True	2112	Town_06Zol_03_01	BP_MapUnit_NPC_C	12	313	730	100	SubEv_C04_Spy_04	{progress:42}>=10&{progress:42}<=60	{progress:42}==40			20029:1
+42	60	SubEv_C04_Spy_04_True	2112	Town_06Zol_03_01	BP_MapUnit_NPC_C	12	313	730	100	SubEv_C04_Spy_04_Retry	{progress:42}>=10&{progress:42}<=60	{progress:42}==50			20029:1
+42	70	SubEv_C04_Spy_05	2120	Town_06Zol_21_01	BP_MapUnit_NPC_C	18	1014	-628	101	SubEv_C04_Spy_05	{progress:0}>=5000	{progress:42}==60			25001:1 12100:1
+43	10	SubEv_C01_Collection_01	2031	Town_02Lan_22_01	BP_MapUnit_NPC_C	0	2258	80822	195	SubEv_C01_Collection_01	!{flag:153}	{progress:43}==0			
+43	11	SubEv_C01_Collection_04_01	2031	Town_02Lan_22_01	BP_MapUnit_NPC_C	0	2258	80822	195	SubEv_C01_Collection_01	!{flag:153}	{progress:43}==0	{item:25004}>=1 {progress:43}==10&{transferItem:0,25004}>=3		
+43	11	SubEv_C01_Collection_04_01	2031	Town_02Lan_22_01	BP_MapUnit_NPC_C	0	2258	80822	195	SubEv_C01_Collection_02	!{flag:153}	{progress:43}>=10	{item:25004}>=1 {progress:43}==10&{transferItem:0,25004}>=3		
+43	12	SubEv_C01_Collection_04_02	2031	Town_02Lan_22_01	BP_MapUnit_NPC_C	0	2258	80822	195	SubEv_C01_Collection_01	!{flag:153}	{progress:43}==0	{item:25004}>=1 {progress:43}==11&{transferItem:0,25004}>=6		
+43	12	SubEv_C01_Collection_04_02	2031	Town_02Lan_22_01	BP_MapUnit_NPC_C	0	2258	80822	195	SubEv_C01_Collection_02	!{flag:153}	{progress:43}>=10	{item:25004}>=1 {progress:43}==11&{transferItem:0,25004}>=6		
+43	13	SubEv_C01_Collection_04_03	2031	Town_02Lan_22_01	BP_MapUnit_NPC_C	0	2258	80822	195	SubEv_C01_Collection_01	!{flag:153}	{progress:43}==0	{item:25004}>=1 {progress:43}==12&{transferItem:0,25004}>=9		
+43	13	SubEv_C01_Collection_04_03	2031	Town_02Lan_22_01	BP_MapUnit_NPC_C	0	2258	80822	195	SubEv_C01_Collection_02	!{flag:153}	{progress:43}>=10	{item:25004}>=1 {progress:43}==12&{transferItem:0,25004}>=9		
+43	14	SubEv_C01_Collection_04_04	2031	Town_02Lan_22_01	BP_MapUnit_NPC_C	0	2258	80822	195	SubEv_C01_Collection_01	!{flag:153}	{progress:43}==0	{item:25004}>=1 {progress:43}==13&{transferItem:0,25004}>=12		
+43	14	SubEv_C01_Collection_04_04	2031	Town_02Lan_22_01	BP_MapUnit_NPC_C	0	2258	80822	195	SubEv_C01_Collection_02	!{flag:153}	{progress:43}>=10	{item:25004}>=1 {progress:43}==13&{transferItem:0,25004}>=12		
+43	15	SubEv_C01_Collection_04_05	2031	Town_02Lan_22_01	BP_MapUnit_NPC_C	0	2258	80822	195	SubEv_C01_Collection_01	!{flag:153}	{progress:43}==0	{item:25004}>=1 {progress:43}==14&{transferItem:0,25004}>=16		
+43	15	SubEv_C01_Collection_04_05	2031	Town_02Lan_22_01	BP_MapUnit_NPC_C	0	2258	80822	195	SubEv_C01_Collection_02	!{flag:153}	{progress:43}>=10	{item:25004}>=1 {progress:43}==14&{transferItem:0,25004}>=16		
+43	16	SubEv_C01_Collection_04_06	2031	Town_02Lan_22_01	BP_MapUnit_NPC_C	0	2258	80822	195	SubEv_C01_Collection_01	!{flag:153}	{progress:43}==0	{item:25004}>=1 {progress:43}==15&{transferItem:0,25004}>=20		
+43	16	SubEv_C01_Collection_04_06	2031	Town_02Lan_22_01	BP_MapUnit_NPC_C	0	2258	80822	195	SubEv_C01_Collection_02	!{flag:153}	{progress:43}>=10	{item:25004}>=1 {progress:43}==15&{transferItem:0,25004}>=20		
+43	17	SubEv_C01_Collection_04_07	2031	Town_02Lan_22_01	BP_MapUnit_NPC_C	0	2258	80822	195	SubEv_C01_Collection_01	!{flag:153}	{progress:43}==0	{item:25004}>=1 {progress:43}==16&{transferItem:0,25004}>=24		
+43	17	SubEv_C01_Collection_04_07	2031	Town_02Lan_22_01	BP_MapUnit_NPC_C	0	2258	80822	195	SubEv_C01_Collection_02	!{flag:153}	{progress:43}>=10	{item:25004}>=1 {progress:43}==16&{transferItem:0,25004}>=24		
+43	18	SubEv_C01_Collection_04_08	2031	Town_02Lan_22_01	BP_MapUnit_NPC_C	0	2258	80822	195	SubEv_C01_Collection_01	!{flag:153}	{progress:43}==0	{item:25004}>=1 {progress:43}==17&{transferItem:0,25004}>=28		
+43	18	SubEv_C01_Collection_04_08	2031	Town_02Lan_22_01	BP_MapUnit_NPC_C	0	2258	80822	195	SubEv_C01_Collection_02	!{flag:153}	{progress:43}>=10	{item:25004}>=1 {progress:43}==17&{transferItem:0,25004}>=28		
+43	19	SubEv_C01_Collection_04_09	2031	Town_02Lan_22_01	BP_MapUnit_NPC_C	0	2258	80822	195	SubEv_C01_Collection_01	!{flag:153}	{progress:43}==0	{item:25004}>=1 {progress:43}==18&{transferItem:0,25004}>=32		
+43	19	SubEv_C01_Collection_04_09	2031	Town_02Lan_22_01	BP_MapUnit_NPC_C	0	2258	80822	195	SubEv_C01_Collection_02	!{flag:153}	{progress:43}>=10	{item:25004}>=1 {progress:43}==18&{transferItem:0,25004}>=32		
+43	20	SubEv_C01_Collection_04_10	2031	Town_02Lan_22_01	BP_MapUnit_NPC_C	0	2258	80822	195	SubEv_C01_Collection_01	!{flag:153}	{progress:43}==0	{item:25004}>=1 {progress:43}==19&{transferItem:0,25004}>=36		
+43	20	SubEv_C01_Collection_04_10	2031	Town_02Lan_22_01	BP_MapUnit_NPC_C	0	2258	80822	195	SubEv_C01_Collection_02	!{flag:153}	{progress:43}>=10	{item:25004}>=1 {progress:43}==19&{transferItem:0,25004}>=36		
+43	21	SubEv_C01_Collection_04_11	2031	Town_02Lan_22_01	BP_MapUnit_NPC_C	0	2258	80822	195	SubEv_C01_Collection_01	!{flag:153}	{progress:43}==0	{item:25004}>=1 {progress:43}==20&{transferItem:0,25004}>=40		
+43	21	SubEv_C01_Collection_04_11	2031	Town_02Lan_22_01	BP_MapUnit_NPC_C	0	2258	80822	195	SubEv_C01_Collection_02	!{flag:153}	{progress:43}>=10	{item:25004}>=1 {progress:43}==20&{transferItem:0,25004}>=40		
+43	22	SubEv_C01_Collection_04_12	2031	Town_02Lan_22_01	BP_MapUnit_NPC_C	0	2258	80822	195	SubEv_C01_Collection_01	!{flag:153}	{progress:43}==0	{item:25004}>=1 {progress:43}==21&{transferItem:0,25004}>=44		
+43	22	SubEv_C01_Collection_04_12	2031	Town_02Lan_22_01	BP_MapUnit_NPC_C	0	2258	80822	195	SubEv_C01_Collection_02	!{flag:153}	{progress:43}>=10	{item:25004}>=1 {progress:43}==21&{transferItem:0,25004}>=44		
+43	23	SubEv_C01_Collection_04_13	2031	Town_02Lan_22_01	BP_MapUnit_NPC_C	0	2258	80822	195	SubEv_C01_Collection_01	!{flag:153}	{progress:43}==0	{item:25004}>=1 {progress:43}==22&{transferItem:0,25004}>=48		
+43	23	SubEv_C01_Collection_04_13	2031	Town_02Lan_22_01	BP_MapUnit_NPC_C	0	2258	80822	195	SubEv_C01_Collection_02	!{flag:153}	{progress:43}>=10	{item:25004}>=1 {progress:43}==22&{transferItem:0,25004}>=48		
+43	24	SubEv_C01_Collection_04_14	2031	Town_02Lan_22_01	BP_MapUnit_NPC_C	0	2258	80822	195	SubEv_C01_Collection_01	!{flag:153}	{progress:43}==0	{item:25004}>=1 {progress:43}==23&{transferItem:0,25004}>=52		
+43	24	SubEv_C01_Collection_04_14	2031	Town_02Lan_22_01	BP_MapUnit_NPC_C	0	2258	80822	195	SubEv_C01_Collection_02	!{flag:153}	{progress:43}>=10	{item:25004}>=1 {progress:43}==23&{transferItem:0,25004}>=52		
+43	25	SubEv_C01_Collection_04_15	2031	Town_02Lan_22_01	BP_MapUnit_NPC_C	0	2258	80822	195	SubEv_C01_Collection_01	!{flag:153}	{progress:43}==0	{item:25004}>=1 {progress:43}==24&{transferItem:0,25004}>=56		
+43	25	SubEv_C01_Collection_04_15	2031	Town_02Lan_22_01	BP_MapUnit_NPC_C	0	2258	80822	195	SubEv_C01_Collection_02	!{flag:153}	{progress:43}>=10	{item:25004}>=1 {progress:43}==24&{transferItem:0,25004}>=56		
+43	26	SubEv_C01_Collection_04_16	2031	Town_02Lan_22_01	BP_MapUnit_NPC_C	0	2258	80822	195	SubEv_C01_Collection_01	!{flag:153}	{progress:43}==0	{item:25004}>=1 {progress:43}==25&{transferItem:0,25004}>=60		
+43	26	SubEv_C01_Collection_04_16	2031	Town_02Lan_22_01	BP_MapUnit_NPC_C	0	2258	80822	195	SubEv_C01_Collection_02	!{flag:153}	{progress:43}>=10	{item:25004}>=1 {progress:43}==25&{transferItem:0,25004}>=60		
+43	27	SubEv_C01_Collection_04_17	2031	Town_02Lan_22_01	BP_MapUnit_NPC_C	0	2258	80822	195	SubEv_C01_Collection_01	!{flag:153}	{progress:43}==0	{item:25004}>=1 {progress:43}==26&{transferItem:0,25004}>=64		
+43	27	SubEv_C01_Collection_04_17	2031	Town_02Lan_22_01	BP_MapUnit_NPC_C	0	2258	80822	195	SubEv_C01_Collection_02	!{flag:153}	{progress:43}>=10	{item:25004}>=1 {progress:43}==26&{transferItem:0,25004}>=64		
+43	28	SubEv_C01_Collection_04_18	2031	Town_02Lan_22_01	BP_MapUnit_NPC_C	0	2258	80822	195	SubEv_C01_Collection_01	!{flag:153}	{progress:43}==0	{item:25004}>=1 {progress:43}==27&{transferItem:0,25004}>=68		
+43	28	SubEv_C01_Collection_04_18	2031	Town_02Lan_22_01	BP_MapUnit_NPC_C	0	2258	80822	195	SubEv_C01_Collection_02	!{flag:153}	{progress:43}>=10	{item:25004}>=1 {progress:43}==27&{transferItem:0,25004}>=68		
+43	29	SubEv_C01_Collection_04_19	2031	Town_02Lan_22_01	BP_MapUnit_NPC_C	0	2258	80822	195	SubEv_C01_Collection_01	!{flag:153}	{progress:43}==0	{item:25004}>=1 {progress:43}==28&{transferItem:0,25004}>=72		
+43	29	SubEv_C01_Collection_04_19	2031	Town_02Lan_22_01	BP_MapUnit_NPC_C	0	2258	80822	195	SubEv_C01_Collection_02	!{flag:153}	{progress:43}>=10	{item:25004}>=1 {progress:43}==28&{transferItem:0,25004}>=72		
+43	30	SubEv_C01_Collection_04_20	2031	Town_02Lan_22_01	BP_MapUnit_NPC_C	0	2258	80822	195	SubEv_C01_Collection_01	!{flag:153}	{progress:43}==0	{item:25004}>=1 {progress:43}==29&{transferItem:0,25004}>=76		
+43	30	SubEv_C01_Collection_04_20	2031	Town_02Lan_22_01	BP_MapUnit_NPC_C	0	2258	80822	195	SubEv_C01_Collection_02	!{flag:153}	{progress:43}>=10	{item:25004}>=1 {progress:43}==29&{transferItem:0,25004}>=76		
+43	31	SubEv_C01_Collection_04_21	2031	Town_02Lan_22_01	BP_MapUnit_NPC_C	0	2258	80822	195	SubEv_C01_Collection_01	!{flag:153}	{progress:43}==0	{item:25004}>=1 {progress:43}==30&{transferItem:0,25004}>=80		
+43	31	SubEv_C01_Collection_04_21	2031	Town_02Lan_22_01	BP_MapUnit_NPC_C	0	2258	80822	195	SubEv_C01_Collection_02	!{flag:153}	{progress:43}>=10	{item:25004}>=1 {progress:43}==30&{transferItem:0,25004}>=80		
+43	32	SubEv_C01_Collection_04_22	2031	Town_02Lan_22_01	BP_MapUnit_NPC_C	0	2258	80822	195	SubEv_C01_Collection_01	!{flag:153}	{progress:43}==0	{item:25004}>=1 {progress:43}==31&{transferItem:0,25004}>=84		
+43	32	SubEv_C01_Collection_04_22	2031	Town_02Lan_22_01	BP_MapUnit_NPC_C	0	2258	80822	195	SubEv_C01_Collection_02	!{flag:153}	{progress:43}>=10	{item:25004}>=1 {progress:43}==31&{transferItem:0,25004}>=84		
+43	33	SubEv_C01_Collection_04_23	2031	Town_02Lan_22_01	BP_MapUnit_NPC_C	0	2258	80822	195	SubEv_C01_Collection_01	!{flag:153}	{progress:43}==0	{item:25004}>=1 {progress:43}==32&{transferItem:0,25004}>=89		
+43	33	SubEv_C01_Collection_04_23	2031	Town_02Lan_22_01	BP_MapUnit_NPC_C	0	2258	80822	195	SubEv_C01_Collection_02	!{flag:153}	{progress:43}>=10	{item:25004}>=1 {progress:43}==32&{transferItem:0,25004}>=89		
+43	34	SubEv_C01_Collection_04_24	2031	Town_02Lan_22_01	BP_MapUnit_NPC_C	0	2258	80822	195	SubEv_C01_Collection_01	!{flag:153}	{progress:43}==0	{item:25004}>=1 {progress:43}==33&{transferItem:0,25004}>=94		
+43	34	SubEv_C01_Collection_04_24	2031	Town_02Lan_22_01	BP_MapUnit_NPC_C	0	2258	80822	195	SubEv_C01_Collection_02	!{flag:153}	{progress:43}>=10	{item:25004}>=1 {progress:43}==33&{transferItem:0,25004}>=94		
+43	35	SubEv_C01_Collection_04_25	2031	Town_02Lan_22_01	BP_MapUnit_NPC_C	0	2258	80822	195	SubEv_C01_Collection_01	!{flag:153}	{progress:43}==0	{item:25004}>=1 {progress:43}==34&{transferItem:0,25004}>=99		
+43	35	SubEv_C01_Collection_04_25	2031	Town_02Lan_22_01	BP_MapUnit_NPC_C	0	2258	80822	195	SubEv_C01_Collection_02	!{flag:153}	{progress:43}>=10	{item:25004}>=1 {progress:43}==34&{transferItem:0,25004}>=99		
+44	0	SubEv_C05_MogChase_Timeover													
+44	10	SubEv_C05_MogChase_01	2130	Town_07Mys_01_01	BP_MapUnit_NPC_C	31	12038	4542	140	SubEv_C05_MogChase_01	!{flag:545}&{progress:44}<60	{progress:44}==0&!{flag:545}			
+44	10	SubEv_C05_MogChase_01	2130	Town_07Mys_01_01	BP_MapUnit_NPC_C	32	11827	4359	140	SubEv_C05_MogChase_01	!{flag:545}|{flag:541}	{progress:44}==0			
+44	20	SubEv_C05_MogChase_06_NPC01_01	2130	Town_07Mys_01_01	BP_MapGimmick_InteractEventTrigger_C	500	0	0	0	SubEv_C05_MogChase_05_NPC01		{flag:545} & ({progress:44}==0|{progress:44}==10) & !{flag:540}	{flag:541}&{flag:542} {progress:0}>=5040 & ({progress:44}==0|{progress:44}==10)		33:1
+44	20	SubEv_C05_MogChase_06_NPC01_01	2130	Town_07Mys_01_01	BP_MapGimmick_InteractEventTrigger_C	503	0	0	0	SubEv_C05_MogChase_05_NPC01		{flag:545} & ({progress:44}==20|{progress:44}==30) & !{flag:540}	{flag:541}&{flag:542} {progress:0}>=5040 & ({progress:44}==0|{progress:44}==10)		33:1
+44	20	SubEv_C05_MogChase_06_NPC01_01	2130	Town_07Mys_01_01	BP_MapGimmick_InteractEventTrigger_C	506	0	0	0	SubEv_C05_MogChase_05_NPC01		{flag:545} & ({progress:44}==40|{progress:44}==50) & !{flag:540}	{flag:541}&{flag:542} {progress:0}>=5040 & ({progress:44}==0|{progress:44}==10)		33:1
+44	20	SubEv_C05_MogChase_06_NPC01_01_loot	2130	Town_07Mys_01_01	BP_MapGimmick_InteractEventTrigger_C	500	0	0	0	SubEv_C05_MogChase_05_NPC01		{flag:545} & ({progress:44}==0|{progress:44}==10) & !{flag:540}	{flag:541}&{flag:542} {progress:0}<5040 & ({progress:44}==0|{progress:44}==10)		33:1
+44	20	SubEv_C05_MogChase_06_NPC01_01_loot	2130	Town_07Mys_01_01	BP_MapGimmick_InteractEventTrigger_C	503	0	0	0	SubEv_C05_MogChase_05_NPC01		{flag:545} & ({progress:44}==20|{progress:44}==30) & !{flag:540}	{flag:541}&{flag:542} {progress:0}<5040 & ({progress:44}==0|{progress:44}==10)		33:1
+44	20	SubEv_C05_MogChase_06_NPC01_01_loot	2130	Town_07Mys_01_01	BP_MapGimmick_InteractEventTrigger_C	506	0	0	0	SubEv_C05_MogChase_05_NPC01		{flag:545} & ({progress:44}==40|{progress:44}==50) & !{flag:540}	{flag:541}&{flag:542} {progress:0}<5040 & ({progress:44}==0|{progress:44}==10)		33:1
+44	20	SubEv_C05_MogChase_06_NPC02_01	2130	Town_07Mys_01_01	BP_MapGimmick_InteractEventTrigger_C	501	0	0	0	SubEv_C05_MogChase_05_NPC02		{flag:545} & ({progress:44}==0|{progress:44}==10) & !{flag:541}	{flag:540}&{flag:542} {progress:0}>=5040 & ({progress:44}==0|{progress:44}==10)		33:1
+44	20	SubEv_C05_MogChase_06_NPC02_01	2130	Town_07Mys_01_01	BP_MapGimmick_InteractEventTrigger_C	504	0	0	0	SubEv_C05_MogChase_05_NPC02		{flag:545} & ({progress:44}==20|{progress:44}==30) & !{flag:541}	{flag:540}&{flag:542} {progress:0}>=5040 & ({progress:44}==0|{progress:44}==10)		33:1
+44	20	SubEv_C05_MogChase_06_NPC02_01	2130	Town_07Mys_01_01	BP_MapGimmick_InteractEventTrigger_C	507	0	0	0	SubEv_C05_MogChase_05_NPC02		{flag:545} & ({progress:44}==40|{progress:44}==50) & !{flag:541}	{flag:540}&{flag:542} {progress:0}>=5040 & ({progress:44}==0|{progress:44}==10)		33:1
+44	20	SubEv_C05_MogChase_06_NPC02_01_loot	2130	Town_07Mys_01_01	BP_MapGimmick_InteractEventTrigger_C	501	0	0	0	SubEv_C05_MogChase_05_NPC02		{flag:545} & ({progress:44}==0|{progress:44}==10) & !{flag:541}	{flag:540}&{flag:542} {progress:0}<5040 & ({progress:44}==0|{progress:44}==10)		33:1
+44	20	SubEv_C05_MogChase_06_NPC02_01_loot	2130	Town_07Mys_01_01	BP_MapGimmick_InteractEventTrigger_C	504	0	0	0	SubEv_C05_MogChase_05_NPC02		{flag:545} & ({progress:44}==20|{progress:44}==30) & !{flag:541}	{flag:540}&{flag:542} {progress:0}<5040 & ({progress:44}==0|{progress:44}==10)		33:1
+44	20	SubEv_C05_MogChase_06_NPC02_01_loot	2130	Town_07Mys_01_01	BP_MapGimmick_InteractEventTrigger_C	507	0	0	0	SubEv_C05_MogChase_05_NPC02		{flag:545} & ({progress:44}==40|{progress:44}==50) & !{flag:541}	{flag:540}&{flag:542} {progress:0}<5040 & ({progress:44}==0|{progress:44}==10)		33:1
+44	20	SubEv_C05_MogChase_06_NPC03_01	2130	Town_07Mys_01_01	BP_MapGimmick_InteractEventTrigger_C	502	0	0	0	SubEv_C05_MogChase_05_NPC03		{flag:545} & ({progress:44}==0|{progress:44}==10) & !{flag:542}	{flag:540}&{flag:541} {progress:0}>=5040 & ({progress:44}==0|{progress:44}==10)		33:1
+44	20	SubEv_C05_MogChase_06_NPC03_01	2130	Town_07Mys_01_01	BP_MapGimmick_InteractEventTrigger_C	505	0	0	0	SubEv_C05_MogChase_05_NPC03		{flag:545} & ({progress:44}==20|{progress:44}==30) & !{flag:542}	{flag:540}&{flag:541} {progress:0}>=5040 & ({progress:44}==0|{progress:44}==10)		33:1
+44	20	SubEv_C05_MogChase_06_NPC03_01	2130	Town_07Mys_01_01	BP_MapGimmick_InteractEventTrigger_C	508	0	0	0	SubEv_C05_MogChase_05_NPC03		{flag:545} & ({progress:44}==40|{progress:44}==50) & !{flag:542}	{flag:540}&{flag:541} {progress:0}>=5040 & ({progress:44}==0|{progress:44}==10)		33:1
+44	20	SubEv_C05_MogChase_06_NPC03_01_loot	2130	Town_07Mys_01_01	BP_MapGimmick_InteractEventTrigger_C	502	0	0	0	SubEv_C05_MogChase_05_NPC03		{flag:545} & ({progress:44}==0|{progress:44}==10) & !{flag:542}	{flag:540}&{flag:541} {progress:0}<5040 & ({progress:44}==0|{progress:44}==10)		33:1
+44	20	SubEv_C05_MogChase_06_NPC03_01_loot	2130	Town_07Mys_01_01	BP_MapGimmick_InteractEventTrigger_C	505	0	0	0	SubEv_C05_MogChase_05_NPC03		{flag:545} & ({progress:44}==20|{progress:44}==30) & !{flag:542}	{flag:540}&{flag:541} {progress:0}<5040 & ({progress:44}==0|{progress:44}==10)		33:1
+44	20	SubEv_C05_MogChase_06_NPC03_01_loot	2130	Town_07Mys_01_01	BP_MapGimmick_InteractEventTrigger_C	508	0	0	0	SubEv_C05_MogChase_05_NPC03		{flag:545} & ({progress:44}==40|{progress:44}==50) & !{flag:542}	{flag:540}&{flag:541} {progress:0}<5040 & ({progress:44}==0|{progress:44}==10)		33:1
+44	30	SubEv_C05_MogChase_02	2130	Town_07Mys_01_01	BP_MapUnit_NPC_C	31	12038	4542	140	SubEv_C05_MogChase_02	!{flag:545}&{progress:44}<60	{progress:44}==20&!{flag:545}			
+44	30	SubEv_C05_MogChase_02	2130	Town_07Mys_01_01	BP_MapUnit_NPC_C	32	11827	4359	140	SubEv_C05_MogChase_02	!{flag:545}|{flag:541}	{progress:44}==20|{progress:44}==40			
+44	40	SubEv_C05_MogChase_06_NPC01_02	2130	Town_07Mys_01_01	BP_MapGimmick_InteractEventTrigger_C	500	0	0	0	SubEv_C05_MogChase_05_NPC01		{flag:545} & ({progress:44}==0|{progress:44}==10) & !{flag:540}	{flag:541}&{flag:542} {progress:0}>=5040 & ({progress:44}==20|{progress:44}==30)		25001:1
+44	40	SubEv_C05_MogChase_06_NPC01_02	2130	Town_07Mys_01_01	BP_MapGimmick_InteractEventTrigger_C	503	0	0	0	SubEv_C05_MogChase_05_NPC01		{flag:545} & ({progress:44}==20|{progress:44}==30) & !{flag:540}	{flag:541}&{flag:542} {progress:0}>=5040 & ({progress:44}==20|{progress:44}==30)		25001:1
+44	40	SubEv_C05_MogChase_06_NPC01_02	2130	Town_07Mys_01_01	BP_MapGimmick_InteractEventTrigger_C	506	0	0	0	SubEv_C05_MogChase_05_NPC01		{flag:545} & ({progress:44}==40|{progress:44}==50) & !{flag:540}	{flag:541}&{flag:542} {progress:0}>=5040 & ({progress:44}==20|{progress:44}==30)		25001:1
+44	40	SubEv_C05_MogChase_06_NPC01_02_loot	2130	Town_07Mys_01_01	BP_MapGimmick_InteractEventTrigger_C	500	0	0	0	SubEv_C05_MogChase_05_NPC01		{flag:545} & ({progress:44}==0|{progress:44}==10) & !{flag:540}	{flag:541}&{flag:542} {progress:0}<5040 & ({progress:44}==20|{progress:44}==30)		25001:1
+44	40	SubEv_C05_MogChase_06_NPC01_02_loot	2130	Town_07Mys_01_01	BP_MapGimmick_InteractEventTrigger_C	503	0	0	0	SubEv_C05_MogChase_05_NPC01		{flag:545} & ({progress:44}==20|{progress:44}==30) & !{flag:540}	{flag:541}&{flag:542} {progress:0}<5040 & ({progress:44}==20|{progress:44}==30)		25001:1
+44	40	SubEv_C05_MogChase_06_NPC01_02_loot	2130	Town_07Mys_01_01	BP_MapGimmick_InteractEventTrigger_C	506	0	0	0	SubEv_C05_MogChase_05_NPC01		{flag:545} & ({progress:44}==40|{progress:44}==50) & !{flag:540}	{flag:541}&{flag:542} {progress:0}<5040 & ({progress:44}==20|{progress:44}==30)		25001:1
+44	40	SubEv_C05_MogChase_06_NPC02_02	2130	Town_07Mys_01_01	BP_MapGimmick_InteractEventTrigger_C	501	0	0	0	SubEv_C05_MogChase_05_NPC02		{flag:545} & ({progress:44}==0|{progress:44}==10) & !{flag:541}	{flag:540}&{flag:542} {progress:0}>=5040 & ({progress:44}==20|{progress:44}==30)		25001:1
+44	40	SubEv_C05_MogChase_06_NPC02_02	2130	Town_07Mys_01_01	BP_MapGimmick_InteractEventTrigger_C	504	0	0	0	SubEv_C05_MogChase_05_NPC02		{flag:545} & ({progress:44}==20|{progress:44}==30) & !{flag:541}	{flag:540}&{flag:542} {progress:0}>=5040 & ({progress:44}==20|{progress:44}==30)		25001:1
+44	40	SubEv_C05_MogChase_06_NPC02_02	2130	Town_07Mys_01_01	BP_MapGimmick_InteractEventTrigger_C	507	0	0	0	SubEv_C05_MogChase_05_NPC02		{flag:545} & ({progress:44}==40|{progress:44}==50) & !{flag:541}	{flag:540}&{flag:542} {progress:0}>=5040 & ({progress:44}==20|{progress:44}==30)		25001:1
+44	40	SubEv_C05_MogChase_06_NPC02_02_loot	2130	Town_07Mys_01_01	BP_MapGimmick_InteractEventTrigger_C	501	0	0	0	SubEv_C05_MogChase_05_NPC02		{flag:545} & ({progress:44}==0|{progress:44}==10) & !{flag:541}	{flag:540}&{flag:542} {progress:0}<5040 & ({progress:44}==20|{progress:44}==30)		25001:1
+44	40	SubEv_C05_MogChase_06_NPC02_02_loot	2130	Town_07Mys_01_01	BP_MapGimmick_InteractEventTrigger_C	504	0	0	0	SubEv_C05_MogChase_05_NPC02		{flag:545} & ({progress:44}==20|{progress:44}==30) & !{flag:541}	{flag:540}&{flag:542} {progress:0}<5040 & ({progress:44}==20|{progress:44}==30)		25001:1
+44	40	SubEv_C05_MogChase_06_NPC02_02_loot	2130	Town_07Mys_01_01	BP_MapGimmick_InteractEventTrigger_C	507	0	0	0	SubEv_C05_MogChase_05_NPC02		{flag:545} & ({progress:44}==40|{progress:44}==50) & !{flag:541}	{flag:540}&{flag:542} {progress:0}<5040 & ({progress:44}==20|{progress:44}==30)		25001:1
+44	40	SubEv_C05_MogChase_06_NPC03_02	2130	Town_07Mys_01_01	BP_MapGimmick_InteractEventTrigger_C	502	0	0	0	SubEv_C05_MogChase_05_NPC03		{flag:545} & ({progress:44}==0|{progress:44}==10) & !{flag:542}	{flag:540}&{flag:541} {progress:0}>=5040 & ({progress:44}==20|{progress:44}==30)		25001:1
+44	40	SubEv_C05_MogChase_06_NPC03_02	2130	Town_07Mys_01_01	BP_MapGimmick_InteractEventTrigger_C	505	0	0	0	SubEv_C05_MogChase_05_NPC03		{flag:545} & ({progress:44}==20|{progress:44}==30) & !{flag:542}	{flag:540}&{flag:541} {progress:0}>=5040 & ({progress:44}==20|{progress:44}==30)		25001:1
+44	40	SubEv_C05_MogChase_06_NPC03_02	2130	Town_07Mys_01_01	BP_MapGimmick_InteractEventTrigger_C	508	0	0	0	SubEv_C05_MogChase_05_NPC03		{flag:545} & ({progress:44}==40|{progress:44}==50) & !{flag:542}	{flag:540}&{flag:541} {progress:0}>=5040 & ({progress:44}==20|{progress:44}==30)		25001:1
+44	40	SubEv_C05_MogChase_06_NPC03_02_loot	2130	Town_07Mys_01_01	BP_MapGimmick_InteractEventTrigger_C	502	0	0	0	SubEv_C05_MogChase_05_NPC03		{flag:545} & ({progress:44}==0|{progress:44}==10) & !{flag:542}	{flag:540}&{flag:541} {progress:0}<5040 & ({progress:44}==20|{progress:44}==30)		25001:1
+44	40	SubEv_C05_MogChase_06_NPC03_02_loot	2130	Town_07Mys_01_01	BP_MapGimmick_InteractEventTrigger_C	505	0	0	0	SubEv_C05_MogChase_05_NPC03		{flag:545} & ({progress:44}==20|{progress:44}==30) & !{flag:542}	{flag:540}&{flag:541} {progress:0}<5040 & ({progress:44}==20|{progress:44}==30)		25001:1
+44	40	SubEv_C05_MogChase_06_NPC03_02_loot	2130	Town_07Mys_01_01	BP_MapGimmick_InteractEventTrigger_C	508	0	0	0	SubEv_C05_MogChase_05_NPC03		{flag:545} & ({progress:44}==40|{progress:44}==50) & !{flag:542}	{flag:540}&{flag:541} {progress:0}<5040 & ({progress:44}==20|{progress:44}==30)		25001:1
+44	50	SubEv_C05_MogChase_02_03	2130	Town_07Mys_01_01	BP_MapUnit_NPC_C	31	12038	4542	140	SubEv_C05_MogChase_02_03	!{flag:545}&{progress:44}<60	{progress:44}==40&!{flag:545}			
+44	60	SubEv_C05_MogChase_06_NPC01_03	2130	Town_07Mys_01_01	BP_MapGimmick_InteractEventTrigger_C	500	0	0	0	SubEv_C05_MogChase_05_NPC01		{flag:545} & ({progress:44}==0|{progress:44}==10) & !{flag:540}	{flag:541}&{flag:542} {progress:0}>=5040 & ({progress:44}==40|{progress:44}==50)		25002:1
+44	60	SubEv_C05_MogChase_06_NPC01_03	2130	Town_07Mys_01_01	BP_MapGimmick_InteractEventTrigger_C	503	0	0	0	SubEv_C05_MogChase_05_NPC01		{flag:545} & ({progress:44}==20|{progress:44}==30) & !{flag:540}	{flag:541}&{flag:542} {progress:0}>=5040 & ({progress:44}==40|{progress:44}==50)		25002:1
+44	60	SubEv_C05_MogChase_06_NPC01_03	2130	Town_07Mys_01_01	BP_MapGimmick_InteractEventTrigger_C	506	0	0	0	SubEv_C05_MogChase_05_NPC01		{flag:545} & ({progress:44}==40|{progress:44}==50) & !{flag:540}	{flag:541}&{flag:542} {progress:0}>=5040 & ({progress:44}==40|{progress:44}==50)		25002:1
+44	60	SubEv_C05_MogChase_06_NPC01_03_loot	2130	Town_07Mys_01_01	BP_MapGimmick_InteractEventTrigger_C	500	0	0	0	SubEv_C05_MogChase_05_NPC01		{flag:545} & ({progress:44}==0|{progress:44}==10) & !{flag:540}	{flag:541}&{flag:542} {progress:0}<5040 & ({progress:44}==40|{progress:44}==50)		25002:1
+44	60	SubEv_C05_MogChase_06_NPC01_03_loot	2130	Town_07Mys_01_01	BP_MapGimmick_InteractEventTrigger_C	503	0	0	0	SubEv_C05_MogChase_05_NPC01		{flag:545} & ({progress:44}==20|{progress:44}==30) & !{flag:540}	{flag:541}&{flag:542} {progress:0}<5040 & ({progress:44}==40|{progress:44}==50)		25002:1
+44	60	SubEv_C05_MogChase_06_NPC01_03_loot	2130	Town_07Mys_01_01	BP_MapGimmick_InteractEventTrigger_C	506	0	0	0	SubEv_C05_MogChase_05_NPC01		{flag:545} & ({progress:44}==40|{progress:44}==50) & !{flag:540}	{flag:541}&{flag:542} {progress:0}<5040 & ({progress:44}==40|{progress:44}==50)		25002:1
+44	60	SubEv_C05_MogChase_06_NPC02_03	2130	Town_07Mys_01_01	BP_MapGimmick_InteractEventTrigger_C	501	0	0	0	SubEv_C05_MogChase_05_NPC02		{flag:545} & ({progress:44}==0|{progress:44}==10) & !{flag:541}	{flag:540}&{flag:542} {progress:0}>=5040 & ({progress:44}==40|{progress:44}==50)		25002:1
+44	60	SubEv_C05_MogChase_06_NPC02_03	2130	Town_07Mys_01_01	BP_MapGimmick_InteractEventTrigger_C	504	0	0	0	SubEv_C05_MogChase_05_NPC02		{flag:545} & ({progress:44}==20|{progress:44}==30) & !{flag:541}	{flag:540}&{flag:542} {progress:0}>=5040 & ({progress:44}==40|{progress:44}==50)		25002:1
+44	60	SubEv_C05_MogChase_06_NPC02_03	2130	Town_07Mys_01_01	BP_MapGimmick_InteractEventTrigger_C	507	0	0	0	SubEv_C05_MogChase_05_NPC02		{flag:545} & ({progress:44}==40|{progress:44}==50) & !{flag:541}	{flag:540}&{flag:542} {progress:0}>=5040 & ({progress:44}==40|{progress:44}==50)		25002:1
+44	60	SubEv_C05_MogChase_06_NPC02_03_loot	2130	Town_07Mys_01_01	BP_MapGimmick_InteractEventTrigger_C	501	0	0	0	SubEv_C05_MogChase_05_NPC02		{flag:545} & ({progress:44}==0|{progress:44}==10) & !{flag:541}	{flag:540}&{flag:542} {progress:0}<5040 & ({progress:44}==40|{progress:44}==50)		25002:1
+44	60	SubEv_C05_MogChase_06_NPC02_03_loot	2130	Town_07Mys_01_01	BP_MapGimmick_InteractEventTrigger_C	504	0	0	0	SubEv_C05_MogChase_05_NPC02		{flag:545} & ({progress:44}==20|{progress:44}==30) & !{flag:541}	{flag:540}&{flag:542} {progress:0}<5040 & ({progress:44}==40|{progress:44}==50)		25002:1
+44	60	SubEv_C05_MogChase_06_NPC02_03_loot	2130	Town_07Mys_01_01	BP_MapGimmick_InteractEventTrigger_C	507	0	0	0	SubEv_C05_MogChase_05_NPC02		{flag:545} & ({progress:44}==40|{progress:44}==50) & !{flag:541}	{flag:540}&{flag:542} {progress:0}<5040 & ({progress:44}==40|{progress:44}==50)		25002:1
+44	60	SubEv_C05_MogChase_06_NPC03_03	2130	Town_07Mys_01_01	BP_MapGimmick_InteractEventTrigger_C	502	0	0	0	SubEv_C05_MogChase_05_NPC03		{flag:545} & ({progress:44}==0|{progress:44}==10) & !{flag:542}	{flag:540}&{flag:541} {progress:0}>=5040 & ({progress:44}==40|{progress:44}==50)		25002:1
+44	60	SubEv_C05_MogChase_06_NPC03_03	2130	Town_07Mys_01_01	BP_MapGimmick_InteractEventTrigger_C	505	0	0	0	SubEv_C05_MogChase_05_NPC03		{flag:545} & ({progress:44}==20|{progress:44}==30) & !{flag:542}	{flag:540}&{flag:541} {progress:0}>=5040 & ({progress:44}==40|{progress:44}==50)		25002:1
+44	60	SubEv_C05_MogChase_06_NPC03_03	2130	Town_07Mys_01_01	BP_MapGimmick_InteractEventTrigger_C	508	0	0	0	SubEv_C05_MogChase_05_NPC03		{flag:545} & ({progress:44}==40|{progress:44}==50) & !{flag:542}	{flag:540}&{flag:541} {progress:0}>=5040 & ({progress:44}==40|{progress:44}==50)		25002:1
+44	60	SubEv_C05_MogChase_06_NPC03_03_loot	2130	Town_07Mys_01_01	BP_MapGimmick_InteractEventTrigger_C	502	0	0	0	SubEv_C05_MogChase_05_NPC03		{flag:545} & ({progress:44}==0|{progress:44}==10) & !{flag:542}	{flag:540}&{flag:541} {progress:0}<5040 & ({progress:44}==40|{progress:44}==50)		25002:1
+44	60	SubEv_C05_MogChase_06_NPC03_03_loot	2130	Town_07Mys_01_01	BP_MapGimmick_InteractEventTrigger_C	505	0	0	0	SubEv_C05_MogChase_05_NPC03		{flag:545} & ({progress:44}==20|{progress:44}==30) & !{flag:542}	{flag:540}&{flag:541} {progress:0}<5040 & ({progress:44}==40|{progress:44}==50)		25002:1
+44	60	SubEv_C05_MogChase_06_NPC03_03_loot	2130	Town_07Mys_01_01	BP_MapGimmick_InteractEventTrigger_C	508	0	0	0	SubEv_C05_MogChase_05_NPC03		{flag:545} & ({progress:44}==40|{progress:44}==50) & !{flag:542}	{flag:540}&{flag:541} {progress:0}<5040 & ({progress:44}==40|{progress:44}==50)		25002:1
+45	10	Summon660_Carbuncle_01	3111	Dng_05Old_45	BP_MapGimmick_FieldItem_C	2	5785	-230	25	Summon660_Carbuncle_01	{progress:45}<=40	{progress:45}==0			
+45	20	Summon660_Carbuncle_02	1000	Wld_05Old	BP_MapGimmick_FieldItem_C	124	-2395	3510	0	Summon660_Carbuncle_02	{progress:45}==10	{progress:45}==10			20030:1
+45	30	Summon660_Carbuncle_03	1000	Wld_05Old	BP_MapGimmick_FieldItem_C	77	805	6795	76	Summon660_Carbuncle_03	{progress:45}==20	{progress:45}==20			20030:1
+45	40	Summon660_Carbuncle_04	1000	Wld_05Old	BP_MapGimmick_FieldItem_C	76	1180	-1335	90	Summon660_Carbuncle_04	{progress:45}==30	{progress:45}==30			20030:1
+45	50	Summon660_Carbuncle_05	3111	Dng_05Old_45	BP_MapGimmick_FieldItem_C	2	5785	-230	25	Summon660_Carbuncle_05	{progress:45}<=40	{progress:45}==40			
+46	10	Summon700_Bahamut_01													
+46	20	Summon700_Bahamut_04	20001	Town_00Com_01	BP_MapUnit_NPC_C	0	2827	261	406	Summon700_Bahamut_02		{progress:46}==10 & {progress:4}!=30 & !({progress:0}>=8040&{progress:24}==0)		9914	
+47	10	ChrEv_0420_001_01	2170	Town_09Pha_01_01	BP_MapUnit_NPC_C	3	1830	-325	500	ChrEv_0420_001_01	{progress:0}>=7020&{progress:47}==0|{progress:0}>=7020&{progress:47}>=50	{progress:47}==0			
+47	10	ChrEv_0420_001_Kari													13051:1 25002:1
+47	20	ChrEv_0420_002_01	3100	Dng_05Old_43_01	BP_MapGimmick_InteractEventTrigger_C	4	2370	5470	50	ChrEv_0420_002_01	{progress:47}==10	{progress:47}==10			
+47	30	ChrEv_0420_003_01	10030	Dng_06Zol_46_01	BP_MapUnit_NPC_C	0	6405	-335	100	ChrEv_0420_003_01	{progress:47}==20|{progress:47}==30	{progress:47}==20|{progress:47}==30			
+47	40	ChrEv_0420_003_02	10030	Dng_06Zol_46_01	BP_MapUnit_NPC_C	0	6405	-335	100	ChrEv_0420_003_01	{progress:47}==20|{progress:47}==30	{progress:47}==20|{progress:47}==30		9134	
+47	50	ChrEv_0420_004_01	3050	Dng_04Dir_40_01	BP_MapGimmick_InteractEventTrigger_C	9	11390	-2935	2070	ChrEv_0420_004_01	{progress:47}==40	{progress:47}==40			
+47	60	ChrEv_0420_005_01	2170	Town_09Pha_01_01	BP_MapUnit_NPC_C	3	1830	-325	500	ChrEv_0420_005_01	{progress:0}>=7020&{progress:47}==0|{progress:0}>=7020&{progress:47}>=50	{progress:47}==50			13051:1 25002:1
+48	10	ChrEv_2630_001_01	2111	Town_06Zol_02_01	BP_MapUnit_NPC_C	8	455	560	100	ChrEv_2630_001_01	{progress:48}==20|{progress:36}==60 & {progress:48}==0	{progress:36}==60&{progress:48}==0			
+48	10	ChrEv_2630_001_Kari													13062:1 25002:1
+48	20	ChrEv_2630_002_03	1000	Wld	BP_MapGimmick_InteractEventTrigger_C	170	-3180	15415	448	ChrEv_2630_002_02	!{flag:444}&{progress:48}==10	!{flag:444}	{flag:443}		
+48	20	ChrEv_2630_002_03	1000	Wld	BP_MapGimmick_InteractEventTrigger_C	171	-14504	16421	636	ChrEv_2630_002_01	!{flag:443}&{progress:48}==10	!{flag:443}	{flag:444}		
+48	30	ChrEv_2630_003_01	2111	Town_06Zol_02_01	BP_MapUnit_NPC_C	8	455	560	100	ChrEv_2630_003_01	{progress:48}==20|{progress:36}==60 & {progress:48}==0	{progress:48}==20			
+48	40	ChrEv_2630_004_01	3130	Dng_06Zol_41_01	BP_MapGimmick_InteractEventTrigger_C	63	7235	12850	142	ChrEv_2630_004_01	{progress:48}==30	{progress:48}==30			
+48	50	ChrEv_2630_005_01	2110	Town_06Zol_01_01	BP_MapUnit_NPC_C	17	620	19625	100	ChrEv_2630_005_01		{progress:48}==40			13062:1 25002:1
+49	10	SubEv_C05_TreasureRadar_02													
+49	11	SubEv_C05_TreasureRadar_03													
+49	20	SubEv_C05_TreasureRadar_04	20001	Town_00Com_01	BP_MapUnit_NPC_C	5	2225	630	371	SubEv_C05_TreasureRadar_04		{flag:1405}&({progress:49}==0|{progress:49}==10|{progress:49}==11)			
+49	30	SubEv_C05_TreasureRadar_05													
+49	31	SubEv_C05_TreasureRadar_06													
+49	40	SubEv_C05_TreasureRadar_07	20001	Town_00Com_01	BP_MapUnit_NPC_C	5	2225	630	371	SubEv_C05_TreasureRadar_07		({progress:49}==30|{progress:49}==31) & {item:27007}>=1 & {progress:51}==14			
+49	41	SubEv_C05_TreasureRadar_08													
+49	41	SubEv_C05_TreasureRadar_08_Ship	1000	Wld	BP_MapGimmick_MerchantShip_C	207	10400	-26186	-81	GimEv_MerchantShip_05	(!{flag:949}&{progress:0}==0&{progress:51}>=23)|(!{flag:949}&{progress:0}>=8000&{progress:51}>=23)	{progress:0}==0|(!{flag:949}&{progress:0}>=8000&{progress:51}>=23)	{flag:950} {money}>=60000 {progress:49}==40 & {progress:51}==23		
+49	50	SubEv_C05_TreasureRadar_09	20001	Town_00Com_01	BP_MapUnit_NPC_C	5	2225	630	371	SubEv_C05_TreasureRadar_09		({progress:49}==40|{progress:49}==41) & {item:27008}>=1 & {progress:51}==23			
+50	10	SubEv_C01_Chloe_Weapon_01	2040	Town_03Kol_20_01	BP_MapUnit_NPC_C	9	-1073	3763	7100	SubEv_C01_Chloe_Weapon_01	{progress:50}==0|{progress:50}==30	{progress:30}==90 & {progress:0}>=5010 & {progress:50}==0			
+50	20	SubEv_C01_Chloe_Weapon_02	3290	Dng_04Dir_45_01	BP_MapUnit_NPC_C	1	2535	13412	240	SubEv_C01_Chloe_Weapon_02	{progress:50}>=10 & {progress:50}<=20	{progress:50}==10			10398:1
+50	30	SubEv_C01_Chloe_Weapon_03	3290	Dng_04Dir_45_01	BP_MapUnit_NPC_C	1	2535	13412	240	SubEv_C01_Chloe_Weapon_03	{progress:50}>=10 & {progress:50}<=20	{progress:50}==20 & {item:10399}>=1			
+51	10	SubEv_C05_TreasureRadar_01_01													20016:1
+51	11	SubEv_C05_TreasureRadar_01_02													11098:1
+51	12	SubEv_C05_TreasureRadar_01_03													25001:1
+51	13	SubEv_C05_TreasureRadar_01_04													12016:1
+51	14	SubEv_C05_TreasureRadar_01_05													11022:1
+51	20	SubEv_C05_TreasureRadar_01_06													10497:1
+51	21	SubEv_C05_TreasureRadar_01_07													25002:1
+51	22	SubEv_C05_TreasureRadar_01_08													10819:1
+51	23	SubEv_C05_TreasureRadar_01_09													12038:1
+51	24	SubEv_C05_TreasureRadar_01_10													25002:1
+51	30	SubEv_C05_TreasureRadar_01_11													12073:1
+51	31	SubEv_C05_TreasureRadar_01_12													12075:1
+51	32	SubEv_C05_TreasureRadar_01_13													12059:1
+51	33	SubEv_C05_TreasureRadar_01_14													-1:1000
+51	34	SubEv_C05_TreasureRadar_01_15													-1:1000
+52	10	Nawatobi_01	2070	Town_05Old_01_01	BP_MapNawatobi_NPC_Jump_C	53	-475	-4263	220	Nawatobi_01		{progress:52}==0			
+52	20	Nawatobi_03													25000:1
+52	30	Nawatobi_06													32:1
+52	40	Nawatobi_09													34:1
+52	50	Nawatobi_15													33:1
+52	60	Nawatobi_18													12030:1
+52	70	Nawatobi_21													25001:1
+53	10	SubEv_C08_Flavia_01	2150	Town_08Gro_01_01	BP_MapUnit_NPC_C	18	3940	-2685	338	SubEv_C08_Flavia_01	{progress:53}==0	{progress:34}>=40&{progress:32}>=40&{progress:53}==0			
+53	20	SubEv_C08_Flavia_02	2140	Town_07Mys_20	BP_MapGimmick_InteractEventTrigger_C	15	4320	275	15	SubEv_C08_Flavia_02	{progress:53}==10	{progress:53}==10			
+53	30	SubEv_C08_Flavia_03	3050	Dng_04Dir_40_01	BP_MapGimmick_InteractEventTrigger_C	8	3680	4160	495	SubEv_C08_Flavia_03	{progress:34}==10|{progress:53}==20	{progress:53}==20			
+53	40	SubEv_C08_Flavia_04	2050	Town_04Dir_20_01	BP_MapUnit_NPC_C	11	7700	-2270	-1909	SubEv_C08_Flavia_04	{progress:53}>=30	{progress:53}==30			25001:1 -1:2500
+54	10	SubEv_C09_Gilgamesh_03	3030	Dng_02Lan_40_01	BP_MapGimmick_TreasureBox_C	18	9400	0	4858	SubEv_C09_Gilgamesh_01				9139	
+54	20	SubEv_C09_Gilgamesh_04	3100	Dng_05Old_43_01	BP_MapUnit_NPC_C	2	-160	12087	1900	SubEv_C09_Gilgamesh_04	{progress:54}==10	{progress:54}==10			
+54	21	SubEv_C09_Gilgamesh_05_01	3120	Dng_06Zol_40_01	BP_MapUnit_NPC_C	0	630	-3445	104	SubEv_C09_Gilgamesh_05_01	{progress:54}==20 | {progress:54}==21	{progress:54}==20			
+54	30	SubEv_C09_Gilgamesh_06	20002	Town_00Com_03_01	BP_MapUnit_NPC_C	6	2082	0	238	SubEv_C09_Gilgamesh_06	{progress:0}>=5060 & ({progress:54}>=20&{progress:54}<=30&({flag:955}|{gilgamesh}) | {progress:54}==30)	{progress:54}>=20&{progress:54}<30			
+54	40	SubEv_C09_Gilgamesh_08	20002	Town_00Com_03_01	BP_MapUnit_NPC_C	6	2082	0	238	SubEv_C09_Gilgamesh_06	{progress:0}>=5060 & ({progress:54}>=20&{progress:54}<=30&({flag:955}|{gilgamesh}) | {progress:54}==30)	{progress:54}>=20&{progress:54}<30		9140	12096:1
+54	40	SubEv_C09_Gilgamesh_08	20002	Town_00Com_03_01	BP_MapUnit_NPC_C	6	2082	0	238	SubEv_C09_Gilgamesh_06_Retry	{progress:0}>=5060 & ({progress:54}>=20&{progress:54}<=30&({flag:955}|{gilgamesh}) | {progress:54}==30)	{progress:54}==30		9140	12096:1
+54	41	SubEv_C09_Gilgamesh_1st	1000	Wld	BP_MapGimmick_InteractEventTrigger_C	208	15375	3070	325	SubEv_C09_Gilgamesh_09	!{flag:951}&{progress:54}>=40&{progress:54}<50	{progress:54}>=40&{progress:54}<50	{progress:54}==40		
+54	41	SubEv_C09_Gilgamesh_1st	1000	Wld	BP_MapGimmick_InteractEventTrigger_C	209	740	-200	10	SubEv_C09_Gilgamesh_10	!{flag:952}&{progress:54}>=40&{progress:54}<50	{progress:54}>=40&{progress:54}<50	{progress:54}==40		
+54	41	SubEv_C09_Gilgamesh_1st	1000	Wld	BP_MapGimmick_InteractEventTrigger_C	210	-3505	14430	460	SubEv_C09_Gilgamesh_11	!{flag:953}&{progress:54}>=40&{progress:54}<50	{progress:54}>=40&{progress:54}<50	{progress:54}==40		
+54	41	SubEv_C09_Gilgamesh_1st	1000	Wld	BP_MapGimmick_InteractEventTrigger_C	211	13530	18630	70	SubEv_C09_Gilgamesh_12	!{flag:954}&{progress:54}>=40&{progress:54}<50	{progress:54}>=40&{progress:54}<50	{progress:54}==40		
+54	42	SubEv_C09_Gilgamesh_2nd	1000	Wld	BP_MapGimmick_InteractEventTrigger_C	208	15375	3070	325	SubEv_C09_Gilgamesh_09	!{flag:951}&{progress:54}>=40&{progress:54}<50	{progress:54}>=40&{progress:54}<50	{progress:54}==41		
+54	42	SubEv_C09_Gilgamesh_2nd	1000	Wld	BP_MapGimmick_InteractEventTrigger_C	209	740	-200	10	SubEv_C09_Gilgamesh_10	!{flag:952}&{progress:54}>=40&{progress:54}<50	{progress:54}>=40&{progress:54}<50	{progress:54}==41		
+54	42	SubEv_C09_Gilgamesh_2nd	1000	Wld	BP_MapGimmick_InteractEventTrigger_C	210	-3505	14430	460	SubEv_C09_Gilgamesh_11	!{flag:953}&{progress:54}>=40&{progress:54}<50	{progress:54}>=40&{progress:54}<50	{progress:54}==41		
+54	42	SubEv_C09_Gilgamesh_2nd	1000	Wld	BP_MapGimmick_InteractEventTrigger_C	211	13530	18630	70	SubEv_C09_Gilgamesh_12	!{flag:954}&{progress:54}>=40&{progress:54}<50	{progress:54}>=40&{progress:54}<50	{progress:54}==41		
+54	43	SubEv_C09_Gilgamesh_3rd	1000	Wld	BP_MapGimmick_InteractEventTrigger_C	208	15375	3070	325	SubEv_C09_Gilgamesh_09	!{flag:951}&{progress:54}>=40&{progress:54}<50	{progress:54}>=40&{progress:54}<50	{progress:54}==42		
+54	43	SubEv_C09_Gilgamesh_3rd	1000	Wld	BP_MapGimmick_InteractEventTrigger_C	209	740	-200	10	SubEv_C09_Gilgamesh_10	!{flag:952}&{progress:54}>=40&{progress:54}<50	{progress:54}>=40&{progress:54}<50	{progress:54}==42		
+54	43	SubEv_C09_Gilgamesh_3rd	1000	Wld	BP_MapGimmick_InteractEventTrigger_C	210	-3505	14430	460	SubEv_C09_Gilgamesh_11	!{flag:953}&{progress:54}>=40&{progress:54}<50	{progress:54}>=40&{progress:54}<50	{progress:54}==42		
+54	43	SubEv_C09_Gilgamesh_3rd	1000	Wld	BP_MapGimmick_InteractEventTrigger_C	211	13530	18630	70	SubEv_C09_Gilgamesh_12	!{flag:954}&{progress:54}>=40&{progress:54}<50	{progress:54}>=40&{progress:54}<50	{progress:54}==42		
+54	50	SubEv_C09_Gilgamesh_13_01													
+54	50	SubEv_C09_Gilgamesh_13_02													
+54	50	SubEv_C09_Gilgamesh_13_03													
+54	50	SubEv_C09_Gilgamesh_13_04													
+54	60	SubEv_C09_Gilgamesh_14	1000	Wld	BP_MapGimmick_InteractEventTrigger_C	212	7825	13900	80	SubEv_C09_Gilgamesh_14	{progress:54}==50	{progress:54}==50			
+54	60	SubEv_C09_Gilgamesh_14_No	1000	Wld	BP_MapUnit_NPC_Field_C	2	7888	13919	58	SubEv_C09_Gilgamesh_14_Retry	{progress:54}==60	{progress:54}==60			
+54	60	SubEv_C09_Gilgamesh_14_No	1000	Wld	BP_MapGimmick_InteractEventTrigger_C	212	7825	13900	80	SubEv_C09_Gilgamesh_14	{progress:54}==50	{progress:54}==50			
+54	70	SubEv_C09_Gilgamesh_15	1000	Wld	BP_MapUnit_NPC_Field_C	2	7888	13919	58	SubEv_C09_Gilgamesh_14_Retry	{progress:54}==60	{progress:54}==60			
+54	70	SubEv_C09_Gilgamesh_15	1000	Wld	BP_MapGimmick_InteractEventTrigger_C	212	7825	13900	80	SubEv_C09_Gilgamesh_14	{progress:54}==50	{progress:54}==50			
+54	80	SubEv_C09_Gilgamesh_17	1000	Wld	BP_MapUnit_NPC_Field_C	2	7888	13919	58	SubEv_C09_Gilgamesh_14_Retry	{progress:54}==60	{progress:54}==60		9141	11396:1
+54	80	SubEv_C09_Gilgamesh_17	1000	Wld	BP_MapGimmick_InteractEventTrigger_C	212	7825	13900	80	SubEv_C09_Gilgamesh_14	{progress:54}==50	{progress:54}==50		9141	11396:1

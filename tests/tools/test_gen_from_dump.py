@@ -20,6 +20,8 @@ gen = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(gen)
 
 T = "tables/FFRS/Content/Datatable"
+QUEST_COUNTER = 28      # Rear Support, Ahoy!
+QUEST_FIGHT = 9001
 
 
 def ftext(en, ja="名前"):
@@ -130,7 +132,29 @@ def make_dump(root):
     house = "FFRS/Content/Map/Dng/01Gra/01Gra_41/GD/Dng_01Gra_41_GD.json"
     write(root, "maps/index.json", [{"path": level, "actors": 4}, {"path": world, "actors": 2},
                                     {"path": town, "actors": 1}, {"path": house, "actors": 1}])
-    write(root, "maps/" + town, [{"Type": "BP_MapGimmick_TreasureBox_C", "Properties": {"m_Id": 0, "m_UniqueId": 4}}])
+    # Round 78: a side quest. The quest log names it; its NPC runs each step by the counter's value
+    # (the condition sits on the entry that holds the event list); step 2 is a fight whose win row
+    # moves the counter; step 3 has no map actor (a quest board's delivery); step 4 is the reward.
+    write(root, f"{T}/Request/DT_RequestData.json", {"Rows": {"zile": {
+        "ID": 13, "Name": ftext("Rear Support, Ahoy!"), "Category": "ERequestCategory::Lanzelt",
+        "AcceptCondition": "{progress:28}==0", "CompletionCondition": "",
+        "Prize": [{"ID": 25000, "Num": 1}, {"ID": -1, "Num": 500}, {"ID": 0, "Num": 1}]}}})
+    progress = lambda value: [{"Condition": "", "ID": QUEST_COUNTER, "Value": value}]
+    write(root, f"{T}/Event/TalkEvent/SubEvent/DT_TalkEventData_SubEv_Chapter01.json", {"Rows": {
+        "Zairu_01": {"ProgressList": progress(10)},
+        "Zairu_02": {"encountGroupId": QUEST_FIGHT},
+        "Zairu_02_Win": {"ProgressList": progress(20)},
+        "Zairu_03": {"ProgressList": progress(30)},
+        "Zairu_04": {"ProgressList": progress(40), "ObtainItemList": [{"ID": 25000, "Num": 1}, {"ID": -1, "Num": 500}]},
+        "Story": {"ProgressList": [{"Condition": "", "ID": 0, "Value": 1110}]},
+    }})
+    write(root, f"{T}/Event/TalkEvent/CDT_TalkEventData_Prod.json", {"Rows": {"Zairu_03": {"ProgressList": progress(99)}}})
+    write(root, f"{T}/Encount/DT_BattleGroup.json", {"Rows": {"zile": {"ID": QUEST_FIGHT, "battleFinishEventId": "Zairu_02_Win"}}})
+    npc_steps = [("{progress:28}==0", "Zairu_01"), ("{progress:28}==10", "Zairu_02"), ("{progress:28}==30", "Zairu_04")]
+    zile = {"Type": "BP_MapUnit_NPC_C", "Properties": {
+        "m_UniqueId": 13, "m_VisiblFlagCondition": "{progress:28}<=30",
+        "m_EventSettings": {"EventList": [{"Condition": c, "EventList": [{"EventId": e, "Weight": 1}]} for c, e in npc_steps]}}}
+    write(root, "maps/" + town, [{"Type": "BP_MapGimmick_TreasureBox_C", "Properties": {"m_Id": 0, "m_UniqueId": 4}}, zile])
     write(root, "maps/" + house, [{"Type": "BP_MapGimmick_TreasureBox_C", "Properties": {"m_Id": 3, "m_UniqueId": 23}}])
     write(root, "maps/" + level, [
         {"Type": "BP_MapGimmick_TreasureBox_C", "Properties": {"m_Id": 0, "m_UniqueId": 4}, "RootLocation": {"X": 1.4, "Y": 2, "Z": 3}},
@@ -240,6 +264,18 @@ def main():
         gimmicks = {r["class"]: r for r in tsv(game / "gimmicks.tsv")}
         assert gimmicks["BP_MapGimmick_BlockingBox_C"]["condition"] == "!{flag:928}"
         assert gimmicks["BP_MapAirShipLandingPoint_C"]["id"] == "10200"
+
+        quests = tsv(game / "quests.tsv")
+        assert [(q["id"], q["name"], q["category"], q["prize"]) for q in quests] == [
+            ("13", "Rear Support, Ahoy!", "Lanzelt", "25000:1 -1:500")], quests
+        steps = [(s["counter"], s["value"], s["row"], s["map"], s["start"], s["condition"], s["fights"], s["gifts"])
+                 for s in tsv(game / "quest_steps.tsv")]
+        assert steps == [
+            ("28", "10", "Zairu_01", "2011", "Zairu_01", "{progress:28}==0", "", ""),
+            ("28", "20", "Zairu_02_Win", "2011", "Zairu_02", "{progress:28}==10", "9001", ""),
+            ("28", "30", "Zairu_03", "", "", "", "", ""),       # no actor leads to it; not the CDT copy's 99
+            ("28", "40", "Zairu_04", "2011", "Zairu_04", "{progress:28}==30", "", "25000:1 -1:500"),
+        ], steps                                               # the story counter's rows are left out
 
         # The comparison with data/*.tsv.
         assert "missing from item_names.tsv" not in log, log

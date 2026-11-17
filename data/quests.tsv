@@ -1,0 +1,29 @@
+quest	counter	value	rows	needs	note
+0	1	50	ChrEv_0010_005_02		A New Leaf
+1	2	50	ChrEv_0020_005_01		The Twin Titleholders
+2	3	50	ChrEv_0030_005_01		Shimmering Reflections
+3	4	50	ChrEv_0040_006_01		Beyond the Blue
+4	5	60	ChrEv_0050_006_01		Nichol's Duty
+5	6	50	ChrEv_0060_006_01		Last Respite: Archwitch Fina on the deck only while the story is below 8050
+6	7	60	ChrEv_0070_006_01		Token Legacy: starts at an inn
+7	8	50	ChrEv_0080_005_03		Mysidia, Ever Blooming
+13	28	40	SubEv_C01_Zairu_04		Rear Support, Ahoy!: step 3 is a quest-board delivery of 4 Turbo Ethers
+14	31	60	SubEv_C01_Rain_05		Dream of an Idealist
+16	30	90	SubEv_C01_Chloe_04		Secrets Unearthed
+18	32	40	SubEv_C02_Roy_04		Lyrical Riddles
+19	34	40	SubEv_C02_Silvia_04		Elven Maven
+20	33	50	SubEv_C01_Lasswell_05		The Weight of Mercy
+21	35	50	SubEv_C03_Mercedes_05		The Tide from the Sky
+22	37	50	ChrEv_0340_005_01	6	Errand's End: starts after Token Legacy
+23	38	40	ChrEv_2810_007_03_03		Forger of Wills
+24	39	50	ChrEv_2280_005_01		Victoria Revivified
+25	36	60	ChrEv_0410_007_02		The Call from Beyond: the Phantom Train
+28	40	50	ChrEv_0470_006_01		The Shield of the Weak
+29	41	50	SubEv_C03_TreatmentGirl_08_Clear		Medicinal Mission
+30	42	70	SubEv_C04_Spy_05		Rogue Rebel
+31	48	50	ChrEv_2630_005_01	25	O General! My General!: starts after The Call from Beyond
+32	47	60	ChrEv_0420_005_01		The Admirable Apprentice: the log says done at 50, the reward row writes 60
+33	53	40	SubEv_C08_Flavia_04	18,19	Reunion: starts after Lyrical Riddles and Elven Maven
+34	44	20	SubEv_C05_MogChase_06_NPC01_01,SubEv_C05_MogChase_06_NPC02_01,SubEv_C05_MogChase_06_NPC03_01,SubEv_C05_MogChase_06_NPC01_01_loot,SubEv_C05_MogChase_06_NPC02_01_loot,SubEv_C05_MogChase_06_NPC03_01_loot		Mog Tag: one catch, any moogle
+35	44	40	SubEv_C05_MogChase_06_NPC01_02,SubEv_C05_MogChase_06_NPC02_02,SubEv_C05_MogChase_06_NPC03_02,SubEv_C05_MogChase_06_NPC01_02_loot,SubEv_C05_MogChase_06_NPC02_02_loot,SubEv_C05_MogChase_06_NPC03_02_loot		More Mog Tag
+36	44	60	SubEv_C05_MogChase_06_NPC01_03,SubEv_C05_MogChase_06_NPC02_03,SubEv_C05_MogChase_06_NPC03_03,SubEv_C05_MogChase_06_NPC01_03_loot,SubEv_C05_MogChase_06_NPC02_03_loot,SubEv_C05_MogChase_06_NPC03_03_loot		Even More Mog Tag

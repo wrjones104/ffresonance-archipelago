@@ -18,7 +18,7 @@ ALL_PARTY_MEMBERS = [1001, 1002, 1003, 1004, 1005, 1006, 1007, 1008]
 # The options the logic reads, sent in slot data so a tracker can build the same world again.
 SLOT_OPTIONS = ("tablet_shards_required", "include_shinies", "include_crystals", "include_tablet_shards",
                 "include_bosses", "start_with_chocobo", "start_with_airship", "shuffle_party_members",
-                "shuffle_visions", "shuffle_key_items", "include_radar_treasures")
+                "shuffle_visions", "shuffle_key_items", "include_radar_treasures", "include_side_quests")
 
 
 class FFResonanceSettings(settings.Group):
@@ -109,7 +109,8 @@ class FFResonanceWorld(World):
         if self.options.goal.value == ffr_options.Goal.option_final_boss:
             most_characters = len(ALL_PARTY_MEMBERS) if self.options.shuffle_party_members else len(self.starting_party)
             most_visions = len(items.item_name_groups["Visions"]) if self.options.shuffle_visions else (
-                len(items.STARTER_VISIONS) + (len(locations.CRYSTALS) if self.options.include_crystals else 0))
+                len(items.STARTER_VISIONS) + (len(locations.CRYSTALS) if self.options.include_crystals else 0)
+                + (len(locations.QUEST_VISIONS) if self.options.include_side_quests else 0))
             self.final_boss_characters = min(self.options.final_boss_characters.value, most_characters)
             self.final_boss_visions = min(self.options.final_boss_visions.value, most_visions)
             if self.options.include_bosses:

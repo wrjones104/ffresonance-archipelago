@@ -1787,6 +1787,59 @@ assert L.eval("G.RadarPatch()") == 0
 assert L.eval("#G.RADAR") == 13 and L.eval("G.RADAR[13].flag") == 716
 print("radar rows: ok")
 
+# Round 78: a side quest's reward row gives the pop-up's stand-in Potion (1) for its first item,
+# and keeps its gil and a second item. A row with a vision is emptied and built again without the
+# vision. The list here behaves like the engine's array: Empty() clears it, and reading one index
+# past the end adds an element.
+L.execute(r"""
+local function itemList(entries)
+  local items = {}
+  local list = setmetatable({}, {
+    __index = function(_, i)
+      if i == "Empty" then return function() for k in pairs(items) do items[k] = nil end end end
+      if i == #items + 1 then items[i] = { ID = 0, Num = 0 } end
+      return items[i]
+    end,
+    __len = function() return #items end })
+  for i, e in ipairs(entries) do items[i] = { ID = e[1], Num = e[2] } end
+  return list
+end
+questRows = {
+  SubEv_C01_Zairu_04 = { ObtainItemList = itemList({ { 25000, 1 }, { -1, 500 } }) },
+  ChrEv_0340_005_01 = { ObtainItemList = itemList({ { 25001, 1 }, { 13017, 1 } }) },
+  ChrEv_0420_005_01 = { ObtainItemList = itemList({ { 13051, 1 }, { 25002, 1 } }) },
+  SubEv_C01_Chloe_04 = { ObtainItemList = itemList({ { 12032, 1 }, { 25000, 1 } }) },
+}
+questTable = { rows = questRows, ParentTables = {} }
+function questTable:IsValid() return true end
+function questTable:HasAnyInternalFlags() return false end
+function questTable:HasAnyFlags() return false end
+function questTable:GetFullName() return "DataTable DT_TalkEventData_SubEv_Chapter01" end
+function questTable:ForEachRow(fn) for k, r in pairs(self.rows) do fn(fname(k), r) end end
+local prevQuestFind = StaticFindObject
+function StaticFindObject(p)
+  if p == "/Game/Datatable/Event/TalkEvent/CDT_TalkEventData_Prod.CDT_TalkEventData_Prod" then return questTable end
+  return prevQuestFind(p)
+end
+function rewards(row)
+  local list, out = questRows[row].ObtainItemList, {}
+  for i = 1, #list do out[#out + 1] = list[i].ID .. "x" .. list[i].Num end
+  return table.concat(out, " ")
+end
+""")
+QUEST_ROWS_TO_CHANGE = 4
+assert L.eval("G.QuestsPatch()") == QUEST_ROWS_TO_CHANGE
+assert L.eval("rewards('SubEv_C01_Zairu_04')") == "1x1 -1x500", "the stand-in, and the gil stays"
+assert L.eval("rewards('ChrEv_0340_005_01')") == "1x1", "Amelia: the Magicite is the location's, the vision comes out"
+assert L.eval("rewards('ChrEv_0420_005_01')") == "1x1", "Ayaka: the vision first, then the Magicite Cryst"
+assert L.eval("rewards('SubEv_C01_Chloe_04')") == "1x1 25000x1", "the Prayer Beads are the location's; the Shard stays"
+assert L.eval("G.QuestsPatch()") == 0, "nothing to write the second time"
+# quests.lua, generated from data/quests.tsv: 28 quests, each with a counter, a value and rows
+assert L.eval("#G.QUESTS") == 28
+assert L.eval("G.QUESTS[1].key") == "quest:0" and L.eval("G.QUESTS[1].counter") == 1 and L.eval("G.QUESTS[1].value") == 50
+assert L.eval("G.MECHABO.counter") == 16 and L.eval("G.MECHABO.start") == 10
+print("quest rows: ok")
+
 # Round 73: the Sworn Six's three assist skills in the Behemoth fight deal a fixed 1 damage, and
 # no other skill changes (Ruin, 500100, is the same ally's own attack and is used elsewhere too).
 L.execute("""

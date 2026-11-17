@@ -20,6 +20,8 @@ Outputs (data/game/):
     shops.tsv        every shop's stock, one row per item
     capabilities.tsv what each party member's skills (by level), Vision's (by awakening) and gear's
                      passives do in a boss fight: element attacks, heals, cleanses, resistances
+    quests.tsv       the game's quest log: id, name, accept and completion tests, prize
+    quest_steps.tsv  each talk row that moves a side-quest counter, with the map actor leading to it
 """
 
 import argparse
@@ -345,6 +347,23 @@ def events(props):
     return " ".join(out)
 
 
+def event_entries(value, out, outer=""):
+    """Every (condition, event) pair inside an actor's properties. An NPC keeps the condition on
+    the entry that holds its event list, so an inner entry takes its parent's condition too."""
+    if isinstance(value, dict):
+        own = value.get("Condition") or value.get("FlagCondition") or ""
+        own = own if isinstance(own, str) else ""
+        cond = f"({outer})&({own})" if outer and own else (own or outer)
+        event = value.get("EventId")
+        if isinstance(event, str) and event not in ("None", "", "FieldItem"):
+            out.append((cond, event))
+        for v in value.values():
+            event_entries(v, out, cond)
+    elif isinstance(value, list):
+        for v in value:
+            event_entries(v, out, outer)
+
+
 def location(actor):
     loc = actor.get("RootLocation") or {}
     if not isinstance(loc, dict):
@@ -354,7 +373,7 @@ def location(actor):
 
 def actors(by_key):
     classes = Classes()
-    fields, transitions, gimmicks, boxes = [], [], [], []
+    fields, transitions, gimmicks, boxes, starts = [], [], [], [], []
     for entry in load("maps/index.json"):
         path = entry["path"]
         mid, stem = map_id(path, by_key)
@@ -364,6 +383,12 @@ def actors(by_key):
             props.update(a.get("Properties") or {})
             uid = props.get("m_UniqueId", 0)   # zero values are not stored
             where = location(a)
+            entries = []
+            event_entries(props, entries)
+            visible = props.get("m_VisiblFlagCondition") or condition(props)
+            for cond, event in entries:
+                starts.append({"map": mid, "level": stem, "actor": cls, "uid": uid, "visible": visible,
+                               "condition": cond, "event": event, "where": where})
             if FIELD_ITEM.search(cls):
                 item = props.get("m_ItemId", -1)
                 kind = "shiny" if item not in (-1, None) else "spot"
@@ -401,7 +426,89 @@ def actors(by_key):
               sorted(transitions, key=sort))
     write_tsv("gimmicks.tsv", ["map", "level", "uid", "class", "id", "description", "condition", "events"] + xyz,
               sorted(gimmicks, key=sort))
-    return fields, boxes
+    return fields, boxes, starts
+
+
+# ---------------------------------------------------------------- side quests (docs/side_quests.md)
+
+TALK_TABLES = "Event/TalkEvent"
+QUEST_LOG = "Request/DT_RequestData"
+BATTLE_GROUPS = "Encount/DT_BattleGroup"
+STORY_COUNTER = 0
+
+
+def talk_rows():
+    """Every talk row of the talk event tables (the composite CDT table only repeats them)."""
+    rows = {}
+    for path in sorted(glob.glob(os.path.join(DUMP, TABLES, TALK_TABLES, "**", "*.json"), recursive=True)):
+        if os.path.basename(path).startswith("CDT_"):
+            continue
+        rows.update(load(os.path.relpath(path, DUMP)).get("Rows") or {})
+    return rows
+
+
+def gifts(row):
+    """'25000:1 -1:500': an item id and count each, -1 for gil."""
+    return " ".join(f"{g['ID']}:{g['Num']}" for g in row.get("ObtainItemList") or [])
+
+
+def quests(starts):
+    """
+    quests.tsv: the game's quest log, one row per quest. quest_steps.tsv: each talk row that moves
+    a side-quest counter ({progress:N}, N not 0), with the map actor that leads to it. A row is
+    reached from an actor's event (`start`) through continuations, choices and battle wins;
+    `fights` are the battle groups on the way. A row no actor leads to (a quest board's) has an empty map.
+    """
+    log = []
+    for key, q in table_rows(QUEST_LOG).items():
+        prize = " ".join(f"{p['ID']}:{p['Num']}" for p in q.get("Prize") or [] if p.get("ID", 0) != 0)
+        log.append([q["ID"], key, text(q.get("Name")), enum(q.get("Category")), q.get("AcceptCondition", ""),
+                    q.get("CompletionCondition", ""), prize])
+    log.sort(key=lambda r: r[0])
+    write_tsv("quests.tsv", ["id", "key", "name", "category", "accept", "done", "prize"], log)
+
+    rows = talk_rows()
+    finish = {g["ID"]: g.get("battleFinishEventId") for g in table_rows(BATTLE_GROUPS).values()}
+
+    def next_rows(row):
+        """(event, condition, fight) for each row this one can run next."""
+        for e in row.get("ContinuousEventList") or []:
+            yield e.get("EventId"), e.get("Condition", ""), None
+        for c in row.get("ChoicesBranchEventList") or []:
+            for e in c.get("EventList") or []:
+                yield e.get("EventId"), e.get("Condition", ""), None
+        group = row.get("encountGroupId", -1)
+        if group not in (-1, None) and finish.get(group) not in (None, "None"):
+            yield finish[group], "", group
+
+    def moves(row):
+        return [(p["ID"], p["Value"]) for p in row.get("ProgressList") or [] if p["ID"] != STORY_COUNTER]
+
+    steps, reached = {}, set()
+    for s in starts:
+        stack = [(s["event"], (), ())]
+        seen = set()
+        while stack:
+            event, fights, conds = stack.pop()
+            if event in seen or event not in rows:
+                continue
+            seen.add(event)
+            row = rows[event]
+            for counter, value in moves(row):
+                reached.add(event)
+                key = (counter, value, event, s["map"], s["uid"], s["level"], s["event"])
+                steps.setdefault(key, [counter, value, event, s["map"], s["level"], s["actor"], s["uid"]] + s["where"]
+                                 + [s["event"], s["visible"], s["condition"], " ".join(conds),
+                                    " ".join(str(f) for f in fights), gifts(row)])
+            for nxt, cond, fight in next_rows(row):
+                stack.append((nxt, fights + ((fight,) if fight else ()), conds + ((cond,) if cond else ())))
+    no_actor = ["", "", "", "", "", "", "", "", "", "", "", ""]
+    for event, row in rows.items():
+        for counter, value in moves(row) if event not in reached else []:
+            steps[(counter, value, event)] = [counter, value, event] + no_actor + [gifts(row)]
+    out = sorted(steps.values(), key=lambda r: (r[0], r[1], r[2], str(r[3]), str(r[6]), r[10]))
+    write_tsv("quest_steps.tsv", ["counter", "value", "row", "map", "level", "actor", "uid", "x", "y", "z",
+                                  "start", "visible", "condition", "chain", "fights", "gifts"], out)
 
 
 # ---------------------------------------------------------------- comparison with data/*.tsv
@@ -491,8 +598,9 @@ def main():
     by_key = maps()
     shops()
     capabilities()
-    field_rows, box_rows = actors(by_key)
+    field_rows, box_rows, starts = actors(by_key)
     chest_rows = chests(box_rows)
+    quests(starts)
     if args.check:
         problems = check(item_rows, chest_rows, field_rows, box_rows)
         print(f"\n{problems} differences")

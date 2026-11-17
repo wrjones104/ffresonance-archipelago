@@ -4,6 +4,8 @@ How side quests become locations on an open world seed. The quest rewards go int
 
 **Asked for (2026-11-17, the user):** side-quest rewards in the pool. The user was not sure about the quest key items, because the quests seem to set flags that do not care about the items. Example: three Ruby Fragments from Archipelago do not wake Carbuncle's stele; only the three world-map spots do.
 
+**Built (round 78, world 0.30.0, mod 0.61.0):** sections 4 to 6, for 28 quests. The option is off by default until a round shows it works.
+
 **Decided (2026-11-17):**
 - A quest's reward is a location. Its vanilla reward goes into the pool.
 - Quest items that the game never tests (section 2) stay vanilla and leave the pool.
@@ -48,7 +50,7 @@ None of the 11 untested quest items (20020, 20023 to 20032) is in a chest or a s
 
 ## 3. The quests
 
-All 33 from the quest log. "Done" is the test that reports the check: the counter at or past the value the reward row writes. It is the log's `CompletionCondition` for every quest but Mechabo Evolved (the log says 60, the reward row `_06` writes 70). The mod tests `>=` throughout. "Places" lists where the steps happen, by continent (from the steps' map actors). The world map (1000) has steps in many of them; the gen step places those by position.
+All 33 from the quest log. "Done" is the test that reports the check: the counter at or past the value the reward row writes. It is the log's `CompletionCondition` for every quest but two: Mechabo Evolved (the log says 60, the reward row `_06` writes 70) and The Admirable Apprentice (the log says 50, the reward row writes 60). The mod tests `>=` throughout. "Places" lists where the steps happen, by continent (from the steps' map actors). The world map (1000) has steps in many of them; the gen step places those by position.
 
 | ID | Quest | Counter | Done | Reward (vanilla) | Continents | Needs | First pass? |
 |---|---|---|---|---|---|---|---|
@@ -78,7 +80,7 @@ All 33 from the quest log. "Done" is the test that reports the check: the counte
 | 29 | Medicinal Mission | 41 | `>=50` | Magicite Shard, 1500 gil | Olderion | | yes |
 | 30 | Rogue Rebel | 42 | `>=70` | Magicite, Rose Circlet | Zoldaad | | yes |
 | 31 | O General! My General! | 48 | `>=50` | Wilhelm, Magicite Cryst | Zoldaad (Weapons Factory) | The Call from Beyond done | yes, if the factory opens |
-| 32 | The Admirable Apprentice | 47 | `>=50` | Ayaka, Magicite Cryst | Pharm, Olderion, Zoldaad, Dirnado | | yes |
+| 32 | The Admirable Apprentice | 47 | `>=60` | Ayaka, Magicite Cryst | Pharm, Olderion, Zoldaad, Dirnado | | yes |
 | 33 | "Reunion" | 53 | `>=40` | Magicite, 2500 gil | Gronoa, Mysidia, Dirnado | Elven Maven and Lyrical Riddles done | yes |
 | 34 | Mog Tag | 44 | `>=20` | Mist X-Potion | Mysidia | | yes |
 | 35 | More Mog Tag | 44 | `>=40` | Magicite | Mysidia | | yes |
@@ -113,7 +115,7 @@ That is 31 locations in the first pass: 28 now, and the three Mechabo quests onc
 
 The same pattern as the radar treasures and the cave masters:
 
-1. **Blank the reward.** Each location's reward row gets its item swapped for the stand-in Potion (`BOSS_STAND_IN`), so the game's own pop-up still shows. The gil entry (`ID -1`) stays, so the quest still pays its gil. A vision entry is removed when `shuffle_visions` is on, and stays when it is off.
+1. **Blank the reward.** Each location's reward row gets its first item swapped for the stand-in Potion (`BOSS_STAND_IN`), so the game's own pop-up still shows. The gil entry (`ID -1`) stays, so the quest still pays its gil, and so does a second item (Secrets Unearthed's Magicite Shard, Rogue Rebel's Rose Circlet). A vision comes out of the row: with `shuffle_visions` on it is in the pool already, and with it off the location holds it, as a sanctum holds its own. The engine's list cannot drop one entry, so a row with a vision is emptied and built again.
 2. **See the check.** Each tick, read the quest's counter (`game.ProgressValue`) and test it against "Done". A met test reports `quest:<id>` (Mog Tag tiers: `quest:34` to `quest:36`; Mechabo: `quest:17`, `quest:26`, `quest:27`). A check stays sent once sent, so the Mog Tag reset does no harm.
 3. **Show the item.** Overwrite the pop-up with the scouted item, as for bosses (`BOSS_POPUP_TRIES`).
 4. **Mechabo's start** (idea 33): on a seed save, when `{progress:16}` reads 0, set it to 10.
@@ -122,7 +124,8 @@ The quest rows that give quest items are not touched.
 
 ## 5. Logic
 
-- **A quest needs every continent its steps use.** Each step's map gives a continent (`maps.tsv`, `island`). A world-map step gets one from its position (`data/continents.tsv`). This answers the scratchpad's note about quests that send you to other continents.
+- **A quest needs every continent its steps use.** Each step's map gives a continent, by its doors (as for chests). A world-map step gets one from its position (`data/continents.tsv`). This answers the scratchpad's note about quests that send you to other continents.
+- **Where one event starts a step in several places, any of them does** (Token Legacy starts at any inn). **Where different events start it, all are needed** (Forger of Wills: three NPCs on three continents, each moving the counter on by one, in any order). `quest_steps.tsv` keeps each step's starting event (`start`) for this.
 - **Airship maps** (20001 Airship, 20002 Deck) need the Airship.
 - **Quest chains** are rules on the earlier quest's location: Errand's End needs Token Legacy, O General! needs The Call from Beyond, "Reunion" needs Elven Maven and Lyrical Riddles.
 - **Fights:** the groups listed in section 3. First pass: no rule beyond the region. Look at their levels against the scaling once the list is in; boss logic may want some of them.
@@ -132,7 +135,7 @@ The quest rows that give quest items are not touched.
 ## 6. The world
 
 - **A new option, `include_side_quests`** (off by default until a round shows it works, then on). Its locations are `quest:<id>`, kind `quest`, named "Quest: <name>" (the game's English quest name).
-- **Each location's vanilla item:** the reward's item (not its gil, and not its vision). It goes into the pool like a chest's.
+- **Each location's vanilla item:** the reward's first item (not its gil, and not its vision). It goes into the pool like a chest's. With `shuffle_visions` off, a vision quest holds its vision instead, and its item is not added.
 - **The key-item pool:** take the 11 untested quest items (20020, 20023 to 20032) out of `PROGRESSION["key"]` whether or not the option is on. They unlock nothing for anyone today.
 - **Slot data:** the option goes in `fill_slot_data` and back in `take_slot_data` (Universal Tracker, round 72).
 
@@ -144,9 +147,9 @@ The quest rows that give quest items are not touched.
 
 ## 8. Order of work
 
-1. **Off-line:** a `tools/gen_from_dump.py` step that writes `data/game/quests.tsv` (the quest log: id, name, accept, done, prize, counter) and `data/game/quest_steps.tsv` (each step's counter value, row, map, actor, condition, fight, reward). The 2026-11-17 pass did this with scratch scripts; this makes it a table. `tools/gen_apworld_data.py` builds the locations and their continents from it.
-2. **World:** the option, the 28 locations, the rules, the key-item change, tests.
-3. **Mod:** the reward patch, the counter checks, the pop-up, the Mechabo start. Tests with `lupa`.
+1. **Off-line (done, round 78):** a `tools/gen_from_dump.py` step that writes `data/game/quests.tsv` (the quest log: id, name, accept, done, prize, counter) and `data/game/quest_steps.tsv` (each step's counter value, row, map, actor, condition, fight, reward). The 2026-11-17 pass did this with scratch scripts; this makes it a table. `tools/gen_apworld_data.py` builds the locations and their continents from it.
+2. **World (done, round 78):** the option, the 28 locations, the rules, the key-item change, tests.
+3. **Mod (done, round 78):** the reward patch, the counter checks, the pop-up, the Mechabo start. Tests with `lupa`.
 4. **Round 78 in game:**
    - Rear Support, Ahoy! (Lanzelt, short): the pop-up shows the scouted item, the check is sent, the 500 gil still comes.
    - A vision quest with `shuffle_visions` on: no second copy of the vision.

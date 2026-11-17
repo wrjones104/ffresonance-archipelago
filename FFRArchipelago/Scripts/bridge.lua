@@ -18,6 +18,7 @@
 --     cfg airship <0|1>                           1: start in the airship; 0: on foot with airship as an item (flag 1431)
 --     cfg continent <name>                        the starting continent when starting on foot
 --     cfg radar <0|1>                             the radar's 13 treasures are locations
+--     cfg quests <0|1>                            side quests are locations: blank their rewards
 --     cfg finalboss <have> <need> ...             the tower lock: characters, visions, Crystal Fragments
 --     scout <base64>                              what a location holds: key, item, player, flags, own
 --
@@ -38,7 +39,7 @@ local B = {}
 -- Round 74: the mod's version changes once per release, so its build (an FNV-1a hash of its
 -- scripts) tells test installs apart. Carriage returns are skipped: a CRLF and an LF copy match.
 -- tests/mod/test_main.py checks it against a Python copy of the same hash.
-B.SCRIPTS = { "main.lua", "game.lua", "bridge.lua", "field_items.lua" }
+B.SCRIPTS = { "main.lua", "game.lua", "bridge.lua", "field_items.lua", "quests.lua" }
 
 function B.build(dir)
     if B.buildId then return B.buildId end

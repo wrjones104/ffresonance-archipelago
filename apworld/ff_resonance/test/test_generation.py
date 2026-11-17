@@ -5,7 +5,7 @@ from worlds import AutoWorld
 from worlds.AutoWorld import call_all
 from test.general import gen_steps
 
-from ..data import AIRSHIP_ITEM, BOSSES, CHESTS, CHOCOBO_ITEM, NO_ROUTE, RADAR, RADAR_ITEM, RADAR_PARTS, RADAR_PART_CHESTS, CONTINENT_UNLOCKS, CRYSTALS, FRAGMENT_ITEM, ITEMS, NO_BOX, TABLET_SHINIES, PROGRESSION, SHINIES, SHUFFLE_ID_LIMIT, UNIT_ITEM_BASE
+from ..data import AIRSHIP_ITEM, BOSSES, CHESTS, CHOCOBO_ITEM, NO_ROUTE, RADAR, RADAR_ITEM, RADAR_PARTS, RADAR_PART_CHESTS, CONTINENT_UNLOCKS, CRYSTALS, FRAGMENT_ITEM, ITEMS, NO_BOX, SIDE_QUESTS, TABLET_SHINIES, PROGRESSION, SHINIES, SHUFFLE_ID_LIMIT, UNIT_ITEM_BASE
 from ..boss_logic import awakening, has_capability
 from ..items import CLASSIFICATIONS, FILLER_CATEGORIES, FRAGMENT_NAME, item_name_groups
 from ..locations import GOAL_EVENT, LOCATION_KEY_TO_ID, SEPHIROTH, VICTORY
@@ -20,6 +20,9 @@ LAST_PALACE_CHEST = "chest:2031:24"   # Oblivion Palace's 4-Star Chamber: all 99
 PALACE_SHARDS = 99
 MARAUDER, LIQUID_THUNDER, ANTLION = 9079, 9083, 9060   # battle groups: a cave master, a story boss, an optional boss
 TARTAROSAURUS, BELMODAR, THE_HUNGER = 9112, 9004, 9012   # tier D, and two tier A with no needs
+QUEST_LOCATIONS = 28    # round 78: the quest log's 33, less the Mechabo three and two boss quests
+# Quest items the game never tests (docs/side_quests.md, section 2): out of the pool.
+QUEST_ONLY_ITEMS = (20020, 20023, 20024, 20025, 20026, 20027, 20028, 20029, 20030, 20031, 20032)
 CAVE_MASTERS, FRAGMENT_BOSSES = 15, 21   # round 71: ten more story bosses; round 72: Behemoth out
 EARLY_LEVEL, FINA_GROUP_HEAL_LEVEL, MAX_LEVEL = 3, 25, 99   # boss levels: Fina has Cure at 3
 
@@ -411,6 +414,88 @@ class TestRadarTreasures(FFResonanceTestBase):
 
     def test_slot_data(self) -> None:
         self.assertEqual(self.world.fill_slot_data()["include_radar_treasures"], 1)
+
+
+class TestSideQuests(FFResonanceTestBase):
+    """Round 78: the rewards of 28 quests from the game's quest log are locations. A quest needs
+    the continents its steps are on, and the Airship for steps aboard it when the player starts
+    on foot (docs/side_quests.md)."""
+    options = {"include_side_quests": True, "start_with_airship": False, "starting_continent": "grandshelt"}
+
+    def quest(self, name):
+        return self.multiworld.get_location(f"Quest: {name}", self.player)
+
+    def test_quests_are_locations(self) -> None:
+        names = {loc.name for loc in self.multiworld.get_locations(self.player)}
+        self.assertEqual(len(SIDE_QUESTS), QUEST_LOCATIONS)
+        self.assertTrue({q["name"] for q in SIDE_QUESTS} <= names)
+        self.assertIn('Quest: "Reunion"', names)
+
+    def test_forger_of_wills_needs_all_three_continents(self) -> None:
+        # Three NPCs, in Dilmagia, the Rebel Hideout and the Village of Kol, each move the counter
+        # on by one, in any order: all three are needed, not any one.
+        state = self.multiworld.state
+        self.collect_by_name(["Airship", "Dirnado Unlock", "Lanzelt Unlock"])
+        self.assertFalse(self.quest("Forger of Wills").can_reach(state))
+        self.collect_by_name(["Zoldaad Unlock"])
+        self.assertTrue(self.quest("Forger of Wills").can_reach(state))
+
+    def test_a_step_aboard_needs_the_airship(self) -> None:
+        # Last Respite is in Grandshelt, the start, but its last step is on the airship's deck.
+        state = self.multiworld.state
+        self.assertFalse(self.quest("Last Respite").can_reach(state))
+        self.collect_by_name(["Airship"])
+        self.assertTrue(self.quest("Last Respite").can_reach(state))
+
+    def test_a_later_quest_needs_the_one_before(self) -> None:
+        errand = next(q for q in SIDE_QUESTS if q["key"] == "quest:22")
+        token = next(q for q in SIDE_QUESTS if q["key"] == "quest:6")
+        self.assertEqual(errand["after"], ["quest:6"])
+        self.assertTrue(set(token["steps"]) <= set(errand["steps"]))
+
+    def test_rewards_go_to_the_pool_and_quest_items_do_not(self) -> None:
+        pool = [i.code for i in self.multiworld.itempool if i.player == self.player]
+        mercy = next(q for q in SIDE_QUESTS if q["key"] == "quest:20")
+        self.assertIn(mercy["vanilla"], pool, "Iwakirimaru")
+        self.assertIn(20021001, pool, "the Throne Room Key: its door tests it")
+        for game_id in QUEST_ONLY_ITEMS:
+            self.assertNotIn(game_id * 1000 + 1, pool, ITEMS[game_id * 1000 + 1]["name"])
+            self.assertNotIn(game_id * 1000 + 1, PROGRESSION["key"])
+
+    def test_goal_is_reachable(self) -> None:
+        self.collect_all_but(())
+        self.assertBeatable(True)
+
+    def test_slot_data(self) -> None:
+        self.assertEqual(self.world.fill_slot_data()["include_side_quests"], 1)
+
+
+class TestSideQuestsUnshuffledVisions(FFResonanceTestBase):
+    """Round 78: with visions not shuffled, a vision quest holds its own vision, as a sanctum does."""
+    options = {"include_side_quests": True, "shuffle_visions": False}
+
+    def test_a_vision_quest_holds_its_vision(self) -> None:
+        for quest in (q for q in SIDE_QUESTS if "vision" in q):
+            self.assertEqual(self.multiworld.get_location(quest["name"], self.player).item.code, quest["vision"])
+
+    def test_no_vision_in_the_pool(self) -> None:
+        pool = [i for i in self.multiworld.itempool if i.player == self.player]
+        self.assertFalse([i.name for i in pool if ITEMS[i.code]["category"] == "vision"])
+
+
+class TestSideQuestsRealDefaults(FFResonanceTestBase, real_defaults=True):
+    """Round 78: with every other default on (bosses, shinies, radar), the seed still fills."""
+    options = {"include_side_quests": True, "start_with_airship": False}
+
+    def test_every_quest_is_a_location(self) -> None:
+        names = {loc.name for loc in self.multiworld.get_locations(self.player)}
+        self.assertTrue({q["name"] for q in SIDE_QUESTS} <= names)
+
+
+class TestNoSideQuests(FFResonanceTestBase):
+    def test_no_quest_is_a_location(self) -> None:
+        names = {loc.name for loc in self.multiworld.get_locations(self.player)}
+        self.assertFalse({q["name"] for q in SIDE_QUESTS} & names)
 
 
 class TestRadarPartChestWithoutTreasures(FFResonanceTestBase):
@@ -880,7 +965,8 @@ class TestData(FFResonanceTestBase):
         self.assertEqual(LOCATION_KEY_TO_ID["chest:2012:5"], 1_000_000_000 + 2012 * 1000 + 5)
         self.assertEqual(LOCATION_KEY_TO_ID[f"boss:{MARAUDER}"], 4_000_000_000 + MARAUDER)
         self.assertEqual(len(LOCATION_KEY_TO_ID), len(CHESTS) + len(SHINIES) + len(CRYSTALS) + len(TABLET_SHINIES)
-                         + len(BOSSES) + len(RADAR) + len(RADAR_PART_CHESTS))
+                         + len(BOSSES) + len(RADAR) + len(RADAR_PART_CHESTS) + len(SIDE_QUESTS))
+        self.assertEqual(LOCATION_KEY_TO_ID["quest:13"], 6_000_000_000 + 13)
 
 
 class TestNoProgression(FFResonanceTestBase):

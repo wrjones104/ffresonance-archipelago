@@ -318,6 +318,8 @@ Along the same lines, I would also want an option for players to start with all 
 
 **The likely fix:** set `{progress:16}` to 10 on the open start. Also set it on load when it reads 0, so existing saves get it. `G.SetProgressValue` already does this kind of write for the radar.
 
+**Built (round 78, mod 0.61.0):** on an open world seed's save, the mod sets `{progress:16}` to 10 whenever it reads 0. The three quests are not locations yet.
+
 **To find out:**
 - Whether the forge still plays Verun's first meeting, or goes straight to the repair request.
 - Whether the steps should be locations: the six abilities and three Magicite rewards, with logic for each material's enemy area. The steps also need Lid in logic if the abilities stay vanilla.
@@ -356,3 +358,5 @@ Along the same lines, I would also want an option for players to start with all 
 - The game's quest log (`DT_RequestData`) has 33 quests with English names, accept tests, completion tests and prizes. 31 become locations in the first pass; Battle at the Big Bridge and Iron Splitter go with the bosses.
 - Each quest runs on its own counter. Quest-item gift rows move the counter, and the next step tests the counter, not the item. So 11 quest items in our key-item pool unlock nothing: Dew of Reprieve, Viscus Vitae, Rushroom, Pure Water, Convalescence Draught, Super Salubrious Salad Stem, Portrait of Dario, Dario's Letter, Ruby Fragment, Broken Sword Hilt and Blade (20020, 20023 to 20032). They leave the pool and stay vanilla (decided with the user).
 - Every quest's start holds at story 8000 except the Mechabo quests (idea 33).
+
+**Built (round 78, world 0.30.0, mod 0.61.0):** option `include_side_quests` (off by default for now): 28 quest locations, `quest:<id>`. The mod swaps each reward row's first item for the stand-in Potion, takes visions out, and reports a quest when its counter reaches the reward row's value. The 11 quest items left the pool. `data/quests.tsv` lists the quests by hand; `data/game/quests.tsv` and `quest_steps.tsv` come from the dump.

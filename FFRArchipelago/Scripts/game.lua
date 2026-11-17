@@ -2354,6 +2354,51 @@ function G.RadarPatch()
     return written
 end
 
+-- Round 78: side quests that are locations (quests.lua, from data/quests.tsv; docs/side_quests.md).
+-- A quest's check is its counter at or past the value its reward row writes.
+G.QUESTS = require("quests")
+-- The Mechabo quests run on progress 16, which the story's repair request (C02_219_02, at story
+-- 2120 only) sets to 10. Our start skips it, so Verun never shows (IDEAS.md idea 33).
+G.MECHABO = { counter = 16, start = 10 }
+
+-- Each reward row's first item becomes the pop-up's stand-in Potion: that item is the location's
+-- now. Gil and a second item stay. A vision comes out (it is an item of its own in the world):
+-- the list is emptied and built again without it. Safe to run again. Returns the rows written.
+G.VISION_IDS = { first = 13000, last = 13999 }
+function G.QuestsPatch()
+    local rows = {}
+    for _, q in ipairs(G.QUESTS) do
+        for _, r in ipairs(q.rows) do rows[r] = true end
+    end
+    local written = 0
+    EachTalkRow(function(key, row)
+        if not rows[key] then return end
+        local list = row.ObtainItemList
+        local keep, first, vision = {}, nil, false
+        for i = 1, #list do
+            local id, num = Int(list[i].ID), Int(list[i].Num)
+            if id >= G.VISION_IDS.first and id <= G.VISION_IDS.last then vision = true
+            elseif id ~= -1 and not first then first = i
+            else keep[#keep + 1] = { id = id, num = num } end
+        end
+        if not first then return end
+        if not vision then
+            if Int(list[first].ID) == BOSS_STAND_IN and Int(list[first].Num) == 1 then return end
+            list[first].ID, list[first].Num = BOSS_STAND_IN, 1
+        else
+            list:Empty()
+            local _ = list[1]
+            list[1].ID, list[1].Num = BOSS_STAND_IN, 1
+            for i, e in ipairs(keep) do
+                local _ = list[i + 1]
+                list[i + 1].ID, list[i + 1].Num = e.id, e.num
+            end
+        end
+        written = written + 1
+    end)
+    return written
+end
+
 -- Rewrites the current map's story boss trigger, NPC pawn and shared encounter/win rows so the
 -- boss can be fought at story 8000 until its flag is set. When `say` is given (ffrap_bossfight
 -- trigger), each step is logged before its engine write runs. Returns true and a summary on a

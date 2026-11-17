@@ -147,6 +147,10 @@ G.CRYSTALS = { { event = 10, map = 10200, flag = 1000 } }
 function G.CrystalsPatch() G.crystalPatches = (G.crystalPatches or 0) + 1; return 3 end
 G.BOSSES = { { group = 9079, flag = 146 }, { group = 9083, flag = 215 } }
 function G.BossesPatch() G.bossPatches = (G.bossPatches or 0) + 1; return 2 end
+G.QUESTS = { { key = "quest:13", counter = 28, value = 40, rows = { "SubEv_C01_Zairu_04" } },
+             { key = "quest:34", counter = 44, value = 20, rows = { "SubEv_C05_MogChase_06_NPC01_01" } } }
+function G.QuestsPatch() G.questPatches = (G.questPatches or 0) + 1; return 2 end
+G.MECHABO = { counter = 16, start = 10 }
 function G.SyncStoryBossTrigger(say)
   G.storyBossSyncs = (G.storyBossSyncs or 0) + 1
   if G.map == 3000 then return true, "group 9004: 2 triggers" end
@@ -1798,6 +1802,40 @@ tick(12)
 assert "check\tradar:1\n" in read("ap_out.txt") and "radar:2" not in read("ap_out.txt"), read("ap_out.txt")[-200:]
 print("radar: ok")
 
+# Round 78: side quests. A quest's check is its counter at or past the value its reward row
+# writes (Rear Support, Ahoy!: progress 28 at 40). The Mechabo counter (16) starts at 10 on an
+# open world seed's save, with or without the quests, and is left alone once it moves.
+ZILE_COUNTER, ZILE_REWARD = 28, 40
+MECHABO_COUNTER, MECHABO_REQUEST, MECHABO_LATER = 16, 10, 30
+inbox("seed\tS78q:0:1\ncfg\topenworld\t1\ncfg\tquests\t1\n", "w")
+L, G = boot5("SD_QUESTS", "0", {})
+L.globals().G = G
+L.execute(SCALE_STUB)
+G.chests = L.table()
+G.story = 8000
+tick(12)
+assert G.questPatches and G.questPatches >= 1, "the reward rows give the pop-up's stand-in"
+assert L.eval(f"G.progress[{MECHABO_COUNTER}]") == MECHABO_REQUEST, "Verun's repair request"
+L.execute(f"G.progress[{ZILE_COUNTER}] = {ZILE_REWARD - 10}")
+tick(12)
+assert "quest:13" not in read("ap_out.txt"), "a step before the reward is no check"
+L.execute(f"G.progress[{ZILE_COUNTER}] = {ZILE_REWARD}; G.progress[{MECHABO_COUNTER}] = {MECHABO_LATER}")
+tick(12)
+assert "check\tquest:13\n" in read("ap_out.txt") and "quest:34" not in read("ap_out.txt"), read("ap_out.txt")[-200:]
+assert L.eval(f"G.progress[{MECHABO_COUNTER}]") == MECHABO_LATER, "the counter is set only at 0"
+
+inbox("seed\tS78n:0:1\ncfg\topenworld\t1\ncfg\tquests\t0\n", "w")
+L, G = boot5("SD_NOQUESTS", "0", {})
+L.globals().G = G
+L.execute(SCALE_STUB)
+G.chests = L.table()
+G.story = 8000
+L.execute(f"G.progress[{ZILE_COUNTER}] = {ZILE_REWARD}")
+tick(12)
+assert G.questPatches is None and "quest:13" not in read("ap_out.txt"), "quests off: no patch, no check"
+assert L.eval(f"G.progress[{MECHABO_COUNTER}]") == MECHABO_REQUEST, "the Mechabo start does not need the quests"
+print("side quests: ok")
+
 # Round 73: the Behemoth fight's assist hits deal 1 damage. The patch runs on a new save and again
 # on each way into the Crystal Tower (map 3280), not on every tick there.
 patches = G.behemothPatches
@@ -2107,7 +2145,7 @@ build = mod_build(Path(WORK))
 assert any(f"version {VERSION} (build {build})" in x for x in list(L.eval("logged").values())), "logged on load"
 crlf = tempfile.mkdtemp(prefix="ffrap_crlf_")
 os.makedirs(os.path.join(crlf, "Scripts"))
-for name in ("main.lua", "game.lua", "bridge.lua", "field_items.lua"):
+for name in ("main.lua", "game.lua", "bridge.lua", "field_items.lua", "quests.lua"):
     text = open(os.path.join(WORK, "Scripts", name), "rb").read().replace(b"\r\n", b"\n")
     open(os.path.join(crlf, "Scripts", name), "wb").write(text.replace(b"\n", b"\r\n"))
 B = runtime()

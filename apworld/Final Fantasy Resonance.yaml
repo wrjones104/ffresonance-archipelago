@@ -224,6 +224,13 @@ Final Fantasy Resonance:
     'false': 0
     'true': 50
 
+  include_side_quests:
+    # The rewards of 28 quests from the game's quest log are locations: the character quests, the
+    # vision quests, the town quests and Mog Tag. A quest's own fetch items (Ruby Fragments, Viscus
+    # Vitae and the like) stay where they are, since the game tests the quest's progress, not them.
+    'false': 50
+    'true': 0
+
   priority_bosses:
     # The cave masters and the two Dragon's Maw bosses are priority locations: the generator puts
     # items that someone needs on them first, so they are worth the fight. Story bosses always hold

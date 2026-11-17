@@ -4,14 +4,17 @@ from typing import TYPE_CHECKING
 
 from BaseClasses import ItemClassification, Location, LocationProgressType, Region
 
-from .data import AIRSHIP_ITEM, BOSSES, CHESTS, CONTINENT_UNLOCKS, RADAR, RADAR_ITEM, RADAR_PART_CHESTS, CRYSTALS, FINAL_AREA, ITEMS, OPEN_AREA, SHINIES, TABLET_SHINIES
+from .data import (AIRSHIP_AREA, AIRSHIP_ITEM, BOSSES, CHESTS, CONTINENT_UNLOCKS, RADAR, RADAR_ITEM, RADAR_PART_CHESTS,
+                   CRYSTALS, FINAL_AREA, ITEMS, OPEN_AREA, SHINIES, SIDE_QUESTS, TABLET_SHINIES)
 from .boss_logic import boss_rule
 from .items import FRAGMENT_NAME, GAME, FFResonanceItem, create_item, progression_ids
 
 if TYPE_CHECKING:
     from .world import FFResonanceWorld
 
-ALL_LOCATIONS = CHESTS + SHINIES + CRYSTALS + TABLET_SHINIES + BOSSES + RADAR + RADAR_PART_CHESTS
+ALL_LOCATIONS = CHESTS + SHINIES + CRYSTALS + TABLET_SHINIES + BOSSES + RADAR + RADAR_PART_CHESTS + SIDE_QUESTS
+# The quests whose reward gives a vision: with visions not shuffled, the quest holds its own.
+QUEST_VISIONS = [loc for loc in SIDE_QUESTS if "vision" in loc]
 LOCATION_NAME_TO_ID: dict[str, int] = {loc["name"]: loc["id"] for loc in ALL_LOCATIONS}
 LOCATION_KEY_TO_ID: dict[str, int] = {loc["key"]: loc["id"] for loc in ALL_LOCATIONS}
 
@@ -23,6 +26,7 @@ location_name_groups["Shinies"] = {loc["name"] for loc in SHINIES}
 location_name_groups["Crystals"] = {loc["name"] for loc in CRYSTALS}
 location_name_groups["Tablet Shard Shinies"] = {loc["name"] for loc in TABLET_SHINIES}
 location_name_groups["Radar Treasures"] = {loc["name"] for loc in RADAR}
+location_name_groups["Side Quests"] = {loc["name"] for loc in SIDE_QUESTS}
 location_name_groups["Fragment Bosses"] = {loc["name"] for loc in BOSSES if loc["fragment"]}
 
 # Sephiroth takes negligible damage at midgame levels even at minimum scaling, so priority_bosses
@@ -93,6 +97,8 @@ def create_regions_and_locations(world: FFResonanceWorld) -> None:
     # Round 75: with the radar's treasures on, a chest that held a radar part is a location too.
     if world.options.include_radar_treasures:
         chosen += RADAR + RADAR_PART_CHESTS
+    if world.options.include_side_quests:
+        chosen += SIDE_QUESTS
     excluded = world.options.excluded_regions.value
     in_pool = set(progression_ids(world))
 
@@ -133,6 +139,17 @@ def create_regions_and_locations(world: FFResonanceWorld) -> None:
         # A radar treasure requires as many Progressive Radars as its tier. The mod opens a whole tier at once.
         if "radar_tier" in loc:
             rules.append(lambda state, n=loc["radar_tier"]: state.has(RADAR_NAME, player, n))
+        # A side quest's steps: one place of each group (side_quests.md, section 5). The airship's
+        # own rooms need the Airship when the player starts on foot.
+        for group in loc.get("steps", []):
+            places = [area for area in group if area != AIRSHIP_AREA]
+            if AIRSHIP_AREA in group and not on_foot:
+                continue
+            if AIRSHIP_AREA in group:
+                rules.append(lambda state, places=places: state.has(AIRSHIP, player) or
+                             any(state.can_reach_region(p, player) for p in places))
+            else:
+                rules.append(lambda state, places=places: any(state.can_reach_region(p, player) for p in places))
         if rules:
             location.access_rule = lambda state, rules=rules: all(rule(state) for rule in rules)
         if (world.options.priority_bosses and loc.get("fragment") is False and loc["key"] != SEPHIROTH
@@ -144,7 +161,8 @@ def create_regions_and_locations(world: FFResonanceWorld) -> None:
             location.place_locked_item(create_item(world, FRAGMENT_NAME))
         elif "vision" in loc and not world.options.shuffle_visions:
             location.place_locked_item(create_item(world, ITEMS[loc["vision"]]["name"]))
-        if loc["vanilla"] is not None:
+        # A location that holds its own item adds nothing to the pool.
+        if loc["vanilla"] is not None and location.item is None:
             world.vanilla_items.append(loc["vanilla"])
 
     if world.options.goal.value == world.options.goal.option_tablet_shards:
