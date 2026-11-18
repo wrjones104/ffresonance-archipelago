@@ -151,6 +151,12 @@ G.QUESTS = { { key = "quest:13", counter = 28, value = 40, rows = { "SubEv_C01_Z
              { key = "quest:34", counter = 44, value = 20, rows = { "SubEv_C05_MogChase_06_NPC01_01" } } }
 function G.QuestsPatch() G.questPatches = (G.questPatches or 0) + 1; return 2 end
 G.MECHABO = { counter = 16, start = 10 }
+G.palaceSyncs = 0
+function G.PalaceSync()
+  G.palaceSyncs = G.palaceSyncs + 1
+  if G.palaceSyncs == 1 then return "palace: 5 shards held, 1 steps paid, progress 43 at 11" end
+  return nil
+end
 function G.SyncStoryBossTrigger(say)
   G.storyBossSyncs = (G.storyBossSyncs or 0) + 1
   if G.map == 3000 then return true, "group 9004: 2 triggers" end
@@ -1892,6 +1898,24 @@ tick(12)
 assert G.questPatches is None and "quest:13" not in read("ap_out.txt"), "quests off: no patch, no check"
 assert L.eval(f"G.progress[{MECHABO_COUNTER}]") == MECHABO_REQUEST, "the Mechabo start does not need the quests"
 print("side quests: ok")
+
+# IDEAS.md idea 37: the Oblivion Palace counter is held on a seed's save each tick, and its line
+# is logged when it changes (game.PalaceSync, tested in test_game.py).
+inbox("seed\tS80p:0:1\ncfg\topenworld\t1\n", "w")
+L, G = boot5("SD_PALACE", "0", {})
+L.globals().G = G
+L.execute(SCALE_STUB)
+L.execute(CAPTURE)
+G.chests = L.table()
+G.story = 1030
+tick(12)
+assert L.eval("G.palaceSyncs") == 0, "not before the open world start"
+G.story = 8000
+tick(12)
+assert L.eval("G.palaceSyncs") >= 2, "every tick on a seed's save"
+palace_logs = [s for s in L.eval("logged").values() if "palace:" in s]
+assert len(palace_logs) == 1 and "progress 43 at 11" in palace_logs[0], palace_logs
+print("palace safes: ok")
 
 # Round 73: the Behemoth fight's assist hits deal 1 damage. The patch runs on a new save and again
 # on each way into the Crystal Tower (map 3280), not on every tick there.

@@ -360,3 +360,16 @@ Along the same lines, I would also want an option for players to start with all 
 - Every quest's start holds at story 8000 except the Mechabo quests (idea 33).
 
 **Built (round 78, world 0.30.0, mod 0.61.0):** option `include_side_quests` (off by default for now): 28 quest locations, `quest:<id>`. The mod swaps each reward row's first item for the stand-in Potion, takes visions out, and reports a quest when its counter reaches the reward row's value. The 11 quest items left the pool. `data/quests.tsv` lists the quests by hand; `data/game/quests.tsv` and `quest_steps.tsv` come from the dump.
+
+## 37. Open the Oblivion Palace safes with no turn-in
+
+**From the user, 2026-11-18 (during round 79).** The turn-in is slow: every visit to the Enigmatic Princess plays her talk, then the same scene once for each chest earned. The user wants to walk in and open the safes the shards already pay for. Her last talk at 99 shards stays.
+
+**Off-line pass (2026-11-18):**
+- Each safe tests only story counter 43. Safe *n* (chest `2031:n`) has `m_OpenCondition` `{progress:43}>=11+n` in `Town_02Lan_22_01_GD`, and the Blueprint's `HaveSafeDepositBoxKey` asks `IsMeetCondition` on it. The safes never test the shards.
+- The princess's chain (`DT_TalkEventData_SubEv_Chapter01`): her first talk, `SubEv_C01_Collection_01`, sets counter 43 to 10, which also lifts the palace's blocking base (`{progress:43}==0`). On each talk she takes every shard held (`TransferItemList` 25004, `Num -1`) into `{transferItem:0,25004}`. `SubEv_C01_Collection_04` then runs one step per chest earned: step *k* needs `{progress:43}==10+k-1` and enough shards turned in, plays the same scene and sets the counter to `10+k`. That loop is the repeated talk.
+- `SubEv_C01_Collection_05` then gives the milestone talks, by shards turned in and flags: `_06` at 28 (flag 151), `_07` at 60 (flag 152, Steam achievement 17), `_08` at 99 (flag 153). They give no items.
+
+**The likely fix (mod only):** hold counter 43 at `10 + chests earned`, counting shards held plus shards turned in, as the radar holds its counters (idea 32). The safes then open with no talk. The mod leaves the shards in the bag, so a talk to her still takes them and plays the milestone talks, the last one included. Her step loop finds every step already done and plays nothing. Turned in: `{transferItem:0,25004}` lives in `SaveData_TransferTargetInventory` (a map), so the mod can ask the game's `CPP_BFL_Condition:IsMeetCondition` instead of reading the map. To test in game: the call from Lua, and whether a safe in view changes when the counter changes, or only on the next visit.
+
+**Built (for round 80, mod 0.61.0):** `G.PalaceSync` (`game.lua`), run each tick on a seed's save. It holds counter 43 at 10 plus the steps paid by the shards held and turned in, asking `IsMeetCondition("{transferItem:0,25004}>=N")` for the turned-in part. It never lowers the counter, and leaves it alone when the condition test is not found. The log line: `palace: 5 shards held, 1 steps paid, progress 43 at 11`. A save that has never met the princess goes to 10 at once, so the palace's barrier is gone from the start.

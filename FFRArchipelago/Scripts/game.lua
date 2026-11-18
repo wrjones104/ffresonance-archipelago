@@ -2366,6 +2366,59 @@ G.QUESTS = require("quests")
 -- 2120 only) sets to 10. Our start skips it, so Verun never shows (IDEAS.md idea 33).
 G.MECHABO = { counter = 16, start = 10 }
 
+-- Oblivion Palace (IDEAS.md idea 37): safe n opens at {progress:43} >= 11 + n. The princess's
+-- first talk sets the counter to 10 (`met`), and each later talk adds one per step of shards
+-- turned in. The steps are DT_TalkEvent_CollectMedal's (data/game/shard_chests.tsv).
+G.PALACE = { counter = 43, met = 10, item = 25004,
+             steps = { 3, 6, 9, 12, 16, 20, 24, 28, 32, 36, 40, 44, 48, 52, 56, 60, 64, 68, 72, 76, 80, 84,
+                       89, 94, 99 } }
+
+-- Whether at least n shards have been turned in to the princess, or nil when the game cannot say.
+-- The count is in SaveData_TransferTargetInventory, a map, so ask the game's own condition test.
+function G.TurnedInAtLeast(n)
+    local lib = Lib("CPP_BFL_Condition")
+    if not (lib and lib.IsMeetCondition) then return nil end
+    local test = string.format("{transferItem:0,%d}>=%d", G.PALACE.item, n)
+    local ok, met = pcall(function() return lib:IsMeetCondition(test, true) end)
+    if not ok then return nil end
+    return met == true
+end
+
+-- The steps paid for by `held` shards plus those turned in, or nil when the game cannot say.
+function G.PalaceStepsPaid(held)
+    local n = 0
+    for _, need in ipairs(G.PALACE.steps) do
+        if need > held then
+            local met = G.TurnedInAtLeast(need - held)
+            if met == nil then return nil end
+            if not met then break end
+        end
+        n = n + 1
+    end
+    return n
+end
+
+-- Holds the palace counter at `met` plus the steps paid, so each safe opens with no talk. The
+-- shards stay in the bag: a talk to the princess still takes them and plays her milestone talks
+-- (28, 60 and 99 turned in), and her step loop finds every step done. Never lowers the counter.
+-- The turned-in count changes only when she takes the shards held, so the steps are counted
+-- again only when the held count or the save changes. Returns a status line when it changes.
+function G.PalaceSync()
+    local P = G.PALACE
+    local held = G.HeldCount(P.item)
+    if not held then return nil end
+    local key = tostring(G.SaveObjectName()) .. ":" .. held
+    if key ~= P.key or P.paid == nil then P.key, P.paid = key, G.PalaceStepsPaid(held) end
+    local now = G.ProgressValue(P.counter)
+    local want = P.paid and P.met + P.paid
+    if want and now and now < want then now = G.SetProgressValue(P.counter, want) end
+    local line = string.format("palace: %d shards held, %s steps paid, progress %d at %s", held,
+        tostring(P.paid), P.counter, tostring(now))
+    if line == P.line then return nil end
+    P.line = line
+    return line
+end
+
 -- Each reward row's first item becomes the pop-up's stand-in Potion: that item is the location's
 -- now. Gil and a second item stay. A vision comes out (it is an item of its own in the world):
 -- the list is emptied and built again without it. Safe to run again. Returns the rows written.

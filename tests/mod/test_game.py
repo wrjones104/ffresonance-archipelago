@@ -1929,3 +1929,68 @@ L.execute("G.GetFlag = function() return nil end")
 assert L.eval("G.ReadSaveStamp()") is None, "no flag library: no stamp"
 L.execute("G.GetFlag, G.SetFlag = savedGetFlag2, savedSetFlag2")
 print("save stamp: ok")
+
+# IDEAS.md idea 37: the Oblivion Palace safes. The steps are the turn-in table's, and the turned-in
+# count is asked of the game's own condition test, as the princess's talk rows test it.
+shard_rows = list(_csv.DictReader(open(paths.REPO / "data/game/shard_chests.tsv", encoding="utf-8"), delimiter="\t"))
+assert list(L.eval("G.PALACE.steps").values()) == [int(r["shards"]) for r in shard_rows], "steps match the dump"
+assert L.eval("G.PALACE.counter") == 43 and L.eval("G.PALACE.met") == 10
+L.execute("""
+TURNED_IN, conditionAsks = 0, {}
+conditionLib = {}
+function conditionLib:IsValid() return true end
+function conditionLib:IsMeetCondition(test, flag)
+  conditionAsks[#conditionAsks + 1] = test
+  local n = tonumber(test:match("^{transferItem:0,25004}>=(%d+)$"))
+  return n ~= nil and TURNED_IN >= n
+end
+local prevConditionFind = StaticFindObject
+function StaticFindObject(p)
+  if p == "/Script/mucha.Default__CPP_BFL_Condition" then return conditionLib end
+  return prevConditionFind(p)
+end
+""")
+SHARDS_TURNED_IN = 20
+L.execute(f"TURNED_IN = {SHARDS_TURNED_IN}")
+assert L.eval(f"G.TurnedInAtLeast({SHARDS_TURNED_IN})") is True
+assert L.eval(f"G.TurnedInAtLeast({SHARDS_TURNED_IN + 1})") is False
+assert L.eval("conditionAsks[1]") == "{transferItem:0,25004}>=20", "the princess rows' own test"
+# The sync: progress 43 at 10 plus the steps the shards held and turned in pay for (safe n opens at
+# 11 + n). The shards stay in the bag for her milestone talks, and the counter is never lowered.
+L.execute("""
+palaceHeld, palaceProgress, palaceSave = 0, {}, "SD_PALACE"
+savedPalace = { G.HeldCount, G.ProgressValue, G.SetProgressValue, G.SaveObjectName }
+G.HeldCount = function(id) return palaceHeld end
+G.ProgressValue = function(i) return palaceProgress[i] or 0 end
+G.SetProgressValue = function(i, n) palaceProgress[i] = n; return n end
+G.SaveObjectName = function() return palaceSave end
+TURNED_IN = 0
+""")
+PALACE_COUNTER, PRINCESS_MET = 43, 10
+progress = lambda: L.eval(f"palaceProgress[{PALACE_COUNTER}]")
+assert L.eval("G.PalaceSync()") == "palace: 0 shards held, 0 steps paid, progress 43 at 10"
+assert progress() == PRINCESS_MET, "no shards: the palace opens, no safe yet"
+assert L.eval("G.PalaceSync()") is None, "the line only when it changes"
+L.execute("palaceHeld = 5")
+L.eval("G.PalaceSync()")
+assert progress() == PRINCESS_MET + 1, "5 shards pay for the 3-shard safe"
+asks = L.eval("#conditionAsks")
+L.eval("G.PalaceSync()")
+assert L.eval("#conditionAsks") == asks, "the steps are counted again only when the held count changes"
+L.execute("palaceHeld = 0; TURNED_IN = 5")    # a talk to the princess: she takes the 5
+L.eval("G.PalaceSync()")
+assert progress() == PRINCESS_MET + 1, "her loop has nothing left to do"
+L.execute("palaceHeld = 22")                  # 27 in all: past the 24-shard step, short of 28
+L.eval("G.PalaceSync()")
+assert progress() == PRINCESS_MET + 7, "held and turned in count together"
+L.execute(f"palaceProgress[{PALACE_COUNTER}] = {PRINCESS_MET + 20}")
+L.eval("G.PalaceSync()")
+assert progress() == PRINCESS_MET + 20, "an older save the game's own turn-ins took further: never lowered"
+L.execute("palaceProgress = {}; palaceHeld = 0; TURNED_IN = 99; palaceSave = 'SD_OTHER'")
+assert L.eval("G.PalaceSync()") == "palace: 0 shards held, 25 steps paid, progress 43 at 35"
+L.execute("StaticFindObject = (function(prev) return function(p) if p:find('CPP_BFL_Condition') then return nil end return prev(p) end end)(StaticFindObject)")
+L.execute("palaceProgress = {}; palaceHeld = 1")
+L.eval("G.PalaceSync()")
+assert progress() is None, "no condition test: the counter is left alone"
+L.execute("G.HeldCount, G.ProgressValue, G.SetProgressValue, G.SaveObjectName = table.unpack(savedPalace)")
+print("palace safes: ok")

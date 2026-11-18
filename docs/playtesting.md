@@ -1042,3 +1042,19 @@ Send the `[FFRAP]` lines of the log.
 **4. The quests from round 78's plan** that were not done yet: Rear Support, Ahoy!, Secrets Unearthed, Mechabo (is Verun at the forge, does "Arise, Mechabo!" show), the Phantom Train and the Weapons Factory, and Mog Tag.
 
 Send the `[FFRAP]` lines of the log.
+
+## Round 80 changes so far (mod 0.61.0 build 7c4eba1d, world 0.30.0 build a1ccfcdb)
+
+Built during round 79, before its results. The plan gets the round 79 fixes too.
+
+**The change:**
+- **Mod: the Oblivion Palace safes open with no talk to the princess** (IDEAS.md idea 37). Safe *n* opens at story counter 43 >= 11 + *n*. The mod holds that counter at 10 plus the steps the shards pay for, held plus turned in. The shards stay in the bag. A talk to her still takes them and plays her talks at 28, 60 and 99 turned in.
+
+**Install:** copy `FFRArchipelago/Scripts`. No new seed needed: the apworld is unchanged.
+
+**To test:**
+- **0.** The log says `version 0.61.0 (build 7c4eba1d)` and, on a seed's save, `palace: N shards held, K steps paid, progress 43 at X`, with X = 10 + K.
+- **1. Walk in with no talk.** Holding shards, enter the palace without talking to her. **Can you open each safe your shards pay for (3 shards for the first, 6 for the second, and so on), and no more?** Each should send its check.
+- **2. A safe in view.** Stand in the palace and receive a shard that pays for a new safe. **Does that safe open at once, or only after you leave and come back?**
+- **3. The princess.** Talk to her once. **Does she take the shards and skip the "earned a chest" scenes?** The `palace:` line should then read 0 shards held, with the same steps paid. If you reach 28 turned in, does her milestone talk play?
+- **4. A save from before.** On a save where you already turned in shards the old way, the counter should stay where it was or go up, never down.

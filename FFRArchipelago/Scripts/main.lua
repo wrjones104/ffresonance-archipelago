@@ -2346,6 +2346,10 @@ seedExtrasTick = function()
     pcall(finalLockTick)
     if seedSave and seedCfg.airship == false then pcall(airshipItemTick) end
     if seedSave and seedCfg.radar and sessionSave() then pcall(radar.tick) end
+    if seedSave then
+        local ok, line = pcall(game.PalaceSync)
+        if ok and line then log(line) end
+    end
     if seedSave and game.ProgressValue(game.MECHABO.counter) == 0 then
         game.SetProgressValue(game.MECHABO.counter, game.MECHABO.start)
         log("mechabo: progress " .. game.MECHABO.counter .. " set to " .. game.MECHABO.start .. " (Verun's repair request)")
