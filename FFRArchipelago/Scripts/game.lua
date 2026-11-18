@@ -5297,8 +5297,23 @@ G.APMENU = {
     -- Options rows' tags).
     TAG = "UI.MainMenu.Scene.FFRAP",
     LAYOUT = "/Game/UI/Tutorial/WBP_TutorialLayout.WBP_TutorialLayout_C",
+    -- Round 85 probe (IDEAS.md idea 39): which screen the entry opens, `text` (the page) or
+    -- `options` (the game's Options screen).
+    screen = "text",
+    OPTIONS_LAYOUT = "/Game/UI/Option/Widget/WBP_OptionLayout.WBP_OptionLayout_C",
 }
 local A = G.APMENU
+-- The game opens its Options screen from DT_GameLayoutWidget_System's UI.Layout.Option row, which
+-- gives it two view models (CPP_VM_Option, CPP_VM_OptionKeyBind) and two more input contexts
+-- (UI_Info, OptionMenu). Round 82 opened it from our entry with only the screen class, and it came
+-- up empty. Main menu rows hold the same LayoutData, so ours can carry them too.
+local GAME_LAYOUT_TABLE = "/Game/Datatable/UI/GameLayout/DT_GameLayoutWidget_System.DT_GameLayoutWidget_System"
+local OPTION_LAYOUT_TAG = "UI.Layout.Option"
+local OPTION_ROOT_TABLE = "/Game/Datatable/UI/Option/DT_Option_Root.DT_Option_Root"
+-- A condition the story counter can never meet: a tab with it is left out (probe `tabs only`).
+local NEVER = "{progress:0}<0"
+local GAMEPLAY_CATEGORY = 0   -- FOP_Parent_CommandCategory: Gameplay 0, Graphic 1, KeyboardMouse 2, Gamepad 3, Sound 4
+local function screenPath() return A.screen == "options" and A.OPTIONS_LAYOUT or A.LAYOUT end
 
 local function quiet() end
 local function tagOf(v)
@@ -5307,6 +5322,7 @@ local function tagOf(v)
     return s
 end
 local function className(path) return path:match("%.([^.]+)$") end
+local function screenClass() return className(screenPath()) end
 local function activated(w)
     local ok, v = pcall(function() return w:IsActivated() end)
     return ok and v == true
@@ -5339,7 +5355,109 @@ function A.Row(say)
     if not pcall(function()
         mine.LayoutData.LayoutWidget = ksl:Conv_SoftClassPathToSoftClassRef(ksl:MakeSoftClassPath(A.LAYOUT))
     end) then return nil, "the row's screen could not be written" end
+    if A.screen ~= "text" then A.WriteScreen(mine.LayoutData, say) end
     return "added"
+end
+
+-- The LayoutData the chosen screen opens with: the game's Options layout row for `options`,
+-- System's main menu row (no view models) for `text`. Returns it, or nil and why not.
+local function screenSource()
+    if A.screen == "options" then
+        local dt = LoadObject(GAME_LAYOUT_TABLE)
+        if not dt then return nil, "DT_GameLayoutWidget_System could not be loaded" end
+        local found
+        pcall(function()
+            dt:ForEachRow(function(_, row) if tagOf(row.LayoutTag) == OPTION_LAYOUT_TAG then found = row.LayoutData end end)
+        end)
+        return found, found == nil and "no UI.Layout.Option row" or nil
+    end
+    local dt = LoadObject(SCENE_TABLE)
+    local found
+    pcall(function()
+        dt:ForEachRow(function(_, row) if tagOf(row.SceneTag) == SYSTEM_TAG then found = row.LayoutData end end)
+    end)
+    return found, found == nil and "no System row" or nil
+end
+
+-- Writes the chosen screen into one LayoutData: its class, view models and input contexts, each
+-- step told to `say` before it runs. Returns a line.
+function A.WriteScreen(data, say)
+    local src, why = screenSource()
+    if not src then return "not written: " .. why end
+    local ksl = Find("/Script/Engine.Default__KismetSystemLibrary")
+    say("apmenu: screen class " .. screenPath())
+    local okClass = pcall(function()
+        data.LayoutWidget = ksl:Conv_SoftClassPathToSoftClassRef(ksl:MakeSoftClassPath(screenPath()))
+    end)
+    local vms, from = data.ViewModelDataList, src.ViewModelDataList
+    say("apmenu: view models " .. #vms .. " -> " .. #from)
+    local okVms = pcall(function()
+        vms:Empty()
+        for i = 1, #from do
+            local _ = vms[i]
+            vms[i].ViewModelClass = from[i].ViewModelClass
+            vms[i].IsManualContextName = from[i].IsManualContextName
+            vms[i].ManualContextName = from[i].ManualContextName
+        end
+    end)
+    local ctx, fromCtx = data.IMCData.childMappingContextList, src.IMCData.childMappingContextList
+    say("apmenu: input contexts " .. #ctx .. " -> " .. #fromCtx)
+    local okCtx = pcall(function()
+        local want = {}
+        for i = 1, #fromCtx do want[i] = Int(fromCtx[i]) end
+        ctx:Empty()
+        for i, v in ipairs(want) do ctx[i] = v end
+    end)
+    return string.format("class %s, view models %s (%d), input contexts %s (%d)", okClass and "written" or "failed",
+        okVms and "written" or "failed", #vms, okCtx and "written" or "failed", #ctx)
+end
+
+-- Switches the entry to `text` or `options`: our table row and the menu subsystem's copy of it.
+-- Returns lines.
+function A.Screen(kind, say)
+    A.screen = kind
+    local out = {}
+    local dt = LoadObject(SCENE_TABLE)
+    local row
+    pcall(function() row = dt:FindRow(A.ROW) end)
+    out[#out + 1] = "row: " .. (row and A.WriteScreen(row.LayoutData, say) or "not added yet; it opens " .. kind .. " when it is")
+    local sub = Live("CPP_MainMenuSubsystem")
+    local copy
+    if sub then
+        pcall(function() sub.SceneDataMap:ForEach(function(k, v) if tagOf(k:get()) == A.TAG then copy = v:get() end end) end)
+    end
+    out[#out + 1] = "subsystem: " .. (copy and A.WriteScreen(copy.LayoutData, say) or "no copy (title screen?)")
+    return out
+end
+
+-- The Options screen's tabs (DT_Option_Root): `list` reads them; `only` leaves out every tab but
+-- Gameplay with a condition never met; `all` puts the conditions back. Returns lines.
+A.tabConditions = {}
+function A.Tabs(mode, say)
+    local dt = LoadObject(OPTION_ROOT_TABLE)
+    if not dt then return { "DT_Option_Root could not be loaded" } end
+    local out = {}
+    pcall(function()
+        dt:ForEachRow(function(name, row)
+            local key, cond, label = ObjText(name), "?", "?"
+            pcall(function() cond = row.Condition:ToString() end)
+            pcall(function() label = row.DisplayText:ToString() end)
+            local category = Int(row.CommandCategory)
+            if mode == "only" and category ~= GAMEPLAY_CATEGORY and cond ~= NEVER then
+                A.tabConditions[key] = cond
+                say("apmenu: tab " .. key .. " (" .. label .. ") condition -> " .. NEVER)
+                pcall(function() row.Condition = NEVER end)
+            elseif mode == "all" and A.tabConditions[key] then
+                say("apmenu: tab " .. key .. " (" .. label .. ") condition back to \"" .. A.tabConditions[key] .. "\"")
+                pcall(function() row.Condition = A.tabConditions[key] end)
+                A.tabConditions[key] = nil
+            end
+            pcall(function() cond = row.Condition:ToString() end)
+            out[#out + 1] = string.format("tab %s: %s, category %s, condition \"%s\"", key, label, tostring(category), cond)
+        end)
+    end)
+    if #out == 0 then out[1] = "DT_Option_Root has no rows" end
+    return out
 end
 
 -- Our tag in DA_MainMenuRoot.DisplaySceneList, before System. Returns "added", "present" or nil.
@@ -5427,7 +5545,7 @@ end
 -- Our screen when it is open: the activated Tutorial screen under the main menu, or nil. Real
 -- tutorials open elsewhere and are never touched.
 local function openHost()
-    local ok, all = pcall(FindAllOf, className(A.LAYOUT))
+    local ok, all = pcall(FindAllOf, screenClass())
     for _, w in ipairs(ok and all or {}) do
         local full = G.PathOf(w)
         if Alive(w) and full and full:find(MENU_LAYOUT, 1, true) and activated(w) then return w end
@@ -5504,7 +5622,7 @@ end
 -- to `say` once per screen instance. Returns "written", "same", or nil and why not.
 function A.Page(title, makeBody, say)
     say = say or quiet
-    local host = openHost()
+    local host = A.screen == "text" and openHost()
     if not host then
         A.reopenFor = nil
         return nil, "not open"
@@ -5581,7 +5699,7 @@ end
 -- take. After three ticks (1.5 s) in that state, FinishedClose. Returns a line when it acts.
 A.stale = {}
 function A.Unstick(say)
-    local ok, all = pcall(FindAllOf, className(A.LAYOUT))
+    local ok, all = pcall(FindAllOf, screenClass())
     for _, w in ipairs(ok and all or {}) do
         local full = G.PathOf(w)
         if Alive(w) and full and full:find(MENU_LAYOUT, 1, true) and not activated(w) then
@@ -5605,7 +5723,7 @@ end
 -- render opacity, open/close state, and the main menu's scene stack. Returns lines.
 function A.State()
     local out = {}
-    local ok, all = pcall(FindAllOf, className(A.LAYOUT))
+    local ok, all = pcall(FindAllOf, screenClass())
     for _, w in ipairs(ok and all or {}) do
         if Alive(w) then
             local vis, visibility, opacity
@@ -5616,7 +5734,7 @@ function A.State()
                 tostring(activated(w)), tostring(vis), tostring(visibility), tostring(opacity), openFlags(w))
         end
     end
-    if #out == 0 then out[1] = className(A.LAYOUT) .. ": none" end
+    if #out == 0 then out[1] = screenClass() .. ": none" end
     local vm = Live("CPP_VM_MainMenu")
     local stack = {}
     if vm then pcall(function() for i = 1, #vm.SceneDataStack do stack[#stack + 1] = tostring(tagOf(vm.SceneDataStack[i])) end end) end

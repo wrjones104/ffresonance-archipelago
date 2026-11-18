@@ -8,7 +8,17 @@ Install: copy `FFRArchipelago/Scripts`, and copy `dist/ff_resonance.apworld` int
 
 ## Build check (Round 85)
 
-- [ ] Verify the log prints `version 0.61.0 (build a87aac00)` and, once connected, `client: world version 0.30.0 (build 84e053e7)`.
+- [x] Verify the log prints `version 0.61.0 (build a87aac00)` and, once connected, `client: world version 0.30.0 (build 84e053e7)`.
+- Will's note: the client build was actually 91d7b935
+
+## Settings in the Archipelago page: probe (Round 85, mod build 05f33eda)
+
+Build `05f33eda` is `a87aac00` plus this probe (copy `Scripts` again). Nothing changes until you run the commands. If the game crashes, send `ap_trace.txt` and the log: each step is logged before it runs.
+
+- [ ] In game, run `ffrap_apmenu options`. The log should list `apmenu: screen class ...`, `apmenu: view models 0 -> 2`, `apmenu: input contexts 1 -> 2`, then `apmenu: row: class written, view models written (2), input contexts written (2)` and the same for `subsystem`. Close the main menu, open it, and pick Archipelago. Does the full Options screen open, with its tabs and rows, including ours at the bottom of Gameplay? Send a screenshot.
+- [ ] In that screen, change one of our settings (EXP, say) and one of the game's, move between tabs, then press Back. Does Back return to the main menu? Does the change stick (a `settings: from the Options screen` line, and the game's setting still changed in System > Options)? If Back does nothing, run `ffrap_apmenu state`, then `ffrap_apmenu close`.
+- [ ] Run `ffrap_apmenu tabs` and send the `apmenu: tab ...` lines. Then run `ffrap_apmenu tabs only` and open Archipelago again. Is Gameplay the only tab now? Then open System > Options: is it the same there? Run `ffrap_apmenu tabs all` and check both show every tab again.
+- [ ] Run `ffrap_apmenu text`. Archipelago should open the text page again.
 
 ## A save not linked to the seed (Round 85)
 
@@ -18,7 +28,7 @@ Install: copy `FFRArchipelago/Scripts`, and copy `dist/ff_resonance.apworld` int
 
 ## Archipelago page: shards and safes (Round 85)
 
-- [ ] Open the page with shards in the bag. Verify `Tablet Shards: N held` matches the bag, and `Oblivion Palace safes: R ready to open, O opened; the next needs S shards in all` matches what you can open in the palace.
+- [x] Open the page with shards in the bag. Verify `Tablet Shards: N held` matches the bag, and `Oblivion Palace safes: R ready to open, O opened; the next needs S shards in all` matches what you can open in the palace.
 - [ ] Visit the palace, then open the page again. Verify it now also says `M turned in`.
 
 ## Fast travel (Round 85)

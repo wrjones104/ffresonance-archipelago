@@ -2365,6 +2365,21 @@ assert L.eval("package.loaded.game.APMENU.closed") is True
 assert any("apmenu: close asked; IsOpeningProcess false" in s for s in logged())
 L.execute('commands["ffrap_apmenu"]("ffrap_apmenu", {"tree"})')
 assert read("ffrap_apmenu.txt") == "host x\n  Overlay Overlay_0 (visibility 4)\n"
+# Round 85 probe: `options` and `text` switch the entry's screen, `tabs` passes its mode on
+L.execute("""
+  local G = package.loaded.game
+  function G.APMENU.Screen(kind) G.APMENU.screenAsked = kind; return { "row: class written", "subsystem: class written" } end
+  function G.APMENU.Tabs(mode) G.APMENU.tabsAsked = mode; return { "tab NewRow: Gameplay" } end
+""")
+L.execute('commands["ffrap_apmenu"]("ffrap_apmenu", {"options"})')
+assert L.eval("package.loaded.game.APMENU.screenAsked") == "options"
+assert any("apmenu: row: class written" in s for s in logged())
+L.execute('commands["ffrap_apmenu"]("ffrap_apmenu", {"tabs", "only"})')
+assert L.eval("package.loaded.game.APMENU.tabsAsked") == "only"
+L.execute('commands["ffrap_apmenu"]("ffrap_apmenu", {"tabs"})')
+assert L.eval("package.loaded.game.APMENU.tabsAsked") == "list", "tabs alone lists them"
+L.execute('commands["ffrap_apmenu"]("ffrap_apmenu", {"text"})')
+assert L.eval("package.loaded.game.APMENU.screenAsked") == "text"
 # Round 84: shards turned in show once the palace has been read, and every safe paid for
 L.execute("package.loaded.game.PALACE.turned = 9; package.loaded.game.progress[43] = 14")
 tick(2)

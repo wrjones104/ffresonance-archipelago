@@ -439,3 +439,16 @@ Along the same lines, I would also want an option for players to start with all 
 2. Keep the Options rows, and have the page say what they are set to and where to change them. Cheap. The rows could also be hidden on a save not linked to the seed.
 
 Until then the Options rows stay, and on a save not linked to the seed they change nothing.
+
+**The user chose way 1 (2026-11-18).** A third way came out of the dump, and it may be the cheapest that still puts the settings in our entry: let the entry open the game's own Options screen, which already does rows, focus, a gamepad, saving and the description box.
+- The game opens Options from `DT_GameLayoutWidget_System`'s `UI.Layout.Option` row. Its `LayoutData` gives the screen two view models, `CPP_VM_Option` and `CPP_VM_OptionKeyBind` (context name `CPP_VM_KeyBind`), and two more input contexts, `UI_Info` and `OptionMenu`.
+- Main menu rows hold the same `LayoutData`. Round 82 opened Options from our entry with the screen class only, and it came up empty. Journal did too: its row has `VM_Journal`. So the missing view models are the likely cause.
+- The tabs are rows of `DT_Option_Root`, one per category (`FOP_Parent_CommandCategory`: Gameplay, Graphic, KeyboardMouse, Gamepad, Sound). Each has a `Condition` string and `Object`, the row table it lists. The categories are a fixed enum, so a sixth tab of our own is not simple.
+- Option rows (`DT_OP_GameSetting`) have types including `Subheader` and `Command`, and an `ItemDescription`. Section headings and read-only lines for the seed's state could be rows of those types.
+
+**Probe (round 85, build 05f33eda):** `ffrap_apmenu options` writes the Options screen and the layout row's view models and input contexts into our row and the menu subsystem's copy (`A.WriteScreen`). `text` puts the page back. `tabs` lists `DT_Option_Root`; `tabs only` leaves out every tab but Gameplay with a condition never met (`{progress:0}<0`), and `all` puts them back.
+
+**To find out (round 85):**
+- Whether the Options screen works from our entry: rows, Back, saving.
+- Whether the tab list is read again at each open, so tabs can differ between our entry and System > Options.
+- Then: which rows show in our entry (only ours, with the seed's state as headings and lines), and how to keep System > Options as it is.

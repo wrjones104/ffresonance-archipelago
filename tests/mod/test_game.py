@@ -2153,6 +2153,92 @@ assert lua("listTags()") == "UI.MainMenu.Scene.Journal,UI.MainMenu.Scene.System"
 assert lua("G.APMENU.Unlist()") is False, "already out"
 print("main menu entry: ok")
 
+# Round 85 probe (idea 39): `options` gives our row and the subsystem's copy the Options screen,
+# with the view models and input contexts of the game's own UI.Layout.Option row; `text` puts the
+# Tutorial screen back with System's (none). The list fakes behave like the engine's arrays.
+L.execute(r"""
+function engineArray(entries, blank)
+  local items = {}
+  for i, e in ipairs(entries) do items[i] = e end
+  return setmetatable({}, {
+    __index = function(_, i)
+      if i == "Empty" then return function() for k in pairs(items) do items[k] = nil end end end
+      if i == #items + 1 and blank then items[i] = blank() end
+      return items[i]
+    end,
+    __newindex = function(_, i, v) items[i] = v end,
+    __len = function() return #items end })
+end
+local function vmBlank() return { ViewModelClass = nil, IsManualContextName = false, ManualContextName = FName("None") } end
+local function giveLists(data, vms, ctx)
+  data.ViewModelDataList = engineArray(vms, vmBlank)
+  data.IMCData = { childMappingContextList = engineArray(ctx) }
+end
+UI_MAINMENU, UI_INFO, OPTION_MENU = 5, 3, 9
+giveLists(sceneDT.rows["システム"].LayoutData, {}, { UI_MAINMENU })
+giveLists(sceneDT.rows.FFRAP_Archipelago.LayoutData, {}, { UI_MAINMENU })
+for _, kv in ipairs(menuSub.SceneDataMap.list) do
+  if kv[1].TagName:ToString() == "UI.MainMenu.Scene.FFRAP" then giveLists(kv[2].LayoutData, {}, { UI_MAINMENU }); subCopy = kv[2] end
+end
+local optionLayout = { LayoutTag = { TagName = FName("UI.Layout.Option") }, LayoutData = {} }
+giveLists(optionLayout.LayoutData,
+  { { ViewModelClass = "CPP_VM_Option", IsManualContextName = false, ManualContextName = FName("None") },
+    { ViewModelClass = "CPP_VM_OptionKeyBind", IsManualContextName = true, ManualContextName = FName("CPP_VM_KeyBind") } },
+  { UI_INFO, OPTION_MENU })
+gameLayoutDT = { rows = { ["System_ヘルプ"] = { LayoutTag = { TagName = FName("UI.Layout.System.Help") }, LayoutData = {} },
+                          ["System_オプション"] = optionLayout } }
+function gameLayoutDT:IsValid() return true end
+function gameLayoutDT:ForEachRow(fn) for k, r in pairs(self.rows) do fn(fname(k), r) end end
+local function fstr(v) return { ToString = function() return v end } end
+local function tabRow(category, label, cond)
+  local store = { CommandCategory = category, DisplayText = FText(label), Condition = fstr(cond) }
+  return setmetatable({}, { __index = store,
+    __newindex = function(_, k, v) store[k] = type(v) == "string" and fstr(v) or v end })
+end
+optionRoot = { rows = { NewRow = tabRow(0, "Gameplay", ""), NewRow_0 = tabRow(1, "Graphics", ""),
+                        NewRow_3 = tabRow(4, "Sound", "") } }
+function optionRoot:IsValid() return true end
+function optionRoot:ForEachRow(fn) for k, r in pairs(self.rows) do fn(fname(k), r) end end
+local prevOptFind = StaticFindObject
+function StaticFindObject(p)
+  if p == "/Game/Datatable/UI/GameLayout/DT_GameLayoutWidget_System.DT_GameLayoutWidget_System" then return gameLayoutDT end
+  if p == "/Game/Datatable/UI/Option/DT_Option_Root.DT_Option_Root" then return optionRoot end
+  return prevOptFind(p)
+end
+function screenOf(data)
+  local vms, ctx = {}, {}
+  for i = 1, #data.ViewModelDataList do
+    local v = data.ViewModelDataList[i]
+    vms[#vms + 1] = tostring(v.ViewModelClass) .. (v.IsManualContextName and ("@" .. v.ManualContextName:ToString()) or "")
+  end
+  for i = 1, #data.IMCData.childMappingContextList do ctx[#ctx + 1] = data.IMCData.childMappingContextList[i] end
+  return data.LayoutWidget.path .. " | " .. table.concat(vms, ",") .. " | " .. table.concat(ctx, ",")
+end
+""")
+OPTIONS_PATH = "/Game/UI/Option/Widget/WBP_OptionLayout.WBP_OptionLayout_C"
+OPTIONS_SCREEN = f"{OPTIONS_PATH} | CPP_VM_Option,CPP_VM_OptionKeyBind@CPP_VM_KeyBind | 3,9"
+TEXT_SCREEN = f"{TUTORIAL_PATH} |  | 5"
+L.execute("says = {}")
+lines = list(L.eval("G.APMENU.Screen('options', say)").values())
+assert lines[0].startswith("row: class written, view models written (2), input contexts written (2)"), lines
+assert lines[1].startswith("subsystem: class written"), lines
+assert lua("screenOf(sceneDT.rows.FFRAP_Archipelago.LayoutData)") == OPTIONS_SCREEN
+assert lua("screenOf(subCopy.LayoutData)") == OPTIONS_SCREEN, "the menu's own copy too"
+assert lua("screenOf(sceneDT.rows['システム'].LayoutData)") == f"{SYSTEM_PATH} |  | 5", "System's row untouched"
+assert "apmenu: view models 0 -> 2" in list(L.eval("says").values()), "each step told before it runs"
+L.eval("G.APMENU.Screen('text', say)")
+assert lua("screenOf(sceneDT.rows.FFRAP_Archipelago.LayoutData)") == TEXT_SCREEN, "the page again"
+assert lua("screenOf(subCopy.LayoutData)") == TEXT_SCREEN
+# the Options tabs: `only` leaves out all but Gameplay, `all` puts their conditions back
+NEVER = "{progress:0}<0"
+tabs = list(L.eval("G.APMENU.Tabs('only', say)").values())
+assert sorted(tabs) == sorted(['tab NewRow: Gameplay, category 0, condition ""',
+                               f'tab NewRow_0: Graphics, category 1, condition "{NEVER}"',
+                               f'tab NewRow_3: Sound, category 4, condition "{NEVER}"']), tabs
+tabs = list(L.eval("G.APMENU.Tabs('all', say)").values())
+assert all(t.endswith('condition ""') for t in tabs), tabs
+print("options screen probe: ok")
+
 # Round 84 (the user): fast travel from a dungeon. The condition that checks the map type travels
 # with the usual confirm dialog; the event and not-visited conditions stay; off puts it back.
 L.execute("""

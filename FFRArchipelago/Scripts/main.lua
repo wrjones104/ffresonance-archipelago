@@ -27,6 +27,7 @@
 --   ffrap_title [list|add]       the Archipelago entry on the title menu (added at start-up)
 --   ffrap_notice [text]          show text with the game's quest-notice banner
 --   ffrap_apmenu off|on|state|close|tree  the Archipelago page in the main menu (on by default)
+--   ffrap_apmenu options|text|tabs [only|all]  round 85 probe: the entry opens the Options screen
 --   ffrap_logo                   place the Archipelago logo on the mod's title line manually
 --   ffrap_layout <text>          log the panels holding some on-screen text
 --   ffrap_feed [on|off|test [plain]|check]  the item feed at the bottom right of the field HUD
@@ -1810,6 +1811,9 @@ end)
 --   state      the page's screens (activated, visible, opacity, open/close flags) and the menu's scene stack
 --   close      when Back does nothing: ask the page to close as Back does, or pop the menu's scene
 --   tree       the open page, widget by widget, to ffrap_apmenu.txt
+--   options | text   round 85 probe (IDEAS.md idea 39): the entry opens the game's Options screen,
+--              with the view models and input contexts the game gives it / the page again
+--   tabs [only | all]   the Options screen's tabs: list them / leave out all but Gameplay / put them back
 -- state.apMenu is the entry's state while it is on: its steps are logged until it is first in the
 -- menu, and each reason it cannot be yet is logged once.
 state.apMenu = {}
@@ -1926,6 +1930,15 @@ command("ffrap_apmenu", function(p)
         for _, line in ipairs(lines) do f:write(line, "\n") end
         f:close()
         notify("Archipelago page: " .. #lines .. " widgets in ffrap_apmenu.txt")
+    elseif what == "options" or what == "text" then
+        for _, line in ipairs(A.Screen(what, log)) do log("apmenu: " .. line) end
+        notify("Archipelago entry opens " .. (what == "options" and "the Options screen" or "the page") ..
+            " (close the main menu and open it again)")
+    elseif what == "tabs" then
+        local mode = tostring(p[2] or "list"):lower()
+        local lines = A.Tabs(mode, log)
+        for _, line in ipairs(lines) do log("apmenu: " .. line) end
+        notify("Options tabs (" .. mode .. "): " .. #lines .. " lines in the log")
     elseif what == "off" then
         state.apMenu = nil
         notify("Archipelago page: no longer added (restart the game to take it out of the menu)")
@@ -1934,7 +1947,7 @@ command("ffrap_apmenu", function(p)
         state.apMenuTick()
         notify("Archipelago page: on")
     else
-        notify("Usage: ffrap_apmenu off | on | state | close | tree")
+        notify("Usage: ffrap_apmenu off | on | state | close | tree | options | text | tabs [only | all]")
     end
 end)
 
