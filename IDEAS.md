@@ -381,3 +381,34 @@ Along the same lines, I would also want an option for players to start with all 
 **Works (round 80, build cac73e78):** with 6 turned in and 4 held, the 9-shard safe opened with no talk. Three more shards sent from Archipelago while in the palace raised the counter, but the next safe opened only after leaving and coming back.
 
 **Why, and the likely fix (not built; the user: rare in a real run, leave it unless it is cheap):** the safe's `OnUpdateHaveItem(in_Value)` tests `m_OpenCondition` again and sets up its event (`SetupEvent`). By its name it runs when the bag changes, so the princess taking the shards refreshes the safes. An Archipelago shard changes the bag before the mod raises the counter, a tick later, so the refresh comes too early. Calling `OnUpdateHaveItem` on each live safe after the counter goes up would likely fix it. `in_Value` is an object, and whether the function reads it is not known, so it needs a probe behind a test command first.
+
+## 38. An Archipelago page in the main menu
+
+**From the user, 2026-11-18 (during round 82).** Our settings sit at the bottom of the game's Options screen. The user wants an entry of our own in the main menu, as FFR Bestiary has, with the settings and more: Tablet Shards and Crystal Fragments found, the seed's settings (goal and so on), and which continents are open.
+
+**How FFR Bestiary does it (0.1.7, read 2026-11-18):**
+- **The entry is a pak** (`~mods/zzz_FFRBestiary_P`). It replaces two whole tables. `DT_MainMenuScene` gets a row tagged `UI.MainMenu.Scene.Bestiary` that opens `WBP_HelpLayout`. The debug menu's tag table `DM_DT_GameplayTag_Option` gets a row that registers the tag. The tables are the game's, so its installer builds the pak on the player's PC (retoc, uasset-json, an Oodle download, one game start in between).
+- **Lua puts the entry in the menu.** It adds the tag to `CPP_DA_MainMenuRoot.DisplaySceneList` before System, and names the entry per language in `CPP_MainMenuSubsystem.SceneDataMap`.
+- **Lua builds the page in a borrowed screen.** When the activated `WBP_HelpLayout_C` under `WBP_MainMenuLayout` opens, it resizes the window, hides the title and puts its own boxes in the screen's `NamedSlot`. The pieces are the game's: `WBP_SystemSubhead` (headings), `WBP_Cmn_Window` (framed panels), `WBP_LeftLineButton` (framed rows), `BP_SystemTextStyle` (body text). A pre-hook on `PushLayoutWidget` stops confirm from opening a tutorial.
+- It calls `SetColorAndOpacity` with a Slate colour table and does not crash. Our round 20 lesson says a Slate colour struct crashes a setter. Test it behind a probe before we use it.
+
+**What we cannot copy:**
+- **The pak.** A second pak that replaces `DT_MainMenuScene` drops the row of whichever loaded first. Bestiary logs this case.
+- **The Help screen.** Bestiary takes over any activated `WBP_HelpLayout_C` under the main menu, so it would draw on our page. The menu pools one screen per class, so the System page's class is out too.
+
+**Our way (no pak), from the off-line dump:**
+- `DT_MainMenuScene` has 8 rows (Root, Item, ActionEquip, Heal, Map, Party, Journal, System). Their struct is `MainMenuSceneData`: `SceneTag`, `EntryName`, `SceneTitle`, `IconTag`, `LayoutData.LayoutWidget` (a soft class), `EnableFlagIdData` and more.
+- `DA_MainMenuRoot.DisplaySceneList` lists Map, Journal, Item, Heal, ActionEquip, Party, System.
+- `DefaultGameplayTags.ini` registers three scene tags that no row uses: `UI.MainMenu.Scene.Vision`, `.Equipment` and `.Action`. A registered tag needs no tag table. Our Options rows also work with tags never registered.
+- So: `AddRow` a copy of System's row into `DT_MainMenuScene` from Lua, as the Options rows are added, then add the tag to the scene list. `CPP_MainMenuSubsystem` (a world subsystem) keeps its own `SceneDataMap` and `SceneEnableMap`, so it may need the row too, when it was built before the row was there.
+
+**What the page can show:** the tower lock's counts (characters, Visions, Crystal Fragments, from `cfg finalboss`), each continent's lock (`game.ContinentOpen`), the start and vehicle settings from the `cfg` lines, and Tablet Shards from the bag. The goal and checks found of total need new `cfg` lines from the client.
+
+**Probe built (round 82, mod build 26b6adfa):** `ffrap_apmenu`, each writing step logged before it runs:
+- `info`: the table's rows, the scene list, the subsystem's maps and the view model's scenes, to `ffrap_apmenu.txt`.
+- `on [own|vision|equipment|action]`: adds the entry, named Archipelago, every tick from then on. `own` is `UI.MainMenu.Scene.FFRAP`, never registered.
+- `layout <system|help|tutorial|option|journal>`: the screen it opens (default: System's). It writes the soft class with `Conv_SoftClassPathToSoftClassRef`, then as a string, and reads each back.
+- `screens`: every instance of those screens, activated and visible.
+- `tree`: the open entry's screen, widget by widget, to `ffrap_apmenu.txt`.
+- `text`: one line of text on the open entry's screen.
+- `off`: stops adding it. A game restart takes it out.

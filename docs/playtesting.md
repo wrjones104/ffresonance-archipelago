@@ -1115,11 +1115,11 @@ Send the `[FFRAP]` lines of the log.
 
 **Built after these results (mod 0.61.0 build 1d6caf0a, world 0.30.0 build dbf83717):** chests and shinies are blanked to nothing (`ItemId -1, ItemNum 0, Money 0`) in place of 1 gil, and each quest reward row loses the location's item (`item` in `quests.lua`) in place of the stand-in Potion. Gil and a second item in a quest row stay, as before. The radar treasures and the boss rewards keep the Potion: they were not tried empty. The `ffrap_empty` probe is gone. The apworld changed only in its game page (no more 1 gil).
 
-## Round 82 test plan (mod 0.61.0 build 1d6caf0a, world 0.30.0 build dbf83717)
+## Round 82 test plan (mod 0.61.0 build 26b6adfa, world 0.30.0 build dbf83717)
 
 **Install:** copy `FFRArchipelago/Scripts`, and copy `dist/ff_resonance.apworld` into `custom_worlds` (only its game page changed; the round 79 seed still works).
 
-**0. The builds.** The log should say `version 0.61.0 (build 1d6caf0a)` and `chest blanking on for this save: N rows changed`; the client `world version 0.30.0 (build dbf83717)`. `quests: N reward rows without the location's item`.
+**0. The builds.** The log should say `version 0.61.0 (build 26b6adfa)` and `chest blanking on for this save: N rows changed`; the client `world version 0.30.0 (build dbf83717)`. `quests: N reward rows without the location's item`.
 
 **1. Chests and shinies.** Open a few chests and pick up a few shinies. **Does each show the Archipelago item, with no gil line?** A chest without a scout would show "0 gil".
 
@@ -1128,5 +1128,14 @@ Send the `[FFRAP]` lines of the log.
 **3. Leave and come back.** After opening chests in a dungeon, leave and come back. **Are they still open?**
 
 **4. The round 81 plan's steps 1 to 3 and 5** still stand (character quest pop-ups, the open items from rounds 79 and 80, the crash trace).
+
+**5. Probe: an Archipelago entry in the main menu (IDEAS.md idea 38).** Build 26b6adfa is 1d6caf0a plus `ffrap_apmenu`. It needs no pak. FFR Bestiary can stay installed: its entry should stay too. Each step that writes logs an `apmenu:` line before it runs, so if the game crashes, the last `apmenu:` line names the step. A game restart undoes all of it. In game, on the field:
+1. `ffrap_apmenu info`. Send `Mods/FFRArchipelago/ffrap_apmenu.txt`.
+2. `ffrap_apmenu on`. Open the main menu. **Is there an Archipelago entry above System? Does it show its name, or "???" with a lock?** Pick it: **does the System page open?** That is expected for now.
+3. If the entry is missing or shows "???", walk into a town or out to the world map so the menu is built again, and look again. If it is still wrong, restart the game and try `ffrap_apmenu on vision`, which uses a tag the game registers.
+4. `ffrap_apmenu info` again (the file is written again). Send it with the log.
+5. `ffrap_apmenu layout tutorial`, then open the entry again. **What opens?** Then try `layout option` and `layout journal`. With each one open, run `ffrap_apmenu tree` and send `ffrap_apmenu.txt` (each run writes over the last). `ffrap_apmenu screens` logs which screens exist and which is activated.
+6. With the entry's screen open, `ffrap_apmenu text`. **Does "Archipelago test page" show anywhere on it?**
+7. After each layout, open System, Quests and Bestiary. **Do they still look and work as before?**
 
 Send the `[FFRAP]` lines of the log.

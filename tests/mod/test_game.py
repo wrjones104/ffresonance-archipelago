@@ -2010,3 +2010,103 @@ L.eval("G.PalaceSync()")
 assert progress() == PRINCESS_MET + 1, "no condition test: the shards held still count"
 L.execute("G.HeldCount, G.ProgressValue, G.SetProgressValue, G.SaveObjectName, G.CurrentMap = table.unpack(savedPalace)")
 print("palace safes: ok")
+
+# Round 82 probe (ffrap_apmenu): an Archipelago entry in the main menu with no pak. The row is a
+# copy of System's in DT_MainMenuScene, the tag goes before System in DisplaySceneList, and the
+# subsystem gets the row when it was built without it.
+SYSTEM_PATH = "/Game/UI/MainMenu/System/WBP_MainMenuSystem.WBP_MainMenuSystem_C"
+HELP_PATH = "/Game/UI/MainMenu/Help/Widget/WBP_HelpLayout.WBP_HelpLayout_C"
+OWN_TAG = "UI.MainMenu.Scene.FFRAP"
+L.execute(r"""
+local function soft(p) return { path = p } end
+local function sceneRow(tag, name, layout)
+  return { SceneTag = { TagName = FName(tag) }, EntryName = FText(name), SceneTitle = FText(name),
+           LayoutData = { LayoutWidget = soft(layout) } }
+end
+local function copyRow(r)
+  return sceneRow(r.SceneTag.TagName:ToString(), r.EntryName:ToString(), r.LayoutData.LayoutWidget.path)
+end
+function freshSceneTable()
+  sceneDT.rows = { ["ジャーナル"] = sceneRow("UI.MainMenu.Scene.Journal", "Quests", "/Game/J.J_C"),
+                   ["システム"] = sceneRow("UI.MainMenu.Scene.System", "System", "SYSTEM_PATH") }
+end
+sceneDT = {}
+function sceneDT:IsValid() return true end
+function sceneDT:ForEachRow(fn) for k, r in pairs(self.rows) do fn(fname(k), r) end end
+function sceneDT:AddRow(name, tpl) self.rows[name] = copyRow(tpl) end
+function sceneDT:FindRow(name) return self.rows[name] end
+freshSceneTable()
+local function live(o) o.IsValid = function() return true end; o.HasAnyInternalFlags = function() return false end
+  o.HasAnyFlags = function() return false end; return o end
+local function fakeMap()
+  local m = { list = {} }
+  function m:ForEach(fn) for _, kv in ipairs(self.list) do fn({ get = function() return kv[1] end }, { get = function() return kv[2] end }) end end
+  function m:Add(k, v) self.list[#self.list + 1] = { k, type(v) == "table" and v.SceneTag and copyRow(v) or v } end
+  return m
+end
+menuRoot = live({ DisplaySceneList = { { TagName = FName("UI.MainMenu.Scene.Journal") }, { TagName = FName("UI.MainMenu.Scene.System") } } })
+menuSub = live({ SceneDataMap = fakeMap(), SceneEnableMap = fakeMap() })
+menuSub.SceneDataMap:Add({ TagName = FName("UI.MainMenu.Scene.System") }, sceneDT.rows["システム"])
+menuSub.SceneEnableMap:Add({ TagName = FName("UI.MainMenu.Scene.System") }, true)
+apKsl = { MakeSoftClassPath = function(_, p) return p end,
+          Conv_SoftClassPathToSoftClassRef = function(_, p) return soft(p) end,
+          Conv_SoftClassReferenceToString = function(_, v) return v.path end }
+function apKsl:IsValid() return true end
+local prevSFO = StaticFindObject
+function StaticFindObject(p)
+  if p == "/Game/UI/MainMenu/Data/DT_MainMenuScene.DT_MainMenuScene" then return sceneDT end
+  if p == "/Script/Engine.Default__KismetSystemLibrary" then return apKsl end
+  return prevSFO(p)
+end
+local prevFFO = FindFirstOf
+function FindFirstOf(c)
+  if c == "CPP_DA_MainMenuRoot" then return menuRoot end
+  if c == "CPP_MainMenuSubsystem" then return menuSub end
+  return prevFFO(c)
+end
+says = {}
+function say(s) says[#says + 1] = s end
+function listTags()
+  local t = {}
+  for i = 1, #menuRoot.DisplaySceneList do t[i] = menuRoot.DisplaySceneList[i].TagName:ToString() end
+  return table.concat(t, ",")
+end
+function subTags(m)
+  local t = {}
+  m:ForEach(function(k, v) t[#t + 1] = k:get().TagName:ToString() .. "=" .. tostring(type(v:get()) == "table" and v:get().LayoutData.LayoutWidget.path or v:get()) end)
+  return table.concat(t, ",")
+end
+""".replace("SYSTEM_PATH", SYSTEM_PATH))
+L.execute(f'ownTag = "{OWN_TAG}"')
+assert lua("G.APMENU.Ensure(ownTag, nil, say)") == "row added; scene list; data added, enable added"
+assert lua("sceneDT.rows.FFRAP_Archipelago.SceneTag.TagName:ToString()") == OWN_TAG
+assert lua("sceneDT.rows.FFRAP_Archipelago.EntryName:ToString()") == "Archipelago"
+assert lua("sceneDT.rows['システム'].SceneTag.TagName:ToString()") == "UI.MainMenu.Scene.System", "System's row untouched"
+assert lua("listTags()") == f"UI.MainMenu.Scene.Journal,{OWN_TAG},UI.MainMenu.Scene.System", "before System"
+assert lua("subTags(menuSub.SceneDataMap)") == f"UI.MainMenu.Scene.System={SYSTEM_PATH},{OWN_TAG}={SYSTEM_PATH}"
+assert lua("subTags(menuSub.SceneEnableMap)") == f"UI.MainMenu.Scene.System=true,{OWN_TAG}=true"
+says = list(L.eval("says").values())
+assert says[0] == "apmenu: AddRow FFRAP_Archipelago (a copy of System's)", says
+assert any("scene list 2 -> 3" in s for s in says) and any("SceneDataMap:Add" in s for s in says), says
+L.execute("says = {}")
+assert lua("G.APMENU.Ensure(ownTag, nil, say)") is None, "nothing to write the second time"
+assert lua("#says") == 0, "and nothing logged"
+# the game loads the table again: the row comes back, with the chosen screen, and nothing else moves
+L.execute("freshSceneTable()")
+done = lua(f'G.APMENU.Ensure(ownTag, "{HELP_PATH}", say)')
+assert done.startswith("row added; row layout: ") and f"-> {HELP_PATH} (soft class ref)" in done, done
+assert lua("sceneDT.rows.FFRAP_Archipelago.LayoutData.LayoutWidget.path") == HELP_PATH
+assert lua("subTags(menuSub.SceneDataMap)") == f"UI.MainMenu.Scene.System={SYSTEM_PATH},{OWN_TAG}={HELP_PATH}", "the subsystem's copy too"
+assert lua("sceneDT.rows['システム'].LayoutData.LayoutWidget.path") == SYSTEM_PATH, "System still opens its own screen"
+assert lua("listTags()").count(OWN_TAG) == 1
+# a scene list that does not end in System (another mod went last): ours goes at the end
+L.execute("menuRoot.DisplaySceneList = { { TagName = FName('UI.MainMenu.Scene.Journal') } }")
+assert lua("G.APMENU.List(ownTag, say)") == "added" and lua("listTags()") == f"UI.MainMenu.Scene.Journal,{OWN_TAG}"
+info = "\n".join(L.eval("G.APMENU.Info()").values())
+assert f"FFRAP_Archipelago  tag {OWN_TAG}  name Archipelago  layout {HELP_PATH}" in info, info
+assert f"data {OWN_TAG}  name Archipelago  layout {HELP_PATH}" in info and f"{OWN_TAG} true" in info, info
+# the title screen: no subsystem and no scene list yet
+L.execute("savedRoot, menuRoot = menuRoot, nil; G.ForgetObjects()")
+assert lua("select(2, G.APMENU.Ensure(ownTag, nil, say))") == "no DA_MainMenuRoot loaded"
+L.execute("menuRoot = savedRoot; G.ForgetObjects()")
+print("main menu entry: ok")

@@ -26,6 +26,7 @@
 --   ffrap_inspect <class|path> [label]  one object's fields and functions to inspect_<name>[_label].tsv
 --   ffrap_title [list|add]       the Archipelago entry on the title menu (added at start-up)
 --   ffrap_notice [text]          show text with the game's quest-notice banner
+--   ffrap_apmenu <step>          probe: an Archipelago entry in the main menu (info, on, layout, screens, tree, text, off)
 --   ffrap_logo                   place the Archipelago logo on the mod's title line manually
 --   ffrap_layout <text>          log the panels holding some on-screen text
 --   ffrap_feed [on|off|test [plain]|check]  the item feed at the bottom right of the field HUD
@@ -1788,6 +1789,90 @@ command("ffrap_layout", function(p)
     notify("Layout of \"" .. text .. "\": " .. #chain .. " levels in the log")
 end)
 
+-- ffrap_apmenu (IDEAS.md idea 38): an Archipelago entry in the main menu, with no pak. Each step
+-- that writes is logged before it runs. A game restart undoes all of it.
+--   info                          the menu's rows, scene list and subsystem, to ffrap_apmenu.txt
+--   on [own|vision|equipment|action]  add the entry (kept every tick); the tag to use
+--   layout <system|help|tutorial|option|journal>  the screen the entry opens
+--   screens                       every instance of those screens: activated, visible
+--   tree                          the open entry's screen, widget by widget, to ffrap_apmenu.txt
+--   text                          one line of text on the open entry's screen
+--   off                           stop adding it (what is in the menu stays until a restart)
+state.apMenuTick = function()
+    local m = state.apMenu
+    local done, why = game.APMENU.Ensure(m.tag, m.layout ~= "system" and game.APMENU.LAYOUTS[m.layout] or nil, log)
+    if done then log("apmenu: " .. done) end
+    if why ~= m.failed then
+        if why then log("apmenu: not yet: " .. why) end
+        m.failed = why
+    end
+end
+command("ffrap_apmenu", function(p)
+    local A = game.APMENU
+    local function writeApMenu(lines)
+        local f = io.open(MOD_DIR .. "ffrap_apmenu.txt", "w")
+        if not f then return end
+        for _, line in ipairs(lines) do f:write(line, "\n") end
+        f:close()
+    end
+    local what = tostring(p and p[1] or ""):lower()
+    local m = state.apMenu
+    if what == "info" then
+        local lines = A.Info()
+        writeApMenu(lines)
+        for _, line in ipairs(lines) do log("apmenu: " .. line) end
+        notify("Main menu info: " .. #lines .. " lines in ffrap_apmenu.txt")
+    elseif what == "on" then
+        local key = tostring(p[2] or "own"):lower()
+        if not A.TAGS[key] then
+            notify("ffrap_apmenu on own | vision | equipment | action")
+            return
+        end
+        state.apMenu = { tag = A.TAGS[key], layout = m and m.layout or "system" }
+        log("apmenu: on with tag " .. A.TAGS[key] .. ", screen " .. state.apMenu.layout)
+        state.apMenuTick()
+        notify("Archipelago menu entry on (" .. key .. "). Open the main menu.")
+    elseif what == "layout" and A.LAYOUTS[tostring(p[2] or ""):lower()] then
+        if not m then
+            notify("Run ffrap_apmenu on first")
+            return
+        end
+        m.layout = p[2]:lower()
+        for _, line in ipairs(A.Layout(m.tag, A.LAYOUTS[m.layout], log)) do log("apmenu: " .. line) end
+        notify("Archipelago menu entry opens " .. m.layout .. " (see the log)")
+    elseif what == "screens" then
+        local lines = A.Screens()
+        for _, line in ipairs(lines) do log("apmenu: " .. line) end
+        notify("Main menu screens: " .. #lines .. " lines in the log")
+    elseif what == "tree" or what == "text" then
+        if not m then
+            notify("Run ffrap_apmenu on first")
+            return
+        end
+        local path = A.LAYOUTS[m.layout]
+        if what == "text" then
+            local line = A.Text(path, "Archipelago test page", log)
+            log("apmenu: " .. line)
+            notify("Menu text: " .. line)
+            return
+        end
+        local lines = A.Tree(path)
+        if not lines then
+            notify("Open the Archipelago entry first (screen " .. m.layout .. ")")
+            return
+        end
+        writeApMenu(lines)
+        log("apmenu: " .. lines[1] .. ", " .. #lines .. " lines in ffrap_apmenu.txt")
+        notify("Screen tree: " .. #lines .. " lines in ffrap_apmenu.txt")
+    elseif what == "off" then
+        state.apMenu = nil
+        log("apmenu: off")
+        notify("Archipelago menu entry: no longer added (restart the game to remove it)")
+    else
+        notify("Usage: ffrap_apmenu info | on [own|vision|equipment|action] | layout <name> | screens | tree | text | off")
+    end
+end)
+
 -- ffrap_notice <text>: try the game's quest-notice banner with our own text (experimental).
 command("ffrap_notice", function(p)
     local text = table.concat(p or {}, " ")
@@ -2227,6 +2312,7 @@ end
 -- Log only the initial insertion or failures.
 local menuFailed, menuAdded = nil, false
 menuTick = function()
+    if state.apMenu then pcall(state.apMenuTick) end
     local added, detail = game.EnsureOptionRows(currentSettings())
     if added == nil then
         if detail ~= menuFailed then log("menu: " .. tostring(detail)) end

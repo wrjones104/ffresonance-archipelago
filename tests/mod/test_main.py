@@ -2247,6 +2247,51 @@ assert list(G.bagAdds.values()) == [RUBY_FRAGMENT], list(G.bagAdds.values())
 assert any("Received Ruby Fragment" in x for x in logs()), logs()
 print("items wait for the field: ok")
 
+# Round 82 probe (ffrap_apmenu): `on` adds the main menu entry now and every tick after, with the
+# chosen tag and screen; a reason it cannot yet is logged once; `off` stops it; `info` writes
+# ffrap_apmenu.txt
+VISION_TAG = "UI.MainMenu.Scene.Vision"
+HELP_PATH = "/Game/H.H_C"
+L, G = boot5("SD_APMENU", "0", {})
+G.ready = True
+L.execute(f'''
+  local G = package.loaded.game
+  G.APMENU = {{ TAGS = {{ own = "UI.MainMenu.Scene.FFRAP", vision = "{VISION_TAG}" }},
+               LAYOUTS = {{ system = "/Game/S.S_C", help = "{HELP_PATH}" }}, calls = {{}}, why = nil }}
+  function G.APMENU.Ensure(tag, layout, say)
+    G.APMENU.calls[#G.APMENU.calls + 1] = tag .. " " .. tostring(layout)
+    if G.APMENU.why then return nil, G.APMENU.why end
+    return nil
+  end
+  function G.APMENU.Layout(tag, path, say) G.APMENU.layoutTo = path; return {{ "row layout: a -> b (soft class ref)" }} end
+  function G.APMENU.Info() return {{ "DT_MainMenuScene: 8 rows", "DisplaySceneList: x" }} end
+''')
+apcalls = lambda: list(L.eval("package.loaded.game.APMENU.calls").values())
+tick = lambda n: [L.execute("tickFn()") for _ in range(n)]
+L.execute("logged = {}; print = function(s) logged[#logged + 1] = tostring(s) end")
+tick(2)
+assert apcalls() == [], "off until asked"
+L.execute('commands["ffrap_apmenu"]("ffrap_apmenu", {"on", "vision"})')
+assert apcalls() == [f"{VISION_TAG} nil"], "at once, with the system screen"
+tick(3)
+assert len(apcalls()) == 4, apcalls()
+L.execute('commands["ffrap_apmenu"]("ffrap_apmenu", {"layout", "help"})')
+assert L.eval("package.loaded.game.APMENU.layoutTo") == HELP_PATH
+L.execute('package.loaded.game.APMENU.why = "no DA_MainMenuRoot loaded"')
+tick(3)
+assert apcalls()[-1] == f"{VISION_TAG} {HELP_PATH}", "the chosen screen goes with each pass"
+waits = [s for s in L.eval("logged").values() if "apmenu: not yet: no DA_MainMenuRoot loaded" in s]
+assert len(waits) == 1, "logged once"
+L.execute('commands["ffrap_apmenu"]("ffrap_apmenu", {"off"})')
+n = len(apcalls())
+tick(3)
+assert len(apcalls()) == n, "off: no more passes"
+L.execute('commands["ffrap_apmenu"]("ffrap_apmenu", {"info"})')
+assert read("ffrap_apmenu.txt") == "DT_MainMenuScene: 8 rows\nDisplaySceneList: x\n"
+L.execute('commands["ffrap_apmenu"]("ffrap_apmenu", {"on", "nonsense"})')
+assert len(apcalls()) == n, "an unknown tag does nothing"
+print("main menu entry: ok")
+
 # Round 74: the build, a hash of the mod's scripts, tells test installs apart while the version
 # stays the same until a release. It is logged on load, and a CRLF copy gives the same build. The
 # Python copy of the hash is tools/package_release.py's, which names a release's mod build.

@@ -5200,4 +5200,336 @@ function G.WakeShipyardElevators()
     return woke
 end
 
+-- -------------------------------------------------------------------------------------------
+-- Probe (round 82): an Archipelago entry in the main menu, with no pak (IDEAS.md idea 38)
+-- -------------------------------------------------------------------------------------------
+-- FFR Bestiary adds its entry with a pak that replaces DT_MainMenuScene and a tag table. A second
+-- pak like it would drop whichever row loaded first. This adds the row from Lua instead, as the
+-- Options rows are added: AddRow into DT_MainMenuScene (a copy of System's row), the tag into
+-- DA_MainMenuRoot.DisplaySceneList before System, and, when the menu subsystem was built before
+-- the row was there, the row into its SceneDataMap. Every step that writes calls `say` first.
+-- A function, not a `do` block: the main chunk is at Lua's limit of 200 locals, and a block's
+-- locals count toward it.
+;(function()
+local SCENE_TABLE = "/Game/UI/MainMenu/Data/DT_MainMenuScene.DT_MainMenuScene"
+local SYSTEM_TAG = "UI.MainMenu.Scene.System"
+local MENU_LAYOUT = "WBP_MainMenuLayout"
+G.APMENU = {
+    ROW = "FFRAP_Archipelago",
+    NAME = "Archipelago",
+    -- own: never registered (the Options rows' tags are not either). The others are registered
+    -- in DefaultGameplayTags.ini, and no row of DT_MainMenuScene uses them.
+    TAGS = { own = "UI.MainMenu.Scene.FFRAP", vision = "UI.MainMenu.Scene.Vision",
+             equipment = "UI.MainMenu.Scene.Equipment", action = "UI.MainMenu.Scene.Action" },
+    -- Screens the row can open. System's opens for sure but is the System page's own (the menu
+    -- pools one per class). Help's is FFR Bestiary's.
+    LAYOUTS = {
+        system = "/Game/UI/MainMenu/System/WBP_MainMenuSystem.WBP_MainMenuSystem_C",
+        help = "/Game/UI/MainMenu/Help/Widget/WBP_HelpLayout.WBP_HelpLayout_C",
+        tutorial = "/Game/UI/Tutorial/WBP_TutorialLayout.WBP_TutorialLayout_C",
+        option = "/Game/UI/Option/Widget/WBP_OptionLayout.WBP_OptionLayout_C",
+        journal = "/Game/UI/MainMenu/Journal/Widget/WBP_JournalLayout.WBP_JournalLayout_C",
+    },
+}
+local A = G.APMENU
+
+local function quiet() end
+local function tagOf(v)
+    local s
+    pcall(function() s = ObjText(v.TagName) end)
+    return s
+end
+local function sceneRows()
+    local dt = LoadObject(SCENE_TABLE)
+    if not dt then return nil end
+    local rows = {}
+    pcall(function() dt:ForEachRow(function(name, row) rows[#rows + 1] = { name = ObjText(name), row = row } end) end)
+    return dt, rows
+end
+local function softText(v)
+    local ksl = Find("/Script/Engine.Default__KismetSystemLibrary")
+    local s
+    pcall(function() s = ksl:Conv_SoftClassReferenceToString(v) end)
+    if type(s) ~= "string" then pcall(function() s = s:ToString() end) end
+    if type(s) ~= "string" then pcall(function() s = v:ToString() end) end
+    return type(s) == "string" and s or "?"
+end
+
+-- The row, added where missing, with our tag and name. Returns "added", "present" or nil and why.
+function A.Row(tag, say)
+    say = say or quiet
+    local dt, rows = sceneRows()
+    if not dt then return nil, "DT_MainMenuScene could not be loaded" end
+    local mine, system
+    for _, r in ipairs(rows) do
+        if r.name == A.ROW then mine = r.row end
+        if tagOf(r.row.SceneTag) == SYSTEM_TAG then system = r.row end
+    end
+    local what = "present"
+    if not mine then
+        if not system then return nil, "no System row to copy" end
+        say("apmenu: AddRow " .. A.ROW .. " (a copy of System's)")
+        if not pcall(function() dt:AddRow(A.ROW, system) end) then return nil, "AddRow failed" end
+        pcall(function() mine = dt:FindRow(A.ROW) end)
+        if not mine then return nil, "AddRow left no row" end
+        what = "added"
+    end
+    if tagOf(mine.SceneTag) ~= tag then
+        say("apmenu: row tag " .. tag)
+        pcall(function() mine.SceneTag.TagName = FName(tag) end)
+        say("apmenu: row texts")
+        pcall(function() mine.EntryName = FText(A.NAME) end)
+        pcall(function() mine.SceneTitle = FText(A.NAME) end)
+    end
+    return what
+end
+
+-- Our tag in DA_MainMenuRoot.DisplaySceneList, before System. Returns "added", "present" or nil.
+function A.List(tag, say)
+    say = say or quiet
+    local da = Live("CPP_DA_MainMenuRoot")
+    if not da then return nil, "no DA_MainMenuRoot loaded" end
+    local list = da.DisplaySceneList
+    local n = #list
+    if n == 0 then return nil, "the scene list is empty" end
+    for i = 1, n do
+        if tagOf(list[i]) == tag then return "present" end
+    end
+    say("apmenu: scene list " .. n .. " -> " .. (n + 1) .. ", " .. tag .. " before System")
+    local last = tagOf(list[n])
+    if last == SYSTEM_TAG then
+        list[n + 1] = { TagName = FName(last) }
+        list[n].TagName = FName(tag)
+    else
+        list[n + 1] = { TagName = FName(tag) }
+    end
+    return "added"
+end
+
+-- Our tag in the menu subsystem's SceneDataMap and SceneEnableMap (one subsystem per world, which
+-- may have copied the table before the row was there). Returns a line, or nil and why.
+function A.Subsystem(tag, say)
+    say = say or quiet
+    local sub = Live("CPP_MainMenuSubsystem")
+    if not sub then return nil, "no main menu subsystem (title screen?)" end
+    local inData, inEnable = false, nil
+    pcall(function() sub.SceneDataMap:ForEach(function(k) if tagOf(k:get()) == tag then inData = true end end) end)
+    pcall(function() sub.SceneEnableMap:ForEach(function(k, v) if tagOf(k:get()) == tag then inEnable = v:get() end end) end)
+    local parts = {}
+    if inData then parts[#parts + 1] = "data present"
+    else
+        local dt = LoadObject(SCENE_TABLE)
+        local row
+        pcall(function() row = dt:FindRow(A.ROW) end)
+        if not row then return nil, "no row to copy into the subsystem" end
+        say("apmenu: SceneDataMap:Add " .. tag)
+        local ok, err = pcall(function() sub.SceneDataMap:Add({ TagName = FName(tag) }, row) end)
+        parts[#parts + 1] = ok and "data added" or ("data add failed: " .. tostring(err))
+    end
+    if inEnable == nil then
+        say("apmenu: SceneEnableMap:Add " .. tag .. " true")
+        local ok = pcall(function() sub.SceneEnableMap:Add({ TagName = FName(tag) }, true) end)
+        parts[#parts + 1] = ok and "enable added" or "enable add failed"
+    else
+        parts[#parts + 1] = "enable " .. tostring(inEnable)
+    end
+    return table.concat(parts, ", ")
+end
+
+-- The screen our row opens: the table row's, and the subsystem's copy when it has one. Tries the
+-- soft class reference from KismetSystemLibrary first, then the path as a string, and reads each
+-- back. Returns lines.
+function A.Layout(tag, path, say)
+    say = say or quiet
+    local out = {}
+    local targets = {}
+    local dt = LoadObject(SCENE_TABLE)
+    pcall(function() local r = dt:FindRow(A.ROW); if r then targets[#targets + 1] = { "row", r } end end)
+    local sub = Live("CPP_MainMenuSubsystem")
+    if sub then
+        pcall(function()
+            sub.SceneDataMap:ForEach(function(k, v)
+                if tagOf(k:get()) == tag then targets[#targets + 1] = { "subsystem", v:get() } end
+            end)
+        end)
+    end
+    if #targets == 0 then return { "no row: run ffrap_apmenu on first" } end
+    local ksl = Find("/Script/Engine.Default__KismetSystemLibrary")
+    for _, t in ipairs(targets) do
+        local where, data = t[1], t[2]
+        local before = softText(data.LayoutData.LayoutWidget)
+        local wrote
+        say("apmenu: " .. where .. " layout via Conv_SoftClassPathToSoftClassRef: " .. path)
+        if pcall(function()
+            data.LayoutData.LayoutWidget = ksl:Conv_SoftClassPathToSoftClassRef(ksl:MakeSoftClassPath(path))
+        end) and softText(data.LayoutData.LayoutWidget) ~= before then wrote = "soft class ref" end
+        if not wrote then
+            say("apmenu: " .. where .. " layout as a string")
+            if pcall(function() data.LayoutData.LayoutWidget = path end)
+                and softText(data.LayoutData.LayoutWidget) ~= before then wrote = "string" end
+        end
+        out[#out + 1] = string.format("%s layout: %s -> %s (%s)", where, before,
+            softText(data.LayoutData.LayoutWidget), wrote or "not written")
+    end
+    return out
+end
+
+-- What the menu holds now: the table's rows, the scene list, the subsystem's maps and the view
+-- model's scene list. Read only. Returns lines.
+function A.Info()
+    local out = {}
+    local _, rows = sceneRows()
+    out[#out + 1] = "DT_MainMenuScene: " .. (rows and #rows or "not loaded") .. " rows"
+    for _, r in ipairs(rows or {}) do
+        local name
+        pcall(function() name = r.row.EntryName:ToString() end)
+        out[#out + 1] = string.format("  %s  tag %s  name %s  layout %s", r.name, tostring(tagOf(r.row.SceneTag)),
+            tostring(name), softText(r.row.LayoutData.LayoutWidget))
+    end
+    local da = Live("CPP_DA_MainMenuRoot")
+    local tags = {}
+    if da then pcall(function() for i = 1, #da.DisplaySceneList do tags[#tags + 1] = tostring(tagOf(da.DisplaySceneList[i])) end end) end
+    out[#out + 1] = "DisplaySceneList: " .. (da and table.concat(tags, ", ") or "DA_MainMenuRoot not loaded")
+    local sub = Live("CPP_MainMenuSubsystem")
+    if sub then
+        out[#out + 1] = "subsystem " .. tostring(G.PathOf(sub))
+        pcall(function()
+            sub.SceneDataMap:ForEach(function(k, v)
+                local d, name = v:get(), nil
+                pcall(function() name = d.EntryName:ToString() end)
+                out[#out + 1] = string.format("  data %s  name %s  layout %s", tostring(tagOf(k:get())), tostring(name),
+                    softText(d.LayoutData.LayoutWidget))
+            end)
+        end)
+        local enabled = {}
+        pcall(function() sub.SceneEnableMap:ForEach(function(k, v) enabled[#enabled + 1] = tostring(tagOf(k:get())) .. " " .. tostring(v:get()) end) end)
+        out[#out + 1] = "  enabled: " .. table.concat(enabled, ", ")
+    else
+        out[#out + 1] = "no main menu subsystem"
+    end
+    local vm = Live("CPP_VM_MainMenu")
+    if vm then
+        local all, stack = {}, {}
+        pcall(function() for i = 1, #vm.AllSceneDataList do all[#all + 1] = tostring(tagOf(vm.AllSceneDataList[i].SceneTag)) end end)
+        pcall(function() for i = 1, #vm.SceneDataStack do stack[#stack + 1] = tostring(tagOf(vm.SceneDataStack[i])) end end)
+        out[#out + 1] = "view model scenes: " .. table.concat(all, ", ") .. "; stack: " .. table.concat(stack, ", ")
+    else
+        out[#out + 1] = "no main menu view model"
+    end
+    return out
+end
+
+local function className(path) return path:match("%.([^.]+)$") end
+local function activated(w)
+    local ok, v = pcall(function() return w:IsActivated() end)
+    return ok and v == true
+end
+
+-- Every instance of the screens in A.LAYOUTS: full name, activated, visible. Returns lines.
+function A.Screens()
+    local out, keys = {}, {}
+    for k in pairs(A.LAYOUTS) do keys[#keys + 1] = k end
+    table.sort(keys)
+    for _, k in ipairs(keys) do
+        local cls = className(A.LAYOUTS[k])
+        local ok, all = pcall(FindAllOf, cls)
+        local n = 0
+        for _, w in ipairs(ok and all or {}) do
+            if Alive(w) then
+                n = n + 1
+                local vis
+                pcall(function() vis = w:IsVisible() end)
+                out[#out + 1] = string.format("%s: %s  activated %s  visible %s", k, tostring(G.PathOf(w)),
+                    tostring(activated(w)), tostring(vis))
+            end
+        end
+        if n == 0 then out[#out + 1] = k .. ": none" end
+    end
+    return out
+end
+
+-- The activated instance of a screen class under the main menu, or nil.
+local function openHost(path)
+    local ok, all = pcall(FindAllOf, className(path))
+    for _, w in ipairs(ok and all or {}) do
+        local full = G.PathOf(w)
+        if Alive(w) and full and full:find(MENU_LAYOUT, 1, true) and activated(w) then return w end
+    end
+end
+
+-- The open screen's widget tree, one line per widget, into nested user widgets. Returns lines,
+-- or nil when that screen is not open under the main menu.
+function A.Tree(path)
+    local host = openHost(path)
+    if not host then return nil end
+    local out = { "host " .. tostring(G.PathOf(host)) }
+    local function walk(w, depth)
+        if #out > 600 or depth > 14 or not Alive(w) then return end
+        local cls, name, vis = "?", "?", "?"
+        pcall(function() cls = w:GetClass():GetFName():ToString() end)
+        pcall(function() name = w:GetFName():ToString() end)
+        pcall(function() vis = tostring(w:GetVisibility()) end)
+        out[#out + 1] = string.rep("  ", depth) .. cls .. " " .. name .. " (visibility " .. vis .. ")"
+        local root
+        pcall(function() root = w.WidgetTree.RootWidget end)
+        if root and Alive(root) and depth > 0 then walk(root, depth + 1) end
+        local n = 0
+        pcall(function() n = w:GetChildrenCount() end)
+        for i = 0, n - 1 do
+            local c
+            pcall(function() c = w:GetChildAt(i) end)
+            if c then walk(c, depth + 1) end
+        end
+    end
+    local root
+    pcall(function() root = host.WidgetTree.RootWidget end)
+    walk(root, 1)
+    return out
+end
+
+-- One line of text on the open screen, added to its root panel. Returns a line.
+function A.Text(path, text, say)
+    say = say or quiet
+    local host = openHost(path)
+    if not host then return "that screen is not open under the main menu" end
+    local tree, root
+    pcall(function() tree = host.WidgetTree; root = tree.RootWidget end)
+    if not (root and Alive(root)) then return "the screen has no root widget" end
+    local cls = Find("/Script/UMG.TextBlock")
+    local tb
+    say("apmenu: make a TextBlock in the screen's widget tree")
+    local okNew, err = pcall(function() tb = StaticConstructObject(cls, tree, FName("FFRAP_MenuText")) end)
+    if not (okNew and tb) then return "could not make the text: " .. tostring(err) end
+    say("apmenu: set the text")
+    pcall(function() tb:SetText(FText(text)) end)
+    local rootClass = "?"
+    pcall(function() rootClass = root:GetClass():GetFName():ToString() end)
+    say("apmenu: AddChild to the root " .. rootClass)
+    local okAdd, slot = pcall(function() return root:AddChild(tb) end)
+    if not (okAdd and slot) then return "AddChild to the root " .. rootClass .. " failed" end
+    say("apmenu: text added")
+    return "text added to the root " .. rootClass
+end
+
+-- `ffrap_apmenu on`, every tick: the row (with its screen when `layoutPath` is set), the scene
+-- list and the subsystem. Returns what was written, nil when nothing was, or nil and why not.
+function A.Ensure(tag, layoutPath, say)
+    local done = {}
+    local row, why = A.Row(tag, say)
+    if not row then return nil, why end
+    if row == "added" then
+        done[#done + 1] = "row added"
+        if layoutPath then
+            for _, line in ipairs(A.Layout(tag, layoutPath, say)) do done[#done + 1] = line end
+        end
+    end
+    local list, whyList = A.List(tag, say)
+    if not list then return nil, whyList end
+    if list == "added" then done[#done + 1] = "scene list" end
+    local sub = A.Subsystem(tag, say)
+    if sub and sub:find("added", 1, true) then done[#done + 1] = sub end
+    return #done > 0 and table.concat(done, "; ") or nil
+end
+end)()
+
 return G
