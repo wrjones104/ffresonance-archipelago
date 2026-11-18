@@ -26,7 +26,7 @@
 --   ffrap_inspect <class|path> [label]  one object's fields and functions to inspect_<name>[_label].tsv
 --   ffrap_title [list|add]       the Archipelago entry on the title menu (added at start-up)
 --   ffrap_notice [text]          show text with the game's quest-notice banner
---   ffrap_apmenu <step>          probe: an Archipelago entry in the main menu (info, on, layout, screens, tree, text, page, off)
+--   ffrap_apmenu <step>          probe: an Archipelago entry in the main menu (info, on, layout, screens, tree, text, page, state, close, off)
 --   ffrap_logo                   place the Archipelago logo on the mod's title line manually
 --   ffrap_layout <text>          log the panels holding some on-screen text
 --   ffrap_feed [on|off|test [plain]|check]  the item feed at the bottom right of the field HUD
@@ -1802,6 +1802,8 @@ end)
 --   tree                          the open entry's screen, widget by widget, to ffrap_apmenu.txt
 --   text                          one line of text on the open entry's screen
 --   page                          the entry opens the Tutorial screen, filled with the seed's state
+--   state                         the entry's screens (activated, visible, opacity) and the menu's scene stack
+--   close                         deactivate the entry's open screen, when it will not close
 --   off                           stop adding it (what is in the menu stays until a restart)
 state.apMenuTick = function()
     local m = state.apMenu
@@ -1908,6 +1910,17 @@ command("ffrap_apmenu", function(p)
         for _, line in ipairs(A.Layout(m.tag, A.LAYOUTS.tutorial, log)) do log("apmenu: " .. line) end
         for _, line in ipairs(state.apMenuPage()) do log("apmenu: page line: " .. line) end
         notify("Archipelago page on. Open the main menu and pick Archipelago.")
+    elseif what == "state" or what == "close" then
+        local path = A.LAYOUTS[m and m.layout or "tutorial"]
+        if what == "close" then
+            local line = A.Close(path, log)
+            log("apmenu: " .. line)
+            notify("Menu close: " .. line)
+            return
+        end
+        local lines = A.State(path)
+        for _, line in ipairs(lines) do log("apmenu: " .. line) end
+        notify("Menu state: " .. #lines .. " lines in the log")
     elseif what == "screens" then
         local lines = A.Screens()
         for _, line in ipairs(lines) do log("apmenu: " .. line) end
@@ -1937,7 +1950,7 @@ command("ffrap_apmenu", function(p)
         log("apmenu: off")
         notify("Archipelago menu entry: no longer added (restart the game to remove it)")
     else
-        notify("Usage: ffrap_apmenu info | on [own|vision|equipment|action] | layout <name> | screens | tree | text | page | off")
+        notify("Usage: ffrap_apmenu info | on [own|vision|equipment|action] | layout <name> | screens | tree | text | page | state | close | off")
     end
 end)
 

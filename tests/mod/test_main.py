@@ -2327,6 +2327,18 @@ inbox("cfg\tgoal\ttablet_shards\t7\t50\n")
 tick(2)
 body = list(L.eval("package.loaded.game.APMENU.paged").values())[2]
 assert body.startswith("Goal: receive 50 Tablet Shards (7 so far)\n"), body
+# Round 83: `state` logs the page's screens, and `close` is a way out of one that will not close
+L.execute('''
+  local G = package.loaded.game
+  function G.APMENU.State(path) return { path .. "  activated true", "main menu scene stack: x" } end
+  function G.APMENU.Close(path) G.APMENU.closed = path; return "deactivated; activated now false" end
+''')
+L.execute("logged = {}")
+L.execute('commands["ffrap_apmenu"]("ffrap_apmenu", {"state"})')
+assert any("apmenu: /Game/T.T_C  activated true" in s for s in L.eval("logged").values()), "the page's screen"
+L.execute('commands["ffrap_apmenu"]("ffrap_apmenu", {"close"})')
+assert L.eval("package.loaded.game.APMENU.closed") == "/Game/T.T_C"
+assert any("apmenu: deactivated; activated now false" in s for s in L.eval("logged").values())
 print("archipelago page lines: ok")
 
 # Round 74: the build, a hash of the mod's scripts, tells test installs apart while the version

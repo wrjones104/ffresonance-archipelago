@@ -1156,17 +1156,27 @@ Send the `[FFRAP]` lines of the log.
 - The page lists the goal, the tower lock (party members, Visions, Crystal Fragments), checks done of the total, items received, Tablet Shards held, the continents open and locked, the kinds of locations, and the start.
 - The client sends two new lines when they change: `cfg goal <kind> <shards> <shards needed>` and `cfg checks <done> <total>`.
 
-## Round 83 test plan (mod 0.61.0 build afd59819, world 0.30.0 build 91d7b935)
+## Round 83 test plan (mod 0.61.0 build 64aeef0d, world 0.30.0 build 91d7b935)
 
 **Install:** copy `FFRArchipelago/Scripts`, and copy `dist/ff_resonance.apworld` into `custom_worlds`. Only the client changed, so the round 79 seed still plays. The client will warn that the seed's build is not its own; that warning is expected this time.
 
-**0. The builds.** The log should say `version 0.61.0 (build afd59819)`; the client `world version 0.30.0 (build 91d7b935)`.
+**0. The builds.** The log should say `version 0.61.0 (build 64aeef0d)`; the client `world version 0.30.0 (build 91d7b935)`.
 
 **First try (build 0c2a8b95, apworld 109145bc, 2026-11-18).** The entry opened the Tutorial screen, but it stayed blank: "TITLE", the white box, "TEXT". The page lines in the log were right (goal, tower 2/6, 7/12, 2/10, checks 113 of 497, 117 items, 16 shards, 5 continents open). The log said `apmenu: page: no Text_Title or Text_Description on the screen`: `GetWidgetFromName` found neither, on the layout or on `WBP_Tutorial`. The round 82 `tree` walk did reach them (it follows `GetChildAt` and each user widget's `WidgetTree.RootWidget`). **Fix (build afd59819):** the page finds its parts with that same walk. A miss now logs how many widgets the walk saw.
 
+**Second try (build afd59819, apworld 91d7b935, 2026-11-18).**
+- **The page works** (screenshot). One window titled Archipelago, the image box, arrows and page count gone, all 10 lines shown. Long lines wrap: the text box is narrower than the window.
+- **The second open was blank and stuck.** The user opened the page (13:10:17), closed it, opened a chest (`check chest:3001:0`, a Tablet Shard came in, 118 items), and opened the page again. The log says `apmenu: page written` at 13:10:57, so the screen was there and activated and got the new text. But only the main menu's background showed, and Back did nothing. Only Alt+F4 got out.
+- **Likely cause:** the menu pools one screen per row (`PushSettings.bUsePooling`, copied from System's row). The Tutorial screen is a pop-up the game makes for each tutorial, and the second time the menu handed back the same one. Its closing animation most likely left it faded out, with its input still bound. Not proven: the log has no opacity line.
+- **Changes (build 64aeef0d):**
+  - Our row's screen is not pooled: `layout` (and `page`) set `bUsePooling` false in the row and the subsystem's copy, and log it (`pooling false`).
+  - The page logs and undoes a faded-out window (`apmenu: page WBP_Tutorial render opacity 0 -> 1`).
+  - `ffrap_apmenu state` logs the screens (activated, visible, visibility, opacity) and the menu's scene stack.
+  - `ffrap_apmenu close` deactivates our open screen: a way out without Alt+F4, if the console still opens.
+
 **1. The page.** In game, run `ffrap_apmenu page`. The log lists the page's lines (`apmenu: page line: ...`). Open the main menu and pick Archipelago. **Does one window show, titled Archipelago, with the lines and no white box, arrows or "1/1"?** Send a screenshot. **Do all the lines fit, or is the text cut off?**
 
-**2. The numbers.** **Do the goal, the tower counts, the checks and the continents match the client and the game?** Open a chest or receive an item, then open the page again. **Do the checks and items received go up?**
+**2. The numbers.** **Do the goal, the tower counts, the checks and the continents match the client and the game?** Open a chest or receive an item, then open the page again. **Do the checks and items received go up?** **Open and close the page three or four times: does it show each time, and does Back always work?** The log should say `pooling false` after `ffrap_apmenu page`. If it goes blank again, open the console, run `ffrap_apmenu state`, then `ffrap_apmenu close`, and send the log.
 
 **3. Nothing else changed.** After the page, open System, Quests, Bestiary and System > Help, and look at a tutorial from Help. **Do they look and work as before?** A tutorial from Help should still show its own picture and text.
 
