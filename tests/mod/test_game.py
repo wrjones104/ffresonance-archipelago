@@ -1955,42 +1955,58 @@ L.execute(f"TURNED_IN = {SHARDS_TURNED_IN}")
 assert L.eval(f"G.TurnedInAtLeast({SHARDS_TURNED_IN})") is True
 assert L.eval(f"G.TurnedInAtLeast({SHARDS_TURNED_IN + 1})") is False
 assert L.eval("conditionAsks[1]") == "{transferItem:0,25004}>=20", "the princess rows' own test"
+assert L.eval("G.TurnedInCount()") == SHARDS_TURNED_IN
+assert L.eval("#conditionAsks") <= 2 + 7, "the count by halving: 7 tests"
 # The sync: progress 43 at 10 plus the steps the shards held and turned in pay for (safe n opens at
 # 11 + n). The shards stay in the bag for her milestone talks, and the counter is never lowered.
+# Round 80: the condition test reads the current map's turn-ins, so it is asked in the palace only.
 L.execute("""
-palaceHeld, palaceProgress, palaceSave = 0, {}, "SD_PALACE"
-savedPalace = { G.HeldCount, G.ProgressValue, G.SetProgressValue, G.SaveObjectName }
+palaceHeld, palaceProgress, palaceSave, palaceMap = 0, {}, "SD_PALACE", 1000
+savedPalace = { G.HeldCount, G.ProgressValue, G.SetProgressValue, G.SaveObjectName, G.CurrentMap }
 G.HeldCount = function(id) return palaceHeld end
 G.ProgressValue = function(i) return palaceProgress[i] or 0 end
 G.SetProgressValue = function(i, n) palaceProgress[i] = n; return n end
 G.SaveObjectName = function() return palaceSave end
-TURNED_IN = 0
+G.CurrentMap = function() return palaceMap end
+savedMeet = conditionLib.IsMeetCondition
+function conditionLib:IsMeetCondition(test, flag)
+  if palaceMap ~= 2031 then return test:match(">=0$") ~= nil end
+  return savedMeet(self, test, flag)
+end
 """)
 PALACE_COUNTER, PRINCESS_MET = 43, 10
+PALACE_MAP, WORLD_MAP = 2031, 1000
 progress = lambda: L.eval(f"palaceProgress[{PALACE_COUNTER}]")
-assert L.eval("G.PalaceSync()") == "palace: 0 shards held, 0 steps paid, progress 43 at 10"
-assert progress() == PRINCESS_MET, "no shards: the palace opens, no safe yet"
-assert L.eval("G.PalaceSync()") is None, "the line only when it changes"
-L.execute("palaceHeld = 5")
-L.eval("G.PalaceSync()")
-assert progress() == PRINCESS_MET + 1, "5 shards pay for the 3-shard safe"
+# Round 80, the user's save: chests 1 and 2 taken the old way (6 turned in, counter 12), 4 held
+L.execute(f"TURNED_IN = 6; palaceHeld = 4; palaceProgress[{PALACE_COUNTER}] = 12")
 asks = L.eval("#conditionAsks")
+assert L.eval("G.PalaceSync()") == "palace: 4 shards held, not read yet turned in, 1 steps paid, progress 43 at 12"
+assert L.eval("#conditionAsks") == asks, "not asked on the world map"
+L.execute(f"palaceMap = {PALACE_MAP}")
+assert L.eval("G.PalaceSync()") == "palace: 4 shards held, 6 turned in, 3 steps paid, progress 43 at 13"
+assert progress() == PRINCESS_MET + 3, "10 shards in all: the third safe (9 shards) opens"
+asks = L.eval("#conditionAsks")
+assert L.eval("G.PalaceSync()") is None, "the line only when it changes"
+assert L.eval("#conditionAsks") == asks, "asked again only when the held count changes"
+L.execute(f"palaceMap = {WORLD_MAP}; palaceHeld = 7")    # 3 more come in on the world map
 L.eval("G.PalaceSync()")
-assert L.eval("#conditionAsks") == asks, "the steps are counted again only when the held count changes"
-L.execute("palaceHeld = 0; TURNED_IN = 5")    # a talk to the princess: she takes the 5
+assert progress() == PRINCESS_MET + 4, "the palace's last reading still counts: 13 in all"
+L.execute(f"palaceMap = {PALACE_MAP}; palaceHeld = 0; TURNED_IN = 13")    # a talk: she takes the 7
 L.eval("G.PalaceSync()")
-assert progress() == PRINCESS_MET + 1, "her loop has nothing left to do"
-L.execute("palaceHeld = 22")                  # 27 in all: past the 24-shard step, short of 28
+assert progress() == PRINCESS_MET + 4, "her loop has nothing left to do"
+L.execute("palaceHeld = 14")                  # 27 in all: past the 24-shard step, short of 28
 L.eval("G.PalaceSync()")
 assert progress() == PRINCESS_MET + 7, "held and turned in count together"
 L.execute(f"palaceProgress[{PALACE_COUNTER}] = {PRINCESS_MET + 20}")
 L.eval("G.PalaceSync()")
-assert progress() == PRINCESS_MET + 20, "an older save the game's own turn-ins took further: never lowered"
+assert progress() == PRINCESS_MET + 20, "never lowered"
 L.execute("palaceProgress = {}; palaceHeld = 0; TURNED_IN = 99; palaceSave = 'SD_OTHER'")
-assert L.eval("G.PalaceSync()") == "palace: 0 shards held, 25 steps paid, progress 43 at 35"
+assert L.eval("G.PalaceSync()") == "palace: 0 shards held, 99 turned in, 25 steps paid, progress 43 at 35"
+L.execute("palaceMap = 1000; palaceProgress = {}; palaceSave = 'SD_NEW'")
+assert L.eval("G.PalaceSync()") == "palace: 0 shards held, not read yet turned in, 0 steps paid, progress 43 at 10",     "a new save: the palace opens, no safe yet"
 L.execute("StaticFindObject = (function(prev) return function(p) if p:find('CPP_BFL_Condition') then return nil end return prev(p) end end)(StaticFindObject)")
-L.execute("palaceProgress = {}; palaceHeld = 1")
+L.execute("palaceMap = 2031; palaceHeld = 4")
 L.eval("G.PalaceSync()")
-assert progress() is None, "no condition test: the counter is left alone"
-L.execute("G.HeldCount, G.ProgressValue, G.SetProgressValue, G.SaveObjectName = table.unpack(savedPalace)")
+assert progress() == PRINCESS_MET + 1, "no condition test: the shards held still count"
+L.execute("G.HeldCount, G.ProgressValue, G.SetProgressValue, G.SaveObjectName, G.CurrentMap = table.unpack(savedPalace)")
 print("palace safes: ok")

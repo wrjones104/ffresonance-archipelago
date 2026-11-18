@@ -2369,51 +2369,57 @@ G.MECHABO = { counter = 16, start = 10 }
 -- Oblivion Palace (IDEAS.md idea 37): safe n opens at {progress:43} >= 11 + n. The princess's
 -- first talk sets the counter to 10 (`met`), and each later talk adds one per step of shards
 -- turned in. The steps are DT_TalkEvent_CollectMedal's (data/game/shard_chests.tsv).
-G.PALACE = { counter = 43, met = 10, item = 25004,
+G.PALACE = { counter = 43, met = 10, item = 25004, map = 2031,
              steps = { 3, 6, 9, 12, 16, 20, 24, 28, 32, 36, 40, 44, 48, 52, 56, 60, 64, 68, 72, 76, 80, 84,
                        89, 94, 99 } }
 
 -- Whether at least n shards have been turned in to the princess, or nil when the game cannot say.
--- The count is in SaveData_TransferTargetInventory, a map, so ask the game's own condition test.
+-- The count is in SaveData_TransferTargetInventoryByMap, a map of maps, so ask the game's own
+-- condition test. It reads the current map's turn-ins: on the world map it said none (round 80).
 function G.TurnedInAtLeast(n)
     local lib = Lib("CPP_BFL_Condition")
     if not (lib and lib.IsMeetCondition) then return nil end
     local test = string.format("{transferItem:0,%d}>=%d", G.PALACE.item, n)
     local ok, met = pcall(function() return lib:IsMeetCondition(test, true) end)
-    if not ok then return nil end
-    return met == true
+    if not ok or type(met) ~= "boolean" then return nil end
+    return met
 end
 
--- The steps paid for by `held` shards plus those turned in, or nil when the game cannot say.
-function G.PalaceStepsPaid(held)
-    local n = 0
-    for _, need in ipairs(G.PALACE.steps) do
-        if need > held then
-            local met = G.TurnedInAtLeast(need - held)
-            if met == nil then return nil end
-            if not met then break end
-        end
-        n = n + 1
+-- Shards turned in, 0 to 99, found by halving in 7 condition tests, or nil when the game cannot say.
+function G.TurnedInCount()
+    local lo, hi = 0, G.PALACE.steps[#G.PALACE.steps]
+    while lo < hi do
+        local mid = (lo + hi + 1) // 2
+        local met = G.TurnedInAtLeast(mid)
+        if met == nil then return nil end
+        if met then lo = mid else hi = mid - 1 end
     end
-    return n
+    return lo
 end
 
--- Holds the palace counter at `met` plus the steps paid, so each safe opens with no talk. The
--- shards stay in the bag: a talk to the princess still takes them and plays her milestone talks
--- (28, 60 and 99 turned in), and her step loop finds every step done. Never lowers the counter.
--- The turned-in count changes only when she takes the shards held, so the steps are counted
--- again only when the held count or the save changes. Returns a status line when it changes.
+-- Holds the palace counter at `met` plus the steps paid by the shards held and turned in, so each
+-- safe opens with no talk. The shards stay in the bag: a talk to the princess still takes them and
+-- plays her milestone talks (28, 60 and 99 turned in), and her step loop finds every step done.
+-- Never lowers the counter. The turned-in count is read only in the palace, and again only when
+-- the held count changes there (she takes them); elsewhere the last reading for the save counts,
+-- or none. Returns a status line when it changes.
 function G.PalaceSync()
     local P = G.PALACE
     local held = G.HeldCount(P.item)
     if not held then return nil end
-    local key = tostring(G.SaveObjectName()) .. ":" .. held
-    if key ~= P.key or P.paid == nil then P.key, P.paid = key, G.PalaceStepsPaid(held) end
+    local saveName = tostring(G.SaveObjectName())
+    if saveName ~= P.save then P.save, P.turned, P.heldAt = saveName, nil, nil end
+    if G.CurrentMap() == P.map and (P.turned == nil or held ~= P.heldAt) then
+        P.turned, P.heldAt = G.TurnedInCount(), held
+    end
+    local paid = 0
+    for _, need in ipairs(P.steps) do
+        if held + (P.turned or 0) >= need then paid = paid + 1 end
+    end
     local now = G.ProgressValue(P.counter)
-    local want = P.paid and P.met + P.paid
-    if want and now and now < want then now = G.SetProgressValue(P.counter, want) end
-    local line = string.format("palace: %d shards held, %s steps paid, progress %d at %s", held,
-        tostring(P.paid), P.counter, tostring(now))
+    if now and now < P.met + paid then now = G.SetProgressValue(P.counter, P.met + paid) end
+    local line = string.format("palace: %d shards held, %s turned in, %d steps paid, progress %d at %s",
+        held, P.turned and tostring(P.turned) or "not read yet", paid, P.counter, tostring(now))
     if line == P.line then return nil end
     P.line = line
     return line

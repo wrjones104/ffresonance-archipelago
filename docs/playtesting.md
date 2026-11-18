@@ -1043,7 +1043,7 @@ Send the `[FFRAP]` lines of the log.
 
 Send the `[FFRAP]` lines of the log.
 
-## Round 80 changes so far (mod 0.61.0 build 7c4eba1d, world 0.30.0 build a1ccfcdb)
+## Round 80 changes so far (mod 0.61.0 build cac73e78, world 0.30.0 build a1ccfcdb)
 
 Built during round 79, before its results. The plan gets the round 79 fixes too.
 
@@ -1053,7 +1053,8 @@ Built during round 79, before its results. The plan gets the round 79 fixes too.
 **Install:** copy `FFRArchipelago/Scripts`. No new seed needed: the apworld is unchanged.
 
 **To test:**
-- **0.** The log says `version 0.61.0 (build 7c4eba1d)` and, on a seed's save, `palace: N shards held, K steps paid, progress 43 at X`, with X = 10 + K.
+- **First try (build 7c4eba1d, 2026-11-18):** the user's save had 6 shards turned in (counter 12) and 4 held, so the 9-shard safe should open. It did not: the mod read the turn-ins on the world map, where the game says 0, and not again in the palace (`palace: 4 shards held, 1 steps paid, progress 43 at 12`). Fixed in build cac73e78: turn-ins are read in the palace only (IDEAS.md idea 37).
+- **0.** The log says `version 0.61.0 (build cac73e78)`. In the palace: `palace: N shards held, T turned in, K steps paid, progress 43 at X`, with X = 10 + K. Before the first visit, `not read yet turned in`.
 - **1. Walk in with no talk.** Holding shards, enter the palace without talking to her. **Can you open each safe your shards pay for (3 shards for the first, 6 for the second, and so on), and no more?** Each should send its check.
 - **2. A safe in view.** Stand in the palace and receive a shard that pays for a new safe. **Does that safe open at once, or only after you leave and come back?**
 - **3. The princess.** Talk to her once. **Does she take the shards and skip the "earned a chest" scenes?** The `palace:` line should then read 0 shards held, with the same steps paid. If you reach 28 turned in, does her milestone talk play?
