@@ -2423,6 +2423,43 @@ L.execute('commands["ffrap_apmenu"]("ffrap_apmenu", {"mode", "game"})')
 L.execute("logged = {}")
 set_scene(None, L.eval("{ get = function() return { TagName = { ToString = function() return 'UI.MainMenu.Scene.System' end } } end }"))
 assert not any("SetScene" in s for s in logged()), "not logged after mode game"
+# Round 87: picking Archipelago makes the tables our page before its screen opens; they go back
+# once the menu has left our scene, at once for another scene, and after 3 s if ours never showed
+L.execute("""
+  local G = package.loaded.game
+  G.APMENU.screen, G.APMENU.top, G.APMENU.modes, G.APMENU.TAG = "options", nil, {}, "UI.MainMenu.Scene.FFRAP"
+  function G.APMENU.SceneTop() return G.APMENU.top end
+  function G.APMENU.Mode(kind, lines)
+    G.APMENU.modes[#G.APMENU.modes + 1] = kind
+    G.APMENU.modeSaved = kind == "ap" and #lines > 0 or nil
+    return { "mode " .. kind .. ": done" }
+  end
+""")
+scene = lambda tag: set_scene(None, L.eval("{ get = function() return { TagName = { ToString = function() return '"
+                                           + tag + "' end } } end }"))
+modes = lambda: list(L.eval("package.loaded.game.APMENU.modes").values())
+OURS, ROOT = "UI.MainMenu.Scene.FFRAP", "UI.MainMenu.Scene.Root"
+scene(OURS)
+assert modes() == ["ap"], "our page at the click"
+L.execute(f"package.loaded.game.APMENU.top = '{OURS}'")
+tick(4)
+assert modes() == ["ap"], "kept while the menu is on our scene"
+L.execute(f"package.loaded.game.APMENU.top = '{ROOT}'")
+tick(1)
+assert modes() == ["ap", "game"], "back once the menu leaves it"
+scene(OURS)
+scene("UI.MainMenu.Scene.System")
+assert modes()[-2:] == ["ap", "game"], "another scene: back at once"
+scene(OURS)
+L.execute("package.loaded.game.APMENU.top = nil")
+tick(4)
+assert modes()[-1] == "ap", "waits for the menu to show our scene"
+tick(4)
+assert modes()[-1] == "game", "and gives up after 3 s"
+L.execute("package.loaded.game.APMENU.screen = 'text'")
+n = len(modes())
+scene(OURS)
+assert len(modes()) == n, "the text page needs no switch"
 # Round 85: shards turned in count once the palace has been read; and the shards the seed has
 # sent, when they are more (two Tablet Shards received here, with the bag emptied by a turn-in)
 L.execute("package.loaded.game.PALACE.turned = 9")

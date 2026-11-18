@@ -2137,6 +2137,8 @@ function subTags(m)
   return table.concat(t, ",")
 end
 """.replace("SYSTEM_PATH", SYSTEM_PATH))
+assert lua("G.APMENU.screen") == "options", "round 87: the entry opens the Options screen as our page"
+L.execute("G.APMENU.screen = 'text'")   # the Tutorial screen here; the probe below writes the Options one
 assert lua("G.APMENU.Ensure(say)") == "row added; scene list; data added, enable added"
 assert lua("sceneDT.rows.FFRAP_Archipelago.SceneTag.TagName:ToString()") == OWN_TAG
 assert lua("sceneDT.rows.FFRAP_Archipelago.EntryName:ToString()") == "Archipelago"
@@ -2295,7 +2297,7 @@ end
 function rowText(name) local r = gameSetting.rows[name]; return r and r.DisplayText:ToString() end
 """)
 TITLE_ONLY = 1
-PAGE_LINES = '{ "Goal: win the last battle", "Checks: 12 of 480" }'
+PAGE_LINES = '{ "Goal: win the last battle", "", "Checks: 12 of 480" }'   # a blank line makes no heading
 lines = list(L.eval(f"G.APMENU.Mode('ap', {PAGE_LINES}, say)").values())
 assert lines[-1] == "mode ap: 2 game rows hidden, 2 heading rows", lines
 assert lua("optionRoot.rows.NewRow.DisplayText:ToString()") == "Archipelago"
@@ -2309,6 +2311,8 @@ assert lines[-1] == "mode game: rows shown again, 2 of 2 heading rows removed", 
 assert lua("optionRoot.rows.NewRow.DisplayText:ToString()") == "Gameplay"
 assert lua("gameSetting.rows['難易度'].ShowCommandData.ShowType") == 2 and lua("gameSetting.rows['初期化'].ShowCommandData.ShowType") == 0
 assert lua("rowText('FFRAP_Info1')") is None, "the heading rows are gone"
+assert lua("gameSetting.rows.FFRAP_Exp.ShowCommandData.ShowType") == TITLE_ONLY, \
+    "round 87: our rows leave in-game System > Options again"
 assert lua("optionRoot.rows.NewRow_0.Condition:ToString()") == "", "every tab again"
 print("options page probe: ok")
 

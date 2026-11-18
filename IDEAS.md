@@ -465,6 +465,14 @@ Until then the Options rows stay, and on a save not linked to the seed they chan
 
 **Probe (round 86, build b93912a5):** `ffrap_apmenu mode ap` makes the switch by hand (`A.Mode`) and logs each `SetScene` from a pre-hook; `mode game` puts the tables back. To find out: whether the page looks right, whether the hook fires before the screen opens, and whether `RemoveRow` takes the heading rows out again.
 
+**Round 86 result:** it looks right: one tab named Archipelago, our settings, the page's lines as headings, and none of the game's rows. The hook logged `SetScene UI.MainMenu.Scene.FFRAP` on the click. `mode game` put System > Options back.
+
+**Built (round 87):** the entry opens the Options screen by default (`APMENU.screen = "options"`).
+- The `SetScene` pre-hook is registered when the page starts. Our tag makes the tables our page (`A.Mode "ap"`, with the page's lines as headings, blank ones left out); any other tag puts them back.
+- Each tick, once the menu's scene stack has shown our scene and then left it, the tables go back (`state.apMenuBack`). They also go back if our scene never shows within 3 s.
+- Our rows are TitleOnly when made, so in game System > Options no longer has them and the title screen's Options still does. On our page they are GamePlayOnly.
+- The text page stays behind `ffrap_apmenu text`.
+
 ## 40. Abilities the story gives, which the open start skips
 
 **Found off-line, 2026-11-18 (round 86, looking at Lid).** Story rows add abilities through their `AbilitySettings` (`AddAbilities`, `AddCommandAbilities`), as the Siren row does for both Finas. The open start never plays them, and it adds only Siren's. From `DT_TalkEventData_Chapter*` (MainEvent):

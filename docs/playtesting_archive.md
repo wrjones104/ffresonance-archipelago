@@ -1278,3 +1278,5 @@ Send the `[FFRAP]` lines of the log.
 - **Late bind log:** passed. One feed line for the backlog, one line per scan for far-away pick-ups, no `sync: check` lines.
 - **Verun:** passed. "Arise, Mechabo!" showed in the quest log, two Ipooh kills finished it, and the reward was the vanilla Magicite Shard (the quest is not a location). Lid had no new skill, even after `!getitem` added her. That is the game's own: the quest's rows (`C02_MechaboLvUp_00` to `_01`) give no ability. Lid's first Mechabo skill, Mechabo Tackle (404110), comes from `C02_MechaboLvUp_03`, the second step of "Mechabo Evolved". Whether a step's ability reaches Lid while she has not joined is not known.
 - **Found looking at Lid:** the open start never runs the story's ability rows. Each character's `C08_817_01` ability, Rain's chapter 6 and 8 abilities and Lid's `Lid_LB2_Get` are missing (IDEAS.md idea 40).
+
+**Round 87 build (mod 0.61.0 build ad155ef2):** the Archipelago entry is the Options screen made our page, switched by a `SetScene` pre-hook and back by the tick, with our rows out of in-game System > Options (IDEAS.md idea 39).

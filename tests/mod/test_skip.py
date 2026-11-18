@@ -636,6 +636,7 @@ optDT = { GetFullName = function() return "opt" end, IsValid = function() return
   AddRow = function(_, name, template)
     local copy = {} for k, v in pairs(template) do copy[k] = v end
     copy.EntryTag = { TagName = template.EntryTag.TagName }
+    copy.ShowCommandData = { ShowType = 2 }   -- GamePlayOnly, as the game's Difficulty row
     if template.SliderInfo then copy.SliderInfo = { MinValue = 0, MaxValue = 0, DefaultValue = 0 } end
     optRows[name] = copy end,
   FindRow = function(_, name) return optRows[name] end }
@@ -663,6 +664,8 @@ assert lua(tag("FFRAP_ScalingStrength") + ".Value") == 2 and lua(tag("FFRAP_Scal
 L.execute("FindFirstOf = prevFFOseed; G.ForgetObjects()")
 assert lua("optRows.FFRAP_Exp.EntryTag.TagName:ToString()") == "Delegate.UI.System.Option.Root.GameSetting.FFRAP.FFRAP_Exp"
 assert lua("optRows.FFRAP_Exp.Type") == 2 and lua("optRows.FFRAP_Exp.SliderInfo.MaxValue") == 10
+TITLE_ONLY = 1
+assert lua("optRows.FFRAP_Exp.ShowCommandData.ShowType") == TITLE_ONLY,     "round 87: in game only the Archipelago page shows our rows; the title screen's Options still does"
 assert lua("optRows.FFRAP_EncounterHalves.SliderInfo.MaxValue") == 6 and lua("optRows.FFRAP_Scaling.Type") == 1
 assert lua("optRows.FFRAP_Exp.DisplayText:ToString()") == "AP: EXP rate"
 assert lua("optRows.b.EntryTag.TagName:ToString()").endswith("GamePad.Sensitivity"), "the game's own row is left alone"

@@ -5120,6 +5120,10 @@ local function SeedOptionEntries(current)
     return added
 end
 
+-- EOP_BaseMenu_Command_ShowType. Round 87 (the user: the settings move to the Archipelago page):
+-- our rows are TitleOnly, so the title screen's Options still has them and in game System >
+-- Options does not; the page (APMENU.Mode "ap") makes them GamePlayOnly while it is open.
+G.SHOW_TYPE = { all = 0, title = 1, game = 2 }
 function G.AddOptionRows(say, current)
     say("menu: loading " .. OPTION_GAMEPLAY)
     local dt = LoadObject(OPTION_GAMEPLAY)
@@ -5156,6 +5160,7 @@ function G.AddOptionRows(say, current)
                     row.DefaultRadioButtonIndex = o.default
                 end
             end)
+            pcall(function() row.ShowCommandData.ShowType = G.SHOW_TYPE.title end)
             done[#done + 1] = o.row .. (ok and "" or " (write failed)")
         else
             done[#done + 1] = o.row .. " (not added)"
@@ -5319,9 +5324,9 @@ G.APMENU = {
     -- Options rows' tags).
     TAG = "UI.MainMenu.Scene.FFRAP",
     LAYOUT = "/Game/UI/Tutorial/WBP_TutorialLayout.WBP_TutorialLayout_C",
-    -- Round 85 probe (IDEAS.md idea 39): which screen the entry opens, `text` (the page) or
-    -- `options` (the game's Options screen).
-    screen = "text",
+    -- Which screen the entry opens: `options`, the game's Options screen made our page (round 87),
+    -- or `text`, the Tutorial screen with the page's lines (rounds 83 to 86; ffrap_apmenu text).
+    screen = "options",
     OPTIONS_LAYOUT = "/Game/UI/Option/Widget/WBP_OptionLayout.WBP_OptionLayout_C",
 }
 local A = G.APMENU
@@ -5452,16 +5457,15 @@ function A.Screen(kind, say)
     return out
 end
 
--- Round 86 probe (IDEAS.md idea 39): the Options screen as our page. Round 85 showed the entry
--- can open it, and that its tabs are read at each open. `ap` leaves out every tab but Gameplay
--- and names it Archipelago, hides the game's rows in DT_OP_GameSetting (ShowType TitleOnly: not
--- in game), and adds a heading row for each of `lines` (copies of the keyboard tab's first
--- SubHeader; both tables hold OP_BaseMenu_EntryInfo rows). `game` puts it all back. Each step is
--- told to `say` before it runs. Returns lines.
+-- The Options screen as our page (IDEAS.md idea 39; round 85 showed the entry can open it and
+-- that its tabs are read at each open, round 86 that this looks right). `ap` leaves out every tab
+-- but Gameplay and names it Archipelago, hides the game's rows in DT_OP_GameSetting (ShowType
+-- TitleOnly: not in game) and shows ours, and adds a heading row for each of `lines` (copies of
+-- the keyboard tab's first SubHeader; both tables hold OP_BaseMenu_EntryInfo rows). `game` puts
+-- it all back and hides ours again. Each step is told to `say` before it runs. Returns lines.
 local KEYBOARD_TABLE = "/Game/Datatable/UI/Option/Root/KeyboardMouseSetting/DT_OP_KeyboardMouseSetting.DT_OP_KeyboardMouseSetting"
 local HEADING_ROW = "SubHeader_共通"
 local GAMEPLAY_TABLE = "/Game/Datatable/UI/Option/Root/GameSetting/DT_OP_GameSetting.DT_OP_GameSetting"
-local TITLE_ONLY = 1   -- EOP_BaseMenu_Command_ShowType: ALL 0, TitleOnly 1, GamePlayOnly 2
 function A.Mode(kind, lines, say)
     local out = A.Tabs(kind == "ap" and "only" or "all", say)
     local root, rows = LoadObject(OPTION_ROOT_TABLE), LoadObject(GAMEPLAY_TABLE)
@@ -5484,17 +5488,21 @@ function A.Mode(kind, lines, say)
         pcall(function()
             rows:ForEachRow(function(name, row)
                 local key = ObjText(name)
-                if ours[key] then return end
+                if ours[key] then
+                    pcall(function() row.ShowCommandData.ShowType = G.SHOW_TYPE.game end)
+                    return
+                end
                 saved.show[key] = Int(row.ShowCommandData.ShowType)
                 say("apmenu: row " .. key .. " ShowType " .. tostring(saved.show[key]) .. " -> TitleOnly")
-                pcall(function() row.ShowCommandData.ShowType = TITLE_ONLY end)
+                pcall(function() row.ShowCommandData.ShowType = G.SHOW_TYPE.title end)
                 saved.hidden = saved.hidden + 1
             end)
         end)
         local keyboard, heading = LoadObject(KEYBOARD_TABLE), nil
         pcall(function() heading = keyboard:FindRow(HEADING_ROW) end)
-        for i, text in ipairs(heading and lines or {}) do
-            local name = "FFRAP_Info" .. i
+        for _, text in ipairs(heading and lines or {}) do
+            if text == "" then goto nextLine end
+            local name = "FFRAP_Info" .. (#saved.info + 1)
             say("apmenu: heading row " .. name .. ": " .. text)
             local row
             if pcall(function() rows:AddRow(name, heading) end) then pcall(function() row = rows:FindRow(name) end) end
@@ -5502,6 +5510,7 @@ function A.Mode(kind, lines, say)
                 pcall(function() row.DisplayText = FText(text) end)
                 saved.info[#saved.info + 1] = name
             end
+            ::nextLine::
         end
         A.modeSaved = saved
         out[#out + 1] = string.format("mode ap: %d game rows hidden, %d heading rows%s", saved.hidden, #saved.info,
@@ -5513,6 +5522,11 @@ function A.Mode(kind, lines, say)
             local row
             pcall(function() row = rows:FindRow(key) end)
             if row then pcall(function() row.ShowCommandData.ShowType = t end) end
+        end
+        for key in pairs(ours) do
+            local row
+            pcall(function() row = rows:FindRow(key) end)
+            if row then pcall(function() row.ShowCommandData.ShowType = G.SHOW_TYPE.title end) end
         end
         local removed = 0
         for _, name in ipairs(saved.info) do
@@ -5837,6 +5851,14 @@ function A.State()
     if vm then pcall(function() for i = 1, #vm.SceneDataStack do stack[#stack + 1] = tostring(tagOf(vm.SceneDataStack[i])) end end) end
     out[#out + 1] = "main menu scene stack: " .. (vm and table.concat(stack, ", ") or "no view model")
     return out
+end
+
+-- The scene at the top of the main menu's stack (a tag), or nil with no main menu.
+function A.SceneTop()
+    local vm = Live("CPP_VM_MainMenu")
+    local top
+    if vm then pcall(function() top = tagOf(vm.SceneDataStack[#vm.SceneDataStack]) end) end
+    return top
 end
 
 -- A way out when the page will not close. With our screen open: ask it to close the way Back does

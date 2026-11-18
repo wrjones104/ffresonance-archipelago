@@ -1864,9 +1864,49 @@ end)
 -- state.apMenu is the entry's state while it is on: its steps are logged until it is first in the
 -- menu, and each reason it cannot be yet is logged once.
 state.apMenu = {}
+-- Round 87: the entry opens the Options screen, and the tables are our page only while the menu
+-- is on our scene, so System > Options stays the game's own. The root entry's click calls
+-- CPP_MainMenuSubsystem:SetScene(tag, option) from Blueprint: a pre-hook sees our tag before our
+-- screen opens and reads the tables (round 86). The tick puts them back once the menu has left
+-- our scene, or when it never showed it.
+state.quietly = function() end
+state.apMenuScene = function(name)
+    local m, A = state.apMenu, game.APMENU
+    if state.apMenuWatch then log("apmenu: SetScene " .. tostring(name)) end
+    if not m or A.screen ~= "options" then return end
+    if name == A.TAG then
+        local lines = A.Mode("ap", state.apMenuPage(), m.modeTold and state.quietly or log)
+        if not m.modeTold then log("apmenu: " .. lines[#lines]) end
+        m.modeTold, m.modeAt, m.seenOurs = true, state.ticks, false
+    elseif A.modeSaved then
+        A.Mode("game", {}, state.quietly)
+    end
+end
+state.apMenuHook = function()
+    if state.apMenuHooked ~= nil then return end
+    state.apMenuHooked = pcall(RegisterHook, "/Script/mucha.CPP_MainMenuSubsystem:SetScene", function(_, tag)
+        local name
+        pcall(function() name = tag:get().TagName:ToString() end)
+        local ok, err = pcall(state.apMenuScene, name)
+        if not ok then log("apmenu: SetScene hook failed: " .. tostring(err)) end
+    end)
+    log("apmenu: SetScene hook " .. (state.apMenuHooked and "registered" or "could not be registered"))
+end
+state.apMenuBack = function(m, A)
+    local MODE_GRACE_TICKS = 6   -- 3 s for the menu to show our scene after SetScene
+    if not A.modeSaved then return end
+    if A.SceneTop() == A.TAG then
+        m.seenOurs = true
+    elseif m.seenOurs or state.ticks - (m.modeAt or 0) > MODE_GRACE_TICKS then
+        A.Mode("game", {}, state.quietly)
+        m.seenOurs = false
+    end
+end
 state.apMenuTick = function()
     local m = state.apMenu
     local A = game.APMENU
+    state.apMenuHook()
+    state.apMenuBack(m, A)
     if save.vanilla() then
         if A.Unlist() then log("apmenu: taken out of the menu (a save not linked to the seed)") end
         return
@@ -1992,17 +2032,7 @@ command("ffrap_apmenu", function(p)
             return
         end
         state.apMenuWatch = kind == "ap"
-        -- The root entry's click calls CPP_MainMenuSubsystem:SetScene(tag, option) from Blueprint, so a
-        -- pre-hook sees which scene opens before its screen does.
-        if state.apMenuWatch and not state.apMenuHooked then
-            state.apMenuHooked = pcall(RegisterHook, "/Script/mucha.CPP_MainMenuSubsystem:SetScene", function(_, tag)
-                if not state.apMenuWatch then return end
-                local name
-                pcall(function() name = tag:get().TagName:ToString() end)
-                log("apmenu: SetScene " .. tostring(name))
-            end)
-            log("apmenu: SetScene hook " .. (state.apMenuHooked and "registered" or "could not be registered"))
-        end
+        state.apMenuHook()
         local lines = A.Mode(kind, kind == "ap" and state.apMenuPage() or {}, log)
         for _, line in ipairs(lines) do log("apmenu: " .. line) end
         notify("Archipelago page " .. lines[#lines])
