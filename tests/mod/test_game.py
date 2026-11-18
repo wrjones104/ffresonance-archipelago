@@ -1849,6 +1849,12 @@ assert L.eval("G.QuestsPatch()") == 0, "nothing to write the second time"
 assert L.eval("#G.QUESTS") == 28
 assert L.eval("G.QUESTS[1].key") == "quest:0" and L.eval("G.QUESTS[1].counter") == 1 and L.eval("G.QUESTS[1].value") == 50
 assert L.eval("G.MECHABO.counter") == 16 and L.eval("G.MECHABO.start") == 10
+# Round 81 probe (ffrap_empty quest): the quest's reward rows give nothing, not even the gil, and
+# QuestsPatch leaves the empty list alone
+assert L.eval("G.EmptyQuestRewards('quest:13')") == 1
+assert L.eval("rewards('SubEv_C01_Zairu_04')") == "", L.eval("rewards('SubEv_C01_Zairu_04')")
+assert L.eval("G.QuestsPatch()") == 0 and L.eval("rewards('SubEv_C01_Zairu_04')") == ""
+assert L.eval("G.EmptyQuestRewards('quest:13')") == 0, "already empty"
 print("quest rows: ok")
 
 # Round 73: the Sworn Six's three assist skills in the Behemoth fight deal a fixed 1 damage, and

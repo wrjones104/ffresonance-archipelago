@@ -1080,11 +1080,11 @@ Built during round 79, before its results. The plan gets the round 79 fixes too.
 - **The shape fits this mod's loops** (`every` → `pcall(tick)` → `pcall(step)`) **and FFRS_QoL's world-map loop** (`guarded` → `pcall(fastWorldMap)` → `wldMapId` → `pcall(function() return s.WldMapId end)`, an int field). The minidump holds no Lua state, so it cannot tell them apart.
 - **Build 42898077 traces all the time:** one file handle, unbuffered, started again at each map load and every 4000 lines (about 90 s). The fast tick has two more steps (`fast: pop-up`, `fast: scans`).
 
-## Round 81 test plan (mod 0.61.0 build 42898077, world 0.30.0 build a1ccfcdb)
+## Round 81 test plan (mod 0.61.0 build 27ed563a, world 0.30.0 build a1ccfcdb)
 
 **Install:** copy `FFRArchipelago/Scripts`. No new seed: the apworld is unchanged.
 
-**0. The build.** The log should say `version 0.61.0 (build 42898077)`.
+**0. The build.** The log should say `version 0.61.0 (build 27ed563a)`. Build 27ed563a is 42898077 plus the `ffrap_empty` probe (step 4).
 
 **1. A character quest's pop-up.** Token Legacy is done, so try another with a stat bonus: Nichol's Duty, Last Respite, A New Leaf, or any character quest. **Does the first pop-up (the reward) show the Archipelago item?** The log should say `chest pop-up for quest:N before its check: text set, item line hidden`, then `check quest:N`.
 
@@ -1092,6 +1092,13 @@ Built during round 79, before its results. The plan gets the round 79 fixes too.
 
 **3. The round 79 and 80 items still open:** early checks once you have the airship, Dragon's Maw, the Phantom Train and the Weapons Factory, Mog Tag, the princess talk, and an old save's counter.
 
-**4. If the game crashes:** send `Mods/FFRArchipelago/ap_trace.txt` with the crash folder and the log, before starting the game again. A last line without its `done` names this mod's step. A `done` last means another mod's loop. If the crashes keep coming on the world map, try a session with FFRS_QoL off (`enabled.txt` out of its folder).
+**4. Probe: empty rewards (IDEAS.md idea 15, way 1), on a save you can reload.** Save first. `ffrap_empty` makes rewards give nothing, in place of 1 gil or the Potion. A game restart undoes it. Each case asks: **does it open, is there a game pop-up (and what does it say), does the check go out, and is it still taken after you leave and come back?**
+- **A chest:** in a dungeon with a closed chest that is a location, run `ffrap_empty chest`. The log lists the chests marked and `empty: N chest rows emptied`. Open one.
+- **A shiny:** where a shiny is still there, run `ffrap_empty shiny`, then pick it up.
+- **A quest:** before the last step of a quest, run `ffrap_empty quest <id>`, with the id from the check line (`quest:20` is 20). Finish it. **Does the quest still complete in the quest log?** The Weight of Mercy (20) or any town quest will do.
+- `ffrap_empty off` puts chests back to 1 gil.
+- If it works, the mod can drop the 1 gil and the Potion and show its own text when a check goes out. If an empty chest will not open or is not saved as taken, the idea is out.
+
+**5. If the game crashes:** send `Mods/FFRArchipelago/ap_trace.txt` with the crash folder and the log, before starting the game again. A last line without its `done` names this mod's step. A `done` last means another mod's loop. If the crashes keep coming on the world map, try a session with FFRS_QoL off (`enabled.txt` out of its folder).
 
 Send the `[FFRAP]` lines of the log.

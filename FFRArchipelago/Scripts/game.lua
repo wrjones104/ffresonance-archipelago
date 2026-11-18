@@ -592,13 +592,23 @@ local MAGICITE_FIRST, MAGICITE_LAST = 25000, 25002   -- Magicite chests are shuf
 -- spawned while blanking is active restore to their true vanilla contents when unblanked.
 local blankOriginals = {}   -- "mapId:ID" -> { ItemId, ItemNum, Money } as the game shipped them
 local BLANK = { ItemId = -1, ItemNum = 1, Money = 1 }
+-- ffrap_empty (IDEAS.md idea 15, way 1): the rows in G.emptyRows ("mapId:ID") are blanked to
+-- nothing in place of 1 gil, to see whether an empty chest opens with no pop-up of its own.
+BLANK.EMPTY = { ItemId = -1, ItemNum = 0, Money = 0 }
+G.emptyRows = {}
+
+function BLANK.is(row, s)
+    return row.ItemId == s.ItemId and row.Money == s.Money and row.ItemNum == s.ItemNum
+end
 
 local function RowKey(row)
     return tostring(Int(row.mapId)) .. ":" .. tostring(Int(row.ID))
 end
 
+-- An empty row counts as blank only when the probe made it so: a chest the game ships empty
+-- keeps its own shape as its original.
 local function IsBlank(row)
-    return row.ItemId == BLANK.ItemId and row.Money == BLANK.Money and row.ItemNum == BLANK.ItemNum
+    return BLANK.is(row, BLANK) or (G.emptyRows[RowKey(row)] == true and BLANK.is(row, BLANK.EMPTY))
 end
 
 -- Records a row's reward the first time it is seen un-blanked.
@@ -618,8 +628,9 @@ local function BlankRow(row, on)
     if not shuffled then return false end
     if on then
         Remember(row)
-        if IsBlank(row) then return false end
-        row.ItemId, row.ItemNum, row.Money = BLANK.ItemId, BLANK.ItemNum, BLANK.Money
+        local want = G.emptyRows[RowKey(row)] and BLANK.EMPTY or BLANK
+        if BLANK.is(row, want) then return false end
+        row.ItemId, row.ItemNum, row.Money = want.ItemId, want.ItemNum, want.Money
         return true
     end
     local orig = blankOriginals[RowKey(row)]
@@ -2461,6 +2472,33 @@ function G.QuestsPatch()
         written = written + 1
     end)
     return written
+end
+
+-- ffrap_empty quest: empties the quest's reward rows (no stand-in, no gil), to see whether the
+-- row still runs, completes the quest and moves its counter with nothing to show. QuestsPatch
+-- leaves an empty list alone. Returns the rows emptied.
+function G.EmptyQuestRewards(key)
+    local rows = {}
+    for _, q in ipairs(G.QUESTS) do
+        if q.key == key then
+            for _, r in ipairs(q.rows) do rows[r] = true end
+        end
+    end
+    local emptied = 0
+    EachTalkRow(function(name, row)
+        if rows[name] and #row.ObtainItemList > 0 then
+            row.ObtainItemList:Empty()
+            emptied = emptied + 1
+        end
+    end)
+    return emptied
+end
+
+-- ffrap_empty shiny: a shiny on the map with nothing in it. BlankFieldItem leaves it so.
+function G.EmptyFieldItem(e)
+    return (pcall(function()
+        e.actor.m_ItemId, e.actor.m_ItemNum, e.actor.m_Money = BLANK.EMPTY.ItemId, BLANK.EMPTY.ItemNum, BLANK.EMPTY.Money
+    end))
 end
 
 -- Rewrites the current map's story boss trigger, NPC pawn and shared encounter/win rows so the

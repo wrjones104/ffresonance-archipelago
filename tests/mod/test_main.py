@@ -92,6 +92,19 @@ assert lua("G.BlankChests(false)") == 5                      # 4 table rows + th
 assert lua("live[1].m_TreasureBoxData.ItemId") == 10100, "0.2.0 bug: live chest stayed blank"
 assert lua("root.rows.b.Money") == 300 and lua("parent.rows.a.ItemId") == 10100
 assert lua("G.BlankChests(false)") == 0                      # idempotent
+# Round 81 probe (ffrap_empty chest): a marked row is blanked to nothing in place of 1 gil, stays
+# so on later passes, goes back to 1 gil when unmarked, and to its original when blanking ends
+L.execute('G.emptyRows["3020:1"] = true')
+assert lua("G.BlankChests(true)") == 5                       # 4 table rows + the live chest
+assert (lua("root.rows.a.ItemId"), lua("root.rows.a.ItemNum"), lua("root.rows.a.Money")) == (-1, 0, 0)
+assert lua("live[1].m_TreasureBoxData.Money") == 0 and lua("root.rows.b.Money") == 1, "only the marked row"
+assert lua("G.BlankChests(true)") == 0, "an empty row stays empty"
+L.execute("G.emptyRows = {}")
+assert lua("G.BlankChests(true)") == 3 and lua("root.rows.a.Money") == 1, "unmarked: back to 1 gil"
+L.execute('G.emptyRows["3020:1"] = true')
+lua("G.BlankChests(true)")
+assert lua("G.BlankChests(false)") == 5 and lua("root.rows.a.ItemId") == 10100, "an empty row restores too"
+L.execute("G.emptyRows = {}")
 print("blanking: ok")
 
 # 3. main with a stub game (0.3.1)
