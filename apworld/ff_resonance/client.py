@@ -118,6 +118,7 @@ class FFResonanceContext(CommonContext):
         self.starting_party: list[int] = []
         self.lock_needs = (0, 0, 0)           # the final boss lock: characters, visions, Crystal Fragments
         self.lock_written: tuple | None = None  # the last finalboss line written
+        self.progress_written: dict[str, tuple] = {}  # the last goal and checks lines written
 
     # -- files ------------------------------------------------------------------------------------
 
@@ -178,6 +179,7 @@ class FFResonanceContext(CommonContext):
         self.start_session()
         self.write_config(self.slot_data)
         self.lock_written = None
+        self.progress_written = {}
         self.scout_locations()
         return True
 
@@ -270,6 +272,18 @@ class FFResonanceContext(CommonContext):
         if line != self.lock_written:
             self.write_line("cfg", "finalboss", *line)
             self.lock_written = line
+
+    def write_progress(self) -> None:
+        """The goal and the checks done, for the mod's Archipelago page, whenever they change."""
+        if self.session_key is None or not os.path.isdir(self.mod_folder):
+            return
+        done = len(self.checked_locations)
+        lines = [("cfg", "goal", self.goal_kind, self.shards_received(), self.shards_needed),
+                 ("cfg", "checks", done, done + len(self.missing_locations))]
+        for line in lines:
+            if line != self.progress_written.get(line[1]):
+                self.write_line(*line)
+                self.progress_written[line[1]] = line
 
     def shards_received(self) -> int:
         return sum(1 for item in self.items_received if item.item == SHARD_ITEM)
@@ -374,6 +388,7 @@ class FFResonanceContext(CommonContext):
             self.lock_needs = (int(slot_data.get("final_boss_characters", 0)), int(slot_data.get("final_boss_visions", 0)),
                                int(slot_data.get("final_boss_fragments", 0)))
             self.lock_written = None
+            self.progress_written = {}
             # Round 74: the version stays the same between releases, so a seed made with another
             # test build of the apworld is told apart by its build.
             seed_build = slot_data.get("world_build")
@@ -423,6 +438,7 @@ async def game_loop(ctx: FFResonanceContext) -> None:
                 ctx.restore_session_file()
                 ctx.write_new_items()
                 ctx.write_lock()
+                ctx.write_progress()
                 checks, story = ctx.read_new_output()
                 if checks:
                     sent = await ctx.check_locations(checks)

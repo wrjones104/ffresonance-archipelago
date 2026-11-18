@@ -2292,6 +2292,43 @@ L.execute('commands["ffrap_apmenu"]("ffrap_apmenu", {"on", "nonsense"})')
 assert len(apcalls()) == n, "an unknown tag does nothing"
 print("main menu entry: ok")
 
+# Round 82 result: `page` turns the entry into the Archipelago page on the Tutorial screen, with
+# the goal and checks from the new cfg lines, the tower lock, the continents and the seed's start
+L.execute('''
+  local G = package.loaded.game
+  G.APMENU.LAYOUTS.tutorial = "/Game/T.T_C"
+  G.CONTINENTS = { { name = "grandshelt" }, { name = "lanzelt" }, { name = "kolobos" } }
+  G.PALACE = { item = 25004 }
+  G.openContinents = { lanzelt = true }
+  function G.HeldCount(id) return id == 25004 and 13 or 0 end
+  function G.APMENU.Page(path, title, body) G.APMENU.paged = { path, title, body }; return "written" end
+''')
+L.execute("logged = {}")
+L.execute('commands["ffrap_apmenu"]("ffrap_apmenu", {"page"})')
+assert L.eval("package.loaded.game.APMENU.layoutTo") == "/Game/T.T_C", "the Tutorial screen"
+inbox("seed\tS82:0:1\ncfg\topenworld\t1\ncfg\tshinies\t1\ncfg\tquests\t1\ncfg\tbosses\t0\ncfg\tairship\t0\ncfg\tcontinent\tlanzelt\n"
+      "cfg\tfinalboss\t3\t4\t1\t2\t2\t5\ncfg\tgoal\tfinal_boss\t0\t99\ncfg\tchecks\t12\t480\n", "w")
+tick(2)
+title, body = list(L.eval("package.loaded.game.APMENU.paged").values())[1:]
+assert title == "Archipelago"
+assert body.split("\n") == [
+    "Goal: win the last battle at the top of the Crystal Tower",
+    "Tower: party members 3/4, Visions 1/2, Crystal Fragments 2/5",
+    "Checks: 12 of 480",
+    "Items received: 0",
+    "Tablet Shards held: 13",
+    "",
+    "Continents open: Lanzelt",
+    "Continents locked: Grandshelt, Kolobos",
+    "Locations: chests, shinies, side quests",
+    "Start: on foot on Lanzelt",
+], body
+inbox("cfg\tgoal\ttablet_shards\t7\t50\n")
+tick(2)
+body = list(L.eval("package.loaded.game.APMENU.paged").values())[2]
+assert body.startswith("Goal: receive 50 Tablet Shards (7 so far)\n"), body
+print("archipelago page lines: ok")
+
 # Round 74: the build, a hash of the mod's scripts, tells test installs apart while the version
 # stays the same until a release. It is logged on load, and a CRLF copy gives the same build. The
 # Python copy of the hash is tools/package_release.py's, which names a release's mod build.

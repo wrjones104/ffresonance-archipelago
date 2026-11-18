@@ -5511,6 +5511,61 @@ function A.Text(path, text, say)
     return "text added to the root " .. rootClass
 end
 
+-- Round 82: the Tutorial screen opened from the menu is one framed window with a title, an image
+-- box, a description, a page count and two arrows, all from WBP_Tutorial. The page keeps the
+-- window and the title and puts our text in the description.
+local PAGE_HIDE = { "SizeBox_2", "Overlay_ButtonNext", "Overlay_ButtonPreview", "HorizontalBox_215" }
+local COLLAPSED = 1
+
+-- Our page on the open Tutorial screen: `title`, `body` in the description, and the rest hidden.
+-- Only what differs from the screen is written, so if the game fills the screen again when it
+-- opens, the next tick puts the page back. Steps are told to `say` once per screen instance.
+-- Returns "written", "same", or nil and why not.
+function A.Page(path, title, body, say)
+    local host = openHost(path)
+    if not host then return nil, "not open" end
+    local full = G.PathOf(host)
+    local tell = A.pageHost ~= full and say or quiet
+    local function part(name)
+        local w
+        pcall(function() w = host:GetWidgetFromName(FName(name)) end)
+        if not (w and Alive(w)) then
+            pcall(function() w = host:GetWidgetFromName(FName("WBP_Tutorial")):GetWidgetFromName(FName(name)) end)
+        end
+        return w and Alive(w) and w or nil
+    end
+    local titleText, bodyText = part("Text_Title"), part("Text_Description")
+    if not (titleText and bodyText) then return nil, "no Text_Title or Text_Description on the screen" end
+    local wrote = false
+    local function setText(w, name, text)
+        local now
+        pcall(function() now = w:GetText():ToString() end)
+        if now == text then return end
+        tell("apmenu: page " .. name)
+        pcall(function() w:SetText(FText(text)) end)
+        wrote = true
+    end
+    setText(titleText, "title", title)
+    setText(bodyText, "text", body)
+    for _, name in ipairs(PAGE_HIDE) do
+        local w = part(name)
+        local vis
+        if w then pcall(function() vis = w:GetVisibility() end) end
+        if w and vis ~= COLLAPSED then
+            tell("apmenu: page hides " .. name)
+            pcall(function() w:SetVisibility(COLLAPSED) end)
+            wrote = true
+        end
+    end
+    local box = part("SizeBox_1")
+    if box and A.pageHost ~= full then
+        tell("apmenu: page lets the text box grow (ClearHeightOverride)")
+        pcall(function() box:ClearHeightOverride() end)
+    end
+    A.pageHost = full
+    return wrote and "written" or "same"
+end
+
 -- `ffrap_apmenu on`, every tick: the row (with its screen when `layoutPath` is set), the scene
 -- list and the subsystem. Returns what was written, nil when nothing was, or nil and why not.
 function A.Ensure(tag, layoutPath, say)

@@ -1139,3 +1139,35 @@ Send the `[FFRAP]` lines of the log.
 7. After each layout, open System, Quests and Bestiary. **Do they still look and work as before?**
 
 Send the `[FFRAP]` lines of the log.
+
+**Round 82 results, step 5 (the main menu probe, build 26b6adfa, 2026-11-18).** Steps 1 to 4 were not reported yet. The files and screenshots are in `.reference/2026-11-18/`.
+- **The entry works with no pak.** `ffrap_apmenu on` (our own tag, never registered) added the row, put it before System and added it to the menu subsystem's maps in one tick. The scene list went from 8 to 9: FFR Bestiary's entry was there already, and both stayed. The user: "the menu looks good so far".
+- **The screen can be changed from Lua.** `layout` wrote the soft class with `Conv_SoftClassPathToSoftClassRef` into both the table row and the subsystem's copy, and read it back. Tutorial, Options and Journal each opened from the entry.
+- **Each screen opens empty**, as its Blueprint's defaults, since our row has no view model:
+  - Tutorial: one framed window with "TITLE", a white image box, "TEXT", two arrows and "1/1" (`WBP_Tutorial`: `Text_Title`, `SizeBox_2` with the image, `SizeBox_1` with `Text_Description`, `Overlay_ButtonNext`, `Overlay_ButtonPreview`, `HorizontalBox_215` with the page count).
+  - Options: the whole Options window with its tabs and empty rows. It is built on `WBP_TitlePanelLayout` (`Text_Title`, `Spacer_101`, `NamedSlot_93`), the same panel FFR Bestiary takes over in Help.
+  - Journal: the Quests page's two columns with "Goal", "Summary" and "Text" lines. It is the Quests page's own class, so the pool may hand our changes to the real Quests page.
+- **Text can be added.** `text` put a TextBlock into the Journal screen's root Overlay, at its top left.
+- In the trees, visibility 3 is HitTestInvisible and 4 is SelfHitTestInvisible.
+- **The choice: the Tutorial screen.** It is one window, it is not a main menu page of its own, and FFR Bestiary does not use it.
+
+**Built after these results (mod 0.61.0 build 0c2a8b95, world 0.30.0 build 109145bc):**
+- `ffrap_apmenu page`: the entry opens the Tutorial screen. The mod sets its title to "Archipelago", hides the image box, the arrows and the page count, and puts the seed's state in the description. Each tick it writes what differs from the screen, so if the game fills the screen again, the page comes back.
+- The page lists the goal, the tower lock (party members, Visions, Crystal Fragments), checks done of the total, items received, Tablet Shards held, the continents open and locked, the kinds of locations, and the start.
+- The client sends two new lines when they change: `cfg goal <kind> <shards> <shards needed>` and `cfg checks <done> <total>`.
+
+## Round 83 test plan (mod 0.61.0 build 0c2a8b95, world 0.30.0 build 109145bc)
+
+**Install:** copy `FFRArchipelago/Scripts`, and copy `dist/ff_resonance.apworld` into `custom_worlds`. Only the client changed, so the round 79 seed still plays. The client will warn that the seed's build is not its own; that warning is expected this time.
+
+**0. The builds.** The log should say `version 0.61.0 (build 0c2a8b95)`; the client `world version 0.30.0 (build 109145bc)`.
+
+**1. The page.** In game, run `ffrap_apmenu page`. The log lists the page's lines (`apmenu: page line: ...`). Open the main menu and pick Archipelago. **Does one window show, titled Archipelago, with the lines and no white box, arrows or "1/1"?** Send a screenshot. **Do all the lines fit, or is the text cut off?**
+
+**2. The numbers.** **Do the goal, the tower counts, the checks and the continents match the client and the game?** Open a chest or receive an item, then open the page again. **Do the checks and items received go up?**
+
+**3. Nothing else changed.** After the page, open System, Quests, Bestiary and System > Help, and look at a tutorial from Help. **Do they look and work as before?** A tutorial from Help should still show its own picture and text.
+
+**4. The round 82 plan's steps 1 to 4**, if not done yet.
+
+Send the `[FFRAP]` lines of the log.

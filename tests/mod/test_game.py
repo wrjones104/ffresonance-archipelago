@@ -2110,3 +2110,53 @@ L.execute("savedRoot, menuRoot = menuRoot, nil; G.ForgetObjects()")
 assert lua("select(2, G.APMENU.Ensure(ownTag, nil, say))") == "no DA_MainMenuRoot loaded"
 L.execute("menuRoot = savedRoot; G.ForgetObjects()")
 print("main menu entry: ok")
+
+# Round 82 result: the Tutorial screen opens from the entry as one framed window. The page sets
+# its title and description, hides the image box, the arrows and the page count, and writes only
+# what differs, so a screen the game fills again is put back on the next tick.
+TUTORIAL_PATH = "/Game/UI/Tutorial/WBP_TutorialLayout.WBP_TutorialLayout_C"
+L.execute(r"""
+local function widget(name, text)
+  local w = { name = name, text = text, vis = 4, cleared = false }
+  function w:IsValid() return true end
+  function w:HasAnyInternalFlags() return false end
+  function w:HasAnyFlags() return false end
+  function w:GetText() local s = self.text; return { ToString = function() return s end } end
+  function w:SetText(t) self.text = t:ToString() end
+  function w:GetVisibility() return self.vis end
+  function w:SetVisibility(v) self.vis = v end
+  function w:ClearHeightOverride() self.cleared = true end
+  return w
+end
+pageParts = {}
+for _, n in ipairs({ "SizeBox_2", "Overlay_ButtonNext", "Overlay_ButtonPreview", "HorizontalBox_215", "SizeBox_1" }) do
+  pageParts[n] = widget(n)
+end
+pageParts.Text_Title = widget("Text_Title", "TITLE")
+pageParts.Text_Description = widget("Text_Description", "TEXT")
+local inner = widget("WBP_Tutorial")
+-- the parts are in WBP_Tutorial's tree, not the layout's
+function inner:GetWidgetFromName(n) return pageParts[n:ToString()] end
+tutorialHost = setmetatable(widget("host"), { __tostring = function() return "WBP_MainMenuLayout_C_1.WBP_TutorialLayout_C_1" end })
+tutorialHost.active = true
+function tutorialHost:IsActivated() return self.active end
+function tutorialHost:GetWidgetFromName(n) if n:ToString() == "WBP_Tutorial" then return inner end return nil end
+local prevFAO = FindAllOf
+function FindAllOf(c) if c == "WBP_TutorialLayout_C" then return { tutorialHost } end return prevFAO(c) end
+says = {}
+""")
+page = lambda: L.eval(f'G.APMENU.Page("{TUTORIAL_PATH}", "Archipelago", "Goal: x\\nChecks: 2 of 5", say)')
+assert page() == "written"
+assert lua("pageParts.Text_Title.text") == "Archipelago" and lua("pageParts.Text_Description.text") == "Goal: x\nChecks: 2 of 5"
+for hidden in ("SizeBox_2", "Overlay_ButtonNext", "Overlay_ButtonPreview", "HorizontalBox_215"):
+    assert lua(f"pageParts.{hidden}.vis") == 1, hidden
+assert lua("pageParts.SizeBox_1.cleared") is True, "the text box may grow"
+first = lua("#says")
+assert first >= 6 and lua("says[1]") == "apmenu: page title", list(L.eval("says").values())
+assert page() == "same" and lua("#says") == first, "nothing to write, nothing told"
+L.execute('pageParts.Text_Description.text = "TEXT"; pageParts.SizeBox_2.vis = 4')   # the game fills it again
+assert page() == "written" and lua("pageParts.Text_Description.text").startswith("Goal: x")
+assert lua("pageParts.SizeBox_2.vis") == 1 and lua("#says") == first, "the same screen: the steps are told once"
+L.execute("tutorialHost.active = false")
+assert L.eval(f'select(2, G.APMENU.Page("{TUTORIAL_PATH}", "Archipelago", "x", say))') == "not open"
+print("archipelago page: ok")

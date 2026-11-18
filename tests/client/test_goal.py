@@ -122,6 +122,19 @@ async def main():
     ctx.write_new_items()
     shard_lines = [line for line in open(in_path, encoding="utf-8").read().splitlines() if line.startswith("item")]
     check("past the goal only the count shows", shard_lines[-1].endswith("Tablet Shard (2)"))
+    # Round 83: the goal and the checks done go to the mod for its Archipelago page, each time
+    # they change
+    progress_lines = lambda: [line for line in open(in_path, encoding="utf-8").read().splitlines()
+                              if line.startswith(("cfg\tgoal", "cfg\tchecks"))]
+    ctx.checked_locations, ctx.missing_locations = {1, 2}, {3, 4, 5}
+    before = len(progress_lines())
+    ctx.write_progress()
+    check("the goal and the checks", progress_lines()[before:] == ["cfg\tgoal\ttablet_shards\t2\t1", "cfg\tchecks\t2\t5"])
+    ctx.write_progress()
+    check("written once while nothing changes", len(progress_lines()) == before + 2)
+    ctx.checked_locations, ctx.missing_locations = {1, 2, 3}, {4, 5}
+    ctx.write_progress()
+    check("a check done: only the checks line", progress_lines()[before + 2:] == ["cfg\tchecks\t3\t5"])
 
     # Round 58: the final boss goal is the mod's `won 9056` line, or the ending's story 9000
     out_path = os.path.join(folder, "ap_out.txt")

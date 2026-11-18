@@ -26,7 +26,7 @@
 --   ffrap_inspect <class|path> [label]  one object's fields and functions to inspect_<name>[_label].tsv
 --   ffrap_title [list|add]       the Archipelago entry on the title menu (added at start-up)
 --   ffrap_notice [text]          show text with the game's quest-notice banner
---   ffrap_apmenu <step>          probe: an Archipelago entry in the main menu (info, on, layout, screens, tree, text, off)
+--   ffrap_apmenu <step>          probe: an Archipelago entry in the main menu (info, on, layout, screens, tree, text, page, off)
 --   ffrap_logo                   place the Archipelago logo on the mod's title line manually
 --   ffrap_layout <text>          log the panels holding some on-screen text
 --   ffrap_feed [on|off|test [plain]|check]  the item feed at the bottom right of the field HUD
@@ -399,7 +399,7 @@ local function newSession(key)
     state.slots, state.slotItems, state.bindPending, state.live = {}, {}, false, nil
     state.scouts = {}
     seedCfg.party, seedCfg.finalboss, seedCfg.chocobo, seedCfg.airship, seedCfg.continent, seedCfg.radar = nil, nil, nil, nil, nil, nil
-    seedCfg.quests = nil
+    seedCfg.quests, seedCfg.goal, seedCfg.checks = nil, nil, nil
     game.blankRadarParts = false
     if save.apObj ~= nil and save.apObj == save.obj and save.autoDone then save.reskip = true end
     save.obj = nil     -- judge the loaded save again for this session
@@ -449,6 +449,10 @@ local function readInbox(initial)
             seedCfg.finalboss = { characters = tonumber(f[3]) or 0, needCharacters = tonumber(f[4]) or 0,
                                   visions = tonumber(f[5]) or 0, needVisions = tonumber(f[6]) or 0,
                                   fragments = tonumber(f[7]) or 0, needFragments = tonumber(f[8]) or 0 }
+        elseif f[1] == "cfg" and f[2] == "goal" then
+            seedCfg.goal = { kind = f[3], shards = tonumber(f[4]) or 0, needShards = tonumber(f[5]) or 0 }
+        elseif f[1] == "cfg" and f[2] == "checks" then
+            seedCfg.checks = { done = tonumber(f[3]) or 0, total = tonumber(f[4]) or 0 }
         elseif f[1] == "cfg" and f[2] == "party" then
             local party = {}
             for id in (f[3] or ""):gmatch("%d+") do party[#party + 1] = tonumber(id) end
@@ -1797,15 +1801,68 @@ end)
 --   screens                       every instance of those screens: activated, visible
 --   tree                          the open entry's screen, widget by widget, to ffrap_apmenu.txt
 --   text                          one line of text on the open entry's screen
+--   page                          the entry opens the Tutorial screen, filled with the seed's state
 --   off                           stop adding it (what is in the menu stays until a restart)
 state.apMenuTick = function()
     local m = state.apMenu
-    local done, why = game.APMENU.Ensure(m.tag, m.layout ~= "system" and game.APMENU.LAYOUTS[m.layout] or nil, log)
+    local A = game.APMENU
+    local done, why = A.Ensure(m.tag, m.layout ~= "system" and A.LAYOUTS[m.layout] or nil, log)
     if done then log("apmenu: " .. done) end
     if why ~= m.failed then
         if why then log("apmenu: not yet: " .. why) end
         m.failed = why
     end
+    if m.page then
+        local wrote, whyPage = A.Page(A.LAYOUTS[m.layout], "Archipelago", table.concat(state.apMenuPage(), "\n"), log)
+        if wrote == "written" then log("apmenu: page written") end
+        if not wrote and whyPage ~= "not open" and whyPage ~= m.pageFailed then log("apmenu: page: " .. whyPage) end
+        m.pageFailed = whyPage
+    end
+end
+-- The Archipelago page's lines, from what the client has sent and the loaded save.
+state.apMenuPage = function()
+    if not seedCfg.heard then return { "No seed yet: start the Archipelago client and connect." } end
+    local lines = {}
+    local goal, lock = seedCfg.goal, seedCfg.finalboss
+    if goal and goal.kind == "tablet_shards" then
+        lines[#lines + 1] = string.format("Goal: receive %d Tablet Shards (%d so far)", goal.needShards, goal.shards)
+    elseif goal and goal.kind == "final_boss" then
+        lines[#lines + 1] = "Goal: win the last battle at the top of the Crystal Tower"
+    elseif goal then
+        lines[#lines + 1] = "Goal: " .. goal.kind
+    end
+    if lock and (lock.needCharacters > 0 or lock.needVisions > 0 or lock.needFragments > 0) then
+        lines[#lines + 1] = string.format("Tower: party members %d/%d, Visions %d/%d, Crystal Fragments %d/%d",
+            lock.characters, lock.needCharacters, lock.visions, lock.needVisions, lock.fragments, lock.needFragments)
+    end
+    if seedCfg.checks then
+        lines[#lines + 1] = string.format("Checks: %d of %d", seedCfg.checks.done, seedCfg.checks.total)
+    end
+    lines[#lines + 1] = "Items received: " .. state.applied
+    lines[#lines + 1] = "Tablet Shards held: " .. tostring(game.HeldCount(game.PALACE.item) or "?")
+    lines[#lines + 1] = ""
+    if locksOn() then
+        local open, locked = {}, {}
+        for _, c in ipairs(game.CONTINENTS) do
+            local name = c.name:sub(1, 1):upper() .. c.name:sub(2)
+            local list = game.ContinentOpen(c.name) and open or locked
+            list[#list + 1] = name
+        end
+        lines[#lines + 1] = "Continents open: " .. (#open > 0 and table.concat(open, ", ") or "none")
+        lines[#lines + 1] = "Continents locked: " .. (#locked > 0 and table.concat(locked, ", ") or "none")
+    else
+        lines[#lines + 1] = "Continents: no locks"
+    end
+    local kinds = {}
+    for _, k in ipairs({ { "shinies", "shinies" }, { "shards", "Tablet Shards" }, { "crystals", "crystals" },
+                         { "bosses", "bosses" }, { "radar", "radar treasures" }, { "quests", "side quests" } }) do
+        if seedCfg[k[1]] then kinds[#kinds + 1] = k[2] end
+    end
+    lines[#lines + 1] = "Locations: chests" .. (#kinds > 0 and ", " .. table.concat(kinds, ", ") or "")
+    lines[#lines + 1] = "Start: " .. (seedCfg.airship == false and ("on foot" .. (seedCfg.continent and
+        (" on " .. seedCfg.continent:sub(1, 1):upper() .. seedCfg.continent:sub(2)) or "")) or "in the airship")
+        .. (seedCfg.chocobo == false and "; the Chocobo is an item" or "")
+    return lines
 end
 command("ffrap_apmenu", function(p)
     local A = game.APMENU
@@ -1840,6 +1897,17 @@ command("ffrap_apmenu", function(p)
         m.layout = p[2]:lower()
         for _, line in ipairs(A.Layout(m.tag, A.LAYOUTS[m.layout], log)) do log("apmenu: " .. line) end
         notify("Archipelago menu entry opens " .. m.layout .. " (see the log)")
+    elseif what == "page" then
+        if not m then
+            state.apMenu = { tag = A.TAGS.own, layout = "system" }
+            m = state.apMenu
+            log("apmenu: on with tag " .. m.tag .. " for the page")
+            state.apMenuTick()
+        end
+        m.layout, m.page = "tutorial", true
+        for _, line in ipairs(A.Layout(m.tag, A.LAYOUTS.tutorial, log)) do log("apmenu: " .. line) end
+        for _, line in ipairs(state.apMenuPage()) do log("apmenu: page line: " .. line) end
+        notify("Archipelago page on. Open the main menu and pick Archipelago.")
     elseif what == "screens" then
         local lines = A.Screens()
         for _, line in ipairs(lines) do log("apmenu: " .. line) end
@@ -1869,7 +1937,7 @@ command("ffrap_apmenu", function(p)
         log("apmenu: off")
         notify("Archipelago menu entry: no longer added (restart the game to remove it)")
     else
-        notify("Usage: ffrap_apmenu info | on [own|vision|equipment|action] | layout <name> | screens | tree | text | off")
+        notify("Usage: ffrap_apmenu info | on [own|vision|equipment|action] | layout <name> | screens | tree | text | page | off")
     end
 end)
 

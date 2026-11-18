@@ -412,3 +412,7 @@ Along the same lines, I would also want an option for players to start with all 
 - `tree`: the open entry's screen, widget by widget, to `ffrap_apmenu.txt`.
 - `text`: one line of text on the open entry's screen.
 - `off`: stops adding it. A game restart takes it out.
+
+**Round 82 result (build 26b6adfa):** the entry works with no pak and sits beside FFR Bestiary's. Our own unregistered tag is enough. The screen it opens can be set from Lua. Tutorial, Options and Journal all opened empty. The Tutorial screen is the host: one framed window, and no other main menu page or mod uses it. Options shares its panel with Help (FFR Bestiary's), and Journal is the Quests page's own class.
+
+**Built (round 83, build 0c2a8b95):** `ffrap_apmenu page` fills the Tutorial screen: the title "Archipelago", the seed's state in the description, and the image box, arrows and page count hidden. The client sends `cfg goal` and `cfg checks` for it. Still to do once the page is seen: turn the entry on by default for a seed, lay the page out with the game's heading and framed-row widgets (as FFR Bestiary does), and decide what the arrows could page through (for example, the received items).
