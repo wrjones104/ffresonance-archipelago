@@ -151,7 +151,7 @@ These commands run in UE4SS's `ConsoleEnablerMod` console for development and de
 | `ffrap_grant <kind> <id> [n]` | Grant directly without the bridge: `item`, `gil`, `vision`, `unit`, `flag` |
 | `ffrap_dump [rows]` | Chest and shiny discovery dump to `ffrap_dump.txt` |
 | `ffrap_export` | Export every chest table row to `chests.tsv` |
-| `ffrap_blank [on\|off]` | Toggle chest blanking (chests that are AP locations give 1 gil; id 13000+ except Magicite keep vanilla) |
+| `ffrap_blank [on\|off]` | Toggle chest blanking (chests that are AP locations give nothing; id 13000+ except Magicite keep vanilla) |
 | `ffrap_sync` | Report every location in `seen.tsv` that the loaded session save marks as looted |
 | `ffrap_bind` | Link the loaded save to the client's session (same as `/bind` in the client) |
 | `ffrap_reset` | Reset the loaded save's applied-item count to 0 so all received items re-apply |

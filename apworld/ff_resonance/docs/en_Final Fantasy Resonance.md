@@ -2,7 +2,7 @@
 
 ## What does randomization do to this game?
 
-Chests that hold consumables, equipment or gil become Archipelago locations. Their contents go into the multiworld item pool, and the chests themselves give 1 gil. The real reward arrives from the server, from whichever world it was placed in.
+Chests that hold consumables, equipment or gil become Archipelago locations. Their contents go into the multiworld item pool, and the chests themselves give nothing. The real reward arrives from the server, from whichever world it was placed in.
 
 Optionally (experimental), the shining spots ("shinies") on the world map are locations too. Locations are named after the game's own maps, for example "Village of Kol Chest 1".
 
@@ -16,7 +16,7 @@ The **Goal** option can ask for a story checkpoint instead, set by **Goal Story 
 
 ## What does another world's item look like in Final Fantasy Resonance?
 
-The chest gives 1 gil, and an on-screen message names the item and the player it was sent to.
+The chest gives nothing of its own, and its pop-up names the item and the player it was sent to.
 
 ## What happens when the player receives an item?
 

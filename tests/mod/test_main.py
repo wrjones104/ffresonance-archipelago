@@ -80,8 +80,9 @@ G = (require("game"))
 ''')
 lua = L.eval
 assert lua("G.BlankChests(true)") == 4                       # 2 rows x 2 tables; the trap row is skipped
-assert lua("root.rows.a.ItemId") == -1 and lua("root.rows.a.Money") == 1
-assert lua("parent.rows.b.Money") == 1 and lua("root.rows.t.ItemId") == 5
+# Round 81: blank is nothing (ItemId -1, ItemNum 0, Money 0), which still opens with its pop-up
+assert (lua("root.rows.a.ItemId"), lua("root.rows.a.ItemNum"), lua("root.rows.a.Money")) == (-1, 0, 0)
+assert lua("parent.rows.b.Money") == 0 and lua("root.rows.t.ItemId") == 5
 # a chest spawns while blanking is on: it copies the already-blank row
 L.execute("live[1] = (function() local r = {} for k, v in pairs(root.rows.a) do r[k] = v end return r end)()")
 L.execute('''local r = live[1]; local a = { m_Id = r.ID, m_IsOpen = false, m_UniqueId = 101, TypeData = { ID = 101 }, m_TreasureBoxData = r }
@@ -92,19 +93,6 @@ assert lua("G.BlankChests(false)") == 5                      # 4 table rows + th
 assert lua("live[1].m_TreasureBoxData.ItemId") == 10100, "0.2.0 bug: live chest stayed blank"
 assert lua("root.rows.b.Money") == 300 and lua("parent.rows.a.ItemId") == 10100
 assert lua("G.BlankChests(false)") == 0                      # idempotent
-# Round 81 probe (ffrap_empty chest): a marked row is blanked to nothing in place of 1 gil, stays
-# so on later passes, goes back to 1 gil when unmarked, and to its original when blanking ends
-L.execute('G.emptyRows["3020:1"] = true')
-assert lua("G.BlankChests(true)") == 5                       # 4 table rows + the live chest
-assert (lua("root.rows.a.ItemId"), lua("root.rows.a.ItemNum"), lua("root.rows.a.Money")) == (-1, 0, 0)
-assert lua("live[1].m_TreasureBoxData.Money") == 0 and lua("root.rows.b.Money") == 1, "only the marked row"
-assert lua("G.BlankChests(true)") == 0, "an empty row stays empty"
-L.execute("G.emptyRows = {}")
-assert lua("G.BlankChests(true)") == 3 and lua("root.rows.a.Money") == 1, "unmarked: back to 1 gil"
-L.execute('G.emptyRows["3020:1"] = true')
-lua("G.BlankChests(true)")
-assert lua("G.BlankChests(false)") == 5 and lua("root.rows.a.ItemId") == 10100, "an empty row restores too"
-L.execute("G.emptyRows = {}")
 print("blanking: ok")
 
 # 3. main with a stub game (0.3.1)
@@ -456,7 +444,7 @@ G = (require("game"))
 ''')
 assert L.eval("G.BlankChests(true)") == 2
 assert L.eval("root.rows.key.ItemId") == 30006, "a key-item chest must keep its content"
-assert L.eval("root.rows.gil.Money") == 1 and L.eval("root.rows.a.ItemId") == -1
+assert L.eval("root.rows.gil.Money") == 0 and L.eval("root.rows.a.ItemId") == -1
 assert L.eval("G.BlankChests(false)") == 2 and L.eval("root.rows.gil.Money") == 400
 print("blanking limit: ok")
 
@@ -1884,7 +1872,7 @@ L.execute(SCALE_STUB)
 G.chests = L.table()
 G.story = 8000
 tick(12)
-assert G.questPatches and G.questPatches >= 1, "the reward rows give the pop-up's stand-in"
+assert G.questPatches and G.questPatches >= 1, "the reward rows lose the location's item"
 assert L.eval(f"G.progress[{MECHABO_COUNTER}]") == MECHABO_REQUEST, "Verun's repair request"
 L.execute(f"G.progress[{ZILE_COUNTER}] = {ZILE_REWARD - 10}")
 tick(12)

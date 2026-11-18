@@ -30,7 +30,7 @@
 --   ffrap_layout <text>          log the panels holding some on-screen text
 --   ffrap_feed [on|off|test [plain]|check]  the item feed at the bottom right of the field HUD
 --   ffrap_find <text>            game classes, functions and fields matching the text, to find_<text>.txt
---   ffrap_blank [on|off]         chests that are Archipelago locations give 1 gil instead
+--   ffrap_blank [on|off]         chests that are Archipelago locations give nothing instead
 --   ffrap_sync                   report every known location the save says is looted
 --   ffrap_bind                   link the loaded save to the client's session (also /bind in the client)
 --   ffrap_reset                  set the loaded save's applied-item count to 0 (re-grants everything to it!)
@@ -943,7 +943,7 @@ local function scanLoot()
         log("map " .. tostring(visit.mapId) .. " -> " .. mapId .. " (save's Map.mapId " .. tostring(game.MapId()) .. ")")
         newVisit(mapId)
         if state.blank and sessionSave() then
-            log("chest blanking: " .. game.BlankChests(true) .. " rows set to 1 gil")
+            log("chest blanking: " .. game.BlankChests(true) .. " rows emptied")
         end
     end
     -- Blank shinies before the map settles so none can be picked up before blanking takes effect.
@@ -1542,7 +1542,7 @@ local function tick()
                 end
                 if newSave and seedCfg.quests then
                     local okQuests, written = pcall(game.QuestsPatch)
-                    log("quests: " .. tostring(written) .. " reward rows set to the pop-up's stand-in" .. (okQuests and "" or " (failed: " .. tostring(written) .. ")"))
+                    log("quests: " .. tostring(written) .. " reward rows without the location's item" .. (okQuests and "" or " (failed: " .. tostring(written) .. ")"))
                 end
                 -- In open-world seeds, one Antlion defeat permanently clears the sandpit path between Kol and Grandport.
                 if newSave then
@@ -2647,49 +2647,6 @@ bossTest.arm = function(id, quiet)
     bossTest.quiet = quiet
     return ok, detail
 end
--- ffrap_empty chest|shiny|quest <id>|off (IDEAS.md idea 15, way 1): this map's closed chests,
--- this map's shinies, or one quest's reward rows give nothing, in place of 1 gil or the stand-in
--- Potion. Opening one shows whether the game still opens it, saves it as taken and shows a pop-up
--- of its own. Each step is logged before it runs. A game restart undoes it.
-command("ffrap_empty", function(p)
-    local what = tostring(p and p[1] or ""):lower()
-    local done
-    if what == "chest" then
-        if not state.blank then
-            notify("ffrap_empty chest: chest blanking is off for this save")
-            return
-        end
-        local keys = {}
-        for _, c in ipairs(game.LiveChests()) do
-            if not c.open and c.rowId and c.rowId >= 0 then keys[#keys + 1] = c.rowMap .. ":" .. c.rowId end
-        end
-        log("empty: marking " .. #keys .. " closed chests: " .. table.concat(keys, ", "))
-        for _, k in ipairs(keys) do game.emptyRows[k] = true end
-        log("empty: writing the rows")
-        done = game.BlankChests(true) .. " chest rows emptied"
-    elseif what == "shiny" then
-        local n = 0
-        for _, s in ipairs(game.LiveFieldItems()) do
-            if not s.open and ((s.itemId or -1) >= 0 or (s.money or 0) > 0) then
-                log("empty: shiny uid " .. tostring(s.uid) .. " (item " .. tostring(s.itemId) .. ", money " .. tostring(s.money) .. ")")
-                if game.EmptyFieldItem(s) then n = n + 1 end
-            end
-        end
-        done = n .. " shinies emptied"
-    elseif what == "quest" and tonumber(p[2]) then
-        local key = "quest:" .. tonumber(p[2])
-        log("empty: emptying the reward rows of " .. key)
-        done = game.EmptyQuestRewards(key) .. " reward rows of " .. key .. " emptied"
-    elseif what == "off" then
-        game.emptyRows = {}
-        done = game.BlankChests(state.blank) .. " chest rows back to 1 gil (shinies and quests: restart the game)"
-    else
-        notify("Usage: ffrap_empty chest | shiny | quest <id> | off")
-        return
-    end
-    log("empty: " .. done)
-    notify("Empty test: " .. done)
-end)
 bossTest.tick = function()
     if game.GetFlag(game.BOSS_TEST_FLAG) ~= true then return end
     game.SetFlag(game.BOSS_TEST_FLAG, false)

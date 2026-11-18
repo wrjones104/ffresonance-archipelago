@@ -578,10 +578,11 @@ function G.ExportChests(path)
     return true, #rows .. " rows"
 end
 
--- Chest blanking: every chest that is an Archipelago location gives 1 gil instead of its
--- vanilla reward, because the real reward comes from the server. 1 gil is the shape the game's
--- own gil chests use (ItemId -1, Money N). Turning it off restores the originals, and a game
--- restart restores them anyway.
+-- Chest blanking: every chest that is an Archipelago location gives nothing instead of its
+-- vanilla reward, because the real reward comes from the server. Round 81: an empty chest still
+-- opens, is saved as taken and shows the game's pop-up ("0 gil"), which the mod writes into; until
+-- then they gave 1 gil. Turning it off restores the originals, and a game restart restores them
+-- anyway.
 --
 -- Chests holding an item at or above SHUFFLE_ID_LIMIT (visions, key items, valuables) are not
 -- locations and keep their content. The apworld uses the same limit (tools/gen_apworld_data.py).
@@ -591,24 +592,14 @@ local MAGICITE_FIRST, MAGICITE_LAST = 25000, 25002   -- Magicite chests are shuf
 -- Key originals by the row's own mapId and ID rather than a spawned actor's copy, so chests
 -- spawned while blanking is active restore to their true vanilla contents when unblanked.
 local blankOriginals = {}   -- "mapId:ID" -> { ItemId, ItemNum, Money } as the game shipped them
-local BLANK = { ItemId = -1, ItemNum = 1, Money = 1 }
--- ffrap_empty (IDEAS.md idea 15, way 1): the rows in G.emptyRows ("mapId:ID") are blanked to
--- nothing in place of 1 gil, to see whether an empty chest opens with no pop-up of its own.
-BLANK.EMPTY = { ItemId = -1, ItemNum = 0, Money = 0 }
-G.emptyRows = {}
-
-function BLANK.is(row, s)
-    return row.ItemId == s.ItemId and row.Money == s.Money and row.ItemNum == s.ItemNum
-end
+local BLANK = { ItemId = -1, ItemNum = 0, Money = 0 }
 
 local function RowKey(row)
     return tostring(Int(row.mapId)) .. ":" .. tostring(Int(row.ID))
 end
 
--- An empty row counts as blank only when the probe made it so: a chest the game ships empty
--- keeps its own shape as its original.
 local function IsBlank(row)
-    return BLANK.is(row, BLANK) or (G.emptyRows[RowKey(row)] == true and BLANK.is(row, BLANK.EMPTY))
+    return row.ItemId == BLANK.ItemId and row.Money == BLANK.Money and row.ItemNum == BLANK.ItemNum
 end
 
 -- Records a row's reward the first time it is seen un-blanked.
@@ -628,9 +619,8 @@ local function BlankRow(row, on)
     if not shuffled then return false end
     if on then
         Remember(row)
-        local want = G.emptyRows[RowKey(row)] and BLANK.EMPTY or BLANK
-        if BLANK.is(row, want) then return false end
-        row.ItemId, row.ItemNum, row.Money = want.ItemId, want.ItemNum, want.Money
+        if IsBlank(row) then return false end
+        row.ItemId, row.ItemNum, row.Money = BLANK.ItemId, BLANK.ItemNum, BLANK.Money
         return true
     end
     local orig = blankOriginals[RowKey(row)]
@@ -1512,7 +1502,7 @@ function G.OnField()
     return FeedHost() ~= nil
 end
 
--- Blanks a shiny actor that is an AP location to 1 gil (matching blanked chests), using the same
+-- Blanks a shiny actor that is an AP location to nothing (matching blanked chests), using the same
 -- shuffle limits (`shinies`) and Tablet Shards (`shards`) filter as the apworld. Returns true if modified.
 local TABLET_SHARD = 25004
 function G.BlankFieldItem(e, shinies, shards)
@@ -1706,9 +1696,9 @@ end
 -- -------------------------------------------------------------------------------------------
 -- The chest pop-up
 -- -------------------------------------------------------------------------------------------
--- Blanked chests give 1 gil, so the general dialog box (WBP_DialogBox_C) shows "You obtained
+-- Blanked chests give nothing (1 gil before round 81), and the general dialog box (WBP_DialogBox_C) still shows "You obtained
 -- the following:" over "(gil icon) 1". Rewrites Text_Message to the scouted AP item and collapses
--- Overlay_Custom (the 1 gil item line), restoring Overlay_Custom when the dialog closes.
+-- Overlay_Custom (the "0 gil" item line), restoring Overlay_Custom when the dialog closes.
 
 local POPUP_MARKER = "obtained"       -- in the game's English chest message
 local POPUP_ITEM_LINE = "Overlay_Custom"
@@ -2436,69 +2426,41 @@ function G.PalaceSync()
     return line
 end
 
--- Each reward row's first item becomes the pop-up's stand-in Potion: that item is the location's
--- now. Gil and a second item stay. A vision comes out (it is an item of its own in the world):
--- the list is emptied and built again without it. Safe to run again. Returns the rows written.
+-- Each reward row loses the quest's location item (`item` in quests.lua) and any vision (an item
+-- of its own in the world). Gil and other items stay. Round 81: a row left empty still completes
+-- the quest and shows the game's pop-up for the mod to write into, so no stand-in is needed. Safe
+-- to run again: a row without the item is left alone. Returns the rows written.
 G.VISION_IDS = { first = 13000, last = 13999 }
 function G.QuestsPatch()
-    local rows = {}
+    local items = {}
     for _, q in ipairs(G.QUESTS) do
-        for _, r in ipairs(q.rows) do rows[r] = true end
+        for _, r in ipairs(q.rows) do items[r] = q.item end
     end
     local written = 0
     EachTalkRow(function(key, row)
-        if not rows[key] then return end
+        local item = items[key]
+        if not item then return end
         local list = row.ObtainItemList
-        local keep, first, vision = {}, nil, false
+        local keep, took, changed = {}, false, false
         for i = 1, #list do
             local id, num = Int(list[i].ID), Int(list[i].Num)
-            if id >= G.VISION_IDS.first and id <= G.VISION_IDS.last then vision = true
-            elseif id ~= -1 and not first then first = i
-            else keep[#keep + 1] = { id = id, num = num } end
-        end
-        if not first then return end
-        if not vision then
-            if Int(list[first].ID) == BOSS_STAND_IN and Int(list[first].Num) == 1 then return end
-            list[first].ID, list[first].Num = BOSS_STAND_IN, 1
-        else
-            list:Empty()
-            local _ = list[1]
-            list[1].ID, list[1].Num = BOSS_STAND_IN, 1
-            for i, e in ipairs(keep) do
-                local _ = list[i + 1]
-                list[i + 1].ID, list[i + 1].Num = e.id, e.num
+            if id >= G.VISION_IDS.first and id <= G.VISION_IDS.last then
+                changed = true
+            elseif id == item and not took then
+                took, changed = true, true
+            else
+                keep[#keep + 1] = { id = id, num = num }
             end
+        end
+        if not changed then return end
+        list:Empty()
+        for i, e in ipairs(keep) do
+            local _ = list[i]
+            list[i].ID, list[i].Num = e.id, e.num
         end
         written = written + 1
     end)
     return written
-end
-
--- ffrap_empty quest: empties the quest's reward rows (no stand-in, no gil), to see whether the
--- row still runs, completes the quest and moves its counter with nothing to show. QuestsPatch
--- leaves an empty list alone. Returns the rows emptied.
-function G.EmptyQuestRewards(key)
-    local rows = {}
-    for _, q in ipairs(G.QUESTS) do
-        if q.key == key then
-            for _, r in ipairs(q.rows) do rows[r] = true end
-        end
-    end
-    local emptied = 0
-    EachTalkRow(function(name, row)
-        if rows[name] and #row.ObtainItemList > 0 then
-            row.ObtainItemList:Empty()
-            emptied = emptied + 1
-        end
-    end)
-    return emptied
-end
-
--- ffrap_empty shiny: a shiny on the map with nothing in it. BlankFieldItem leaves it so.
-function G.EmptyFieldItem(e)
-    return (pcall(function()
-        e.actor.m_ItemId, e.actor.m_ItemNum, e.actor.m_Money = BLANK.EMPTY.ItemId, BLANK.EMPTY.ItemNum, BLANK.EMPTY.Money
-    end))
 end
 
 -- Rewrites the current map's story boss trigger, NPC pawn and shared encounter/win rows so the

@@ -1112,3 +1112,21 @@ Send the `[FFRAP]` lines of the log.
 - **The quest pop-up fix works in game.** Rogue Rebel also sets its counter after its pop-up: `chest pop-up for quest:30 before its check` at 12:03:22, `check quest:30` at 12:03:25. Without build 42898077's fix, this quest would have shown the Potion.
 - **No Magicite and no Rose Circlet came, and the quest log shows Rogue Rebel complete.** So the pop-up was the empty row's own, as with chests, and the quest log's prize list gives nothing by itself.
 - **Way 1 works for chests, shinies and quests:** an empty reward opens or completes as normal, the check goes out, and the game still shows its pop-up for the mod to write into. The 1 gil and the stand-in Potion are not needed. Not tried: the radar treasures and the boss rewards, which use the Potion too.
+
+**Built after these results (mod 0.61.0 build 1d6caf0a, world 0.30.0 build dbf83717):** chests and shinies are blanked to nothing (`ItemId -1, ItemNum 0, Money 0`) in place of 1 gil, and each quest reward row loses the location's item (`item` in `quests.lua`) in place of the stand-in Potion. Gil and a second item in a quest row stay, as before. The radar treasures and the boss rewards keep the Potion: they were not tried empty. The `ffrap_empty` probe is gone. The apworld changed only in its game page (no more 1 gil).
+
+## Round 82 test plan (mod 0.61.0 build 1d6caf0a, world 0.30.0 build dbf83717)
+
+**Install:** copy `FFRArchipelago/Scripts`, and copy `dist/ff_resonance.apworld` into `custom_worlds` (only its game page changed; the round 79 seed still works).
+
+**0. The builds.** The log should say `version 0.61.0 (build 1d6caf0a)` and `chest blanking on for this save: N rows changed`; the client `world version 0.30.0 (build dbf83717)`. `quests: N reward rows without the location's item`.
+
+**1. Chests and shinies.** Open a few chests and pick up a few shinies. **Does each show the Archipelago item, with no gil line?** A chest without a scout would show "0 gil".
+
+**2. Quests.** Finish any quest. **One pop-up with the Archipelago item, the quest complete in the log, and no vanilla item?** A quest with gil (Rear Support, Ahoy!, The Weight of Mercy) should still pay its gil.
+
+**3. Leave and come back.** After opening chests in a dungeon, leave and come back. **Are they still open?**
+
+**4. The round 81 plan's steps 1 to 3 and 5** still stand (character quest pop-ups, the open items from rounds 79 and 80, the crash trace).
+
+Send the `[FFRAP]` lines of the log.

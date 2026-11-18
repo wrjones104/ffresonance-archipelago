@@ -361,11 +361,12 @@ function shiny(id, money, open) local a = { m_ItemId = id, m_ItemNum = 2, m_Mone
   return { actor = a, itemId = id, money = money, open = open } end
 s1, s2, s3, s4, s5 = shiny(10302, -1), shiny(25004, -1), shiny(-1, -1), shiny(10302, -1, true), shiny(-1, 500)""")
 assert lua("G.BlankFieldItem(s1, false, true)") is False, "shards only: a normal shiny stays"
-assert lua("G.BlankFieldItem(s1, true, false)") is True and lua("s1.actor.m_ItemId") == -1 and lua("s1.actor.m_Money") == 1
-assert lua("G.BlankFieldItem(s5, true, false)") is True and lua("s5.actor.m_Money") == 1, "gil too"
+assert lua("G.BlankFieldItem(s1, true, false)") is True and lua("s1.actor.m_ItemId") == -1 and lua("s1.actor.m_Money") == 0
+assert lua("s1.actor.m_ItemNum") == 0, "nothing in it (round 81)"
+assert lua("G.BlankFieldItem(s5, true, false)") is True and lua("s5.actor.m_Money") == 0, "gil too"
 assert lua("G.BlankFieldItem(s2, true, false)") is False and lua("s2.actor.m_ItemId") == 25004, "without the option a Tablet Shard stays"
 assert lua("G.BlankFieldItem(s3, true, true)") is False and lua("G.BlankFieldItem(s4, true, true)") is False
-L.execute("s1.itemId, s1.money = -1, 1")
+L.execute("s1.itemId, s1.money = -1, 0")
 assert lua("G.BlankFieldItem(s1, true, true)") is False, "already blank"
 # Round 47: with the option a Tablet Shard shiny is blanked too; another key item never is
 assert lua("G.BlankFieldItem(s2, false, true)") is True and lua("s2.actor.m_ItemId") == -1
@@ -386,7 +387,7 @@ libs["/Game/Datatable/Map/Gimmick/TreasureBox/CDT_MapGimmickTreasureBox.CDT_MapG
   ForEachRow = function(_, fn) for _, r in ipairs(chestRows) do fn("r", r) end end }
 """)
 assert lua("G.BlankChests(true)") == 2
-assert lua("chestRows[1].ItemId") == -1 and lua("chestRows[1].Money") == 1, "Magicite is blanked"
+assert lua("chestRows[1].ItemId") == -1 and lua("chestRows[1].Money") == 0, "Magicite is blanked"
 assert lua("chestRows[2].ItemId") == 20016, "a key item stays"
 assert lua("G.BlankChests(false)") == 2 and lua("chestRows[1].ItemId") == 25000, "and it comes back"
 # Round 75: with the radar's treasures on, Mt. Reizan's chest with the Resonance Stone is a location

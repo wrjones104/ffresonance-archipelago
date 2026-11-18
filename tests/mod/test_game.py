@@ -1798,9 +1798,8 @@ assert L.eval("G.RadarPatch()") == 0
 assert L.eval("#G.RADAR") == 13 and L.eval("G.RADAR[13].flag") == 716
 print("radar rows: ok")
 
-# Round 78: a side quest's reward row gives the pop-up's stand-in Potion (1) for its first item,
-# and keeps its gil and a second item. A row with a vision is emptied and built again without the
-# vision. The list here behaves like the engine's array: Empty() clears it, and reading one index
+# Round 78: a side quest's reward row loses the location's item (round 81: no stand-in Potion),
+# and keeps its gil and a second item. A vision comes out too. The list here behaves like the engine's array: Empty() clears it, and reading one index
 # past the end adds an element.
 L.execute(r"""
 local function itemList(entries)
@@ -1840,21 +1839,16 @@ end
 """)
 QUEST_ROWS_TO_CHANGE = 4
 assert L.eval("G.QuestsPatch()") == QUEST_ROWS_TO_CHANGE
-assert L.eval("rewards('SubEv_C01_Zairu_04')") == "1x1 -1x500", "the stand-in, and the gil stays"
-assert L.eval("rewards('ChrEv_0340_005_01')") == "1x1", "Amelia: the Magicite is the location's, the vision comes out"
-assert L.eval("rewards('ChrEv_0420_005_01')") == "1x1", "Ayaka: the vision first, then the Magicite Cryst"
-assert L.eval("rewards('SubEv_C01_Chloe_04')") == "1x1 25000x1", "the Prayer Beads are the location's; the Shard stays"
-assert L.eval("G.QuestsPatch()") == 0, "nothing to write the second time"
+assert L.eval("rewards('SubEv_C01_Zairu_04')") == "-1x500", "the location's item goes, the gil stays"
+assert L.eval("rewards('ChrEv_0340_005_01')") == "", "Amelia: the Magicite is the location's, the vision comes out"
+assert L.eval("rewards('ChrEv_0420_005_01')") == "", "Ayaka: the vision first, then the Magicite Cryst"
+assert L.eval("rewards('SubEv_C01_Chloe_04')") == "25000x1", "the Prayer Beads are the location's; the Shard stays"
+assert L.eval("G.QuestsPatch()") == 0, "nothing to write the second time: the Shard is not the location's"
 # quests.lua, generated from data/quests.tsv: 28 quests, each with a counter, a value and rows
 assert L.eval("#G.QUESTS") == 28
 assert L.eval("G.QUESTS[1].key") == "quest:0" and L.eval("G.QUESTS[1].counter") == 1 and L.eval("G.QUESTS[1].value") == 50
 assert L.eval("G.MECHABO.counter") == 16 and L.eval("G.MECHABO.start") == 10
-# Round 81 probe (ffrap_empty quest): the quest's reward rows give nothing, not even the gil, and
-# QuestsPatch leaves the empty list alone
-assert L.eval("G.EmptyQuestRewards('quest:13')") == 1
-assert L.eval("rewards('SubEv_C01_Zairu_04')") == "", L.eval("rewards('SubEv_C01_Zairu_04')")
-assert L.eval("G.QuestsPatch()") == 0 and L.eval("rewards('SubEv_C01_Zairu_04')") == ""
-assert L.eval("G.EmptyQuestRewards('quest:13')") == 0, "already empty"
+assert L.eval("G.QUESTS[1].item") == 12050, "the location's item, which the rows lose"
 print("quest rows: ok")
 
 # Round 73: the Sworn Six's three assist skills in the Behemoth fight deal a fixed 1 damage, and
