@@ -1059,3 +1059,7 @@ Built during round 79, before its results. The plan gets the round 79 fixes too.
 - **2. A safe in view.** Stand in the palace and receive a shard that pays for a new safe. **Does that safe open at once, or only after you leave and come back?**
 - **3. The princess.** Talk to her once. **Does she take the shards and skip the "earned a chest" scenes?** The `palace:` line should then read 0 shards held, with the same steps paid. If you reach 28 turned in, does her milestone talk play?
 - **4. A save from before.** On a save where you already turned in shards the old way, the counter should stay where it was or go up, never down.
+
+**Results so far (build cac73e78, 2026-11-18):**
+- **Walk in with no talk: works.** On the user's save (6 turned in, 4 held), the 9-shard safe opened.
+- **A safe in view: only after a new visit.** Three shards sent from Archipelago while in the palace opened the next safe only after leaving and coming back. Then it opened at once. Left as it is (IDEAS.md idea 37 has the likely fix).
