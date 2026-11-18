@@ -75,7 +75,7 @@ class TestDefault(FFResonanceTestBase):
     def test_each_unlock_opens_its_continent(self) -> None:
         self.collect_by_name(["Pharm Unlock"])
         self.assertTrue(self.multiworld.state.can_reach_region("Pharm", self.player))
-        self.assertTrue(self.multiworld.get_location("Pharm - Dragon's Maw - NE Alcove near East Save Point Chest", self.player).can_reach(self.multiworld.state))
+        self.assertTrue(chest_location(self, "chest:3260:2").can_reach(self.multiworld.state), "Mt. Reizan, below Ignis")
         self.assertFalse(self.multiworld.state.can_reach_region("Gronoa", self.player))
 
     def test_places_with_no_route_are_not_locations(self) -> None:
@@ -309,17 +309,37 @@ class TestDirnadoOnFoot(FFResonanceTestBase, real_defaults=True):
         self.assertTrue(self.reachable("Dirnado - Wind Shrine - Upper-West Corridor Chest"))
 
 
-class TestDragonsMawOnFoot(FFResonanceTestBase):
-    """Round 74 (a tester): on foot, Intangir (tier D) holds Dragon's Maw and the world map past its
-    north door. Tier D wants the Airship, and the Airship lands on the north side, so on foot
-    Dragon's Maw needs the Airship."""
-    options = {"start_with_airship": False, "starting_continent": "pharm"}
+DRAGONS_MAW_CHESTS = [f"chest:3010:{n}" for n in range(7)]
+DRAGONS_MAW_NORTH_SHINY = "shiny:1000:149"
 
-    def test_dragons_maw_needs_the_airship(self) -> None:
-        chest = chest_location(self, "chest:3010:0")
-        self.assertFalse(chest.can_reach(self.multiworld.state))
+
+class TestDragonsMaw(FFResonanceTestBase):
+    """Round 78 (the user): every chest in Dragon's Maw is past Intangir, airship or not. The seed
+    started with the airship, which put all of Dragon's Maw in logic while Intangir was not."""
+    options = {"start_with_airship": True, "starting_continent": "pharm", "include_shinies": True}
+
+    def test_dragons_maw_needs_intangir(self) -> None:
+        state = self.multiworld.state
+        chests = [chest_location(self, key) for key in DRAGONS_MAW_CHESTS]
+        north = self.multiworld.get_location(NAME_OF_KEY[DRAGONS_MAW_NORTH_SHINY], self.player)
+        self.assertTrue(north.can_reach(state), "the airship lands by the north door")
+        self.assertEqual([c.name for c in chests if c.can_reach(state)], [], "not before Intangir")
+        self.collect_all_but([])
+        self.assertTrue(all(c.can_reach(state) for c in chests))
+
+
+class TestDragonsMawOnFoot(FFResonanceTestBase):
+    """Round 74 (a tester): on foot, Intangir (tier D) holds the world map past Dragon's Maw's north
+    door. Tier D wants the Airship, and the Airship lands on the north side, so on foot that shiny
+    needs the Airship."""
+    options = {"start_with_airship": False, "starting_continent": "pharm", "include_shinies": True}
+
+    def test_the_north_side_needs_the_airship(self) -> None:
+        north = self.multiworld.get_location(NAME_OF_KEY[DRAGONS_MAW_NORTH_SHINY], self.player)
+        self.assertFalse(north.can_reach(self.multiworld.state))
         self.collect_by_name(["Airship"])
-        self.assertTrue(chest.can_reach(self.multiworld.state))
+        self.assertTrue(north.can_reach(self.multiworld.state))
+        self.assertFalse(chest_location(self, "chest:3010:0").can_reach(self.multiworld.state), "Intangir")
 
 
 class TestUnshuffledVisions(FFResonanceTestBase):

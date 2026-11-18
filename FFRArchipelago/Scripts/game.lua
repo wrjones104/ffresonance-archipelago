@@ -427,7 +427,8 @@ end
 -- The chests in the loaded maps. Each carries a copy of its chest table row in
 -- m_TreasureBoxData, so `rowMap` and `rowId` are the row's own mapId and ID: the location key,
 -- whatever map the game currently reports. `uid` (m_Id), `uniqueId` (m_UniqueId) and `typeId`
--- (TypeData.ID) are inspected for save-key matching (`m_UniqueId` is used by the save).
+-- (TypeData.ID) are inspected for save-key matching (`m_UniqueId` is used by the save). `x`, `y`:
+-- where it stands, for the player-reach test (round 79).
 function G.LiveChests()
     local out = {}
     local ok, all = pcall(FindAllOf, "CPP_MapGimmick_TreasureBox")
@@ -445,6 +446,10 @@ function G.LiveChests()
                 end)
                 pcall(function() e.uniqueId = Int(c.m_UniqueId) end)
                 pcall(function() e.typeId = Int(c.TypeData.ID) end)
+                pcall(function()
+                    local loc = c:K2_GetActorLocation()
+                    e.x, e.y = loc.X, loc.Y
+                end)
                 out[#out + 1] = e
             end)
         end
@@ -1780,13 +1785,13 @@ function G.PopupJustOpened()
 end
 
 -- Writes `text` into the chest pop-up on screen and collapses its item line. Returns true and a
--- detail, or false and why not (no pop-up on screen yet).
+-- detail, or false and why not (no pop-up on screen yet). A message with no item line beside it is
+-- another dialog: in round 78 a character quest's stat bonus said "obtained" before the item
+-- pop-up came, took the text, and left the item pop-up as the game made it.
 function G.ChestPopup(text)
     local msg = PopupMessage()
     if not msg then return false, "no chest pop-up on screen" end
-    if not pcall(function() msg:SetText(FText(text)) end) then return false, "SetText failed" end
-    popupWasShown = true   -- this pop-up is handled; the fast check waits for the next one
-    local parent
+    local parent, line
     pcall(function() parent = msg:GetParent() end)
     local n = 0
     pcall(function() n = parent:GetChildrenCount() end)
@@ -1794,16 +1799,16 @@ function G.ChestPopup(text)
         local child, name
         pcall(function() child = parent:GetChildAt(i) end)
         pcall(function() name = child:GetFName():ToString() end)
-        if name == POPUP_ITEM_LINE and Alive(child) then
-            local was = 0
-            pcall(function() was = child:GetVisibility() end)
-            if pcall(function() child:SetVisibility(COLLAPSED) end) then
-                popupHidden = { line = G.PathOf(child), message = G.PathOf(msg), visibility = was }
-                return true, "text set, item line hidden"
-            end
-        end
+        if name == POPUP_ITEM_LINE and Alive(child) then line = child end
     end
-    return true, "text set (no item line found to hide)"
+    if not line then return false, "an \"obtained\" message with no item line: not the item pop-up" end
+    if not pcall(function() msg:SetText(FText(text)) end) then return false, "SetText failed" end
+    popupWasShown = true   -- this pop-up is handled; the fast check waits for the next one
+    local was = 0
+    pcall(function() was = line:GetVisibility() end)
+    if not pcall(function() line:SetVisibility(COLLAPSED) end) then return true, "text set (the item line would not hide)" end
+    popupHidden = { line = G.PathOf(line), message = G.PathOf(msg), visibility = was }
+    return true, "text set, item line hidden"
 end
 
 -- Makes the item line visible again once the pop-up has closed. Call every tick.

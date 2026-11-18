@@ -170,7 +170,9 @@ NO_ROUTE_CHESTS = {"chest:2012:1"}
 # tier). Round 71 (the user): Fina's Psyche (maps 3210 to 3212) is reached past Tellus in the Tower
 # of Mysidia. Round 72 (the user): Sanctissimus Shrine's chests and shards (3250) are past its first
 # three fights, Archaeoaevis, Dad Bomb and Test Rider.
-AFTER_BOSS = {3210: [9038], 3211: [9038], 3212: [9038], 3250: [9075, 9074, 9073]}
+# Round 78 (the user): every chest in Dragon's Maw (3010) is past Intangir, airship or not. Its
+# Tablet Shard and the Rogue Magitek Weapon are too.
+AFTER_BOSS = {3210: [9038], 3211: [9038], 3212: [9038], 3250: [9075, 9074, 9073], 3010: [7042]}
 # Single locations behind a boss fight, where the rest of their map is not. Round 73: the Crystal
 # Tower's third section is past Behemoth (9051). Its door (transition 11, at story 8020) leads to
 # the room at y -125400, and that room's other door to the section around (8000, -58000). These
@@ -208,8 +210,9 @@ FAR_SIDE = {
     9046: {"doors": {30, 64, 65, 66}, "maps": set(), "keys": set(), "airship": False},
     # Intangir's blocking box (flag 928) in Dragon's Maw is near its south door, the one most of Pharm
     # walks to. The tester went through Dragon's Maw after beating Intangir, to World Map Shiny 149
-    # by the north door. The north side is reached from the air (data/airship_only.tsv).
-    7042: {"doors": set(), "maps": {3010}, "keys": {"shiny:1000:149"}, "airship": True},
+    # by the north door. The north side is reached from the air. Dragon's Maw itself needs Intangir
+    # whichever way in (AFTER_BOSS, round 78).
+    7042: {"doors": set(), "maps": set(), "keys": {"shiny:1000:149"}, "airship": True},
 }
 # Places that on foot lie past a boss, which the airship flies over. Round 73 (the user): from
 # Dilmagia, where the Dirnado start and the ferry arrive, Liquid Thunder on Mt. Thunderclap's

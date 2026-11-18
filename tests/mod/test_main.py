@@ -1007,9 +1007,12 @@ G.shinies = L.table()
 # Round 63: in Felicitas the live shard read id 1, and the save had the level's id 8. A scouted
 # shiny on the map is asked of the save by its own id, and one the seed does not hold is not.
 FELICITAS, SHARD_UID, LIVE_UID, NOT_A_LOCATION = 2040, 8, 1, 9
+SHARD_8_PLACE = (-2733, -3948)                 # data/game/field_items.tsv
 inbox(f"scout\tshiny:{FELICITAS}:{SHARD_UID}\tLongshot\tRat2\t1\t0\n")
 tick(1)
 G.map = FELICITAS
+# the player stands by the shard (round 79: a location is sent only with the player near it)
+L.execute(f"package.loaded.game.PlayerPose = function() return {{ x = {SHARD_8_PLACE[0] + 100}, y = {SHARD_8_PLACE[1]}, z = 0 }} end")
 G.shinies = L.table_from({1: L.table_from({"uid": LIVE_UID, "open": False, "itemId": -1, "itemNum": 1, "money": 1})})
 tick(4)
 assert f"check\tshiny:{FELICITAS}:{SHARD_UID}" not in read("ap_out.txt"), "not before the save says so"
@@ -1026,6 +1029,7 @@ ZOLDAAD_CASTLE, SHARD_10_PLACE, SHARD_11_PLACE = 3160, (29089, -1073), (30460, 3
 inbox(f"scout\tshiny:{ZOLDAAD_CASTLE}:10\tLongshot\tRat2\t1\t0\n"
       f"scout\tshiny:{ZOLDAAD_CASTLE}:11\tLongshot\tRat2\t1\t0\n")
 G.map = ZOLDAAD_CASTLE
+L.execute(f"package.loaded.game.PlayerPose = function() return {{ x = {SHARD_11_PLACE[0]}, y = {SHARD_11_PLACE[1] + 200}, z = 0 }} end")
 tick(2)
 G.shinies = L.table_from({1: L.table_from({"uid": 10, "open": True, "itemId": 25004, "itemNum": 1, "money": -1,
                                             "x": SHARD_11_PLACE[0] + 20, "y": SHARD_11_PLACE[1] - 30})})
@@ -1037,6 +1041,49 @@ G.shinies = L.table_from({1: L.table_from({"uid": 10, "open": False, "itemId": 2
                                             "x": SHARD_10_PLACE[0] + 5000, "y": SHARD_10_PLACE[1]})})
 tick(2)
 G.shinies = L.table()
+# Round 78: checks went out with nothing picked up. The Colosseum's shard (map 2016, uid 2) read
+# taken on arrival, and world-map shinies a continent away each time a player boarded the airship.
+# A chest or shiny read as taken is sent only with the player near it.
+COLOSSEUM, COLOSSEUM_SHARD = 2016, (25789, -10567)
+COLOSSEUM_DOOR = (28000, -2000)                # far from the shard
+NEAR = 300
+inbox(f"scout\tshiny:{COLOSSEUM}:2\tLongshot\tRat2\t1\t0\n"
+      f"scout\tchest:3020:9\tLongshot\tRat2\t1\t0\n")
+G.map = COLOSSEUM
+L.execute(f"local G = package.loaded.game; G.px, G.py = {COLOSSEUM_DOOR[0]}, {COLOSSEUM_DOOR[1]}; "
+          "function G.PlayerPose() return { x = G.px, y = G.py, z = 0 } end")
+L.execute("logged = {}; print = function(s) logged[#logged + 1] = tostring(s) end")
+G.shinies = L.table_from({1: L.table_from({"uid": 2, "open": True, "itemId": 25004, "itemNum": 1, "money": -1,
+                                           "x": COLOSSEUM_SHARD[0], "y": COLOSSEUM_SHARD[1]})})
+G.chests = L.table_from({1: L.table_from({"uid": 9, "open": True, "rowMap": 3020, "rowId": 9, "uniqueId": 30,
+                                          "itemId": 7, "itemNum": 1, "money": -1, "x": 0, "y": 0})})
+tick(10)
+out = read("ap_out.txt")
+assert f"shiny:{COLOSSEUM}:2" not in out and "chest:3020:9" not in out, out[-200:]
+held = [s for s in L.eval("logged").values() if "not sent until the player is near it" in s]
+assert len(held) == 2, held                    # once per location per visit
+assert any(f"shiny:{COLOSSEUM}:2 reads taken (live open, save row false)" in s for s in held), held
+# the save row alone, for a scouted shiny that is not loaded, is held the same way
+G.shinies = L.table()
+G.saveOpen[f"{COLOSSEUM}:2"] = True
+tick(4)
+assert f"shiny:{COLOSSEUM}:2" not in read("ap_out.txt")
+# the pawn cannot be read: still held
+L.execute("package.loaded.game.PlayerPose = function() return nil end")
+tick(4)
+assert f"shiny:{COLOSSEUM}:2" not in read("ap_out.txt")
+# the player walks up to it: sent, and the log says what read it as taken
+L.execute(f"local G = package.loaded.game; G.px, G.py = {COLOSSEUM_SHARD[0] + NEAR}, {COLOSSEUM_SHARD[1]}; "
+          "function G.PlayerPose() return { x = G.px, y = G.py, z = 0 } end")
+tick(2)
+assert f"check\tshiny:{COLOSSEUM}:2\n" in read("ap_out.txt")
+sent = [s for s in L.eval("logged").values() if f"check shiny:{COLOSSEUM}:2" in s]
+assert sent and "(save row only, 300 from the player)" in sent[0], sent
+L.execute(f"local G = package.loaded.game; G.px, G.py = {NEAR}, 0")
+tick(2)
+assert "check\tchest:3020:9\n" in read("ap_out.txt")
+G.chests, G.shinies = L.table(), L.table()
+G.saveOpen[f"{COLOSSEUM}:2"] = None
 print("chest pop-up: ok")
 
 # 13. experimental gate and custom key-item probe (0.11.3): works standalone even on unlinked saves
@@ -1819,9 +1866,19 @@ assert L.eval(f"G.progress[{MECHABO_COUNTER}]") == MECHABO_REQUEST, "Verun's rep
 L.execute(f"G.progress[{ZILE_COUNTER}] = {ZILE_REWARD - 10}")
 tick(12)
 assert "quest:13" not in read("ap_out.txt"), "a step before the reward is no check"
+# Round 78: the reward scene can run past a minute before its pop-up comes (a character quest's
+# stat bonus). The pop-up waits through the scene and gives up only after time on the field.
+inbox(b64_scout("quest:13", "Hookshot", "Alice", 1, 0))
+tick(2)
+REWARD_SCENE_TICKS, FIELD_WAIT_TICKS = 200, 60          # 100 s of scene; BOSS_POPUP_TRIES
+G.popupReady, G.onField, G.popups = False, False, L.table()
 L.execute(f"G.progress[{ZILE_COUNTER}] = {ZILE_REWARD}; G.progress[{MECHABO_COUNTER}] = {MECHABO_LATER}")
-tick(12)
+tick(REWARD_SCENE_TICKS)
 assert "check\tquest:13\n" in read("ap_out.txt") and "quest:34" not in read("ap_out.txt"), read("ap_out.txt")[-200:]
+G.popupReady = True
+tick(1)
+assert list(G.popups.values()) == ["You found Alice's:\nHookshot"], list(G.popups.values())
+G.onField = True
 assert L.eval(f"G.progress[{MECHABO_COUNTER}]") == MECHABO_LATER, "the counter is set only at 0"
 
 inbox("seed\tS78n:0:1\ncfg\topenworld\t1\ncfg\tquests\t0\n", "w")

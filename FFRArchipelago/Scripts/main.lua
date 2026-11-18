@@ -658,25 +658,69 @@ local function popupTick()
         popup = nil
         return
     end
-    popup.tries = popup.tries - 1
+    -- A quest's pop-up comes at the end of its reward scene, which can run past a minute (round 78,
+    -- the character quests' stat bonus): its wait counts only the time on the field.
+    if not popup.scene or game.OnField() then popup.tries = popup.tries - 1 end
     if popup.tries <= 0 then
         log("chest pop-up for " .. popup.key .. ": " .. tostring(detail))
         popup = nil
     end
 end
 
+-- Where chests and shinies stand. `same`: a live shiny this close to a level shiny is that shiny
+-- (round 72). `reach`: round 78 sent checks with nothing picked up, a Colosseum shard on arrival
+-- and world-map shinies a continent away each time a player boarded the airship. The game still
+-- had them, and the players picked them up later. A chest or shiny opens with the player at it,
+-- so one read as taken farther away than this waits until the player is near it.
+local PLACE = { same = 150, reach = 1500 }
+
+-- How far the player stands from (x, y), or nil when the pawn cannot be read. One pose per scan.
+function PLACE.distance(x, y)
+    if PLACE.visit ~= visit or PLACE.at ~= visit.scans then
+        PLACE.visit, PLACE.at, PLACE.pose = visit, visit.scans, game.PlayerPose()
+    end
+    local pose = PLACE.pose
+    if not pose then return nil end
+    return math.sqrt((pose.x - x) ^ 2 + (pose.y - y) ^ 2)
+end
+
+-- A level shiny's place on a map: { uid, x, y }, or nil.
+function PLACE.level(mapId, uid)
+    for _, p in ipairs(LEVEL_SHINIES[mapId] or {}) do
+        if p[1] == uid then return p end
+    end
+end
+
 -- `fresh` is true when a chest transitions from closed to open in this map visit; request the pop-up
 -- rewrite even if the check was already reported (e.g. after reloading an older save). Also request on
 -- first report for chests opened before the map's initial scan.
-local function opened(key, fresh)
+-- `spot` is { x, y, why }: where the location stands (x is nil when not known) and what read it as
+-- taken, for the log.
+local function opened(key, fresh, spot)
     if not sessionSave() then return end
+    local known = state.reported["check|" .. key]
+    if known and not fresh then return true end
+    local where = ""
+    if spot then
+        local d = spot.x and PLACE.distance(spot.x, spot.y)
+        if spot.x and not (d and d <= PLACE.reach) then
+            if not known and not visit.recorded["far:" .. key] then
+                visit.recorded["far:" .. key] = true
+                log(string.format("%s reads taken (%s), %s; not sent until the player is near it", key, spot.why,
+                    d and (math.floor(d) .. " from the player") or "the player's place unknown"))
+            end
+            return false
+        end
+        where = " (" .. spot.why .. (d and (", " .. math.floor(d) .. " from the player") or "") .. ")"
+    end
     local new = report("check", key)
-    if new then log("check " .. key) end
+    if new then log("check " .. key .. where) end
     if new or fresh then
         local s = state.scouts[key]
         -- Shinies use the same dialog widget to show their scouted reward.
         if s and (key:find("^chest:") or key:find("^shiny:")) then popup = { text = popupText(s), key = key, tries = POPUP_TRIES } end
     end
+    return true
 end
 
 -- A boss check triggers on the win row's flag. Bosses with shuffled items keep their reward
@@ -701,7 +745,7 @@ local function scanBosses()
             if (game.ProgressValue(q.counter) or 0) >= q.value and report("check", q.key) then
                 log("check " .. q.key)
                 local s = state.scouts[q.key]
-                if s then popup = { text = popupText(s), key = q.key, tries = BOSS_POPUP_TRIES } end
+                if s then popup = { text = popupText(s), key = q.key, tries = BOSS_POPUP_TRIES, scene = true } end
             end
         end
     end
@@ -756,9 +800,9 @@ local function scanChests(mapId)
                 noteGameUid("chest", mapId, c.uniqueId, c.actor)
             end
             if c.open then
-                local fresh = visit.closed[id] == true
-                visit.closed[id] = nil
-                if key then opened(key, fresh) end
+                if not key or opened(key, visit.closed[id] == true, { x = c.x, y = c.y, why = "live open" }) then
+                    visit.closed[id] = nil
+                end
             else
                 visit.closed[id] = true   -- seen closed: opening it later is "in front of the player"
                 -- IsOpenTreasureBox falls back to other maps' rows when this map has no save rows yet,
@@ -780,11 +824,10 @@ end
 -- Shinies report when m_IsOpen is set or the map's save row marks them looted. Spots with neither
 -- item nor money are story/quest triggers, recorded as "spot" and never reported.
 -- Live shinies can report an m_UniqueId that differs from the level dump, so any level shiny
--- within SHINY_SAME_PLACE supplies the canonical ID.
-local SHINY_SAME_PLACE = 150
+-- within PLACE.same supplies the canonical ID.
 local function levelShinyUid(mapId, s)
     if not (s.x and LEVEL_SHINIES[mapId]) then return s.uid end
-    local best, bestD = nil, SHINY_SAME_PLACE
+    local best, bestD = nil, PLACE.same
     for _, p in ipairs(LEVEL_SHINIES[mapId]) do
         local d = math.sqrt((s.x - p[2]) ^ 2 + (s.y - p[3]) ^ 2)
         if d < bestD then best, bestD = p[1], d end
@@ -809,9 +852,10 @@ local function scanShinies(mapId)
             end
             local id = "s" .. s.uid
             if hasReward and (s.open or rows[s.uid]) then
-                local fresh = visit.closed[id] == true
-                visit.closed[id] = nil
-                opened("shiny:" .. mapId .. ":" .. s.uid, fresh)
+                local why = "live " .. (s.open and "open" or "closed") .. ", save row " .. tostring(rows[s.uid] == true)
+                if opened("shiny:" .. mapId .. ":" .. s.uid, visit.closed[id] == true, { x = s.x, y = s.y, why = why }) then
+                    visit.closed[id] = nil
+                end
             elseif hasReward then
                 visit.closed[id] = true   -- seen closed: picking it up later is "in front of the player"
             end
@@ -829,7 +873,10 @@ local function scanShinies(mapId)
     end
     for _, uid in ipairs(visit.scoutShinies) do
         local key = "shiny:" .. mapId .. ":" .. uid
-        if not state.reported["check|" .. key] and rows[uid] then opened(key, false) end
+        if not state.reported["check|" .. key] and rows[uid] then
+            local p = PLACE.level(mapId, uid)
+            opened(key, false, { x = p and p[2], y = p and p[3], why = "save row only" })
+        end
     end
 end
 

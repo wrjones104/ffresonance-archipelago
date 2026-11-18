@@ -459,6 +459,17 @@ L.execute("G.ChestPopupRestore()")
 assert L.eval("popupLine.vis") == 0, "visible again once the pop-up is gone"
 ok, detail = L.execute('return G.ChestPopup("x")')
 assert ok is False and detail == "no chest pop-up on screen", detail
+# Round 78: a character quest's stat bonus said "obtained" in a dialog with no item line. It is
+# left alone, so the item pop-up after it still gets the text.
+L.execute('rich.text = "Rain obtained an attribute bonus"; rich.shown = true; box_kids = rich:GetParent().kids; '
+          'table.remove(box_kids, 2)')
+ok, detail = L.execute('return G.ChestPopup("You found:\\nHookshot")')
+assert ok is False and "no item line" in detail, detail
+assert L.eval("rich.text") == "Rain obtained an attribute bonus"
+L.execute('box_kids[2] = popupLine; rich.text = "You obtained the following:\\nPotion"')
+ok, detail = L.execute('return G.ChestPopup("You found:\\nHookshot")')
+assert ok is True and detail == "text set, item line hidden", detail
+L.execute('rich.shown = false; G.ChestPopupRestore(); rich.text = "x"')
 # 0.11.1: PopupJustOpened, from the cached message widget: true once per pop-up
 assert L.eval("G.PopupJustOpened()") is False, "closed (the fast check sees it closed between pop-ups)"
 L.execute('rich.text = "You obtained the following:"; rich.shown = true')

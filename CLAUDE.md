@@ -1,6 +1,6 @@
 # FFR Archipelago: notes for Claude
 
-An Archipelago implementation for Final Fantasy Resonance (UE 5.6, game module `/Script/mucha`). Read this first; the README has the full history, round by round.
+An Archipelago implementation for Final Fantasy Resonance (UE 5.6, game module `/Script/mucha`). Read this first; `docs/playtesting.md` has the full history, round by round.
 
 ## The parts
 
@@ -12,7 +12,8 @@ An Archipelago implementation for Final Fantasy Resonance (UE 5.6, game module `
 - **The apworld and client**, `apworld/ff_resonance/` (`client.py`, `world.py`, `items.py`, `locations.py`, `boss_logic.py`, `options.py`, generated `data.py`). `python tools/build_apworld.py` builds `dist/ff_resonance.apworld`.
 - **The game data dump**, `tools/dump_game/` (C#, CUE4Parse) and `tools/gen_from_dump.py`. They read the game's pak files off-line and write `data/game/*.tsv`. Use these tables, not FFR-Randomizer's lists, as the reference for items, units, maps, chests, field items, map exits and gimmicks. See "The game data dump" in the README.
 - **Docs:**
-  - `README.md`: setup, commands, bridge format, test results per round, the current round's test plan, open questions.
+  - `README.md`: setup and install for players.
+  - `docs/playtesting.md`: test results per round and the current round's test plan.
   - `IDEAS.md`: numbered ideas and findings, with what is known and what to find out.
   - `docs/progression.md`: the game's chapters and gates.
   - `docs/logic.md`: the progression logic design (in progress).
@@ -23,7 +24,7 @@ An Archipelago implementation for Final Fantasy Resonance (UE 5.6, game module `
 
 ## How we work
 
-- **Rounds.** Claude builds and tests off-line, then writes a round test plan in the README. The user installs and plays, and sends `UE4SS.log` (`[FFRAP]` lines), screenshots or recordings. Claude records the results in the README as "Round N (mod x.y.z, ...)", fixes what they show, and plans the next round.
+- **Rounds.** Claude builds and tests off-line, then writes a round test plan in `docs/playtesting.md`. The user installs and plays, and sends `UE4SS.log` (`[FFRAP]` lines), screenshots or recordings. Claude records the results there as "Round N (mod x.y.z, ...)", fixes what they show, and plans the next round.
 - **Versions (one bump per release, decided 2026-11-16).** Rounds between releases share one version, so players never see numbers jump between releases.
   - The mod's version is `VERSION` in `main.lua`. The world's version is `world_version` in `apworld/ff_resonance/archipelago.json`.
   - At the first change after a release, bump both to the next release's numbers. Then leave them alone until the user releases. Do not bump them each round.
@@ -87,6 +88,7 @@ An Archipelago implementation for Final Fantasy Resonance (UE 5.6, game module `
 - `CPP_VM_Party:AddUnit` does not set `JoinStatus`: a unit added only that way gains no EXP and gear on it does not count (round 44).
 - The prologue skip must run after story 1005 and the game's first autosave, or the opening movie's input lock survives the reload (round 9).
 - **A live field item's `m_UniqueId` can differ from the level's.** Tablet Shards in Felicitas read 0 and 1, while the save keeps them as 8 and 9 (round 63). In Zoldaad Castle a taken shard came back reading another shard's id (round 71). The mod takes a shiny's id from the level's shiny at the same place (`Scripts/field_items.lua`, round 72).
+- **A chest or shiny read as taken is not always a pick-up.** In round 78 world-map shinies a continent away read as taken each time a player boarded the airship, and a shard on a first arrival; the game still had them. The mod sends one only with the player within reach (`PLACE.reach` in `main.lua`, round 79).
 - **`IsOpenTreasureBox(map, uid)` answers from another map's row when the map has no row for that uid yet.** Four Earth Shrine chests were sent on arrival because shinies with the same uids were open elsewhere. Read the map's own rows, `Map.mapGimmick{map}.treasureBox.treasureBoxList` (`game.SaveOpenRows`), and judge a loaded chest by the chest (rounds 64 and 65).
 - **The world map's id can come in before the town's pawn is gone.** A position read as the map changed was Grandport's own, and put the airship in Olderion. Check the pawn's class (`BP_MapUnit_Player_Field_C` on the world map) before trusting a world-map position (round 69).
 - **On foot, the pawn's rotation reads 0 whichever way the player faces.** Every `ffrap_gate mark` cart went north. Take a direction from the player's movement (round 67).

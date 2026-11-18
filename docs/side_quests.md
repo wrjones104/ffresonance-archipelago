@@ -155,6 +155,7 @@ The quest rows that give quest items are not touched.
    - A vision quest with `shuffle_visions` on: no second copy of the vision.
    - Mechabo: Verun is at the Dwarven Forge, and whether the forge plays his first meeting.
    - The Phantom Train (map 3121) and the Weapons Factory (3130) can be reached on our start.
+   - **Round 78 results:** six quests sent their checks, and the normal ones showed only the Archipelago item. The character quests with a stat bonus (Nichol's Duty, Last Respite, A New Leaf) showed the stand-in Potion: their counter moves at the start of a long reward scene, and the mod gave up on the pop-up after 30 s, or wrote into the stat bonus dialog, which says "obtained" but has no item line. Round 79: the wait counts only time on the field, and only a dialog with the item line is written (`docs/playtesting.md`).
 5. **Later rounds:** the Mechabo quests as locations, then section 7.
 
 ## 9. To find out

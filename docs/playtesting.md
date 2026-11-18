@@ -1008,3 +1008,37 @@ Side quests as locations (`docs/side_quests.md`) and the Mechabo start (IDEAS.md
 **6. If the game crashes** in a quest's reward scene, send the crash folder, the log and `Mods/FFRArchipelago/ap_trace.txt`. The vision quests' rows are rebuilt from an empty list, the step most likely to go wrong.
 
 Send the `[FFRAP]` lines of the log.
+
+**Round 78 results (mod 0.61.0 build d9576a0a, world 0.30.0 build 33c2ffa5, 2026-11-17).** The user's seed with `include_side_quests` on, started on foot in Olderion with the airship parked. Also the log of FieryBlizzard, a pre-release player on v0.29.0 (mod 0.60.0 build 08cabc86). The notes are in `.reference/2026-11-17/`. The user did not get to every quest yet.
+- **Side quests work.** Six quests sent their checks: Medicinal Mission (29), Nichol's Duty (4), The Tide from the Sky (21), Last Respite (5), A New Leaf (0) and the vision quest The Shield of the Weak (28). The vision came only from its Archipelago item. On the normal quests the pop-up showed only the Archipelago item, and the logic held. Log: `quests: 86 reward rows set to the pop-up's stand-in` (43 rows in two tables).
+- **Quests with a stat bonus or an esper showed the stand-in Potion.** On Nichol's Duty, Last Respite and A New Leaf the pop-up said Potion, and the Archipelago item came in the feed after it. These are character quests, and the counter moves at the start of a long reward scene. The mod waited 30 s for the pop-up and gave up (`no chest pop-up on screen` for quests 0 and 5). On quest 4 it wrote into the stat bonus dialog, which also says "obtained" but has no item line (`text set (no item line found to hide)`), and the item pop-up after it kept the Potion. The Potion itself comes on every quest: it is the stand-in the game's pop-up needs.
+- **Mechabo:** `mechabo: progress 16 set to 10` once, as planned. Verun and the quest log not checked yet.
+- **Checks sent with nothing picked up.**
+  - The user: Colosseum Shard 2 (`shiny:2016:2`) 3 s after entering the Colosseum for the first time. No pop-up came (`no chest pop-up on screen`).
+  - FieryBlizzard: after the Sanctum of Cecil (10211), groups of world-map shinies were sent each time they boarded the airship: 49, 57, 58, then 5, 24, 25, 100 and 102, which are on other continents, and later 1, 3, 4, 7, 21, 22, 82, 99, 104, 105, 127, 128, 130 and 150. Each group came with `locks: 6 boxes on the airship's shadow list (0 -> 6)`, the airship being made again. Their map marker mod's "looted" count did not move for them, and three pick-ups later had no check line: those shinies were still in the game, and the player picked them up after their checks were out. Three Wind Shrine chests (`chest:2130:1`, `:3`, `:4`) were also sent 3 s after a first arrival.
+  - What read them as taken is not known. A shiny is sent when the live actor's `m_IsOpen` is true or the save's own row for its map says open, and a scouted shiny on the map also on the save's row alone. The log did not say which. The chests go by `m_IsOpen` alone, so for them it was the live actor.
+- **Dragon's Maw was in logic at the start, Intangir was not.** With the airship, the world let the airship stand in for Intangir for all of Dragon's Maw (round 74's rule for its north door). The user: every chest there is past Intangir. FieryBlizzard's run agrees: from the south door they met Intangir before any chest, then Chests 7 and 6, then the Rogue Magitek Weapon, then Shard 4 and Chests 5, 3, 4 and 2, out of the north door, and Chest 1 by the north door on the way back in.
+
+## Round 79 test plan (mod 0.61.0 build 5f81a706, world 0.30.0 build a1ccfcdb)
+
+**The fixes:**
+- **Mod: a chest or shiny is sent only with the player near it.** One read as taken farther than 1500 units from the pawn waits until the player walks up to it. Each one held is logged once a visit: `shiny:1000:100 reads taken (live open, save row true), 21345 from the player; not sent until the player is near it`. Each check line now says what read it as taken: `check shiny:1000:47 (live open, save row true, 120 from the player)`. Chests carry their place now (`x`, `y` in `game.LiveChests`).
+- **Mod: a quest's pop-up waits through the reward scene.** It counts down only while the field is on screen, and it writes only into a dialog with the item line, so the stat bonus dialog is left alone.
+- **World: every location in Dragon's Maw needs Intangir** (`AFTER_BOSS` in `tools/gen_apworld_data.py`): its seven chests, Shard 4 and the Rogue Magitek Weapon. World Map Shiny 149 by the north door still needs Intangir or the airship.
+
+**Install:** copy `FFRArchipelago/Scripts`, and copy `dist/ff_resonance.apworld` into `custom_worlds`. Generate a new seed for the Dragon's Maw logic; the mod parts also work on the round 78 seed.
+
+**0. The builds.** The log should say `version 0.61.0 (build 5f81a706)`, and the client `world version 0.30.0 (build a1ccfcdb)`.
+
+**1. Early checks.** Play as usual, and board the airship often. Look for `reads taken` lines in the log.
+- **When one shows, is the shiny or chest still there?** If it is, pick it up: the check should go out then, with a pop-up. Note which signal the line names (`live open`, `save row true` or `save row only`).
+- **Does any check go out with nothing picked up?** The check line says how far the player was.
+- A shiny you picked up should still be sent at once, with its pop-up, as before.
+
+**2. Quests with a stat bonus or an esper.** Nichol's Duty, Last Respite or A New Leaf (on a new seed), or any other character quest. **Does the last pop-up show the Archipelago item now?** The log should say `chest pop-up for quest:N: text set, item line hidden`. The stand-in Potion still comes, as on every quest.
+
+**3. Dragon's Maw.** In Universal Tracker, Dragon's Maw should be out of logic until Intangir is. **From the north door, can you reach any chest before a fight?** If you can, those chests need the airship only, and the logic is stricter than the game.
+
+**4. The quests from round 78's plan** that were not done yet: Rear Support, Ahoy!, Secrets Unearthed, Mechabo (is Verun at the forge, does "Arise, Mechabo!" show), the Phantom Train and the Weapons Factory, and Mog Tag.
+
+Send the `[FFRAP]` lines of the log.
