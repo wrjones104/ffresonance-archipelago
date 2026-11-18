@@ -2011,11 +2011,11 @@ assert progress() == PRINCESS_MET + 1, "no condition test: the shards held still
 L.execute("G.HeldCount, G.ProgressValue, G.SetProgressValue, G.SaveObjectName, G.CurrentMap = table.unpack(savedPalace)")
 print("palace safes: ok")
 
-# Round 82 probe (ffrap_apmenu): an Archipelago entry in the main menu with no pak. The row is a
-# copy of System's in DT_MainMenuScene, the tag goes before System in DisplaySceneList, and the
-# subsystem gets the row when it was built without it.
+# Rounds 82 and 83: the Archipelago entry in the main menu, with no pak. The row is a copy of
+# System's in DT_MainMenuScene that opens the Tutorial screen, the tag goes before System in
+# DisplaySceneList, and the subsystem gets the row when it was built without it.
 SYSTEM_PATH = "/Game/UI/MainMenu/System/WBP_MainMenuSystem.WBP_MainMenuSystem_C"
-HELP_PATH = "/Game/UI/MainMenu/Help/Widget/WBP_HelpLayout.WBP_HelpLayout_C"
+TUTORIAL_PATH = "/Game/UI/Tutorial/WBP_TutorialLayout.WBP_TutorialLayout_C"
 OWN_TAG = "UI.MainMenu.Scene.FFRAP"
 L.execute(r"""
 local function soft(p) return { path = p } end
@@ -2077,44 +2077,39 @@ function subTags(m)
   return table.concat(t, ",")
 end
 """.replace("SYSTEM_PATH", SYSTEM_PATH))
-L.execute(f'ownTag = "{OWN_TAG}"')
-assert lua("G.APMENU.Ensure(ownTag, nil, say)") == "row added; scene list; data added, enable added"
+assert lua("G.APMENU.Ensure(say)") == "row added; scene list; data added, enable added"
 assert lua("sceneDT.rows.FFRAP_Archipelago.SceneTag.TagName:ToString()") == OWN_TAG
 assert lua("sceneDT.rows.FFRAP_Archipelago.EntryName:ToString()") == "Archipelago"
+assert lua("sceneDT.rows.FFRAP_Archipelago.LayoutData.LayoutWidget.path") == TUTORIAL_PATH, "opens the Tutorial screen"
 assert lua("sceneDT.rows['システム'].SceneTag.TagName:ToString()") == "UI.MainMenu.Scene.System", "System's row untouched"
+assert lua("sceneDT.rows['システム'].LayoutData.LayoutWidget.path") == SYSTEM_PATH, "System still opens its own screen"
 assert lua("listTags()") == f"UI.MainMenu.Scene.Journal,{OWN_TAG},UI.MainMenu.Scene.System", "before System"
-assert lua("subTags(menuSub.SceneDataMap)") == f"UI.MainMenu.Scene.System={SYSTEM_PATH},{OWN_TAG}={SYSTEM_PATH}"
+assert lua("subTags(menuSub.SceneDataMap)") == f"UI.MainMenu.Scene.System={SYSTEM_PATH},{OWN_TAG}={TUTORIAL_PATH}"
 assert lua("subTags(menuSub.SceneEnableMap)") == f"UI.MainMenu.Scene.System=true,{OWN_TAG}=true"
 says = list(L.eval("says").values())
 assert says[0] == "apmenu: AddRow FFRAP_Archipelago (a copy of System's)", says
+assert "apmenu: row tag, texts and screen" in says, says
 assert any("scene list 2 -> 3" in s for s in says) and any("SceneDataMap:Add" in s for s in says), says
 L.execute("says = {}")
-assert lua("G.APMENU.Ensure(ownTag, nil, say)") is None, "nothing to write the second time"
+assert lua("G.APMENU.Ensure(say)") is None, "nothing to write the second time"
 assert lua("#says") == 0, "and nothing logged"
-# the game loads the table again: the row comes back, with the chosen screen, and nothing else moves
+# the game loads the table again: the row comes back with its screen, and nothing else moves
 L.execute("freshSceneTable()")
-done = lua(f'G.APMENU.Ensure(ownTag, "{HELP_PATH}", say)')
-assert done.startswith("row added; row layout: ") and f"-> {HELP_PATH} (soft class ref)" in done, done
-assert lua("sceneDT.rows.FFRAP_Archipelago.LayoutData.LayoutWidget.path") == HELP_PATH
-assert lua("subTags(menuSub.SceneDataMap)") == f"UI.MainMenu.Scene.System={SYSTEM_PATH},{OWN_TAG}={HELP_PATH}", "the subsystem's copy too"
-assert lua("sceneDT.rows['システム'].LayoutData.LayoutWidget.path") == SYSTEM_PATH, "System still opens its own screen"
+assert lua("G.APMENU.Ensure(say)") == "row added"
+assert lua("sceneDT.rows.FFRAP_Archipelago.LayoutData.LayoutWidget.path") == TUTORIAL_PATH
 assert lua("listTags()").count(OWN_TAG) == 1
 # a scene list that does not end in System (another mod went last): ours goes at the end
 L.execute("menuRoot.DisplaySceneList = { { TagName = FName('UI.MainMenu.Scene.Journal') } }")
-assert lua("G.APMENU.List(ownTag, say)") == "added" and lua("listTags()") == f"UI.MainMenu.Scene.Journal,{OWN_TAG}"
-info = "\n".join(L.eval("G.APMENU.Info()").values())
-assert f"FFRAP_Archipelago  tag {OWN_TAG}  name Archipelago  layout {HELP_PATH}" in info, info
-assert f"data {OWN_TAG}  name Archipelago  layout {HELP_PATH}" in info and f"{OWN_TAG} true" in info, info
+assert lua("G.APMENU.List(say)") == "added" and lua("listTags()") == f"UI.MainMenu.Scene.Journal,{OWN_TAG}"
 # the title screen: no subsystem and no scene list yet
 L.execute("savedRoot, menuRoot = menuRoot, nil; G.ForgetObjects()")
-assert lua("select(2, G.APMENU.Ensure(ownTag, nil, say))") == "no DA_MainMenuRoot loaded"
+assert lua("select(2, G.APMENU.Ensure(say))") == "no DA_MainMenuRoot loaded"
 L.execute("menuRoot = savedRoot; G.ForgetObjects()")
 print("main menu entry: ok")
 
 # Round 82 result: the Tutorial screen opens from the entry as one framed window. The page sets
-# its title and description, hides the image box, the arrows and the page count, and writes only
-# what differs, so a screen the game fills again is put back on the next tick.
-TUTORIAL_PATH = "/Game/UI/Tutorial/WBP_TutorialLayout.WBP_TutorialLayout_C"
+# its title and description, hides the image box, the arrows and the page count, widens the text
+# box, and writes only what differs, so a screen the game fills again is put back on the next tick.
 L.execute(r"""
 local function widget(name, text, kids)
   local w = { name = name, text = text, vis = 4, cleared = false, kids = kids or {} }
@@ -2129,6 +2124,7 @@ local function widget(name, text, kids)
   function w:GetVisibility() return self.vis end
   function w:SetVisibility(v) self.vis = v end
   function w:ClearHeightOverride() self.cleared = true end
+  function w:SetWidthOverride(x) self.width = x end
   w.opacity = 1.0
   function w:GetRenderOpacity() return self.opacity end
   function w:SetRenderOpacity(o) self.opacity = o end
@@ -2156,19 +2152,20 @@ local prevFAO = FindAllOf
 function FindAllOf(c) if c == "WBP_TutorialLayout_C" then return { tutorialHost } end return prevFAO(c) end
 says = {}
 """)
-page = lambda: L.eval(f'G.APMENU.Page("{TUTORIAL_PATH}", "Archipelago", "Goal: x\\nChecks: 2 of 5", say)')
+L.execute('bodies = 0; function pageBody() bodies = bodies + 1; return "Goal: x\\nChecks: 2 of 5" end')
+page = lambda: L.eval('G.APMENU.Page("Archipelago", pageBody, say)')
 assert page() == "written"
 assert lua("pageParts.Text_Title.text") == "Archipelago" and lua("pageParts.Text_Description.text") == "Goal: x\nChecks: 2 of 5"
 for hidden in ("SizeBox_2", "Overlay_ButtonNext", "Overlay_ButtonPreview", "HorizontalBox_215"):
     assert lua(f"pageParts.{hidden}.vis") == 1, hidden
-assert lua("pageParts.SizeBox_1.cleared") is True, "the text box may grow"
+assert lua("pageParts.SizeBox_1.cleared") is True and lua("pageParts.SizeBox_1.width") == 1180, "the text box: wider, any height"
 first = lua("#says")
 assert first >= 6 and lua("says[1]") == "apmenu: page title", list(L.eval("says").values())
 assert page() == "same" and lua("#says") == first, "nothing to write, nothing told"
 L.execute('pageParts.Text_Description.text = "TEXT"; pageParts.SizeBox_2.vis = 4')   # the game fills it again
 assert page() == "written" and lua("pageParts.Text_Description.text").startswith("Goal: x")
 assert lua("pageParts.SizeBox_2.vis") == 1 and lua("#says") == first, "the same screen: the steps are told once"
-tree = list(L.eval(f'G.APMENU.Tree("{TUTORIAL_PATH}")').values())
+tree = list(L.eval('G.APMENU.Tree()').values())
 assert tree[0].startswith("host ") and any(line.startswith("          ? Text_Description") for line in tree), tree
 # round 83: Back asked the screen to close and the menu turned it off at once, so its closing
 # never finished, and the next open and Back were refused. The page turns on the base class's
@@ -2188,7 +2185,7 @@ assert lua("says[#says]") == ("apmenu: page screen at opacity 0 (IsOpeningProces
                               "IsCanInput false, bIsCanceling nil, close finish true); OnRequestOpen"), lua("says[#says]")
 assert page() == "same" and lua("tutorialHost.opens") == 1, "not again while its animation runs"
 L.execute("tutorialHost.active = false")
-assert L.eval(f'select(2, G.APMENU.Page("{TUTORIAL_PATH}", "Archipelago", "x", say))') == "not open"
+assert L.eval(f'select(2, G.APMENU.Page("Archipelago", pageBody, say))') == "not open"
 L.execute("tutorialHost.active = true; tutorialHost.opacity = 0; tutorialHost.IsOpeningProcess = true")
 page()
 assert lua("tutorialHost.opens") == 1, "the menu's own open is under way: left alone"
@@ -2198,21 +2195,21 @@ L.execute("tutorialHost.active = true; tutorialHost.IsOpeningProcess = false")  
 page()
 assert lua("tutorialHost.opens") == 2, "asked again on the next opening"
 L.execute("tutorialHost.opacity = 1.0")
-state = "\n".join(L.eval(f'G.APMENU.State("{TUTORIAL_PATH}")').values())
+state = "\n".join(L.eval('G.APMENU.State()').values())
 assert "activated true  visible nil  visibility 4  opacity 1.0; IsOpeningProcess false" in state, state
 assert "main menu scene stack: " in state, state
 # close asks an open screen to close the way Back does
-assert lua(f'G.APMENU.Close("{TUTORIAL_PATH}", ownTag, say)').startswith("close asked; IsOpeningProcess false")
+assert lua(f'G.APMENU.Close(say)').startswith("close asked; IsOpeningProcess false")
 assert lua("tutorialHost.closes") == 1
 # the fallback: a screen off but still closing gets FinishedClose after three ticks, once
 L.execute('''
   tutorialHost.active, tutorialHost.IsClosingProcess, tutorialHost.finishes = false, true, 0
   function tutorialHost:FinishedClose() self.finishes = self.finishes + 1 end
 ''')
-assert lua(f'G.APMENU.Unstick("{TUTORIAL_PATH}", say)') is None
-assert lua(f'G.APMENU.Unstick("{TUTORIAL_PATH}", say)') is None
-assert lua(f'G.APMENU.Unstick("{TUTORIAL_PATH}", say)').startswith("finished a stale close")
-assert lua(f'G.APMENU.Unstick("{TUTORIAL_PATH}", say)') is None and lua("tutorialHost.finishes") == 1, "once"
+assert lua(f'G.APMENU.Unstick(say)') is None
+assert lua(f'G.APMENU.Unstick(say)') is None
+assert lua(f'G.APMENU.Unstick(say)').startswith("finished a stale close")
+assert lua(f'G.APMENU.Unstick(say)') is None and lua("tutorialHost.finishes") == 1, "once"
 # the empty background: our screen off, the menu still on our scene. close pops the scene.
 L.execute(f'''
   menuVM = {{ SceneDataStack = {{ {{ TagName = FName("UI.MainMenu.Scene.Root") }}, {{ TagName = FName("{OWN_TAG}") }} }} }}
@@ -2223,7 +2220,10 @@ L.execute(f'''
   local prevFFO = FindFirstOf
   function FindFirstOf(c) if c == "CPP_VM_MainMenu" then return menuVM end return prevFFO(c) end
 ''')
-assert lua(f'G.APMENU.Close("{TUTORIAL_PATH}", ownTag, say)') == "PopScene; the stack ends with UI.MainMenu.Scene.Root"
-assert lua(f'G.APMENU.Close("{TUTORIAL_PATH}", ownTag, say)').startswith("no WBP_TutorialLayout_C open and the menu is not on our scene")
-assert L.eval(f'select(2, G.APMENU.Page("{TUTORIAL_PATH}", "Archipelago", "x", say))') == "not open"
+assert lua(f'G.APMENU.Close(say)') == "PopScene; the stack ends with UI.MainMenu.Scene.Root"
+assert lua(f'G.APMENU.Close(say)').startswith("the page is not open and the menu is not on it")
+assert L.eval(f'select(2, G.APMENU.Page("Archipelago", pageBody, say))') == "not open"
+made = lua("bodies")
+L.eval(f'G.APMENU.Page("Archipelago", pageBody, say)')
+assert lua("bodies") == made, "the text is made only while the page is open"
 print("archipelago page: ok")

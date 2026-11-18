@@ -169,6 +169,7 @@ These commands run in UE4SS's `ConsoleEnablerMod` console for development and de
 | `ffrap_notice [text]` | Experimental quest-notice banner test |
 | `ffrap_logo` | Manually place the Archipelago logo on the title screen |
 | `ffrap_layout <text>` | Log widget panel chain containing `<text>` |
+| `ffrap_apmenu off\|on\|state\|close\|tree` | The Archipelago page in the main menu (on by default): stop or restart adding it, log its screen's state, close it when Back does nothing, or write its widgets to `ffrap_apmenu.txt` |
 | `ffrap_feed [on\|off\|test [plain]\|check]` | Configure or test the bottom-right HUD item feed |
 | `ffrap_scale <level\|low high\|party [range]\|off> [at %] [hp %] [attack %] [magic %] [power %] [boss] [follow]` | Manual enemy scaling probe in `DT_UnitParameter` (`show <id\|name>` inspects rows) |
 | `ffrap_noland <list\|here\|show [width]\|hide\|lock <box>\|unlock <box>\|refresh\|spawn [half] [top]\|move [half]\|channel <n> <0-2>\|cond <text>\|off>` | Probe and visualize `BP_MapNonLandingArea_C` airship no-landing boxes |

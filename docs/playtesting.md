@@ -1225,3 +1225,26 @@ Send the `[FFRAP]` lines of the log.
 - At 09:17:43 the mod logged `new session 41007...:0:1 (was 92996...:0:1)`. It emptied `ap_out.txt` and wrote `hello`, `seed 41007...` and, in the same tick, `applied 0 ok flag 1421 = true` (item 0, 09:17:43.477). The new file was 80 bytes, the old one 72.
 - The client noticed a new file only when it was shorter than what it had read. This one was longer, so the client read on from byte 72, past the new `seed` line. It kept the old seed as the scope and dropped every line after it: `story 8000` and `check chest:2020:0` (09:18:06). A restart read the file from the top, which is why it fixed it. `/resync` would also have.
 - **Fix (client, world build 91d7b935):** the client keeps the start of `ap_out.txt` through its first `seed` line (`out_file_head`). When that start changes, the mod started the file over, and the client reads it from the top. A game restart appends `hello` and `seed` to the same file, so its start stays the same and nothing is read twice. `tests/client/test_out_file.py` plays the log's files; the old client fails it.
+
+## Round 84 test plan (mod 0.61.0 build dc66cdd9, world 0.30.0 build 91d7b935)
+
+**Built after round 83 (the page works):** the Archipelago page is a normal feature now.
+- The entry is added with no command, whenever the mod runs. Its steps are logged until it is first in the menu; putting it back after the game loads its table again is quiet.
+- The row opens the Tutorial screen as soon as it is added. The extra tags and screens of the probe are gone, and so are `info`, `layout`, `screens`, `text` and `page`.
+- The page's text box is 1180 wide (it was 750), so the long lines should no longer wrap.
+- The page's text is made only while the page is open.
+- `ffrap_apmenu off | on | state | close | tree` stay, for when something goes wrong.
+
+**Install:** copy `FFRArchipelago/Scripts`. The apworld is the same as round 83's (91d7b935).
+
+**0. The build.** The log should say `version 0.61.0 (build dc66cdd9)`, then, once in game, `apmenu: scene list; data added, enable added`.
+
+**1. The page with no command.** Open the main menu. **Is Archipelago there, above System, beside Bestiary?** Open it. **Do all the lines fit on one line each now?** Send a screenshot.
+
+**2. Again and again.** Open and close the page several times, with a chest or a received item in between. **Does it open each time, show the new numbers, and close with Back?** Then leave for the title screen and load the save again. **Is the entry still there and working?**
+
+**3. Nothing else changed.** Open System, Quests, Bestiary and System > Help, and look at a tutorial from Help. **Do they look and work as before?**
+
+**4. Still open from round 83:** step 5 (a new game before the client connects) and the round 82 plan's steps 1 to 4, if not done yet.
+
+If the page gets stuck, open the console and run `ffrap_apmenu state`, then `ffrap_apmenu close`. Send the `[FFRAP]` lines of the log.

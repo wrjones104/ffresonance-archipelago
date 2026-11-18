@@ -104,6 +104,8 @@ function G.MapId() return G.saveMap end
 function G.StoryCounter() return G.story end
 function G.PartyIds() return {1001} end
 function G.Toast() return false end
+-- the Archipelago page is on by default; its own section below replaces this
+G.APMENU = { Ensure = function() end, Page = function() return nil, "not open" end, Unstick = function() end }
 function G.IsChestOpenInSave(m, uid) return G.saveOpen[m .. ":" .. uid] == true end
 function G.SaveOpenRows(m)
   return setmetatable({}, { __index = function(_, uid) if G.saveOpen[m .. ":" .. uid] == true then return true end end })
@@ -2247,75 +2249,68 @@ assert list(G.bagAdds.values()) == [RUBY_FRAGMENT], list(G.bagAdds.values())
 assert any("Received Ruby Fragment" in x for x in logs()), logs()
 print("items wait for the field: ok")
 
-# Round 82 probe (ffrap_apmenu): `on` adds the main menu entry now and every tick after, with the
-# chosen tag and screen; a reason it cannot yet is logged once; `off` stops it; `info` writes
-# ffrap_apmenu.txt
-VISION_TAG = "UI.MainMenu.Scene.Vision"
-HELP_PATH = "/Game/H.H_C"
+# Rounds 82 and 83: the Archipelago page is on by default. The entry is kept in the menu every
+# tick; its steps are logged until it is first in the menu, and a reason it cannot be yet is
+# logged once. `off` stops it for the run and `on` brings it back.
 L, G = boot5("SD_APMENU", "0", {})
 G.ready = True
-L.execute(f'''
+L.execute('''
   local G = package.loaded.game
-  G.APMENU = {{ TAGS = {{ own = "UI.MainMenu.Scene.FFRAP", vision = "{VISION_TAG}" }},
-               LAYOUTS = {{ system = "/Game/S.S_C", help = "{HELP_PATH}" }}, calls = {{}}, why = nil }}
-  function G.APMENU.Ensure(tag, layout, say)
-    G.APMENU.calls[#G.APMENU.calls + 1] = tag .. " " .. tostring(layout)
+  G.APMENU = { calls = {}, why = nil, done = nil }
+  function G.APMENU.Ensure(say)
+    G.APMENU.calls[#G.APMENU.calls + 1] = say and "told" or "quiet"
     if G.APMENU.why then return nil, G.APMENU.why end
-    return nil
+    return G.APMENU.done
   end
-  function G.APMENU.Layout(tag, path, say) G.APMENU.layoutTo = path; return {{ "row layout: a -> b (soft class ref)" }} end
-  function G.APMENU.Info() return {{ "DT_MainMenuScene: 8 rows", "DisplaySceneList: x" }} end
+  function G.APMENU.Page(title, makeBody) return nil, "not open" end
+  function G.APMENU.Unstick() end
 ''')
 apcalls = lambda: list(L.eval("package.loaded.game.APMENU.calls").values())
 tick = lambda n: [L.execute("tickFn()") for _ in range(n)]
 L.execute("logged = {}; print = function(s) logged[#logged + 1] = tostring(s) end")
-tick(2)
-assert apcalls() == [], "off until asked"
-L.execute('commands["ffrap_apmenu"]("ffrap_apmenu", {"on", "vision"})')
-assert apcalls() == [f"{VISION_TAG} nil"], "at once, with the system screen"
-tick(3)
-assert len(apcalls()) == 4, apcalls()
-L.execute('commands["ffrap_apmenu"]("ffrap_apmenu", {"layout", "help"})')
-assert L.eval("package.loaded.game.APMENU.layoutTo") == HELP_PATH
+logged = lambda: list(L.eval("logged").values())
 L.execute('package.loaded.game.APMENU.why = "no DA_MainMenuRoot loaded"')
 tick(3)
-assert apcalls()[-1] == f"{VISION_TAG} {HELP_PATH}", "the chosen screen goes with each pass"
-waits = [s for s in L.eval("logged").values() if "apmenu: not yet: no DA_MainMenuRoot loaded" in s]
-assert len(waits) == 1, "logged once"
+assert apcalls() == ["told"] * 3, "on with no command, and its steps are told"
+assert sum("apmenu: not yet: no DA_MainMenuRoot loaded" in s for s in logged()) == 1, "logged once"
+L.execute('package.loaded.game.APMENU.why = nil; package.loaded.game.APMENU.done = "scene list; data added, enable added"')
+tick(1)
+assert any("apmenu: scene list; data added, enable added" in s for s in logged())
+L.execute('package.loaded.game.APMENU.done = "row added"')      # the game loads its table again
+tick(2)
+assert apcalls()[-2:] == ["quiet", "quiet"] and not any("apmenu: row added" in s for s in logged()), \
+    "once in the menu, putting it back is quiet"
 L.execute('commands["ffrap_apmenu"]("ffrap_apmenu", {"off"})')
 n = len(apcalls())
 tick(3)
 assert len(apcalls()) == n, "off: no more passes"
-L.execute('commands["ffrap_apmenu"]("ffrap_apmenu", {"info"})')
-assert read("ffrap_apmenu.txt") == "DT_MainMenuScene: 8 rows\nDisplaySceneList: x\n"
-L.execute('commands["ffrap_apmenu"]("ffrap_apmenu", {"on", "nonsense"})')
-assert len(apcalls()) == n, "an unknown tag does nothing"
+L.execute('commands["ffrap_apmenu"]("ffrap_apmenu", {"on"})')
+assert len(apcalls()) == n + 1, "on: at once"
 print("main menu entry: ok")
 
-# Round 82 result: `page` turns the entry into the Archipelago page on the Tutorial screen, with
-# the goal and checks from the new cfg lines, the tower lock, the continents and the seed's start
+# The page's text: the goal and checks from the cfg lines, the tower lock, the continents and the
+# seed's start. It is made only when the page asks for it (while the page is open).
 L.execute('''
   local G = package.loaded.game
-  G.APMENU.LAYOUTS.tutorial = "/Game/T.T_C"
+  G.APMENU.done = nil
   G.CONTINENTS = { { name = "grandshelt" }, { name = "lanzelt" }, { name = "kolobos" } }
   G.PALACE = { item = 25004 }
   G.openContinents = { lanzelt = true }
   function G.HeldCount(id) return id == 25004 and 13 or 0 end
-  function G.APMENU.Page(path, title, body) G.APMENU.paged = { path, title, body }; return "written" end
-  function G.APMENU.Unstick(path)
+  function G.APMENU.Page(title, makeBody) G.APMENU.paged = { title, makeBody() }; return "written" end
+  function G.APMENU.Unstick()
     G.APMENU.unsticks = (G.APMENU.unsticks or 0) + 1
     if G.APMENU.unsticks == 2 then return "finished a stale close; x" end
   end
 ''')
 L.execute("logged = {}")
-L.execute('commands["ffrap_apmenu"]("ffrap_apmenu", {"page"})')
-assert L.eval("package.loaded.game.APMENU.layoutTo") == "/Game/T.T_C", "the Tutorial screen"
 inbox("seed\tS82:0:1\ncfg\topenworld\t1\ncfg\tshinies\t1\ncfg\tquests\t1\ncfg\tbosses\t0\ncfg\tairship\t0\ncfg\tcontinent\tlanzelt\n"
       "cfg\tfinalboss\t3\t4\t1\t2\t2\t5\ncfg\tgoal\tfinal_boss\t0\t99\ncfg\tchecks\t12\t480\n", "w")
 tick(2)
-title, body = list(L.eval("package.loaded.game.APMENU.paged").values())[1:]
+title, body = list(L.eval("package.loaded.game.APMENU.paged").values())
 assert title == "Archipelago"
-assert any("apmenu: finished a stale close" in s for s in L.eval("logged").values()), "the fallback runs each tick"
+assert sum("apmenu: page shown" in s for s in logged()) == 1, "logged the first time only"
+assert any("apmenu: finished a stale close" in s for s in logged()), "the fallback runs each tick"
 assert body.split("\n") == [
     "Goal: win the last battle at the top of the Crystal Tower",
     "Tower: party members 3/4, Visions 1/2, Crystal Fragments 2/5",
@@ -2330,20 +2325,24 @@ assert body.split("\n") == [
 ], body
 inbox("cfg\tgoal\ttablet_shards\t7\t50\n")
 tick(2)
-body = list(L.eval("package.loaded.game.APMENU.paged").values())[2]
+body = list(L.eval("package.loaded.game.APMENU.paged").values())[1]
 assert body.startswith("Goal: receive 50 Tablet Shards (7 so far)\n"), body
-# Round 83: `state` logs the page's screens, and `close` is a way out of one that will not close
+# Round 83: `state` logs the page's screens, `close` is a way out of one that will not close, and
+# `tree` writes the open page's widgets to ffrap_apmenu.txt
 L.execute('''
   local G = package.loaded.game
-  function G.APMENU.State(path) return { path .. "  activated true", "main menu scene stack: x" } end
-  function G.APMENU.Close(path) G.APMENU.closed = path; return "close asked; IsOpeningProcess false" end
+  function G.APMENU.State() return { "WBP_TutorialLayout_C_1  activated true", "main menu scene stack: x" } end
+  function G.APMENU.Close() G.APMENU.closed = true; return "close asked; IsOpeningProcess false" end
+  function G.APMENU.Tree() return { "host x", "  Overlay Overlay_0 (visibility 4)" } end
 ''')
 L.execute("logged = {}")
 L.execute('commands["ffrap_apmenu"]("ffrap_apmenu", {"state"})')
-assert any("apmenu: /Game/T.T_C  activated true" in s for s in L.eval("logged").values()), "the page's screen"
+assert any("apmenu: WBP_TutorialLayout_C_1  activated true" in s for s in logged())
 L.execute('commands["ffrap_apmenu"]("ffrap_apmenu", {"close"})')
-assert L.eval("package.loaded.game.APMENU.closed") == "/Game/T.T_C"
-assert any("apmenu: close asked; IsOpeningProcess false" in s for s in L.eval("logged").values())
+assert L.eval("package.loaded.game.APMENU.closed") is True
+assert any("apmenu: close asked; IsOpeningProcess false" in s for s in logged())
+L.execute('commands["ffrap_apmenu"]("ffrap_apmenu", {"tree"})')
+assert read("ffrap_apmenu.txt") == "host x\n  Overlay Overlay_0 (visibility 4)\n"
 print("archipelago page lines: ok")
 
 # Round 74: the build, a hash of the mod's scripts, tells test installs apart while the version
