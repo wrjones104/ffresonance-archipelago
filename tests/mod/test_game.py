@@ -2150,6 +2150,7 @@ inner.WidgetTree = { RootWidget = widget("VerticalBox_0", nil, { pageParts.Text_
 tutorialHost = setmetatable(widget("host"), { __tostring = function() return "WBP_MainMenuLayout_C_1.WBP_TutorialLayout_C_1" end })
 tutorialHost.WidgetTree = { RootWidget = widget("Overlay_0", nil, { widget("WBP_BGDimming"), inner }) }
 tutorialHost.active = true
+tutorialHost.CloseStateProperty = { IsEnableDefaultFinisheCall = false }
 function tutorialHost:IsActivated() return self.active end
 local prevFAO = FindAllOf
 function FindAllOf(c) if c == "WBP_TutorialLayout_C" then return { tutorialHost } end return prevFAO(c) end
@@ -2169,8 +2170,13 @@ assert page() == "written" and lua("pageParts.Text_Description.text").startswith
 assert lua("pageParts.SizeBox_2.vis") == 1 and lua("#says") == first, "the same screen: the steps are told once"
 tree = list(L.eval(f'G.APMENU.Tree("{TUTORIAL_PATH}")').values())
 assert tree[0].startswith("host ") and any(line.startswith("          ? Text_Description") for line in tree), tree
-# round 83: the menu hands back the same screen activated at opacity 0 without asking it to open.
-# The page asks it (OnRequestOpen) once per opening; its open animation then runs up from 0.
+# round 83: Back asked the screen to close and the menu turned it off at once, so its closing
+# never finished, and the next open and Back were refused. The page turns on the base class's
+# default finish for a close, once per screen.
+assert lua("tutorialHost.CloseStateProperty.IsEnableDefaultFinisheCall") is True
+assert "apmenu: page CloseStateProperty.IsEnableDefaultFinisheCall true" in list(L.eval("says").values())
+# If the screen still comes back at opacity 0 with no open under way, the page asks it to open
+# (OnRequestOpen) once per opening; its open animation then runs up from 0.
 L.execute('''
   tutorialHost.opens, tutorialHost.IsOpeningProcess, tutorialHost.IsCanInput = 0, false, false
   function tutorialHost:OnRequestOpen() self.opens = self.opens + 1; self.opacity = 0.2 end
@@ -2179,21 +2185,45 @@ L.execute('''
 ''')
 assert page() == "written" and lua("tutorialHost.opens") == 1
 assert lua("says[#says]") == ("apmenu: page screen at opacity 0 (IsOpeningProcess false, IsClosingProcess nil, "
-                              "IsCanInput false, bIsCanceling nil); OnRequestOpen"), lua("says[#says]")
+                              "IsCanInput false, bIsCanceling nil, close finish true); OnRequestOpen"), lua("says[#says]")
 assert page() == "same" and lua("tutorialHost.opens") == 1, "not again while its animation runs"
 L.execute("tutorialHost.active = false")
 assert L.eval(f'select(2, G.APMENU.Page("{TUTORIAL_PATH}", "Archipelago", "x", say))') == "not open"
-L.execute("tutorialHost.active = true; tutorialHost.opacity = 0")    # the next opening
+L.execute("tutorialHost.active = true; tutorialHost.opacity = 0; tutorialHost.IsOpeningProcess = true")
+page()
+assert lua("tutorialHost.opens") == 1, "the menu's own open is under way: left alone"
+L.execute("tutorialHost.active = false")
+page()
+L.execute("tutorialHost.active = true; tutorialHost.IsOpeningProcess = false")    # the next opening
 page()
 assert lua("tutorialHost.opens") == 2, "asked again on the next opening"
 L.execute("tutorialHost.opacity = 1.0")
 state = "\n".join(L.eval(f'G.APMENU.State("{TUTORIAL_PATH}")').values())
 assert "activated true  visible nil  visibility 4  opacity 1.0; IsOpeningProcess false" in state, state
 assert "main menu scene stack: " in state, state
-# close asks the screen to close the way Back does
-assert lua(f'G.APMENU.Close("{TUTORIAL_PATH}", say)').startswith("close asked; IsOpeningProcess false")
+# close asks an open screen to close the way Back does
+assert lua(f'G.APMENU.Close("{TUTORIAL_PATH}", ownTag, say)').startswith("close asked; IsOpeningProcess false")
 assert lua("tutorialHost.closes") == 1
-L.execute("tutorialHost.active = false")
-assert lua(f'G.APMENU.Close("{TUTORIAL_PATH}", say)').startswith("no WBP_TutorialLayout_C open")
+# the fallback: a screen off but still closing gets FinishedClose after three ticks, once
+L.execute('''
+  tutorialHost.active, tutorialHost.IsClosingProcess, tutorialHost.finishes = false, true, 0
+  function tutorialHost:FinishedClose() self.finishes = self.finishes + 1 end
+''')
+assert lua(f'G.APMENU.Unstick("{TUTORIAL_PATH}", say)') is None
+assert lua(f'G.APMENU.Unstick("{TUTORIAL_PATH}", say)') is None
+assert lua(f'G.APMENU.Unstick("{TUTORIAL_PATH}", say)').startswith("finished a stale close")
+assert lua(f'G.APMENU.Unstick("{TUTORIAL_PATH}", say)') is None and lua("tutorialHost.finishes") == 1, "once"
+# the empty background: our screen off, the menu still on our scene. close pops the scene.
+L.execute(f'''
+  menuVM = {{ SceneDataStack = {{ {{ TagName = FName("UI.MainMenu.Scene.Root") }}, {{ TagName = FName("{OWN_TAG}") }} }} }}
+  function menuVM:IsValid() return true end
+  function menuVM:HasAnyInternalFlags() return false end
+  function menuVM:HasAnyFlags() return false end
+  function menuVM:PopScene() table.remove(self.SceneDataStack) end
+  local prevFFO = FindFirstOf
+  function FindFirstOf(c) if c == "CPP_VM_MainMenu" then return menuVM end return prevFFO(c) end
+''')
+assert lua(f'G.APMENU.Close("{TUTORIAL_PATH}", ownTag, say)') == "PopScene; the stack ends with UI.MainMenu.Scene.Root"
+assert lua(f'G.APMENU.Close("{TUTORIAL_PATH}", ownTag, say)').startswith("no WBP_TutorialLayout_C open and the menu is not on our scene")
 assert L.eval(f'select(2, G.APMENU.Page("{TUTORIAL_PATH}", "Archipelago", "x", say))') == "not open"
 print("archipelago page: ok")

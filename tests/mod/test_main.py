@@ -2302,6 +2302,10 @@ L.execute('''
   G.openContinents = { lanzelt = true }
   function G.HeldCount(id) return id == 25004 and 13 or 0 end
   function G.APMENU.Page(path, title, body) G.APMENU.paged = { path, title, body }; return "written" end
+  function G.APMENU.Unstick(path)
+    G.APMENU.unsticks = (G.APMENU.unsticks or 0) + 1
+    if G.APMENU.unsticks == 2 then return "finished a stale close; x" end
+  end
 ''')
 L.execute("logged = {}")
 L.execute('commands["ffrap_apmenu"]("ffrap_apmenu", {"page"})')
@@ -2311,6 +2315,7 @@ inbox("seed\tS82:0:1\ncfg\topenworld\t1\ncfg\tshinies\t1\ncfg\tquests\t1\ncfg\tb
 tick(2)
 title, body = list(L.eval("package.loaded.game.APMENU.paged").values())[1:]
 assert title == "Archipelago"
+assert any("apmenu: finished a stale close" in s for s in L.eval("logged").values()), "the fallback runs each tick"
 assert body.split("\n") == [
     "Goal: win the last battle at the top of the Crystal Tower",
     "Tower: party members 3/4, Visions 1/2, Crystal Fragments 2/5",

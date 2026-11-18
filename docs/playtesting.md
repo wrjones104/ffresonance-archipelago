@@ -1156,11 +1156,11 @@ Send the `[FFRAP]` lines of the log.
 - The page lists the goal, the tower lock (party members, Visions, Crystal Fragments), checks done of the total, items received, Tablet Shards held, the continents open and locked, the kinds of locations, and the start.
 - The client sends two new lines when they change: `cfg goal <kind> <shards> <shards needed>` and `cfg checks <done> <total>`.
 
-## Round 83 test plan (mod 0.61.0 build da0d250c, world 0.30.0 build 91d7b935)
+## Round 83 test plan (mod 0.61.0 build 6a38c39e, world 0.30.0 build 91d7b935)
 
 **Install:** copy `FFRArchipelago/Scripts`, and copy `dist/ff_resonance.apworld` into `custom_worlds`. Only the client changed, so the round 79 seed still plays. The client will warn that the seed's build is not its own; that warning is expected this time.
 
-**0. The builds.** The log should say `version 0.61.0 (build da0d250c)`; the client `world version 0.30.0 (build 91d7b935)`.
+**0. The builds.** The log should say `version 0.61.0 (build 6a38c39e)`; the client `world version 0.30.0 (build 91d7b935)`.
 
 **First try (build 0c2a8b95, apworld 109145bc, 2026-11-18).** The entry opened the Tutorial screen, but it stayed blank: "TITLE", the white box, "TEXT". The page lines in the log were right (goal, tower 2/6, 7/12, 2/10, checks 113 of 497, 117 items, 16 shards, 5 continents open). The log said `apmenu: page: no Text_Title or Text_Description on the screen`: `GetWidgetFromName` found neither, on the layout or on `WBP_Tutorial`. The round 82 `tree` walk did reach them (it follows `GetChildAt` and each user widget's `WidgetTree.RootWidget`). **Fix (build afd59819):** the page finds its parts with that same walk. A miss now logs how many widgets the walk saw.
 
@@ -1189,9 +1189,23 @@ Send the `[FFRAP]` lines of the log.
 - `ffrap_apmenu state` adds those four flags.
 - The `bUsePooling` write is gone.
 
+**Fourth try (build da0d250c, 2026-11-18).** No change for the player: the second open still would not close. The flags told why.
+- On the second open: `IsOpeningProcess false, IsClosingProcess true`. **The first close never finished.** Back asked the screen to close (`A_Close`, then `FinishedClose` at its end), but the menu turned the screen off at once, so `FinishedClose` never ran and the screen stayed "closing". With `IsEnableInProcessingStateChange` false, the next open was refused (opacity 0), and so was the next close.
+- Our `OnRequestOpen` call played the open, but the state stayed "closing".
+- `ffrap_apmenu close` (`OnRequestClose`) did finish a close: 2 s later the screen was off and `IsClosingProcess false`. But the menu's scene stack still ended with our scene, so the menu stayed on its empty background. It does not wait for a late `FinishedClose`.
+- `inspect_WBP_TutorialLayout_C.tsv`: the class chain is `WBP_TutorialLayout_C < CPP_WBP_Tutorial < CPP_WBP_MuchaActivatable < CPP_EU_WBP_Activatable < CommonActivatableWidget`. `FinishedOpen`, `FinishedClose`, `OnRequestOpen` and `OnRequestClose` are callable. Both `OpenStateProperty` and `CloseStateProperty` have every switch false.
+- The game's exe names `PushScene`, `PopScene`, `RequestScene` and `OnFinishedSceneOpen`, most likely on `CPP_VM_MainMenu`, which holds `SceneDataStack`.
+
+**Changes (build 6a38c39e):**
+- The page sets our screen's `CloseStateProperty.IsEnableDefaultFinisheCall` to true, so the base class finishes a close itself, the moment Back asks. The next open should then start from "closed", and the menu's own open should play.
+- A fallback: a screen that is off but still "closing" for 1.5 s gets `FinishedClose`, logged as `apmenu: screen off but still closing (...); FinishedClose`.
+- The page asks `OnRequestOpen` only when no open is under way.
+- `ffrap_apmenu close`: with our screen open, `OnRequestClose`. With it already off but the menu still on our scene, `CPP_VM_MainMenu:PopScene`.
+- `ffrap_apmenu state` adds `close finish`.
+
 **1. The page.** In game, run `ffrap_apmenu page`. The log lists the page's lines (`apmenu: page line: ...`). Open the main menu and pick Archipelago. **Does one window show, titled Archipelago, with the lines and no white box, arrows or "1/1"?** Send a screenshot. **Do all the lines fit, or is the text cut off?**
 
-**2. The numbers.** **Do the goal, the tower counts, the checks and the continents match the client and the game?** Open a chest or receive an item, then open the page again. **Do the checks and items received go up?** **Open and close the page three or four times: does it show each time, and does Back always work?** On the second open the log should say `page screen at opacity 0 (...); OnRequestOpen`, and the window should fade in. If Back does nothing, open the console, run `ffrap_apmenu state`, then `ffrap_inspect WBP_TutorialLayout_C` (it writes `inspect_WBP_TutorialLayout_C.tsv`), then `ffrap_apmenu close`. Send the log and the file.
+**2. The numbers.** **Do the goal, the tower counts, the checks and the continents match the client and the game?** Open a chest or receive an item, then open the page again. **Do the checks and items received go up?** **Open and close the page three or four times: does it show each time, and does Back always work?** On the second open the log should say `page screen at opacity 0 (...); OnRequestOpen`, and the window should fade in. The log should say `page CloseStateProperty.IsEnableDefaultFinisheCall true` on the first open. On the second open it should say nothing about opacity. If Back does nothing, open the console, run `ffrap_apmenu state`, then `ffrap_inspect CPP_VM_MainMenu` (it writes `inspect_CPP_VM_MainMenu.tsv`), then `ffrap_apmenu close` (once, and again if the screen goes but the empty background stays). Send the log and the file.
 
 **3. Nothing else changed.** After the page, open System, Quests, Bestiary and System > Help, and look at a tutorial from Help. **Do they look and work as before?** A tutorial from Help should still show its own picture and text.
 

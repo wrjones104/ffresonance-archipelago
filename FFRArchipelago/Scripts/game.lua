@@ -5542,6 +5542,9 @@ local function openFlags(w)
         pcall(function() v = w[k] end)
         f[#f + 1] = k .. " " .. tostring(v)
     end
+    local finish
+    pcall(function() finish = w.CloseStateProperty.IsEnableDefaultFinisheCall end)
+    f[#f + 1] = "close finish " .. tostring(finish)
     return table.concat(f, ", ")
 end
 
@@ -5588,13 +5591,22 @@ function A.Page(path, title, body, say)
         tell("apmenu: page lets the text box grow (ClearHeightOverride)")
         pcall(function() box:ClearHeightOverride() end)
     end
-    -- Round 83: the menu hands back the same screen on the next open, activated but at opacity 0,
-    -- its A_Close's end, without asking it to open, and Back then could not close it. The Tutorial
-    -- screen opens in its OnRequestOpen (A_Open, then FinishedOpen at the end), so the page asks
-    -- that once per opening.
-    local opacity
+    -- Round 83: Back asks the screen to close (A_Close, then FinishedClose at its end), but the menu
+    -- turns the screen off at once, so FinishedClose never ran. The screen stayed "closing", and
+    -- the next open and the next Back were refused. With the default finish on, the base class
+    -- finishes a close itself, as the System page's does.
+    local finish
+    pcall(function() finish = host.CloseStateProperty.IsEnableDefaultFinisheCall end)
+    if finish == false then
+        tell("apmenu: page CloseStateProperty.IsEnableDefaultFinisheCall true")
+        pcall(function() host.CloseStateProperty.IsEnableDefaultFinisheCall = true end)
+    end
+    -- If a screen still comes back at opacity 0 with no open under way, ask it to open, once per
+    -- opening (OnRequestOpen: A_Open, then FinishedOpen at its end).
+    local opacity, opening
     pcall(function() opacity = host:GetRenderOpacity() end)
-    if type(opacity) == "number" and opacity < 0.99 and A.reopenFor ~= full then
+    pcall(function() opening = host.IsOpeningProcess end)
+    if type(opacity) == "number" and opacity < 0.99 and opening ~= true and A.reopenFor ~= full then
         A.reopenFor = full
         say("apmenu: page screen at opacity " .. opacity .. " (" .. openFlags(host) .. "); OnRequestOpen")
         local okOpen, err = pcall(function() host:OnRequestOpen() end)
@@ -5631,15 +5643,49 @@ function A.State(path)
     return out
 end
 
--- A way out when our screen will not close: ask it to close the way Back does (OnRequestClose:
--- A_Close, then FinishedClose, which the menu waits for). Round 83: DeactivateWidget took the
--- screen away but left the menu waiting, empty. Returns a line.
-function A.Close(path, say)
+-- Our screen turned off but still "closing": the fallback for when the default finish above does
+-- not take. After three ticks (1.5 s) in that state, FinishedClose. Returns a line when it acts.
+A.stale = {}
+function A.Unstick(path, say)
+    local ok, all = pcall(FindAllOf, className(path))
+    for _, w in ipairs(ok and all or {}) do
+        local full = G.PathOf(w)
+        if Alive(w) and full and full:find(MENU_LAYOUT, 1, true) and not activated(w) then
+            local closing
+            pcall(function() closing = w.IsClosingProcess end)
+            if closing == true then
+                A.stale[full] = (A.stale[full] or 0) + 1
+                if A.stale[full] == 3 then
+                    say("apmenu: screen off but still closing (" .. openFlags(w) .. "); FinishedClose")
+                    pcall(function() w:FinishedClose() end)
+                    return "finished a stale close; " .. openFlags(w)
+                end
+            else
+                A.stale[full] = nil
+            end
+        end
+    end
+end
+
+-- A way out when the page will not close. With our screen open: ask it to close the way Back does
+-- (OnRequestClose). With it already off but the menu still showing our scene, the empty
+-- background of round 83: the menu's view model PopScene. Returns a line.
+function A.Close(path, tag, say)
     local host = openHost(path)
-    if not host then return "no " .. className(path) .. " open under the main menu" end
-    say("apmenu: OnRequestClose " .. tostring(G.PathOf(host)) .. " (" .. openFlags(host) .. ")")
-    local okCall, err = pcall(function() host:OnRequestClose() end)
-    return okCall and ("close asked; " .. openFlags(host)) or ("OnRequestClose failed: " .. tostring(err))
+    if host then
+        say("apmenu: OnRequestClose " .. tostring(G.PathOf(host)) .. " (" .. openFlags(host) .. ")")
+        local okCall, err = pcall(function() host:OnRequestClose() end)
+        return okCall and ("close asked; " .. openFlags(host)) or ("OnRequestClose failed: " .. tostring(err))
+    end
+    local vm = Live("CPP_VM_MainMenu")
+    local top
+    if vm then pcall(function() top = tagOf(vm.SceneDataStack[#vm.SceneDataStack]) end) end
+    if top ~= tag then return "no " .. className(path) .. " open and the menu is not on our scene (" .. tostring(top) .. ")" end
+    say("apmenu: CPP_VM_MainMenu:PopScene (the stack ends with " .. tag .. ")")
+    local okPop, errPop = pcall(function() vm:PopScene() end)
+    local now
+    pcall(function() now = tagOf(vm.SceneDataStack[#vm.SceneDataStack]) end)
+    return okPop and ("PopScene; the stack ends with " .. tostring(now)) or ("PopScene failed: " .. tostring(errPop))
 end
 
 -- `ffrap_apmenu on`, every tick: the row (with its screen when `layoutPath` is set), the scene

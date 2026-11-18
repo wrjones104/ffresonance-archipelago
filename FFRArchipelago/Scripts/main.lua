@@ -1819,6 +1819,8 @@ state.apMenuTick = function()
         if wrote == "written" then log("apmenu: page written") end
         if not wrote and whyPage ~= "not open" and whyPage ~= m.pageFailed then log("apmenu: page: " .. whyPage) end
         m.pageFailed = whyPage
+        local unstuck = A.Unstick(A.LAYOUTS[m.layout], log)
+        if unstuck then log("apmenu: " .. unstuck) end
     end
 end
 -- The Archipelago page's lines, from what the client has sent and the loaded save.
@@ -1913,7 +1915,7 @@ command("ffrap_apmenu", function(p)
     elseif what == "state" or what == "close" then
         local path = A.LAYOUTS[m and m.layout or "tutorial"]
         if what == "close" then
-            local line = A.Close(path, log)
+            local line = A.Close(path, m and m.tag or A.TAGS.own, log)
             log("apmenu: " .. line)
             notify("Menu close: " .. line)
             return
