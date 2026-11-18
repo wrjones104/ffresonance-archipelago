@@ -27,7 +27,7 @@
 --   ffrap_title [list|add]       the Archipelago entry on the title menu (added at start-up)
 --   ffrap_notice [text]          show text with the game's quest-notice banner
 --   ffrap_apmenu off|on|state|close|tree  the Archipelago page in the main menu (on by default)
---   ffrap_apmenu options|text|tabs [only|all]  round 85 probe: the entry opens the Options screen
+--   ffrap_apmenu options|text|tabs [only|all]|mode ap|game  rounds 85-86 probe: the Options screen as the page
 --   ffrap_logo                   place the Archipelago logo on the mod's title line manually
 --   ffrap_layout <text>          log the panels holding some on-screen text
 --   ffrap_feed [on|off|test [plain]|check]  the item feed at the bottom right of the field HUD
@@ -116,13 +116,6 @@ local function openStartOn() return openStart or seedCfg.openworld end
 local function seedArrival()
     if seedCfg.airship == false then return game.FOOT_STARTS[seedCfg.continent or ""] or game.OPEN_START end
     return game.OPEN_START
-end
--- An `ffrap_lock on|off` from this run wins. Then a seed that asks for locks: a saved "off" from
--- an old test must not quietly leave a real seed unlocked. Then the saved switch.
-local lockChoice = nil
-local function locksOn()
-    if lockChoice ~= nil then return lockChoice end
-    return seedCfg.openworld or continentLocks == true
 end
 local locksFailed = nil      -- the last ContinentSync failure logged, so each one is logged once
 local shopSave = nil         -- the save the vision shop guard last ran on
@@ -263,7 +256,7 @@ function save.writeStamp(force)
         return
     end
     save.stampWhy = nil
-    if wrote > 0 then log("stamp: " .. state.applied .. " items (" .. wrote .. " flags)") end
+    if wrote > 0 and not state.catchUp then log("stamp: " .. state.applied .. " items (" .. wrote .. " flags)") end
     save.stamped = want
 end
 
@@ -276,6 +269,16 @@ end
 -- made it: our settings are not applied and the Archipelago page leaves the menu. /bind links it.
 function save.vanilla()
     return state.seed ~= nil and save.obj ~= nil and not save.ok
+end
+
+-- A save not linked to the seed has no locks (round 85: they were still on there). Then an
+-- `ffrap_lock on|off` from this run wins. Then a seed that asks for locks: a saved "off" from an
+-- old test must not quietly leave a real seed unlocked. Then the saved switch.
+local lockChoice = nil
+local function locksOn()
+    if save.vanilla() then return false end
+    if lockChoice ~= nil then return lockChoice end
+    return seedCfg.openworld or continentLocks == true
 end
 
 local function slotsText(withItems)
@@ -551,6 +554,15 @@ local function applyItems()
         state.lastResult = "waiting: not on the field"
         return
     end
+    -- Round 85: binding a save late in a seed brought 280 items, each with its own "Received" line.
+    -- With more than this many waiting, the feed says so once and once more when they are in.
+    local CATCH_UP_AFTER = 10
+    if not state.catchUp and state.items[state.applied + CATCH_UP_AFTER] then
+        local last = state.applied
+        while state.items[last + 1] do last = last + 1 end
+        state.catchUp = state.applied
+        notify("Receiving " .. (last - state.applied + 1) .. " items from Archipelago")
+    end
     local done, names = 0, {}
     applyWaiting(names)
     while done < MAX_GRANTS_PER_TICK do
@@ -583,7 +595,12 @@ local function applyItems()
             saveState()
         end
     end
-    if feedOn and game.InGame() then
+    if state.catchUp then
+        if not state.items[state.applied] then
+            notify("Received " .. (state.applied - state.catchUp) .. " items")
+            state.catchUp = nil
+        end
+    elseif feedOn and game.InGame() then
         -- The feed has a line per item.
         for _, name in ipairs(names) do notify("Received " .. name) end
     elseif #names == 1 then
@@ -718,6 +735,24 @@ end
 -- so one read as taken farther away than this waits until the player is near it.
 local PLACE = { same = 150, reach = 1500 }
 
+-- Round 85: a save bound late in a seed read 80 shinies as taken far away, a line each. They are
+-- logged together, the first few by name.
+PLACE.far = {}
+PLACE.FAR_NAMED = 5
+function PLACE.logFar()
+    local far = PLACE.far
+    if #far == 0 then return end
+    PLACE.far = {}
+    if #far == 1 then
+        log(far[1] .. "; not sent until the player is near it")
+        return
+    end
+    local named = {}
+    for i = 1, math.min(#far, PLACE.FAR_NAMED) do named[i] = far[i] end
+    log(string.format("%d locations read as taken far from the player, not sent until the player is near each: %s%s",
+        #far, table.concat(named, "; "), #far > PLACE.FAR_NAMED and ("; and " .. (#far - PLACE.FAR_NAMED) .. " more") or ""))
+end
+
 -- How far the player stands from (x, y), or nil when the pawn cannot be read. One pose per scan.
 function PLACE.distance(x, y)
     if PLACE.visit ~= visit or PLACE.at ~= visit.scans then
@@ -750,8 +785,8 @@ local function opened(key, fresh, spot)
         if spot.x and not (d and d <= PLACE.reach) then
             if not known and not visit.recorded["far:" .. key] then
                 visit.recorded["far:" .. key] = true
-                log(string.format("%s reads taken (%s), %s; not sent until the player is near it", key, spot.why,
-                    d and (math.floor(d) .. " from the player") or "the player's place unknown"))
+                PLACE.far[#PLACE.far + 1] = string.format("%s reads taken (%s), %s", key, spot.why,
+                    d and (math.floor(d) .. " from the player") or "the player's place unknown")
             end
             return false
         end
@@ -940,10 +975,7 @@ local function syncFromSave()
             key = "shiny:" .. e.map .. ":" .. e.uid
         end
         if key then rowsOf[e.map] = rowsOf[e.map] or game.SaveOpenRows(e.map) end
-        if key and rowsOf[e.map][e.uid] and report("check", key) then
-            log("sync: check " .. key)
-            new = new + 1
-        end
+        if key and rowsOf[e.map][e.uid] and report("check", key) then new = new + 1 end
     end
     return new
 end
@@ -966,6 +998,7 @@ local function scanLoot()
     if visit.scans <= MAP_SETTLE_SCANS then return end
     scanChests(mapId)
     scanShinies(mapId)
+    PLACE.logFar()
 end
 
 -- Goal victory tracking: Rain vs. Sol (battle group 9056). Story reaches 8050 before the last
@@ -1458,6 +1491,18 @@ end
 -- Continent locks (game.ContinentSync): re-spawn world-map lock boxes after map transitions so
 -- they match the save's flags. Run only on the field (never during battle).
 local function locksTick()
+    -- The boxes the map load placed before the save was known, and the ferry's closed ports, come
+    -- off once for each such save.
+    if save.vanilla() then
+        if state.unlockedSave ~= save.obj then
+            state.unlockedSave = save.obj
+            game.ContinentClear()
+            local ferry = game.FerrySync(true)
+            log("locks: off for a save not linked to the seed (" .. ferry .. " ferry choices put back)")
+        end
+        return
+    end
+    state.unlockedSave = nil
     if not locksOn() or not game.OnField() then return end
     local ferry = game.FerrySync()
     if ferry > 0 then log("ferry: " .. ferry .. " port choices written") end
@@ -1814,6 +1859,8 @@ end)
 --   options | text   round 85 probe (IDEAS.md idea 39): the entry opens the game's Options screen,
 --              with the view models and input contexts the game gives it / the page again
 --   tabs [only | all]   the Options screen's tabs: list them / leave out all but Gameplay / put them back
+--   mode ap | game   round 86 probe: the Options screen as our page (one Archipelago tab, the game's
+--              rows hidden, a heading per page line), and the main menu's SetScene calls logged / back
 -- state.apMenu is the entry's state while it is on: its steps are logged until it is first in the
 -- menu, and each reason it cannot be yet is logged once.
 state.apMenu = {}
@@ -1841,27 +1888,26 @@ state.apMenuTick = function()
     local unstuck = A.Unstick(log)
     if unstuck then log("apmenu: " .. unstuck) end
 end
--- The user, round 84: a player wants to know how many shards they have and how many safes they can
--- open without the princess's long talk. Counter 43 is 10 plus the safes paid for (game.PalaceSync
--- keeps it so), and a safe opened is its chest's check. Shards turned in are known only after a
--- visit to the palace in this run.
+-- Round 84, a player: count the shards without the princess's long talk. Round 85, the user: the
+-- total collected and the chests ready to open, no more. Collected: the shards the seed has sent,
+-- or held plus turned in when that is more (with include_tablet_shards off the shards are the
+-- game's own pick-ups; turned in is known after a visit to the palace in this run). A chest is
+-- paid for by its step's shards and opened when its check is sent.
 state.palaceLines = function()
     local P = game.PALACE
-    local held = game.HeldCount(P.item)
-    local text = "Tablet Shards: " .. tostring(held or "?") .. " held"
-    if P.turned then text = text .. ", " .. P.turned .. " turned in" end
-    local lines = { text }
-    local counter = game.ProgressValue(P.counter)
-    if not counter then return lines end
-    local paid = math.max(0, counter - P.met)
-    local opened = 0
-    for i = 0, #P.steps - 1 do
-        if state.reported["check|chest:" .. P.map .. ":" .. i] then opened = opened + 1 end
+    local received = 0
+    for i = 0, state.applied - 1 do
+        local it = state.items[i]
+        if it and it.kind == "item" and it.id == P.item then received = received + it.count end
     end
-    local need = P.steps[paid + 1]
-    lines[#lines + 1] = string.format("Oblivion Palace safes: %d ready to open, %d opened%s", math.max(0, paid - opened),
-        opened, need and string.format("; the next needs %d shards in all", need) or "; all paid for")
-    return lines
+    local collected = math.max(received, (game.HeldCount(P.item) or 0) + (P.turned or 0))
+    local paid, opened = 0, 0
+    for i, need in ipairs(P.steps) do
+        if collected >= need then paid = paid + 1 end
+        if state.reported["check|chest:" .. P.map .. ":" .. (i - 1)] then opened = opened + 1 end
+    end
+    return { "Tablet Shards: " .. collected .. " collected",
+             "Oblivion Palace Chests: " .. math.max(0, paid - opened) .. " ready to open" }
 end
 -- The Archipelago page's lines, from what the client has sent and the loaded save.
 state.apMenuPage = function()
@@ -1939,6 +1985,27 @@ command("ffrap_apmenu", function(p)
         local lines = A.Tabs(mode, log)
         for _, line in ipairs(lines) do log("apmenu: " .. line) end
         notify("Options tabs (" .. mode .. "): " .. #lines .. " lines in the log")
+    elseif what == "mode" then
+        local kind = tostring(p[2] or ""):lower()
+        if kind ~= "ap" and kind ~= "game" then
+            notify("Usage: ffrap_apmenu mode ap | game")
+            return
+        end
+        state.apMenuWatch = kind == "ap"
+        -- The root entry's click calls CPP_MainMenuSubsystem:SetScene(tag, option) from Blueprint, so a
+        -- pre-hook sees which scene opens before its screen does.
+        if state.apMenuWatch and not state.apMenuHooked then
+            state.apMenuHooked = pcall(RegisterHook, "/Script/mucha.CPP_MainMenuSubsystem:SetScene", function(_, tag)
+                if not state.apMenuWatch then return end
+                local name
+                pcall(function() name = tag:get().TagName:ToString() end)
+                log("apmenu: SetScene " .. tostring(name))
+            end)
+            log("apmenu: SetScene hook " .. (state.apMenuHooked and "registered" or "could not be registered"))
+        end
+        local lines = A.Mode(kind, kind == "ap" and state.apMenuPage() or {}, log)
+        for _, line in ipairs(lines) do log("apmenu: " .. line) end
+        notify("Archipelago page " .. lines[#lines])
     elseif what == "off" then
         state.apMenu = nil
         notify("Archipelago page: no longer added (restart the game to take it out of the menu)")
@@ -1947,7 +2014,7 @@ command("ffrap_apmenu", function(p)
         state.apMenuTick()
         notify("Archipelago page: on")
     else
-        notify("Usage: ffrap_apmenu off | on | state | close | tree | options | text | tabs [only | all]")
+        notify("Usage: ffrap_apmenu off | on | state | close | tree | options | text | tabs [only | all] | mode ap | game")
     end
 end)
 
@@ -2693,6 +2760,13 @@ local function followRescale(f)
 end
 
 local function seedScaleTick()
+    -- Round 85: an `ffrap_scale 1` from the linked save was still on in a save of the game's own.
+    if save.vanilla() and scaleByHand then
+        scaleByHand, seedScaleOn, scaleFollow = false, false, nil
+        log("scale: ffrap_scale is off for a save not linked to the seed")
+        applyScale("off", nil, nil, false, { hp = 100, attack = 100, magic = 100 })
+        return
+    end
     if not seedCfg.openworld or scaleByHand then return end
     if not sessionSave() or not setting("scaling") then
         if seedScaleOn then

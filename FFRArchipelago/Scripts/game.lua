@@ -2411,12 +2411,32 @@ G.QUESTS = require("quests")
 -- C02_219_02 also accepts "Arise, Mechabo!" (request 17) into the quest log. Round 84: Verun asked
 -- for the Ipooh drops with no quest in the log. His own rows for that step accept it instead:
 -- `_yet` when he asks, and `_ItemGet` when the drops are delivered before talking to him.
+-- Round 85: still no quest. Request 17's own row (DT_RequestData C02_MechaboLvUp) is accepted only
+-- while `{progress:16}==0&{progress:0}>=2120`, and the start has set the counter to 10, so the
+-- Accept was refused. Its accept and occurrence tests become the counter at Verun's step. The
+-- quest board's Ipooh hunt (quest 1001) most likely counts only while the quest is accepted.
 G.MECHABO = { counter = 16, start = 10, request = 17,
-              rows = { "C02_MechaboLvUp_00_yet", "C02_MechaboLvUp_00_ItemGet" } }
--- Puts an Accept of request 17 first in each of those rows' RequestStateSettings. Safe to run
--- again. Returns the rows written.
+              rows = { "C02_MechaboLvUp_00_yet", "C02_MechaboLvUp_00_ItemGet" },
+              requestTable = "/Game/Datatable/Request/DT_RequestData.DT_RequestData",
+              requestRow = "C02_MechaboLvUp", accept = "{progress:16}==10" }
+-- Puts an Accept of request 17 first in each of those rows' RequestStateSettings, and request 17's
+-- accept and occurrence tests at Verun's step. Safe to run again. Returns the rows written.
 function G.MechaboPatch()
     local M, written, wanted = G.MECHABO, 0, {}
+    local requests = G.LoadObject(M.requestTable)
+    local request
+    pcall(function() request = requests:FindRow(M.requestRow) end)
+    if request then
+        local now
+        pcall(function() now = request.AcceptCondition:ToString() end)
+        if now ~= M.accept then
+            pcall(function()
+                request.AcceptCondition = M.accept
+                request.Occurrence.Condition = M.accept
+            end)
+            written = written + 1
+        end
+    end
     for _, r in ipairs(M.rows) do wanted[r] = true end
     EachTalkRow(function(key, row)
         if not wanted[key] then return end
@@ -3205,6 +3225,7 @@ local function LoadObject(path)
     end
     return o
 end
+G.LoadObject = LoadObject   -- for functions defined above this point
 
 -- Loads a cooked Blueprint's generated class (`<pkg>.<name>_C`), trying the class path first and
 -- AssetRegistryHelpers second (as FFRSLib loads BP_PackSection_C).
@@ -4737,9 +4758,10 @@ G.FERRY_MENUS = {
     Gim_EV_ShipMovement_04_01_Choice = { ports = { 1, 2, 3 }, cancel = "Gim_EV_ShipMovement_Cancel" },
 }
 
--- Points each menu choice at its trip or at the cancel row, by the ports' continents. Safe to
--- call often: it writes only what differs. Returns the number of choices written.
-function G.FerrySync()
+-- Points each menu choice at its trip or at the cancel row, by the ports' continents (`allOpen`:
+-- every trip, as the game has it). Safe to call often: it writes only what differs. Returns the
+-- number of choices written.
+function G.FerrySync(allOpen)
     local written = 0
     for _, dt in ipairs(TableFamily(Find(SHOP_TABLE))) do
         for rowName, menu in pairs(G.FERRY_MENUS) do
@@ -4747,7 +4769,7 @@ function G.FerrySync()
             pcall(function() row = dt:FindRow(rowName) end)
             if row then
                 for i, port in ipairs(menu.ports) do
-                    local want = G.ContinentOpen(G.FERRY_PORTS[port])
+                    local want = (allOpen or G.ContinentOpen(G.FERRY_PORTS[port]))
                         and string.format("Gim_EV_ShipMovement_%02d_Cushion", port) or menu.cancel
                     pcall(function()
                         local entry = row.ChoicesBranchEventList[i].EventList[1]
@@ -5427,6 +5449,81 @@ function A.Screen(kind, say)
         pcall(function() sub.SceneDataMap:ForEach(function(k, v) if tagOf(k:get()) == A.TAG then copy = v:get() end end) end)
     end
     out[#out + 1] = "subsystem: " .. (copy and A.WriteScreen(copy.LayoutData, say) or "no copy (title screen?)")
+    return out
+end
+
+-- Round 86 probe (IDEAS.md idea 39): the Options screen as our page. Round 85 showed the entry
+-- can open it, and that its tabs are read at each open. `ap` leaves out every tab but Gameplay
+-- and names it Archipelago, hides the game's rows in DT_OP_GameSetting (ShowType TitleOnly: not
+-- in game), and adds a heading row for each of `lines` (copies of the keyboard tab's first
+-- SubHeader; both tables hold OP_BaseMenu_EntryInfo rows). `game` puts it all back. Each step is
+-- told to `say` before it runs. Returns lines.
+local KEYBOARD_TABLE = "/Game/Datatable/UI/Option/Root/KeyboardMouseSetting/DT_OP_KeyboardMouseSetting.DT_OP_KeyboardMouseSetting"
+local HEADING_ROW = "SubHeader_共通"
+local GAMEPLAY_TABLE = "/Game/Datatable/UI/Option/Root/GameSetting/DT_OP_GameSetting.DT_OP_GameSetting"
+local TITLE_ONLY = 1   -- EOP_BaseMenu_Command_ShowType: ALL 0, TitleOnly 1, GamePlayOnly 2
+function A.Mode(kind, lines, say)
+    local out = A.Tabs(kind == "ap" and "only" or "all", say)
+    local root, rows = LoadObject(OPTION_ROOT_TABLE), LoadObject(GAMEPLAY_TABLE)
+    local gameplay
+    pcall(function()
+        root:ForEachRow(function(_, row) if Int(row.CommandCategory) == GAMEPLAY_CATEGORY then gameplay = row end end)
+    end)
+    if not (gameplay and rows) then
+        out[#out + 1] = "no Gameplay tab or no DT_OP_GameSetting"
+        return out
+    end
+    local ours = {}
+    for _, o in ipairs(G.OPTION_ROWS) do ours[o.row] = true end
+    local saved = A.modeSaved
+    if kind == "ap" and not saved then
+        saved = { show = {}, info = {}, hidden = 0 }
+        pcall(function() saved.label = gameplay.DisplayText:ToString() end)
+        say("apmenu: Gameplay tab named " .. A.NAME)
+        pcall(function() gameplay.DisplayText = FText(A.NAME) end)
+        pcall(function()
+            rows:ForEachRow(function(name, row)
+                local key = ObjText(name)
+                if ours[key] then return end
+                saved.show[key] = Int(row.ShowCommandData.ShowType)
+                say("apmenu: row " .. key .. " ShowType " .. tostring(saved.show[key]) .. " -> TitleOnly")
+                pcall(function() row.ShowCommandData.ShowType = TITLE_ONLY end)
+                saved.hidden = saved.hidden + 1
+            end)
+        end)
+        local keyboard, heading = LoadObject(KEYBOARD_TABLE), nil
+        pcall(function() heading = keyboard:FindRow(HEADING_ROW) end)
+        for i, text in ipairs(heading and lines or {}) do
+            local name = "FFRAP_Info" .. i
+            say("apmenu: heading row " .. name .. ": " .. text)
+            local row
+            if pcall(function() rows:AddRow(name, heading) end) then pcall(function() row = rows:FindRow(name) end) end
+            if row then
+                pcall(function() row.DisplayText = FText(text) end)
+                saved.info[#saved.info + 1] = name
+            end
+        end
+        A.modeSaved = saved
+        out[#out + 1] = string.format("mode ap: %d game rows hidden, %d heading rows%s", saved.hidden, #saved.info,
+            heading and "" or " (no SubHeader row to copy)")
+    elseif kind == "game" and saved then
+        say("apmenu: Gameplay tab named " .. tostring(saved.label))
+        if saved.label then pcall(function() gameplay.DisplayText = FText(saved.label) end) end
+        for key, t in pairs(saved.show) do
+            local row
+            pcall(function() row = rows:FindRow(key) end)
+            if row then pcall(function() row.ShowCommandData.ShowType = t end) end
+        end
+        local removed = 0
+        for _, name in ipairs(saved.info) do
+            say("apmenu: RemoveRow " .. name)
+            if pcall(function() rows:RemoveRow(name) end) then removed = removed + 1 end
+        end
+        A.modeSaved = nil
+        out[#out + 1] = string.format("mode game: rows shown again, %d of %d heading rows removed", removed, #saved.info)
+    else
+        out[#out + 1] = "mode " .. kind .. ": already so"
+    end
     return out
 end
 

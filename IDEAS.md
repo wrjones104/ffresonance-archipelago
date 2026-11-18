@@ -324,6 +324,8 @@ Along the same lines, I would also want an option for players to start with all 
 
 **Round 84 result:** Verun is at the forge and asks for the Ipooh drops (`C02_MechaboLvUp_00_yet`), but "Arise, Mechabo!" was not in the quest log. The quest log is fed by each event row's `RequestStateSettings` (Accept, Proceed, Complete), and the Accept of request 17 is in `C02_219_02`, which the skip never plays. **Built (build a87aac00):** `G.MechaboPatch` puts that Accept first in `_00_yet` and `_00_ItemGet`. Quests 26 and 27 are accepted by the chain's own rows (`_02`, `_07`).
 
+**Round 85 result:** still no quest, and Ipooh kills did not count. Request 17's own row (`DT_RequestData` `C02_MechaboLvUp`) is accepted only while `AcceptCondition` holds, `{progress:16}==0&{progress:0}>=2120`, and the start has the counter at 10 already. Its first step lists quest 1001 on quest board 1000: "Ipooh" x2 (`ClearConditionList` ID 55), most likely a hunt that counts only while the quest is accepted. **Built (build b93912a5):** `G.MechaboPatch` also sets request 17's `AcceptCondition` and `Occurrence.Condition` to `{progress:16}==10`.
+
 **To find out:**
 - Whether the steps should be locations: the six abilities and three Magicite rewards, with logic for each material's enemy area. The steps also need Lid in logic if the abilities stay vanilla.
 
@@ -452,3 +454,13 @@ Until then the Options rows stay, and on a save not linked to the seed they chan
 - Whether the Options screen works from our entry: rows, Back, saving.
 - Whether the tab list is read again at each open, so tabs can differ between our entry and System > Options.
 - Then: which rows show in our entry (only ours, with the seed's state as headings and lines), and how to keep System > Options as it is.
+
+**Round 85 result (build 05f33eda):** the Options screen works from our entry, settings save from it and from System > Options, and Back returns to the menu. `tabs only` and `tabs all` changed the tabs at the next open, so the tab list is read at each open.
+
+**The plan from here:**
+- Our entry opens the Options screen. When the player picks it, the tables switch to "our page": the Gameplay tab alone, named Archipelago; the game's rows hidden; heading rows with the seed's state. When the menu leaves our scene, they switch back, so System > Options is the game's own again. The title screen's Options would show the game's own too.
+- The moment to switch: the root entry's click calls `CPP_MainMenuSubsystem:SetScene(tag, option)` from Blueprint (`WBP_MainMenuRootEntry.BP_OnClicked`), so a pre-hook sees our tag before our screen opens.
+- Hiding a row: each option row (`OP_BaseMenu_EntryInfo`) has `ShowCommandData.ShowType` (ALL 0, TitleOnly 1, GamePlayOnly 2). TitleOnly should hide it in game.
+- Headings: `DT_OP_KeyboardMouseSetting` has `SubHeader` rows of the same struct to copy, with our text in `DisplayText`. The rows also have `ItemDescription`, the line shown for the focused row, which could hold more of the seed's state.
+
+**Probe (round 86, build b93912a5):** `ffrap_apmenu mode ap` makes the switch by hand (`A.Mode`) and logs each `SetScene` from a pre-hook; `mode game` puts the tables back. To find out: whether the page looks right, whether the hook fires before the screen opens, and whether `RemoveRow` takes the heading rows out again.

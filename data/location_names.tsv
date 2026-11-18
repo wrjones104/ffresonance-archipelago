@@ -19,29 +19,29 @@ chest:2020:0	Village of Kol Chest 1	Village of Kol - Tent Chest	Lanzelt - Villag
 chest:2020:1	Village of Kol Chest 2	Village of Kol - Antidote Herb x3 Chest	Lanzelt - Village of Kol - NW House Chest	
 chest:2030:0	Grandport Harbor Chest 1	Grandport Harbor - Smoke Bomb x2 Chest	Lanzelt - Grandport Harbor - North Courtyard NW Chest	
 chest:2030:1	Grandport Harbor Chest 2	Grandport Harbor - Lightning Scroll I x2 Chest	Lanzelt - Grandport Harbor - North Courtyard NE Chest	
-chest:2031:0	Oblivion Palace Chest 1	Oblivion Palace - Vitality Charm Chest	Lanzelt - Oblivion Palace - 1-Star Chamber 3-Shard Safe (South Outer-West)	
-chest:2031:1	Oblivion Palace Chest 2	Oblivion Palace - Earrings Chest	Lanzelt - Oblivion Palace - 1-Star Chamber 6-Shard Safe (South Inner-West)	
-chest:2031:2	Oblivion Palace Chest 3	Oblivion Palace - Magicite Shard Chest 1	Lanzelt - Oblivion Palace - 1-Star Chamber 9-Shard Safe (South Inner-East)	same place as another
-chest:2031:3	Oblivion Palace Chest 4	Oblivion Palace - Stagger Ring Chest	Lanzelt - Oblivion Palace - 1-Star Chamber 12-Shard Safe (South Outer-East)	
-chest:2031:4	Oblivion Palace Chest 5	Oblivion Palace - Dreadwing Mallet Chest	Lanzelt - Oblivion Palace - 1-Star Chamber 16-Shard Safe (Middle Outer-West)	
-chest:2031:5	Oblivion Palace Chest 6	Oblivion Palace - Compound Bow Chest	Lanzelt - Oblivion Palace - 1-Star Chamber 20-Shard Safe (Middle Inner-West)	
-chest:2031:6	Oblivion Palace Chest 7	Oblivion Palace - Magicite Shard Chest 2	Lanzelt - Oblivion Palace - 1-Star Chamber 24-Shard Safe (Middle Inner-East)	same place as another
-chest:2031:7	Oblivion Palace Chest 8	Oblivion Palace - Astral Jacket Chest	Lanzelt - Oblivion Palace - 1-Star Chamber 28-Shard Safe (Middle Outer-East)	
-chest:2031:8	Oblivion Palace Chest 9	Oblivion Palace - Cure Drop Chest	Lanzelt - Oblivion Palace - 2-Star Chamber 32-Shard Safe (Middle Outer-West)	
-chest:2031:9	Oblivion Palace Chest 10	Oblivion Palace - Celaeno Fragments Chest	Lanzelt - Oblivion Palace - 2-Star Chamber 36-Shard Safe (Middle Inner-West)	
-chest:2031:10	Oblivion Palace Chest 11	Oblivion Palace - Magicite Chest	Lanzelt - Oblivion Palace - 2-Star Chamber 40-Shard Safe (Middle Inner-East)	
-chest:2031:11	Oblivion Palace Chest 12	Oblivion Palace - Phantom Robe Chest	Lanzelt - Oblivion Palace - 2-Star Chamber 44-Shard Safe (Middle Outer-East)	
-chest:2031:12	Oblivion Palace Chest 13	Oblivion Palace - Repeater Rifle Chest	Lanzelt - Oblivion Palace - 2-Star Chamber 48-Shard Safe (North Outer-West)	
-chest:2031:13	Oblivion Palace Chest 14	Oblivion Palace - Protective Gear Chest	Lanzelt - Oblivion Palace - 2-Star Chamber 52-Shard Safe (North Inner-West)	
-chest:2031:14	Oblivion Palace Chest 15	Oblivion Palace - Briar Edge Chest	Lanzelt - Oblivion Palace - 2-Star Chamber 56-Shard Safe (North Inner-East)	
-chest:2031:15	Oblivion Palace Chest 16	Oblivion Palace - War Pick Chest	Lanzelt - Oblivion Palace - 2-Star Chamber 60-Shard Safe (North Outer-East)	
-chest:2031:16	Oblivion Palace Chest 17	Oblivion Palace - Magicite Cryst Chest	Lanzelt - Oblivion Palace - 3-Star Chamber 64-Shard Safe (Middle Outer-West)	
-chest:2031:17	Oblivion Palace Chest 18	Oblivion Palace - Mirage Jacket Chest	Lanzelt - Oblivion Palace - 3-Star Chamber 68-Shard Safe (Middle Inner-West)	
-chest:2031:18	Oblivion Palace Chest 19	Oblivion Palace - Sundering Odachi Chest	Lanzelt - Oblivion Palace - 3-Star Chamber 72-Shard Safe (Middle Inner-East)	
-chest:2031:19	Oblivion Palace Chest 20	Oblivion Palace - Ancient Firearm Chest	Lanzelt - Oblivion Palace - 3-Star Chamber 76-Shard Safe (Middle Outer-East)	
-chest:2031:21	Oblivion Palace Chest 21	Oblivion Palace - Ancient Whip Chest	Lanzelt - Oblivion Palace - 3-Star Chamber 84-Shard Safe (North Inner-East)	
-chest:2031:23	Oblivion Palace Chest 22	Oblivion Palace - Arch Drain Chest	Lanzelt - Oblivion Palace - 4-Star Chamber 94-Shard Safe (North Inner-East)	
-chest:2031:24	Oblivion Palace Chest 23	Oblivion Palace - Lightbringer Chest	Lanzelt - Oblivion Palace - 4-Star Chamber 99-Shard Safe (Far-North Apex)	
+chest:2031:0	Oblivion Palace Chest 1	Oblivion Palace - Vitality Charm Chest	Lanzelt - Oblivion Palace - 1-Star Chamber 3-Shard Chest (South Outer-West)	
+chest:2031:1	Oblivion Palace Chest 2	Oblivion Palace - Earrings Chest	Lanzelt - Oblivion Palace - 1-Star Chamber 6-Shard Chest (South Inner-West)	
+chest:2031:2	Oblivion Palace Chest 3	Oblivion Palace - Magicite Shard Chest 1	Lanzelt - Oblivion Palace - 1-Star Chamber 9-Shard Chest (South Inner-East)	same place as another
+chest:2031:3	Oblivion Palace Chest 4	Oblivion Palace - Stagger Ring Chest	Lanzelt - Oblivion Palace - 1-Star Chamber 12-Shard Chest (South Outer-East)	
+chest:2031:4	Oblivion Palace Chest 5	Oblivion Palace - Dreadwing Mallet Chest	Lanzelt - Oblivion Palace - 1-Star Chamber 16-Shard Chest (Middle Outer-West)	
+chest:2031:5	Oblivion Palace Chest 6	Oblivion Palace - Compound Bow Chest	Lanzelt - Oblivion Palace - 1-Star Chamber 20-Shard Chest (Middle Inner-West)	
+chest:2031:6	Oblivion Palace Chest 7	Oblivion Palace - Magicite Shard Chest 2	Lanzelt - Oblivion Palace - 1-Star Chamber 24-Shard Chest (Middle Inner-East)	same place as another
+chest:2031:7	Oblivion Palace Chest 8	Oblivion Palace - Astral Jacket Chest	Lanzelt - Oblivion Palace - 1-Star Chamber 28-Shard Chest (Middle Outer-East)	
+chest:2031:8	Oblivion Palace Chest 9	Oblivion Palace - Cure Drop Chest	Lanzelt - Oblivion Palace - 2-Star Chamber 32-Shard Chest (Middle Outer-West)	
+chest:2031:9	Oblivion Palace Chest 10	Oblivion Palace - Celaeno Fragments Chest	Lanzelt - Oblivion Palace - 2-Star Chamber 36-Shard Chest (Middle Inner-West)	
+chest:2031:10	Oblivion Palace Chest 11	Oblivion Palace - Magicite Chest	Lanzelt - Oblivion Palace - 2-Star Chamber 40-Shard Chest (Middle Inner-East)	
+chest:2031:11	Oblivion Palace Chest 12	Oblivion Palace - Phantom Robe Chest	Lanzelt - Oblivion Palace - 2-Star Chamber 44-Shard Chest (Middle Outer-East)	
+chest:2031:12	Oblivion Palace Chest 13	Oblivion Palace - Repeater Rifle Chest	Lanzelt - Oblivion Palace - 2-Star Chamber 48-Shard Chest (North Outer-West)	
+chest:2031:13	Oblivion Palace Chest 14	Oblivion Palace - Protective Gear Chest	Lanzelt - Oblivion Palace - 2-Star Chamber 52-Shard Chest (North Inner-West)	
+chest:2031:14	Oblivion Palace Chest 15	Oblivion Palace - Briar Edge Chest	Lanzelt - Oblivion Palace - 2-Star Chamber 56-Shard Chest (North Inner-East)	
+chest:2031:15	Oblivion Palace Chest 16	Oblivion Palace - War Pick Chest	Lanzelt - Oblivion Palace - 2-Star Chamber 60-Shard Chest (North Outer-East)	
+chest:2031:16	Oblivion Palace Chest 17	Oblivion Palace - Magicite Cryst Chest	Lanzelt - Oblivion Palace - 3-Star Chamber 64-Shard Chest (Middle Outer-West)	
+chest:2031:17	Oblivion Palace Chest 18	Oblivion Palace - Mirage Jacket Chest	Lanzelt - Oblivion Palace - 3-Star Chamber 68-Shard Chest (Middle Inner-West)	
+chest:2031:18	Oblivion Palace Chest 19	Oblivion Palace - Sundering Odachi Chest	Lanzelt - Oblivion Palace - 3-Star Chamber 72-Shard Chest (Middle Inner-East)	
+chest:2031:19	Oblivion Palace Chest 20	Oblivion Palace - Ancient Firearm Chest	Lanzelt - Oblivion Palace - 3-Star Chamber 76-Shard Chest (Middle Outer-East)	
+chest:2031:21	Oblivion Palace Chest 21	Oblivion Palace - Ancient Whip Chest	Lanzelt - Oblivion Palace - 3-Star Chamber 84-Shard Chest (North Inner-East)	
+chest:2031:23	Oblivion Palace Chest 22	Oblivion Palace - Arch Drain Chest	Lanzelt - Oblivion Palace - 4-Star Chamber 94-Shard Chest (North Inner-East)	
+chest:2031:24	Oblivion Palace Chest 23	Oblivion Palace - Lightbringer Chest	Lanzelt - Oblivion Palace - 4-Star Chamber 99-Shard Chest (Far-North Apex)	
 chest:2040:0	Town of Felicitas Chest 1	Town of Felicitas - Tent Chest	Kolobos - Town of Felicitas - West Courtyard Spur Chest	
 chest:2040:1	Town of Felicitas Chest 2	Town of Felicitas - Smoke Bomb x2 Chest	Kolobos - Town of Felicitas - Central Plaza Nook Chest	
 chest:2040:2	Town of Felicitas Chest 3	Town of Felicitas - Unicorn Horn x2 Chest	Kolobos - Town of Felicitas - Town Hall East Side Chest	

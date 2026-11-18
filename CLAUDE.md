@@ -86,7 +86,7 @@ An Archipelago implementation for Final Fantasy Resonance (UE 5.6, game module `
 - A battle's MRP is `ap` in `DT_BattleGroup`, not a field on the enemy (round 47).
 - A talk row with `encountGroupId` starts that battle group when the game's own chain reaches it, and the group's `battleFinishEventId` runs after a win. The row run after a win must be a Sequence row: a Blueprint row with no Blueprint leaves the screen black (round 49).
 - An esper in the summon menu is an ability on both Finas, added by the event row's `AbilitySettings`; its flag (90 to 98) alone does nothing (round 46).
-- **The quest log is fed by event rows' `RequestStateSettings`** (Accept 0, Proceed 1, Complete 2, by request id). A quest whose Accept is in a skipped story row never shows, even with its counter set (Verun, round 84).
+- **The quest log is fed by event rows' `RequestStateSettings`** (Accept 0, Proceed 1, Complete 2, by request id). A quest whose Accept is in a skipped story row never shows, even with its counter set (Verun, round 84). The Accept is also refused unless the request's own `AcceptCondition` (`DT_RequestData`) holds at that moment (round 85).
 - **A talk row whose `ObtainItemList` is left empty can show "You obtained a vision!"** in place of the item pop-up (Mog Tag, round 84). Keep a stand-in item unless the pop-up is written before the check.
 - A story `NoEntry` zone holds until its event's flag is on (the Earth Shrine's exit needs flag 102, round 44). `gimmicks.tsv` has the conditions.
 - `CPP_VM_Party:AddUnit` does not set `JoinStatus`: a unit added only that way gains no EXP and gear on it does not count (round 44).

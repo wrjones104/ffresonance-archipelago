@@ -226,7 +226,11 @@ function G.ContinentStatus() return "open []" end
 function G.SetContinentOpen(name, open) if name == "narnia" then return nil, "no continent" end G.lockOpens[name] = open; return 1 end
 G.WORLD_MAP, G.ferrySyncs, G.crossingLists = 1000, 0, {}
 G.CROSSINGS = { { a = "grandshelt", b = "lanzelt", x = 13684, y = 16599, z = 87, yaw = 180.0, scale = 3.0 } }
-function G.FerrySync() G.ferrySyncs = G.ferrySyncs + 1; return 0 end
+function G.FerrySync(allOpen)
+  G.ferrySyncs = G.ferrySyncs + 1
+  if allOpen then G.ferryAllOpen = (G.ferryAllOpen or 0) + 1 end
+  return 0
+end
 function G.IsContinent(name) return name ~= "narnia" end
 function G.ContinentOpen(name) return (G.openContinents or {})[name] == true end
 function G.CrossingSync(list) G.crossingLists[#G.crossingLists + 1] = list; return 0, 0 end
@@ -943,6 +947,16 @@ tick(3)
 assert list(G.toasts.values())[toasts:] == ["Received Tent"], list(G.toasts.values())[toasts:]
 L.execute('commands["ffrap_feed"]("ffrap_feed", {"on"})')
 assert "itemfeed\t1" in read("ap_state.txt")
+# Round 85: a save bound late in a seed brought 280 items, a feed line each. With more than ten
+# waiting, the feed says so once, and once more when they are all in.
+CATCH_UP_ITEMS = 14
+n = len(feed())
+inbox("".join(f"item\t{i}\titem\t{800 + i}\t1\tCatch{i}\n" for i in range(11, 11 + CATCH_UP_ITEMS)))
+tick(12)
+assert feed()[n:] == [f"Receiving {CATCH_UP_ITEMS} items from Archipelago", f"Received {CATCH_UP_ITEMS} items"], feed()[n:]
+inbox(f"item\t{11 + CATCH_UP_ITEMS}\titem\t900\t1\tLast\n")
+tick(3)
+assert feed()[-1] == "Received Last", "one at a time again"
 print("item feed: ok")
 
 # 11. before the feed has shown anything in a run (it cannot find a HUD), the Toast takes messages
@@ -1087,9 +1101,10 @@ G.chests = L.table_from({1: L.table_from({"uid": 9, "open": True, "rowMap": 3020
 tick(10)
 out = read("ap_out.txt")
 assert f"shiny:{COLOSSEUM}:2" not in out and "chest:3020:9" not in out, out[-200:]
-held = [s for s in L.eval("logged").values() if "not sent until the player is near it" in s]
-assert len(held) == 2, held                    # once per location per visit
-assert any(f"shiny:{COLOSSEUM}:2 reads taken (live open, save row false)" in s for s in held), held
+held = [s for s in L.eval("logged").values() if "not sent until the player is near" in s]
+# once per location per visit; round 85: those of one scan on one line
+assert len(held) == 1 and "2 locations read as taken far from the player" in held[0], held
+assert f"shiny:{COLOSSEUM}:2 reads taken (live open, save row false)" in held[0], held
 # the save row alone, for a scouted shiny that is not loaded, is held the same way
 G.shinies = L.table()
 G.saveOpen[f"{COLOSSEUM}:2"] = True
@@ -1210,7 +1225,10 @@ print("waiting vision: ok")
 
 # 15. 0.14.0: ffrap_scale's options (at, hp, power, boss, follow), and follow moving the band when
 # the party's level changes, on the field only. 0.15.0: attack and magic apart, party mode's
-# defaults (range 2, at 80), and scale.txt.
+# defaults (range 2, at 80), and scale.txt. With no seed: round 85 turns ffrap_scale off on a save
+# not linked to one.
+if os.path.exists(path("ap_state.txt")):
+    os.remove(path("ap_state.txt"))
 L, G = boot()
 L.globals().G = G
 L.execute("""
@@ -2163,13 +2181,22 @@ tick(20)
 assert list(G.scaleCalls.values()) == [], "scaling off: the seed does not scale"
 # Round 84 (the user): a save not linked to the seed plays as the game made it (round 57 had the
 # settings apply to it), and the linked save gets them back
+# Round 85: there the continent locks come off once (the boxes, the crossings and the ferry), and
+# an ffrap_scale from the linked save goes off too
+L.execute('commands["ffrap_scale"]("ffrap_scale", {"1"})')
+scaled = len(G.scaleCalls)
+L.execute("G.lockCleared = nil; G.ferryAllOpen = 0")
 G.slotOf = L.table_from({"900": 5})
 load(G, "SD_SET_OTHER", "900")
 tick(10)
 assert list(G.rates.values()) == [1, 1, 1] and list(G.encounterTables.values()) == [True, 1], "the game's values"
+assert G.lockCleared is True and G.ferryAllOpen == 1, "the locks off, once"
+assert list(G.scaleCalls.values())[-1].startswith("off "), list(G.scaleCalls.values())
+assert len(G.scaleCalls) == scaled + 1, "turned off once"
 load(G, "SD_SET", "0")
 tick(10)
 assert list(G.rates.values()) == [2, 1, 1] and list(G.encounterTables.values()) == [False, 5], "the player's values"
+assert G.ferryAllOpen == 1, "the linked save keeps its locks"
 L2, G2 = boot5("SD_SET2", "0", {})
 L2.execute("tickFn = tickFn")
 assert "exp 2" in read("settings.txt"), "kept for the next run"
@@ -2315,7 +2342,6 @@ L.execute('''
   G.APMENU.done = nil
   G.CONTINENTS = { { name = "grandshelt" }, { name = "lanzelt" }, { name = "kolobos" } }
   G.PALACE = { counter = 43, met = 10, item = 25004, map = 2031, steps = { 3, 6, 9, 12 } }
-  G.progress[43] = 12
   G.openContinents = { lanzelt = true }
   function G.HeldCount(id) return id == 25004 and 13 or 0 end
   function G.APMENU.Page(title, makeBody) G.APMENU.paged = { title, makeBody() }; return "written" end
@@ -2337,8 +2363,8 @@ assert body.split("\n") == [
     "Tower: party members 3/4, Visions 1/2, Crystal Fragments 2/5",
     "Checks: 12 of 480",
     "Items received: 0",
-    "Tablet Shards: 13 held",
-    "Oblivion Palace safes: 2 ready to open, 0 opened; the next needs 9 shards in all",
+    "Tablet Shards: 13 collected",
+    "Oblivion Palace Chests: 4 ready to open",
     "",
     "Continents open: Lanzelt",
     "Continents locked: Grandshelt, Kolobos",
@@ -2380,12 +2406,34 @@ L.execute('commands["ffrap_apmenu"]("ffrap_apmenu", {"tabs"})')
 assert L.eval("package.loaded.game.APMENU.tabsAsked") == "list", "tabs alone lists them"
 L.execute('commands["ffrap_apmenu"]("ffrap_apmenu", {"text"})')
 assert L.eval("package.loaded.game.APMENU.screenAsked") == "text"
-# Round 84: shards turned in show once the palace has been read, and every safe paid for
-L.execute("package.loaded.game.PALACE.turned = 9; package.loaded.game.progress[43] = 14")
+# Round 86 probe: `mode ap` hands the page's lines to A.Mode and logs the menu's SetScene calls;
+# `mode game` stops the logging
+L.execute("""
+  local G = package.loaded.game
+  function G.APMENU.Mode(kind, lines) G.APMENU.modeAsked = { kind, #lines }; return { "mode " .. kind .. ": done" } end
+""")
+L.execute('commands["ffrap_apmenu"]("ffrap_apmenu", {"mode", "ap"})')
+assert list(L.eval("package.loaded.game.APMENU.modeAsked").values())[0] == "ap"
+assert list(L.eval("package.loaded.game.APMENU.modeAsked").values())[1] > 0, "the page's lines"
+set_scene = L.eval('hooks["/Script/mucha.CPP_MainMenuSubsystem:SetScene"]')
+L.execute("logged = {}")
+set_scene(None, L.eval("{ get = function() return { TagName = { ToString = function() return 'UI.MainMenu.Scene.FFRAP' end } } end }"))
+assert any("apmenu: SetScene UI.MainMenu.Scene.FFRAP" in s for s in logged()), logged()
+L.execute('commands["ffrap_apmenu"]("ffrap_apmenu", {"mode", "game"})')
+L.execute("logged = {}")
+set_scene(None, L.eval("{ get = function() return { TagName = { ToString = function() return 'UI.MainMenu.Scene.System' end } } end }"))
+assert not any("SetScene" in s for s in logged()), "not logged after mode game"
+# Round 85: shards turned in count once the palace has been read; and the shards the seed has
+# sent, when they are more (two Tablet Shards received here, with the bag emptied by a turn-in)
+L.execute("package.loaded.game.PALACE.turned = 9")
 tick(2)
 body = list(L.eval("package.loaded.game.APMENU.paged").values())[1].split("\n")
-assert "Tablet Shards: 13 held, 9 turned in" in body and \
-    "Oblivion Palace safes: 4 ready to open, 0 opened; all paid for" in body, body
+assert "Tablet Shards: 22 collected" in body, body
+inbox("item\t0\titem\t25004\t1\tTablet Shard\nitem\t1\titem\t25004\t1\tTablet Shard\n")
+L.execute("package.loaded.game.PALACE.turned = nil; function package.loaded.game.HeldCount() return 0 end")
+tick(4)
+body = list(L.eval("package.loaded.game.APMENU.paged").values())[1].split("\n")
+assert "Tablet Shards: 2 collected" in body and "Oblivion Palace Chests: 0 ready to open" in body, body
 # Round 84 (the user): a save not linked to the seed takes the entry out of the menu, once, and
 # the linked save puts it back
 L.execute("logged = {}")

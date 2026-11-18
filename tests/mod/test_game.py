@@ -1776,6 +1776,12 @@ L.execute("ferryFlags[1423], ferryFlags[1425] = true, true")
 assert L.eval("G.FerrySync()") == CLOSED_CHOICES
 assert L.eval("ferryChoice(gimTalk, 'Gim_EV_ShipMovement_02_03_Choice', 3)") == "Gim_EV_ShipMovement_04_Cushion"
 assert L.eval("ferryChoice(cdtTalk, 'Gim_EV_ShipMovement_01_03_Choice', 1)") == "Gim_EV_ShipMovement_02_Cushion"
+# Round 85: a save not linked to the seed gets every trip back, whatever its flags say
+L.execute("ferryFlags = {}")
+assert L.eval("G.FerrySync(true)") == 0, "every trip already open"
+assert L.eval("G.FerrySync()") == 2 * 3 * 4, "closed again by the flags"
+assert L.eval("G.FerrySync(true)") == 2 * 3 * 4
+assert L.eval("ferryChoice(gimTalk, 'Gim_EV_ShipMovement_03_02_Choice', 3)") == "Gim_EV_ShipMovement_04_Cushion"
 L.execute("G.GetFlag = ferrySavedGetFlag")
 print("ferry: ok")
 
@@ -1873,6 +1879,19 @@ end
 questRows.C02_MechaboLvUp_00_yet = { RequestStateSettings = requestList({}) }
 questRows.C02_MechaboLvUp_00_ItemGet = { RequestStateSettings = requestList({ { 17, 1, 1 } }) }
 questRows.C02_MechaboLvUp_01 = { RequestStateSettings = requestList({ { 17, 2, 0 } }) }
+local function fstr(v) return { ToString = function() return v end } end
+local store = { AcceptCondition = fstr("{progress:16}==0&{progress:0}>=2120"),
+                Occurrence = { Condition = "{progress:16}==0&{progress:0}>=2120" } }
+mechaboRequest = setmetatable({}, { __index = store,
+  __newindex = function(_, k, v) store[k] = type(v) == "string" and fstr(v) or v end })
+requestDT = { rows = { C02_MechaboLvUp = mechaboRequest } }
+function requestDT:IsValid() return true end
+function requestDT:FindRow(name) return self.rows[name] end
+local prevRequestFind = StaticFindObject
+function StaticFindObject(p)
+  if p == "/Game/Datatable/Request/DT_RequestData.DT_RequestData" then return requestDT end
+  return prevRequestFind(p)
+end
 function requests(row)
   local list, out = questRows[row].RequestStateSettings, {}
   for i = 1, #list do out[#out + 1] = list[i].RequestID .. ":" .. list[i].Type .. ":" .. list[i].ProgressIndex end
@@ -1880,7 +1899,12 @@ function requests(row)
 end
 """)
 ACCEPT_17 = "17:0:0"
-assert L.eval("G.MechaboPatch()") == 2
+VERUN_STEP = "{progress:16}==10"
+MECHABO_ROWS_AND_REQUEST = 3
+assert L.eval("G.MechaboPatch()") == MECHABO_ROWS_AND_REQUEST
+assert L.eval("mechaboRequest.AcceptCondition:ToString()") == VERUN_STEP, \
+    "round 85: the quest's own accept test was the counter at 0, which the start had already passed"
+assert L.eval("mechaboRequest.Occurrence.Condition") == VERUN_STEP
 assert L.eval("requests('C02_MechaboLvUp_00_yet')") == ACCEPT_17, "Verun asks for the drops: accepted"
 assert L.eval("requests('C02_MechaboLvUp_00_ItemGet')") == ACCEPT_17 + " 17:1:1", "accepted, then its step"
 assert L.eval("requests('C02_MechaboLvUp_01')") == "17:2:0", "the rest of the chain is the game's"
@@ -2238,6 +2262,55 @@ assert sorted(tabs) == sorted(['tab NewRow: Gameplay, category 0, condition ""',
 tabs = list(L.eval("G.APMENU.Tabs('all', say)").values())
 assert all(t.endswith('condition ""') for t in tabs), tabs
 print("options screen probe: ok")
+
+# Round 86 probe: `mode ap` makes the Options screen our page. One tab, named Archipelago; the
+# game's rows hidden in game (ShowType TitleOnly) and ours left alone; a heading row per page line,
+# copied from the keyboard tab's SubHeader. `mode game` puts it all back.
+L.execute(r"""
+local function fstr(v) return { ToString = function() return v end } end
+local function optionRow(showType, label)
+  return { ShowCommandData = { ShowType = showType }, DisplayText = fstr(label) }
+end
+local function table_(rows)
+  local t = { rows = rows }
+  function t:IsValid() return true end
+  function t:ForEachRow(fn) for k, r in pairs(self.rows) do fn(fname(k), r) end end
+  function t:FindRow(n) return self.rows[n] end
+  function t:AddRow(n, tpl) self.rows[n] = { ShowCommandData = { ShowType = tpl.ShowCommandData.ShowType }, DisplayText = tpl.DisplayText } end
+  function t:RemoveRow(n) self.rows[n] = nil end
+  return t
+end
+GAMEPLAY_ONLY = 2
+gameSetting = table_({ ["難易度"] = optionRow(GAMEPLAY_ONLY, "Difficulty"), ["初期化"] = optionRow(0, "Reset"),
+                       FFRAP_Exp = optionRow(GAMEPLAY_ONLY, "EXP") })
+keyboardSetting = table_({ ["SubHeader_共通"] = optionRow(0, "UI / Main Menu") })
+local gameplayTab = optionRoot.rows.NewRow
+local tabStore = { DisplayText = fstr("Gameplay") }
+local prevModeFind = StaticFindObject
+function StaticFindObject(p)
+  if p == "/Game/Datatable/UI/Option/Root/GameSetting/DT_OP_GameSetting.DT_OP_GameSetting" then return gameSetting end
+  if p == "/Game/Datatable/UI/Option/Root/KeyboardMouseSetting/DT_OP_KeyboardMouseSetting.DT_OP_KeyboardMouseSetting" then return keyboardSetting end
+  return prevModeFind(p)
+end
+function rowText(name) local r = gameSetting.rows[name]; return r and r.DisplayText:ToString() end
+""")
+TITLE_ONLY = 1
+PAGE_LINES = '{ "Goal: win the last battle", "Checks: 12 of 480" }'
+lines = list(L.eval(f"G.APMENU.Mode('ap', {PAGE_LINES}, say)").values())
+assert lines[-1] == "mode ap: 2 game rows hidden, 2 heading rows", lines
+assert lua("optionRoot.rows.NewRow.DisplayText:ToString()") == "Archipelago"
+assert lua("optionRoot.rows.NewRow_0.Condition:ToString()") == NEVER, "the other tabs are left out"
+assert lua("gameSetting.rows['難易度'].ShowCommandData.ShowType") == TITLE_ONLY
+assert lua("gameSetting.rows.FFRAP_Exp.ShowCommandData.ShowType") == 2, "our rows stay"
+assert lua("rowText('FFRAP_Info1')") == "Goal: win the last battle" and lua("rowText('FFRAP_Info2')") == "Checks: 12 of 480"
+assert list(L.eval(f"G.APMENU.Mode('ap', {PAGE_LINES}, say)").values())[-1] == "mode ap: already so"
+lines = list(L.eval("G.APMENU.Mode('game', {}, say)").values())
+assert lines[-1] == "mode game: rows shown again, 2 of 2 heading rows removed", lines
+assert lua("optionRoot.rows.NewRow.DisplayText:ToString()") == "Gameplay"
+assert lua("gameSetting.rows['難易度'].ShowCommandData.ShowType") == 2 and lua("gameSetting.rows['初期化'].ShowCommandData.ShowType") == 0
+assert lua("rowText('FFRAP_Info1')") is None, "the heading rows are gone"
+assert lua("optionRoot.rows.NewRow_0.Condition:ToString()") == "", "every tab again"
+print("options page probe: ok")
 
 # Round 84 (the user): fast travel from a dungeon. The condition that checks the map type travels
 # with the usual confirm dialog; the event and not-visited conditions stay; off puts it back.
