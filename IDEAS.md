@@ -464,3 +464,26 @@ Until then the Options rows stay, and on a save not linked to the seed they chan
 - Headings: `DT_OP_KeyboardMouseSetting` has `SubHeader` rows of the same struct to copy, with our text in `DisplayText`. The rows also have `ItemDescription`, the line shown for the focused row, which could hold more of the seed's state.
 
 **Probe (round 86, build b93912a5):** `ffrap_apmenu mode ap` makes the switch by hand (`A.Mode`) and logs each `SetScene` from a pre-hook; `mode game` puts the tables back. To find out: whether the page looks right, whether the hook fires before the screen opens, and whether `RemoveRow` takes the heading rows out again.
+
+## 40. Abilities the story gives, which the open start skips
+
+**Found off-line, 2026-11-18 (round 86, looking at Lid).** Story rows add abilities through their `AbilitySettings` (`AddAbilities`, `AddCommandAbilities`), as the Siren row does for both Finas. The open start never plays them, and it adds only Siren's. From `DT_TalkEventData_Chapter*` (MainEvent):
+
+| Unit | Abilities | Rows |
+|---|---|---|
+| Every character (1001 to 1008) | 1471, and their own `40x300` (Rain 401300, Lasswell 402300, Fina 403300, Lid 404300, Nichol 405300, Jake 406300, Sakura 407300, Archwitch Fina 408300) | `C08_817_01` (and its `_A` to `_H`, `_Nama` copies) |
+| Rain (1001) | 1475 | `C06_624_01` |
+| Rain | 401130 | `C06_626_01` |
+| Rain | 401240 | `C08_820_03` |
+| Rain | 1259 | `C08_819_04` |
+| Rain | 401030, 401040 | `C08_821_01` |
+| Fina (1003) | 210190 | `C06_608_01` |
+| Lid (1004) | 404030 | `Lid_LB2_Get` (chapter 4; by its name, her second Limit Burst) |
+| Fina and Archwitch Fina | 6, 430980, and command ability 6 | `C01_037_01` (chapter 1) |
+| Archwitch Fina (1006) | 220110, 408030, 431120; command abilities 408010, 18, 400010, 7, 400020 | `C01_001D_01`, `C01_001D_02`, `C01_001F_02`; `C03_320_01` |
+
+**To find out:**
+- What each ability is (`data/game/capabilities.tsv` or the skill table), and which of them a player would miss. 1471 and the `40x300` set come at the end of chapter 8, just before the tower.
+- Whether the start should add them all, or only those a player could have before the tower.
+- The character events (`CharaEvent`) and other tables may add more, such as other characters' second Limit Bursts.
+
