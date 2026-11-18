@@ -208,17 +208,23 @@ local state = {
 
 -- Round 77: a crash about a second after a map change, in a game-thread Lua loop (FName::ToString
 -- on a freed object, as in round 71). The stack does not say which mod's loop: FFRS_QoL runs eight.
--- For TRACE_TICKS ticks after each map load, ap_trace.txt gets a line before each step of our
--- loops. After a crash, a last line without its "done" names the step; a "done" last means it was
--- not this mod's loop.
-state.TRACE_TICKS, state.traceLeft = 12, 0
+-- ap_trace.txt gets a line before each step of our loops. After a crash, a last line without its
+-- "done" names the step; a "done" last means it was not this mod's loop. Round 79's crash came
+-- 5 s after a load, just past the 12 ticks the trace then covered, so it now runs all the time:
+-- one handle, unbuffered (the lines reach the OS before a crash), started again at each map load
+-- and every TRACE_LINES lines.
+state.TRACE_LINES, state.traceLines, state.traceFile = 4000, 0, nil
+function state.traceStart(first)
+    if state.traceFile then state.traceFile:close() end
+    state.traceFile, state.traceLines = io.open(MOD_DIR .. "ap_trace.txt", "w"), 0
+    if state.traceFile then state.traceFile:setvbuf("no") end
+    state.mark(first)
+end
 function state.mark(step)
-    if state.traceLeft <= 0 then return end
-    local f = io.open(MOD_DIR .. "ap_trace.txt", "a")
-    if f then
-        f:write(os.date("%H:%M:%S"), " tick ", state.ticks, " ", step, "\n")
-        f:close()
-    end
+    if not state.traceFile then return end
+    if state.traceLines >= state.TRACE_LINES then return state.traceStart(step) end
+    state.traceLines = state.traceLines + 1
+    state.traceFile:write(os.date("%H:%M:%S"), " tick ", state.ticks, " ", step, "\n")
 end
 
 -- The loaded save, and whether it is the session's. Not kept across game restarts: save data
@@ -649,9 +655,35 @@ local function popupText(s)
     return "You found " .. s.player .. "'s:\n" .. s.item
 end
 
+-- Round 79: Token Legacy's reward row sets its counter only after its item pop-up and the stat
+-- bonus dialog have closed, so its check came too late to write the pop-up. While a quest's
+-- counter still reads `before` on the map its reward rows run on, an item pop-up in an event there
+-- is that quest's. state.questPopups keeps the quests written so, which the check then leaves alone.
+state.questPopups = {}
+function state.earlyQuestPopup()
+    if not (seedCfg.quests and sessionSave()) or game.OnField() then return end
+    local mapId = game.CurrentMap()
+    for _, q in ipairs(game.QUESTS) do
+        if q.map == mapId and not state.reported["check|" .. q.key]
+            and game.ProgressValue(q.counter) == q.before then
+            local s = state.scouts[q.key]
+            if not s then return end
+            local ok, detail = game.ChestPopup(popupText(s))
+            if ok then
+                state.questPopups[q.key] = true
+                log("chest pop-up for " .. q.key .. " before its check: " .. detail)
+            end
+            return
+        end
+    end
+end
+
 local function popupTick()
     pcall(game.ChestPopupRestore)
-    if not popup then return end
+    if not popup then
+        state.earlyQuestPopup()
+        return
+    end
     local ok, detail = game.ChestPopup(popup.text)
     if ok then
         log("chest pop-up for " .. popup.key .. ": " .. detail)
@@ -745,7 +777,9 @@ local function scanBosses()
             if (game.ProgressValue(q.counter) or 0) >= q.value and report("check", q.key) then
                 log("check " .. q.key)
                 local s = state.scouts[q.key]
-                if s then popup = { text = popupText(s), key = q.key, tries = BOSS_POPUP_TRIES, scene = true } end
+                if s and not state.questPopups[q.key] then
+                    popup = { text = popupText(s), key = q.key, tries = BOSS_POPUP_TRIES, scene = true }
+                end
             end
         end
     end
@@ -2891,12 +2925,7 @@ end)
 -- Re-apply continent locks on map load so saves loaded in the air cannot land prematurely.
 if RegisterLoadMapPostHook then
     local okHook, errHook = pcall(RegisterLoadMapPostHook, function(_, world)
-        local trace = io.open(MOD_DIR .. "ap_trace.txt", "w")
-        if trace then
-            trace:write(os.date("%H:%M:%S"), " tick ", state.ticks, " map load\n")
-            trace:close()
-        end
-        state.traceLeft = state.TRACE_TICKS
+        state.traceStart("map load")
         pcall(game.ForgetObjects)
         local okRun, placed, why = pcall(function() return game.ContinentMapLoaded(world:get(), locksOn()) end)
         if not okRun then
@@ -2973,7 +3002,9 @@ if randomizerWarning then log(randomizerWarning) end
 local function fastTick()
     pcall(defendRates)
     if not game.InGame() or state.inGameTicks <= SETTLE_TICKS or not sessionSave() then return end
+    state.mark("fast: pop-up")
     if not game.PopupJustOpened() then return end
+    state.mark("fast: scans")
     local mapId = game.CurrentMap()
     if mapId and mapId == visit.mapId and visit.scans > MAP_SETTLE_SCANS then
         pcall(scanChests, mapId)
@@ -2991,7 +3022,6 @@ local function every(ms, name, fn)
         local ok, err = pcall(fn)
         if not ok then log(name .. " error: " .. tostring(err)) end
         state.mark(name .. " done")
-        if name == "tick" and state.traceLeft > 0 then state.traceLeft = state.traceLeft - 1 end
     end
     if LoopInGameThreadWithDelay then
         LoopInGameThreadWithDelay(ms, run)

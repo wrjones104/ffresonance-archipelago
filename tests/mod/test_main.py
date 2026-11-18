@@ -147,7 +147,8 @@ G.CRYSTALS = { { event = 10, map = 10200, flag = 1000 } }
 function G.CrystalsPatch() G.crystalPatches = (G.crystalPatches or 0) + 1; return 3 end
 G.BOSSES = { { group = 9079, flag = 146 }, { group = 9083, flag = 215 } }
 function G.BossesPatch() G.bossPatches = (G.bossPatches or 0) + 1; return 2 end
-G.QUESTS = { { key = "quest:13", counter = 28, value = 40, rows = { "SubEv_C01_Zairu_04" } },
+G.QUESTS = { { key = "quest:13", counter = 28, value = 40, map = 2030, before = 30, rows = { "SubEv_C01_Zairu_04" } },
+             { key = "quest:6", counter = 7, value = 60, map = 3160, before = 50, rows = { "ChrEv_0070_006_01" } },
              { key = "quest:34", counter = 44, value = 20, rows = { "SubEv_C05_MogChase_06_NPC01_01" } } }
 function G.QuestsPatch() G.questPatches = (G.questPatches or 0) + 1; return 2 end
 G.MECHABO = { counter = 16, start = 10 }
@@ -1435,19 +1436,22 @@ assert G.hookPlace is True, "the seed turns the locks on, even over an old saved
 L.execute('commands["ffrap_lock"]("ffrap_lock", {"off"})')
 L.execute("loadMapHook(nil, worldParam)")
 assert G.hookPlace is False, "an explicit off wins"
-# Round 77: after a map load, ap_trace.txt names each step of the loops for a few ticks, so a crash
-# shows whether this mod's loop was running and where
+# Round 77: after a map load, ap_trace.txt names each step of the loops, so a crash shows whether
+# this mod's loop was running and where. Round 79: it runs all the time, and starts again after
+# TRACE_LINES lines so it stays small.
 trace = read("ap_trace.txt").splitlines()
 assert trace[0].endswith("map load"), trace
 L.execute("tickFn()")
 trace = read("ap_trace.txt").splitlines()
 steps = [line.split(" ", 3)[3] for line in trace[1:]]
 assert steps[0] == "tick" and steps[-1] == "tick done" and "items" in steps and "loot" in steps, steps
-TRACE_TICKS = 12                                 # state.TRACE_TICKS in main.lua
-for _ in range(TRACE_TICKS + 3):
+TRACE_LINES = int(re.search(r"state.TRACE_LINES, state.traceLines, state.traceFile = (\d+)",
+                            open(os.path.join(SRC, "Scripts", "main.lua"), encoding="utf-8").read()).group(1))
+lines_per_tick = len(trace)
+for _ in range(2 * TRACE_LINES // lines_per_tick):
     L.execute("tickFn()")
-done = read("ap_trace.txt").count("tick done")
-assert done == TRACE_TICKS, ("the trace stops after its ticks", done)
+trace = read("ap_trace.txt").splitlines()
+assert trace[-1].endswith("tick done") and len(trace) <= TRACE_LINES, ("still tracing, and started again", len(trace))
 L.execute('commands["ffrap_lock"]("ffrap_lock", {"on"})')
 assert "continentlocks\t1\n" in read("ap_state.txt")
 open(path("ap_in.txt"), "w", encoding="utf-8", newline="\n").close()
@@ -1886,6 +1890,33 @@ tick(1)
 assert list(G.popups.values()) == ["You found Alice's:\nHookshot"], list(G.popups.values())
 G.onField = True
 assert L.eval(f"G.progress[{MECHABO_COUNTER}]") == MECHABO_LATER, "the counter is set only at 0"
+# Round 79: Token Legacy's row sets its counter only after its pop-ups. While the counter reads
+# the value before, an item pop-up in an event on the reward map is the quest's; the check later
+# leaves it alone. The same counter value elsewhere, or on the field, writes nothing.
+TOKEN_COUNTER, TOKEN_BEFORE, TOKEN_REWARD = 7, 50, 60
+ZOLDAAD_CASTLE_MAP, ELSEWHERE_MAP = 3160, 2102
+inbox(b64_scout("quest:6", "Seraphim Bow", "Alice", 1, 0))
+tick(2)
+written = len(G.popups)
+L.execute(f"G.progress[{TOKEN_COUNTER}] = {TOKEN_BEFORE}")
+G.map, G.onField, G.popupReady = ELSEWHERE_MAP, False, True
+tick(2)
+assert len(G.popups) == written, "not on the reward map"
+G.map, G.onField = ZOLDAAD_CASTLE_MAP, True
+tick(2)
+assert len(G.popups) == written, "on the field"
+G.onField, G.popupReady = False, False
+tick(4)
+assert len(G.popups) == written, "no pop-up yet"
+G.popupReady = True
+tick(1)
+assert len(G.popups) == written + 1 and G.popups[written + 1] == "You found Alice's:\nSeraphim Bow", list(G.popups.values())
+assert "quest:6" not in read("ap_out.txt"), "the check waits for the counter"
+L.execute(f"G.progress[{TOKEN_COUNTER}] = {TOKEN_REWARD}")
+tick(4)
+assert "check\tquest:6\n" in read("ap_out.txt"), read("ap_out.txt")[-200:]
+assert len(G.popups) == written + 1, "the check writes no second pop-up"
+G.onField = True
 
 inbox("seed\tS78n:0:1\ncfg\topenworld\t1\ncfg\tquests\t0\n", "w")
 L, G = boot5("SD_NOQUESTS", "0", {})

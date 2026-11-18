@@ -1063,3 +1063,35 @@ Built during round 79, before its results. The plan gets the round 79 fixes too.
 **Results so far (build cac73e78, 2026-11-18):**
 - **Walk in with no talk: works.** On the user's save (6 turned in, 4 held), the 9-shard safe opened.
 - **A safe in view: only after a new visit.** Three shards sent from Archipelago while in the palace opened the next safe only after leaving and coming back. Then it opened at once. Left as it is (IDEAS.md idea 37 has the likely fix).
+- **The princess and an old save:** not tried yet.
+
+**Round 79 results (mod 0.61.0 build cac73e78, world 0.30.0 build a1ccfcdb, 2026-11-18).** The user's seed, on foot, no airship yet.
+- **Early checks:** none so far. No airship yet, so the boarding case is untested.
+- **Token Legacy (quest 6) still showed the stand-in Potion.** The order on screen: the reward pop-up (Potion), then the stat bonus box, then the Archipelago item in the client. So the reward pop-up comes first, not last. The log has `check quest:6` at 11:19:12 and no pop-up line at all: the check came after both pop-ups had closed, and a shiny's pop-up replaced the waiting one later.
+  - **Why:** the reward row `ChrEv_0070_006_01` gives the item, completes the request and sets counter 7 to 60, all in one row. The game applies the counter after the row's pop-ups. Secrets Unearthed (quest 16) set its counter before its pop-up, which is why it worked.
+  - **Fix (build 42898077):** `quests.lua` now has each quest's reward `map` and the counter's value `before` the reward row, from `quest_steps.tsv` (Mog Tag has several and gets none). While a quest's counter reads `before` on its map, an item pop-up in an event there is that quest's: the mod writes it before the check (`chest pop-up for quest:6 before its check: ...`) and the check later writes nothing.
+- **The Weight of Mercy (quest 20)** went out 17 s after Secrets Unearthed, in the same town, and its pop-up was never found (`no chest pop-up on screen`). Not asked about yet.
+- **Dragon's Maw:** not in logic yet.
+- **Quests:** Rear Support, Ahoy! and Secrets Unearthed worked. The Phantom Train and the Weapons Factory are open; not done yet. Mog Tag not reached.
+
+**Round 80, a crash (build cac73e78, 2026-11-18 11:20:03).** On the world map, about 5 s after walking out of Zoldaad (2102). FFRS_QoL (MapMarkers 1) and FFRBestiary were on; ModSettings is gone.
+- `UECC-...B474475`: an access violation in `RC::LuaType::push_intproperty`, reading 0x230440020. A Lua loop read an int field (`obj.Field`) of a freed object. The C frames show the loop's callback, then two Lua `pcall`s, then the read.
+- `ap_trace.txt` ends `tick 3840 tick done` at 11:20:03. That was the 12th tick after the load, the last one the trace covered, so it cannot say whose loop it was.
+- **The shape fits this mod's loops** (`every` → `pcall(tick)` → `pcall(step)`) **and FFRS_QoL's world-map loop** (`guarded` → `pcall(fastWorldMap)` → `wldMapId` → `pcall(function() return s.WldMapId end)`, an int field). The minidump holds no Lua state, so it cannot tell them apart.
+- **Build 42898077 traces all the time:** one file handle, unbuffered, started again at each map load and every 4000 lines (about 90 s). The fast tick has two more steps (`fast: pop-up`, `fast: scans`).
+
+## Round 81 test plan (mod 0.61.0 build 42898077, world 0.30.0 build a1ccfcdb)
+
+**Install:** copy `FFRArchipelago/Scripts`. No new seed: the apworld is unchanged.
+
+**0. The build.** The log should say `version 0.61.0 (build 42898077)`.
+
+**1. A character quest's pop-up.** Token Legacy is done, so try another with a stat bonus: Nichol's Duty, Last Respite, A New Leaf, or any character quest. **Does the first pop-up (the reward) show the Archipelago item?** The log should say `chest pop-up for quest:N before its check: text set, item line hidden`, then `check quest:N`.
+
+**2. Normal quests still work.** On The Weight of Mercy or any town quest: one pop-up with the Archipelago item, and one `chest pop-up for quest:N` line.
+
+**3. The round 79 and 80 items still open:** early checks once you have the airship, Dragon's Maw, the Phantom Train and the Weapons Factory, Mog Tag, the princess talk, and an old save's counter.
+
+**4. If the game crashes:** send `Mods/FFRArchipelago/ap_trace.txt` with the crash folder and the log, before starting the game again. A last line without its `done` names this mod's step. A `done` last means another mod's loop. If the crashes keep coming on the world map, try a session with FFRS_QoL off (`enabled.txt` out of its folder).
+
+Send the `[FFRAP]` lines of the log.

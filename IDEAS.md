@@ -109,6 +109,8 @@ The chapter-by-chapter progression (party, vehicles, gates, Visions, Espers) is 
 
 **Verdict:** worth one cheap test (way 1), when there is time. If chests can be empty, the rest follows from what the feed already does. If not, way 2 is a small, safe polish, and way 3 waits until long after progression logic.
 
+**Round 79 (the user asked whether to probe this now).** Token Legacy showed the stand-in Potion because its check came after the game's pop-up had closed, not because of the widget. An own pop-up shown at check time would still come after a Potion pop-up. Way 1 is the one that helps every kind of check: with an empty reward row (a chest's `Money 0`, a quest's empty `ObtainItemList`) the game shows no pop-up of its own, and the mod shows its text whenever the check comes. Its test also covers quests: empty one quest's reward row and see whether the row still runs, completes the quest and moves the counter. Build 42898077 fixes the quest case without it (arms the pop-up from the counter's value before the reward).
+
 ## 16. Map blockers and custom forced gates
 
 **Idea:** Introduce "blocking" elements on the world map or in town/dungeon maps (e.g. new forced gates or barriers on a bridge or choke point until specific items, characters, or flags are collected) to control routing and enforce progression logic.
