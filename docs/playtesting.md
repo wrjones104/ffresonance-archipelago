@@ -1156,11 +1156,11 @@ Send the `[FFRAP]` lines of the log.
 - The page lists the goal, the tower lock (party members, Visions, Crystal Fragments), checks done of the total, items received, Tablet Shards held, the continents open and locked, the kinds of locations, and the start.
 - The client sends two new lines when they change: `cfg goal <kind> <shards> <shards needed>` and `cfg checks <done> <total>`.
 
-## Round 83 test plan (mod 0.61.0 build 0c2a8b95, world 0.30.0 build 109145bc)
+## Round 83 test plan (mod 0.61.0 build 0c2a8b95, world 0.30.0 build 91d7b935)
 
 **Install:** copy `FFRArchipelago/Scripts`, and copy `dist/ff_resonance.apworld` into `custom_worlds`. Only the client changed, so the round 79 seed still plays. The client will warn that the seed's build is not its own; that warning is expected this time.
 
-**0. The builds.** The log should say `version 0.61.0 (build 0c2a8b95)`; the client `world version 0.30.0 (build 109145bc)`.
+**0. The builds.** The log should say `version 0.61.0 (build 0c2a8b95)`; the client `world version 0.30.0 (build 91d7b935)`.
 
 **1. The page.** In game, run `ffrap_apmenu page`. The log lists the page's lines (`apmenu: page line: ...`). Open the main menu and pick Archipelago. **Does one window show, titled Archipelago, with the lines and no white box, arrows or "1/1"?** Send a screenshot. **Do all the lines fit, or is the text cut off?**
 
@@ -1170,4 +1170,13 @@ Send the `[FFRAP]` lines of the log.
 
 **4. The round 82 plan's steps 1 to 4**, if not done yet.
 
+**5. A new game before the client.** With a new seed, start an Archipelago new game first and connect the client while the game waits on the prologue. Open the first chest. **Does the client send the check without a restart?** This is the 2026-11-18 fault below.
+
 Send the `[FFRAP]` lines of the log.
+
+**Found on 2026-11-18, the first play of a new seed (`.reference/2026-11-18/UE4SS_first play - client did not receive item.log`).** The client did not send a chest check until it was restarted. The game was right: it reported the check. The client dropped it.
+- The user had cleared `ap_in.txt` and `ap_out.txt` for the new seed, but `ap_state.txt` still named the old seed. So the game started, wrote `hello` and `seed 92996...` to `ap_out.txt`, and linked the new game to the old seed (09:17:25, "this new game is linked to the seed"). The story then went 1000 -> 1005, so `ap_out.txt` was 4 short lines.
+- The client connected and wrote the new seed to `ap_in.txt`. Before the mod saw it, the client read the old 4-line file to its end.
+- At 09:17:43 the mod logged `new session 41007...:0:1 (was 92996...:0:1)`. It emptied `ap_out.txt` and wrote `hello`, `seed 41007...` and, in the same tick, `applied 0 ok flag 1421 = true` (item 0, 09:17:43.477). The new file was 80 bytes, the old one 72.
+- The client noticed a new file only when it was shorter than what it had read. This one was longer, so the client read on from byte 72, past the new `seed` line. It kept the old seed as the scope and dropped every line after it: `story 8000` and `check chest:2020:0` (09:18:06). A restart read the file from the top, which is why it fixed it. `/resync` would also have.
+- **Fix (client, world build 91d7b935):** the client keeps the start of `ap_out.txt` through its first `seed` line (`out_file_head`). When that start changes, the mod started the file over, and the client reads it from the top. A game restart appends `hello` and `seed` to the same file, so its start stays the same and nothing is read twice. `tests/client/test_out_file.py` plays the log's files; the old client fails it.

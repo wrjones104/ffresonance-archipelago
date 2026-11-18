@@ -43,6 +43,7 @@ FINAL_GOAL = "final_boss"
 FINAL_BATTLE = 9056   # Rain against Sol, reported by the mod as `won 9056`
 ENDING_STORY = 9000   # the ending sets this after its scenes: the goal if the win was missed
 SHARD_ITEM = next(ap_id for ap_id, info in ITEMS.items() if info["name"] == "Tablet Shard")
+OUT_HEAD_BYTES = 256  # the mod's hello and seed lines open the file, well inside this
 
 
 def clean(text: Any) -> str:
@@ -63,6 +64,18 @@ def decode_scout(encoded: str) -> list[str]:
     return base64.b64decode(encoded.encode("ascii")).decode("utf-8").split("\t")
 
 
+def out_file_head(start: bytes) -> bytes:
+    """The start of ap_out.txt through its first `seed` line, or b"" if that line is not there yet.
+    The mod starts the file over for a new session with its hello and seed lines, so a new head
+    means a new file."""
+    end = 0
+    for line in start.split(b"\n")[:-1]:
+        end += len(line) + 1
+        if line.startswith(b"seed\t"):
+            return start[:end]
+    return b""
+
+
 class FFResonanceCommandProcessor(ClientCommandProcessor):
     ctx: FFResonanceContext
 
@@ -78,6 +91,7 @@ class FFResonanceCommandProcessor(ClientCommandProcessor):
         self.ctx.write_line("sync")
         self.ctx.out_offset = 0
         self.ctx.out_scope = None
+        self.ctx.out_head = b""
         self.output("Resync requested.")
         return True
 
@@ -110,6 +124,7 @@ class FFResonanceContext(CommonContext):
         self.slot_data: dict = {}             # the Connected packet's, to write the seed's settings again
         self.out_offset = 0
         self.out_scope: str | None = None     # the seed key the ap_out.txt lines being read belong to
+        self.out_head = b""                   # out_file_head of the ap_out.txt being read
         self.max_story = 0
         self.battles_won: set[int] = set()
         self.mod_version: str | None = None
@@ -168,6 +183,7 @@ class FFResonanceContext(CommonContext):
         self.write_line("client", world_version(), world_build())
         self.out_offset = 0
         self.out_scope = None
+        self.out_head = b""
 
     def restore_session_file(self) -> bool:
         """Round 77: ap_in.txt deleted while connected (the user cleared it for a new seed with the
@@ -309,9 +325,14 @@ class FFResonanceContext(CommonContext):
         if not os.path.exists(self.out_path):
             return checks, story
         size = os.path.getsize(self.out_path)
-        if size < self.out_offset:            # the mod started the file over
-            self.out_offset, self.out_scope = 0, None
         with open(self.out_path, "rb") as f:
+            head = out_file_head(f.read(OUT_HEAD_BYTES))
+            # The mod starts the file over for a new session. Round 83: a size check alone missed
+            # it. The client read the old seed's short file, and the new one was longer by its
+            # next poll, so the new seed line was skipped and every check after it was dropped.
+            if size < self.out_offset or (self.out_head and head != self.out_head):
+                self.out_offset, self.out_scope = 0, None
+            self.out_head = head
             f.seek(self.out_offset)
             data = f.read()
         end = data.rfind(b"\n") + 1
