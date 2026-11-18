@@ -2331,14 +2331,14 @@ assert body.startswith("Goal: receive 50 Tablet Shards (7 so far)\n"), body
 L.execute('''
   local G = package.loaded.game
   function G.APMENU.State(path) return { path .. "  activated true", "main menu scene stack: x" } end
-  function G.APMENU.Close(path) G.APMENU.closed = path; return "deactivated; activated now false" end
+  function G.APMENU.Close(path) G.APMENU.closed = path; return "close asked; IsOpeningProcess false" end
 ''')
 L.execute("logged = {}")
 L.execute('commands["ffrap_apmenu"]("ffrap_apmenu", {"state"})')
 assert any("apmenu: /Game/T.T_C  activated true" in s for s in L.eval("logged").values()), "the page's screen"
 L.execute('commands["ffrap_apmenu"]("ffrap_apmenu", {"close"})')
 assert L.eval("package.loaded.game.APMENU.closed") == "/Game/T.T_C"
-assert any("apmenu: deactivated; activated now false" in s for s in L.eval("logged").values())
+assert any("apmenu: close asked; IsOpeningProcess false" in s for s in L.eval("logged").values())
 print("archipelago page lines: ok")
 
 # Round 74: the build, a hash of the mod's scripts, tells test installs apart while the version

@@ -5368,14 +5368,8 @@ function A.Layout(tag, path, say)
             if pcall(function() data.LayoutData.LayoutWidget = path end)
                 and softText(data.LayoutData.LayoutWidget) ~= before then wrote = "string" end
         end
-        -- Round 83: the menu pools one screen per row. The Tutorial screen came back the second
-        -- time blank and would not close, so ours is made new on each open.
-        say("apmenu: " .. where .. " PushSettings.bUsePooling false")
-        pcall(function() data.LayoutData.PushSettings.bUsePooling = false end)
-        local pooled
-        pcall(function() pooled = data.LayoutData.PushSettings.bUsePooling end)
-        out[#out + 1] = string.format("%s layout: %s -> %s (%s), pooling %s", where, before,
-            softText(data.LayoutData.LayoutWidget), wrote or "not written", tostring(pooled))
+        out[#out + 1] = string.format("%s layout: %s -> %s (%s)", where, before,
+            softText(data.LayoutData.LayoutWidget), wrote or "not written")
     end
     return out
 end
@@ -5540,9 +5534,23 @@ local COLLAPSED = 1
 -- Only what differs from the screen is written, so if the game fills the screen again when it
 -- opens, the next tick puts the page back. Steps are told to `say` once per screen instance.
 -- Returns "written", "same", or nil and why not.
+-- The screen's own open/close state (CPP_EU_WBP_Activatable), as one line.
+local function openFlags(w)
+    local f = {}
+    for _, k in ipairs({ "IsOpeningProcess", "IsClosingProcess", "IsCanInput", "bIsCanceling" }) do
+        local v
+        pcall(function() v = w[k] end)
+        f[#f + 1] = k .. " " .. tostring(v)
+    end
+    return table.concat(f, ", ")
+end
+
 function A.Page(path, title, body, say)
     local host = openHost(path)
-    if not host then return nil, "not open" end
+    if not host then
+        A.reopenFor = nil
+        return nil, "not open"
+    end
     local full = G.PathOf(host)
     local tell = A.pageHost ~= full and say or quiet
     local parts, count = {}, 0
@@ -5580,17 +5588,21 @@ function A.Page(path, title, body, say)
         tell("apmenu: page lets the text box grow (ClearHeightOverride)")
         pcall(function() box:ClearHeightOverride() end)
     end
-    -- Round 83: the second open was blank. If a closing animation left the window faded out, the
-    -- log shows it here, and the page fades it back in.
-    for _, w in ipairs({ { "layout", host }, { "WBP_Tutorial", parts.WBP_Tutorial } }) do
-        local opacity
-        if w[2] then pcall(function() opacity = w[2]:GetRenderOpacity() end) end
-        if type(opacity) == "number" and opacity < 0.99 then
-            A.fades = (A.fades or 0) + 1
-            if A.fades <= 20 then say("apmenu: page " .. w[1] .. " render opacity " .. opacity .. " -> 1") end
-            pcall(function() w[2]:SetRenderOpacity(1.0) end)
-            wrote = true
+    -- Round 83: the menu hands back the same screen on the next open, activated but at opacity 0,
+    -- its A_Close's end, without asking it to open, and Back then could not close it. The Tutorial
+    -- screen opens in its OnRequestOpen (A_Open, then FinishedOpen at the end), so the page asks
+    -- that once per opening.
+    local opacity
+    pcall(function() opacity = host:GetRenderOpacity() end)
+    if type(opacity) == "number" and opacity < 0.99 and A.reopenFor ~= full then
+        A.reopenFor = full
+        say("apmenu: page screen at opacity " .. opacity .. " (" .. openFlags(host) .. "); OnRequestOpen")
+        local okOpen, err = pcall(function() host:OnRequestOpen() end)
+        if not okOpen then
+            say("apmenu: OnRequestOpen failed (" .. tostring(err) .. "); render opacity -> 1")
+            pcall(function() host:SetRenderOpacity(1.0) end)
         end
+        wrote = true
     end
     A.pageHost = full
     return wrote and "written" or "same"
@@ -5607,8 +5619,8 @@ function A.State(path)
             pcall(function() vis = w:IsVisible() end)
             pcall(function() visibility = w:GetVisibility() end)
             pcall(function() opacity = w:GetRenderOpacity() end)
-            out[#out + 1] = string.format("%s  activated %s  visible %s  visibility %s  opacity %s", tostring(G.PathOf(w)),
-                tostring(activated(w)), tostring(vis), tostring(visibility), tostring(opacity))
+            out[#out + 1] = string.format("%s  activated %s  visible %s  visibility %s  opacity %s; %s", tostring(G.PathOf(w)),
+                tostring(activated(w)), tostring(vis), tostring(visibility), tostring(opacity), openFlags(w))
         end
     end
     if #out == 0 then out[1] = className(path) .. ": none" end
@@ -5619,13 +5631,15 @@ function A.State(path)
     return out
 end
 
--- A way out when our screen will not close: deactivate the open one. Returns a line.
+-- A way out when our screen will not close: ask it to close the way Back does (OnRequestClose:
+-- A_Close, then FinishedClose, which the menu waits for). Round 83: DeactivateWidget took the
+-- screen away but left the menu waiting, empty. Returns a line.
 function A.Close(path, say)
     local host = openHost(path)
     if not host then return "no " .. className(path) .. " open under the main menu" end
-    say("apmenu: DeactivateWidget " .. tostring(G.PathOf(host)))
-    local okCall, err = pcall(function() host:DeactivateWidget() end)
-    return okCall and ("deactivated; activated now " .. tostring(activated(host))) or ("DeactivateWidget failed: " .. tostring(err))
+    say("apmenu: OnRequestClose " .. tostring(G.PathOf(host)) .. " (" .. openFlags(host) .. ")")
+    local okCall, err = pcall(function() host:OnRequestClose() end)
+    return okCall and ("close asked; " .. openFlags(host)) or ("OnRequestClose failed: " .. tostring(err))
 end
 
 -- `ffrap_apmenu on`, every tick: the row (with its screen when `layoutPath` is set), the scene

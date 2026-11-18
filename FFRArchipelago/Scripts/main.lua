@@ -1803,7 +1803,7 @@ end)
 --   text                          one line of text on the open entry's screen
 --   page                          the entry opens the Tutorial screen, filled with the seed's state
 --   state                         the entry's screens (activated, visible, opacity) and the menu's scene stack
---   close                         deactivate the entry's open screen, when it will not close
+--   close                         ask the entry's open screen to close, as Back does, when Back does nothing
 --   off                           stop adding it (what is in the menu stays until a restart)
 state.apMenuTick = function()
     local m = state.apMenu

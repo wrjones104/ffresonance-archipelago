@@ -2019,13 +2019,12 @@ HELP_PATH = "/Game/UI/MainMenu/Help/Widget/WBP_HelpLayout.WBP_HelpLayout_C"
 OWN_TAG = "UI.MainMenu.Scene.FFRAP"
 L.execute(r"""
 local function soft(p) return { path = p } end
-local function sceneRow(tag, name, layout, pooled)
+local function sceneRow(tag, name, layout)
   return { SceneTag = { TagName = FName(tag) }, EntryName = FText(name), SceneTitle = FText(name),
-           LayoutData = { LayoutWidget = soft(layout), PushSettings = { bUsePooling = pooled ~= false } } }
+           LayoutData = { LayoutWidget = soft(layout) } }
 end
 local function copyRow(r)
-  return sceneRow(r.SceneTag.TagName:ToString(), r.EntryName:ToString(), r.LayoutData.LayoutWidget.path,
-    r.LayoutData.PushSettings.bUsePooling)
+  return sceneRow(r.SceneTag.TagName:ToString(), r.EntryName:ToString(), r.LayoutData.LayoutWidget.path)
 end
 function freshSceneTable()
   sceneDT.rows = { ["ジャーナル"] = sceneRow("UI.MainMenu.Scene.Journal", "Quests", "/Game/J.J_C"),
@@ -2097,10 +2096,6 @@ L.execute("freshSceneTable()")
 done = lua(f'G.APMENU.Ensure(ownTag, "{HELP_PATH}", say)')
 assert done.startswith("row added; row layout: ") and f"-> {HELP_PATH} (soft class ref)" in done, done
 assert lua("sceneDT.rows.FFRAP_Archipelago.LayoutData.LayoutWidget.path") == HELP_PATH
-# round 83: a pooled Tutorial screen came back blank the second time, so our screen is not pooled
-assert "pooling false" in done, done
-assert lua("sceneDT.rows.FFRAP_Archipelago.LayoutData.PushSettings.bUsePooling") is False
-assert lua("sceneDT.rows['システム'].LayoutData.PushSettings.bUsePooling") is True, "System keeps its pooling"
 assert lua("subTags(menuSub.SceneDataMap)") == f"UI.MainMenu.Scene.System={SYSTEM_PATH},{OWN_TAG}={HELP_PATH}", "the subsystem's copy too"
 assert lua("sceneDT.rows['システム'].LayoutData.LayoutWidget.path") == SYSTEM_PATH, "System still opens its own screen"
 assert lua("listTags()").count(OWN_TAG) == 1
@@ -2174,17 +2169,31 @@ assert page() == "written" and lua("pageParts.Text_Description.text").startswith
 assert lua("pageParts.SizeBox_2.vis") == 1 and lua("#says") == first, "the same screen: the steps are told once"
 tree = list(L.eval(f'G.APMENU.Tree("{TUTORIAL_PATH}")').values())
 assert tree[0].startswith("host ") and any(line.startswith("          ? Text_Description") for line in tree), tree
-# round 83: a screen left faded out by its closing animation is faded back in, and logged
-L.execute("tutorialInner.opacity = 0")
-assert page() == "written" and lua("tutorialInner.opacity") == 1.0
-assert lua("says[#says]") == "apmenu: page WBP_Tutorial render opacity 0 -> 1", lua("says[#says]")
-assert page() == "same"
-state = "\n".join(L.eval(f'G.APMENU.State("{TUTORIAL_PATH}")').values())
-assert "activated true  visible nil  visibility 4  opacity 1.0" in state and "main menu scene stack: " in state, state
-L.execute("function tutorialHost:DeactivateWidget() self.active = false end")
-assert lua(f'G.APMENU.Close("{TUTORIAL_PATH}", say)') == "deactivated; activated now false"
-assert lua(f'G.APMENU.Close("{TUTORIAL_PATH}", say)').startswith("no WBP_TutorialLayout_C open")
-L.execute("tutorialHost.active = true")
+# round 83: the menu hands back the same screen activated at opacity 0 without asking it to open.
+# The page asks it (OnRequestOpen) once per opening; its open animation then runs up from 0.
+L.execute('''
+  tutorialHost.opens, tutorialHost.IsOpeningProcess, tutorialHost.IsCanInput = 0, false, false
+  function tutorialHost:OnRequestOpen() self.opens = self.opens + 1; self.opacity = 0.2 end
+  function tutorialHost:OnRequestClose() self.closes = (self.closes or 0) + 1 end
+  tutorialHost.opacity = 0
+''')
+assert page() == "written" and lua("tutorialHost.opens") == 1
+assert lua("says[#says]") == ("apmenu: page screen at opacity 0 (IsOpeningProcess false, IsClosingProcess nil, "
+                              "IsCanInput false, bIsCanceling nil); OnRequestOpen"), lua("says[#says]")
+assert page() == "same" and lua("tutorialHost.opens") == 1, "not again while its animation runs"
 L.execute("tutorialHost.active = false")
+assert L.eval(f'select(2, G.APMENU.Page("{TUTORIAL_PATH}", "Archipelago", "x", say))') == "not open"
+L.execute("tutorialHost.active = true; tutorialHost.opacity = 0")    # the next opening
+page()
+assert lua("tutorialHost.opens") == 2, "asked again on the next opening"
+L.execute("tutorialHost.opacity = 1.0")
+state = "\n".join(L.eval(f'G.APMENU.State("{TUTORIAL_PATH}")').values())
+assert "activated true  visible nil  visibility 4  opacity 1.0; IsOpeningProcess false" in state, state
+assert "main menu scene stack: " in state, state
+# close asks the screen to close the way Back does
+assert lua(f'G.APMENU.Close("{TUTORIAL_PATH}", say)').startswith("close asked; IsOpeningProcess false")
+assert lua("tutorialHost.closes") == 1
+L.execute("tutorialHost.active = false")
+assert lua(f'G.APMENU.Close("{TUTORIAL_PATH}", say)').startswith("no WBP_TutorialLayout_C open")
 assert L.eval(f'select(2, G.APMENU.Page("{TUTORIAL_PATH}", "Archipelago", "x", say))') == "not open"
 print("archipelago page: ok")
