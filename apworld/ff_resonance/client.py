@@ -432,9 +432,7 @@ class FFResonanceContext(CommonContext):
             self.scout_locations()
             logger.info(f"Goal: {self.goal_text()}. Mod folder: {self.mod_folder}")
         elif cmd == "LocationInfo":
-            written = self.write_scouts(args.get("locations") or [])
-            if written:
-                logger.info(f"Told the game what {written} location(s) hold, for its chest pop-up")
+            self.write_scouts(args.get("locations") or [])
         elif cmd == "PrintJSON" and args.get("type") == "ItemSend" and self.slot is not None:
             item, receiver = args.get("item"), args.get("receiving")
             if item is not None and item.player == self.slot and receiver != self.slot:

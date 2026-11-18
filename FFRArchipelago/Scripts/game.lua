@@ -1881,6 +1881,49 @@ local SKIP_MAPS = { 5010, 2013, 20000, 3001 }   -- known and visited
 -- (20000), so Grandshelt Castle (2013), Earth Shrine (3001), or the unobtained airship are not
 -- immediate fast-travel destinations bypassing continent locks.
 G.OPEN_START_MAPS, G.OPEN_START_MAPS_AIRSHIP = { 5010 }, { 5010, 20000 }
+-- Round 84 (the user): the Airship item makes the airship a fast travel place at once, as a visit
+-- would. 20001 is the airship, 20002 its deck (maps.tsv).
+G.AIRSHIP_MAPS = { 20001, 20002 }
+
+-- Marks each map known and visited that the save says is not visited yet. Returns the maps marked,
+-- or nil when the save cannot be read.
+function G.MarkVisited(maps)
+    local perMap = Lib("CPP_BFL_SaveData_PerMap")
+    if not perMap then return nil end
+    local marked = {}
+    for _, m in ipairs(maps) do
+        local visited
+        pcall(function() visited = perMap:IsVisited(m) end)
+        if visited == false and pcall(function() perMap:AddKnownMap(m); perMap:AddVisitedMap(m) end) then
+            marked[#marked + 1] = m
+        end
+    end
+    return marked
+end
+
+-- Round 84 (the user): fast travel from dungeons. DA_WldMapParameter's FastTravelProperty refuses
+-- it with the condition that checks the map type ("Fast Travel cannot be used while you are in a
+-- dungeon"). `on` makes that condition's behaviour travel, with the usual confirm dialog; off puts
+-- the game's back. The other two conditions (an event under way, a place not visited) stay. Run
+-- it every pass: the asset can be loaded again. Returns what changed, or nil.
+G.FAST_TRAVEL = { confirm = "UI.Dialog.Box.Map.FastTravel", refuse = "UI.Dialog.Box.Map.FastTravel.CanNot.MapType" }
+function G.DungeonFastTravel(on)
+    local da = Live("CPP_DA_WldMapParameter")
+    if not da then return nil end
+    local changed
+    pcall(function()
+        local list = da.FastTravelProperty.ConditionBehaviorList
+        for i = 1, #list do
+            local entry = list[i]
+            if entry.Condition.bCheckMapType and entry.Behavior.bCanTravel ~= on then
+                entry.Behavior.bCanTravel = on
+                entry.Behavior.DialogTag.TagName = FName(on and G.FAST_TRAVEL.confirm or G.FAST_TRAVEL.refuse)
+                changed = on and "allowed from dungeons" or "refused from dungeons again (the game's rule)"
+            end
+        end
+    end)
+    return changed
+end
 G.SKIP_ARRIVAL = { map = 3001, x = -5775.0, y = 0.0, z = -197.85, direction = 2 }
 -- Open-world start sets story 8000 directly (or 7090 at the dock for `event`). Arrivals:
 --   dock   story 8000 at the Crystal Tower dock
@@ -2365,7 +2408,34 @@ end
 G.QUESTS = require("quests")
 -- The Mechabo quests run on progress 16, which the story's repair request (C02_219_02, at story
 -- 2120 only) sets to 10. Our start skips it, so Verun never shows (IDEAS.md idea 33).
-G.MECHABO = { counter = 16, start = 10 }
+-- C02_219_02 also accepts "Arise, Mechabo!" (request 17) into the quest log. Round 84: Verun asked
+-- for the Ipooh drops with no quest in the log. His own rows for that step accept it instead:
+-- `_yet` when he asks, and `_ItemGet` when the drops are delivered before talking to him.
+G.MECHABO = { counter = 16, start = 10, request = 17,
+              rows = { "C02_MechaboLvUp_00_yet", "C02_MechaboLvUp_00_ItemGet" } }
+-- Puts an Accept of request 17 first in each of those rows' RequestStateSettings. Safe to run
+-- again. Returns the rows written.
+function G.MechaboPatch()
+    local M, written, wanted = G.MECHABO, 0, {}
+    for _, r in ipairs(M.rows) do wanted[r] = true end
+    EachTalkRow(function(key, row)
+        if not wanted[key] then return end
+        local list = row.RequestStateSettings
+        -- ERequestStateChangeType: Accept 0, Proceed 1, Complete 2
+        if #list >= 1 and Int(list[1].RequestID) == M.request and Int(list[1].Type) == 0 then return end
+        local keep = { { M.request, 0, 0 } }
+        for i = 1, #list do
+            keep[#keep + 1] = { Int(list[i].RequestID), Int(list[i].Type), Int(list[i].ProgressIndex) }
+        end
+        list:Empty()
+        for i, e in ipairs(keep) do
+            local _ = list[i]
+            list[i].RequestID, list[i].Type, list[i].ProgressIndex = e[1], e[2], e[3]
+        end
+        written = written + 1
+    end)
+    return written
+end
 
 -- Oblivion Palace (IDEAS.md idea 37): safe n opens at {progress:43} >= 11 + n. The princess's
 -- first talk sets the counter to 10 (`met`), and each later talk adds one per step of shards
@@ -2428,18 +2498,22 @@ end
 
 -- Each reward row loses the quest's location item (`item` in quests.lua) and any vision (an item
 -- of its own in the world). Gil and other items stay. Round 81: a row left empty still completes
--- the quest and shows the game's pop-up for the mod to write into, so no stand-in is needed. Safe
--- to run again: a row without the item is left alone. Returns the rows written.
+-- the quest and shows the game's pop-up for the mod to write into. Round 84: not for Mog Tag. Its
+-- rows hold only the location's item, and left empty they showed "You obtained a vision!", which
+-- the mod did not find to write into. A quest with no `before` (no pop-up armed ahead of its
+-- check) keeps the stand-in Potion in a row that would be left empty. Safe to run again: a row
+-- without the item is left alone. Returns the rows written.
 G.VISION_IDS = { first = 13000, last = 13999 }
 function G.QuestsPatch()
-    local items = {}
+    local quests = {}
     for _, q in ipairs(G.QUESTS) do
-        for _, r in ipairs(q.rows) do items[r] = q.item end
+        for _, r in ipairs(q.rows) do quests[r] = q end
     end
     local written = 0
     EachTalkRow(function(key, row)
-        local item = items[key]
-        if not item then return end
+        local q = quests[key]
+        if not q then return end
+        local item = q.item
         local list = row.ObtainItemList
         local keep, took, changed = {}, false, false
         for i = 1, #list do
@@ -2453,6 +2527,7 @@ function G.QuestsPatch()
             end
         end
         if not changed then return end
+        if #keep == 0 and not q.before then keep[1] = { id = BOSS_STAND_IN, num = 1 } end
         list:Empty()
         for i, e in ipairs(keep) do
             local _ = list[i]
@@ -5286,6 +5361,23 @@ function A.List(say)
         list[n + 1] = { TagName = FName(A.TAG) }
     end
     return "added"
+end
+
+-- Takes our tag out of DisplaySceneList again (an engine list cannot drop one entry, so it is
+-- emptied and built again). Returns true when it was there.
+function A.Unlist()
+    local da = Live("CPP_DA_MainMenuRoot")
+    if not da then return false end
+    local list = da.DisplaySceneList
+    local keep, found = {}, false
+    for i = 1, #list do
+        local tag = tagOf(list[i])
+        if tag == A.TAG then found = true else keep[#keep + 1] = tag end
+    end
+    if not found then return false end
+    list:Empty()
+    for i, tag in ipairs(keep) do list[i] = { TagName = FName(tag) } end
+    return true
 end
 
 -- Our tag in the menu subsystem's SceneDataMap and SceneEnableMap (one subsystem per world, which

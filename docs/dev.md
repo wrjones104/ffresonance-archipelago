@@ -4,7 +4,8 @@ Technical documentation for the Final Fantasy Resonance Archipelago mod, apworld
 
 Related docs:
 - [CLAUDE.md](../CLAUDE.md): project conventions, engine quirks, and debugging lessons.
-- [docs/playtesting.md](playtesting.md): round-by-round test logs and active round test plans.
+- [docs/playtesting.md](playtesting.md): open in-game test checklist (`- [ ]` items still needing testing).
+- [docs/playtesting_archive.md](playtesting_archive.md): round-by-round test history and past plans.
 - [docs/open_world.md](open_world.md): open-world mode design (story skip, continent locks, enemy scaling).
 - [docs/logic.md](logic.md) and [docs/boss_logic.md](boss_logic.md): progression and boss logic designs.
 - [docs/bosses.md](bosses.md) and [docs/progression.md](progression.md): boss data and chapter progression notes.

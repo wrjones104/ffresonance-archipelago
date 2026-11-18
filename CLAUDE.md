@@ -1,6 +1,6 @@
 # FFR Archipelago: notes for Claude
 
-An Archipelago implementation for Final Fantasy Resonance (UE 5.6, game module `/Script/mucha`). Read this first; `docs/playtesting.md` has the full history, round by round.
+An Archipelago implementation for Final Fantasy Resonance (UE 5.6, game module `/Script/mucha`). Read this first; `docs/playtesting_archive.md` has the full history, round by round, and `docs/playtesting.md` holds only the open items that still need testing.
 
 ## The parts
 
@@ -13,7 +13,8 @@ An Archipelago implementation for Final Fantasy Resonance (UE 5.6, game module `
 - **The game data dump**, `tools/dump_game/` (C#, CUE4Parse) and `tools/gen_from_dump.py`. They read the game's pak files off-line and write `data/game/*.tsv`. Use these tables, not FFR-Randomizer's lists, as the reference for items, units, maps, chests, field items, map exits and gimmicks. See "The game data dump" in the README.
 - **Docs:**
   - `README.md`: setup and install for players.
-  - `docs/playtesting.md`: test results per round and the current round's test plan.
+  - `docs/playtesting.md`: open in-game checks that still need testing, in `- [ ]` tick-box format.
+  - `docs/playtesting_archive.md`: completed round results and past test plans.
   - `IDEAS.md`: numbered ideas and findings, with what is known and what to find out.
   - `docs/progression.md`: the game's chapters and gates.
   - `docs/logic.md`: the progression logic design (in progress).
@@ -24,7 +25,7 @@ An Archipelago implementation for Final Fantasy Resonance (UE 5.6, game module `
 
 ## How we work
 
-- **Rounds.** Claude builds and tests off-line, then writes a round test plan in `docs/playtesting.md`. The user installs and plays, and sends `UE4SS.log` (`[FFRAP]` lines), screenshots or recordings. Claude records the results there as "Round N (mod x.y.z, ...)", fixes what they show, and plans the next round.
+- **Rounds.** Claude builds and tests off-line, then adds open checks in `- [ ]` tick-box format to `docs/playtesting.md`. The user installs and plays, and sends `UE4SS.log` (`[FFRAP]` lines), screenshots or recordings. Claude records the results in `docs/playtesting_archive.md` as "Round N (mod x.y.z, ...)", removes tested items from `docs/playtesting.md` so it only keeps what still needs to be done, fixes what the results show, and updates the open checklist.
 - **Versions (one bump per release, decided 2026-11-16).** Rounds between releases share one version, so players never see numbers jump between releases.
   - The mod's version is `VERSION` in `main.lua`. The world's version is `world_version` in `apworld/ff_resonance/archipelago.json`.
   - At the first change after a release, bump both to the next release's numbers. Then leave them alone until the user releases. Do not bump them each round.
@@ -85,6 +86,8 @@ An Archipelago implementation for Final Fantasy Resonance (UE 5.6, game module `
 - A battle's MRP is `ap` in `DT_BattleGroup`, not a field on the enemy (round 47).
 - A talk row with `encountGroupId` starts that battle group when the game's own chain reaches it, and the group's `battleFinishEventId` runs after a win. The row run after a win must be a Sequence row: a Blueprint row with no Blueprint leaves the screen black (round 49).
 - An esper in the summon menu is an ability on both Finas, added by the event row's `AbilitySettings`; its flag (90 to 98) alone does nothing (round 46).
+- **The quest log is fed by event rows' `RequestStateSettings`** (Accept 0, Proceed 1, Complete 2, by request id). A quest whose Accept is in a skipped story row never shows, even with its counter set (Verun, round 84).
+- **A talk row whose `ObtainItemList` is left empty can show "You obtained a vision!"** in place of the item pop-up (Mog Tag, round 84). Keep a stand-in item unless the pop-up is written before the check.
 - A story `NoEntry` zone holds until its event's flag is on (the Earth Shrine's exit needs flag 102, round 44). `gimmicks.tsv` has the conditions.
 - `CPP_VM_Party:AddUnit` does not set `JoinStatus`: a unit added only that way gains no EXP and gear on it does not count (round 44).
 - The prologue skip must run after story 1005 and the game's first autosave, or the opening movie's input lock survives the reload (round 9).

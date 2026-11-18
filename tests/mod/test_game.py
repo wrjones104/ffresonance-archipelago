@@ -1819,6 +1819,7 @@ questRows = {
   ChrEv_0340_005_01 = { ObtainItemList = itemList({ { 25001, 1 }, { 13017, 1 } }) },
   ChrEv_0420_005_01 = { ObtainItemList = itemList({ { 13051, 1 }, { 25002, 1 } }) },
   SubEv_C01_Chloe_04 = { ObtainItemList = itemList({ { 12032, 1 }, { 25000, 1 } }) },
+  SubEv_C05_MogChase_06_NPC01_01 = { ObtainItemList = itemList({ { 33, 1 } }) },
 }
 questTable = { rows = questRows, ParentTables = {} }
 function questTable:IsValid() return true end
@@ -1837,12 +1838,15 @@ function rewards(row)
   return table.concat(out, " ")
 end
 """)
-QUEST_ROWS_TO_CHANGE = 4
+QUEST_ROWS_TO_CHANGE = 5
+STAND_IN_POTION = "1x1"
 assert L.eval("G.QuestsPatch()") == QUEST_ROWS_TO_CHANGE
 assert L.eval("rewards('SubEv_C01_Zairu_04')") == "-1x500", "the location's item goes, the gil stays"
 assert L.eval("rewards('ChrEv_0340_005_01')") == "", "Amelia: the Magicite is the location's, the vision comes out"
 assert L.eval("rewards('ChrEv_0420_005_01')") == "", "Ayaka: the vision first, then the Magicite Cryst"
 assert L.eval("rewards('SubEv_C01_Chloe_04')") == "25000x1", "the Prayer Beads are the location's; the Shard stays"
+assert L.eval("rewards('SubEv_C05_MogChase_06_NPC01_01')") == STAND_IN_POTION, \
+    "round 84: Mog Tag's row left empty showed a vision pop-up; it keeps the stand-in"
 assert L.eval("G.QuestsPatch()") == 0, "nothing to write the second time: the Shard is not the location's"
 # quests.lua, generated from data/quests.tsv: 28 quests, each with a counter, a value and rows
 assert L.eval("#G.QUESTS") == 28
@@ -1850,6 +1854,38 @@ assert L.eval("G.QUESTS[1].key") == "quest:0" and L.eval("G.QUESTS[1].counter") 
 assert L.eval("G.MECHABO.counter") == 16 and L.eval("G.MECHABO.start") == 10
 assert L.eval("G.QUESTS[1].item") == 12050, "the location's item, which the rows lose"
 print("quest rows: ok")
+
+# Round 84: the open start skips C02_219_02, which accepts request 17 into the quest log. Verun's
+# rows for the first step accept it instead, ahead of what they already do, once.
+L.execute(r"""
+local function requestList(entries)
+  local items = {}
+  local list = setmetatable({}, {
+    __index = function(_, i)
+      if i == "Empty" then return function() for k in pairs(items) do items[k] = nil end end end
+      if i == #items + 1 then items[i] = { RequestID = 0, Type = 0, ProgressIndex = 0 } end
+      return items[i]
+    end,
+    __len = function() return #items end })
+  for i, e in ipairs(entries) do items[i] = { RequestID = e[1], Type = e[2], ProgressIndex = e[3] } end
+  return list
+end
+questRows.C02_MechaboLvUp_00_yet = { RequestStateSettings = requestList({}) }
+questRows.C02_MechaboLvUp_00_ItemGet = { RequestStateSettings = requestList({ { 17, 1, 1 } }) }
+questRows.C02_MechaboLvUp_01 = { RequestStateSettings = requestList({ { 17, 2, 0 } }) }
+function requests(row)
+  local list, out = questRows[row].RequestStateSettings, {}
+  for i = 1, #list do out[#out + 1] = list[i].RequestID .. ":" .. list[i].Type .. ":" .. list[i].ProgressIndex end
+  return table.concat(out, " ")
+end
+""")
+ACCEPT_17 = "17:0:0"
+assert L.eval("G.MechaboPatch()") == 2
+assert L.eval("requests('C02_MechaboLvUp_00_yet')") == ACCEPT_17, "Verun asks for the drops: accepted"
+assert L.eval("requests('C02_MechaboLvUp_00_ItemGet')") == ACCEPT_17 + " 17:1:1", "accepted, then its step"
+assert L.eval("requests('C02_MechaboLvUp_01')") == "17:2:0", "the rest of the chain is the game's"
+assert L.eval("G.MechaboPatch()") == 0, "nothing to write the second time"
+print("mechabo quest log: ok")
 
 # Round 73: the Sworn Six's three assist skills in the Behemoth fight deal a fixed 1 damage, and
 # no other skill changes (Ruin, 500100, is the same ally's own attack and is used elsewhere too).
@@ -2105,7 +2141,63 @@ assert lua("G.APMENU.List(say)") == "added" and lua("listTags()") == f"UI.MainMe
 L.execute("savedRoot, menuRoot = menuRoot, nil; G.ForgetObjects()")
 assert lua("select(2, G.APMENU.Ensure(say))") == "no DA_MainMenuRoot loaded"
 L.execute("menuRoot = savedRoot; G.ForgetObjects()")
+# Round 84: on a save not linked to the seed the entry leaves the scene list, once
+L.execute(f"""
+local list = {{ {{ TagName = FName('UI.MainMenu.Scene.Journal') }}, {{ TagName = FName('{OWN_TAG}') }},
+                {{ TagName = FName('UI.MainMenu.Scene.System') }} }}
+list.Empty = function(self) for i = #self, 1, -1 do self[i] = nil end end
+menuRoot.DisplaySceneList = list
+""")
+assert lua("G.APMENU.Unlist()") is True
+assert lua("listTags()") == "UI.MainMenu.Scene.Journal,UI.MainMenu.Scene.System", "the rest stays in order"
+assert lua("G.APMENU.Unlist()") is False, "already out"
 print("main menu entry: ok")
+
+# Round 84 (the user): fast travel from a dungeon. The condition that checks the map type travels
+# with the usual confirm dialog; the event and not-visited conditions stay; off puts it back.
+L.execute("""
+local function cond(mapType, tag)
+  return { Condition = { bCheckMapType = mapType }, Behavior = { bCanTravel = false, DialogTag = { TagName = FName(tag) } } }
+end
+wldParam = { FastTravelProperty = { ConditionBehaviorList = {
+  cond(true, 'UI.Dialog.Box.Map.FastTravel.CanNot.MapType'), cond(false, 'UI.Dialog.Box.Map.FastTravel.CanNot.Event'),
+  cond(false, 'UI.Dialog.Box.Map.FastTravel.CanNot.LockMap') } } }
+wldParam.IsValid = function() return true end
+wldParam.HasAnyInternalFlags = function() return false end
+wldParam.HasAnyFlags = function() return false end
+local prevWldFFO = FindFirstOf
+function FindFirstOf(c) if c == 'CPP_DA_WldMapParameter' then return wldParam end return prevWldFFO(c) end
+function travelRule(i)
+  local b = wldParam.FastTravelProperty.ConditionBehaviorList[i].Behavior
+  return tostring(b.bCanTravel) .. ' ' .. b.DialogTag.TagName:ToString()
+end
+""")
+assert lua("G.DungeonFastTravel(true)") == "allowed from dungeons"
+assert lua("travelRule(1)") == "true UI.Dialog.Box.Map.FastTravel"
+assert lua("travelRule(2)") == "false UI.Dialog.Box.Map.FastTravel.CanNot.Event", "an event under way still refuses"
+assert lua("travelRule(3)") == "false UI.Dialog.Box.Map.FastTravel.CanNot.LockMap", "a place not visited still refuses"
+assert lua("G.DungeonFastTravel(true)") is None, "nothing to write the second time"
+assert lua("G.DungeonFastTravel(false)").startswith("refused from dungeons again")
+assert lua("travelRule(1)") == "false UI.Dialog.Box.Map.FastTravel.CanNot.MapType"
+print("dungeon fast travel: ok")
+
+# Round 84 (the user): the Airship item marks the airship's maps visited, for fast travel.
+L.execute("""
+perMapLib = { visited = { [20002] = true }, known = {} }
+function perMapLib:IsVisited(m) return self.visited[m] == true end
+function perMapLib:AddKnownMap(m) self.known[m] = true end
+function perMapLib:AddVisitedMap(m) self.visited[m] = true end
+perMapLib.IsValid = function() return true end
+local prevPerMapFind = StaticFindObject
+function StaticFindObject(p)
+  if p == '/Script/mucha.Default__CPP_BFL_SaveData_PerMap' then return perMapLib end
+  return prevPerMapFind(p)
+end
+""")
+assert lua("table.concat(G.MarkVisited(G.AIRSHIP_MAPS), ',')") == "20001", "the deck was visited already"
+assert lua("perMapLib.known[20001]") is True
+assert lua("#G.MarkVisited(G.AIRSHIP_MAPS)") == 0, "nothing the second time"
+print("airship visited: ok")
 
 # Round 82 result: the Tutorial screen opens from the entry as one framed window. The page sets
 # its title and description, hides the image box, the arrows and the page count, widens the text

@@ -271,6 +271,12 @@ local function sessionSave()
     return state.seed == nil or save.ok
 end
 
+-- Round 84 (the user): a save of the game's own, loaded while there is a seed. It plays as the game
+-- made it: our settings are not applied and the Archipelago page leaves the menu. /bind links it.
+function save.vanilla()
+    return state.seed ~= nil and save.obj ~= nil and not save.ok
+end
+
 local function slotsText(withItems)
     local list = {}
     for slot in pairs(state.slots) do list[#list + 1] = slot end
@@ -1442,7 +1448,7 @@ local function crossingsTick()
         crossingHinted = near
         local names = {}
         for _, side in ipairs(locked) do names[#names + 1] = side:sub(1, 1):upper() .. side:sub(2) .. " Unlock" end
-        notify("The way is closed. Archipelago needs " .. table.concat(names, " and "))
+        notify("The way is closed. You need " .. table.concat(names, " and "))
     elseif not near then
         crossingHinted = nil
     end
@@ -1548,6 +1554,10 @@ local function tick()
                 if newSave and seedCfg.quests then
                     local okQuests, written = pcall(game.QuestsPatch)
                     log("quests: " .. tostring(written) .. " reward rows without the location's item" .. (okQuests and "" or " (failed: " .. tostring(written) .. ")"))
+                end
+                if newSave then
+                    local okMechabo, written = pcall(game.MechaboPatch)
+                    log("mechabo: " .. tostring(written) .. " rows of Verun's first step accept its quest" .. (okMechabo and "" or " (failed)"))
                 end
                 -- In open-world seeds, one Antlion defeat permanently clears the sandpit path between Kol and Grandport.
                 if newSave then
@@ -1806,6 +1816,10 @@ state.apMenu = {}
 state.apMenuTick = function()
     local m = state.apMenu
     local A = game.APMENU
+    if save.vanilla() then
+        if A.Unlist() then log("apmenu: taken out of the menu (a save not linked to the seed)") end
+        return
+    end
     local done, why = A.Ensure(not m.ready and log or nil)
     if done and not m.ready then log("apmenu: " .. done) end
     if not why and done then m.ready = true end
@@ -1822,6 +1836,28 @@ state.apMenuTick = function()
     m.pageFailed = whyPage
     local unstuck = A.Unstick(log)
     if unstuck then log("apmenu: " .. unstuck) end
+end
+-- The user, round 84: a player wants to know how many shards they have and how many safes they can
+-- open without the princess's long talk. Counter 43 is 10 plus the safes paid for (game.PalaceSync
+-- keeps it so), and a safe opened is its chest's check. Shards turned in are known only after a
+-- visit to the palace in this run.
+state.palaceLines = function()
+    local P = game.PALACE
+    local held = game.HeldCount(P.item)
+    local text = "Tablet Shards: " .. tostring(held or "?") .. " held"
+    if P.turned then text = text .. ", " .. P.turned .. " turned in" end
+    local lines = { text }
+    local counter = game.ProgressValue(P.counter)
+    if not counter then return lines end
+    local paid = math.max(0, counter - P.met)
+    local opened = 0
+    for i = 0, #P.steps - 1 do
+        if state.reported["check|chest:" .. P.map .. ":" .. i] then opened = opened + 1 end
+    end
+    local need = P.steps[paid + 1]
+    lines[#lines + 1] = string.format("Oblivion Palace safes: %d ready to open, %d opened%s", math.max(0, paid - opened),
+        opened, need and string.format("; the next needs %d shards in all", need) or "; all paid for")
+    return lines
 end
 -- The Archipelago page's lines, from what the client has sent and the loaded save.
 state.apMenuPage = function()
@@ -1843,7 +1879,7 @@ state.apMenuPage = function()
         lines[#lines + 1] = string.format("Checks: %d of %d", seedCfg.checks.done, seedCfg.checks.total)
     end
     lines[#lines + 1] = "Items received: " .. state.applied
-    lines[#lines + 1] = "Tablet Shards held: " .. tostring(game.HeldCount(game.PALACE.item) or "?")
+    for _, line in ipairs(state.palaceLines()) do lines[#lines + 1] = line end
     lines[#lines + 1] = ""
     if locksOn() then
         local open, locked = {}, {}
@@ -2370,14 +2406,16 @@ settingsTick = function()
         end
         menuLogged = line
     end
-    local rates = game.ApplyRates(setting("exp"), setting("gil"), setting("mrp"))
-    defendedRates = { setting("exp"), setting("gil"), setting("mrp") }
+    local vanilla = save.vanilla()
+    local value = vanilla and function(k) return SETTING_DEFAULTS[k] end or setting
+    local rates = game.ApplyRates(value("exp"), value("gil"), value("mrp"))
+    defendedRates = { value("exp"), value("gil"), value("mrp") }
     -- Re-apply encounter settings every pass since other mods (e.g. FFRS_QoL) also touch these rows.
-    local rows, tables = game.ApplyEncounterTables(setting("encounters"), setting("encounterrate"))
-    local players = game.ApplyPlayerEncounter(setting("encounters"))
+    local rows, tables = game.ApplyEncounterTables(value("encounters"), value("encounterrate"))
+    local players = game.ApplyPlayerEncounter(value("encounters"))
     if rates > 0 or rows > 0 or players > 0 then
-        local line = string.format("settings: %s (%d rate rows, %d map rows in %d tables, %d players changed)", settingsText(),
-            rates, rows, tables, players)
+        local line = string.format("settings: %s (%d rate rows, %d map rows in %d tables, %d players changed)",
+            vanilla and "the game's own, for a save not linked to the seed" or settingsText(), rates, rows, tables, players)
         if line ~= settingsLogged then log(line) end
         settingsLogged = line
     end
@@ -2421,7 +2459,7 @@ finalLockTick = function()
     local d = math.sqrt((pose.x - game.TOWER_TOP.x) ^ 2 + (pose.y - game.TOWER_TOP.y) ^ 2)
     if d < LOCK_NOTICE_NEAR and not lockNoticed then
         lockNoticed = true
-        notify("The way to the top is sealed. Archipelago needs " .. text)
+        notify("The way to the top is sealed. You need " .. text)
     elseif d > LOCK_NOTICE_AGAIN then
         lockNoticed = false
     end
@@ -2494,6 +2532,12 @@ seedExtrasTick = function()
     end
     pcall(finalLockTick)
     if seedSave and seedCfg.airship == false then pcall(airshipItemTick) end
+    if seedSave and game.GetFlag(game.AIRSHIP_FLAG) == true then
+        local marked = game.MarkVisited(game.AIRSHIP_MAPS)
+        if marked and #marked > 0 then log("airship: maps " .. table.concat(marked, ", ") .. " marked visited, for fast travel") end
+    end
+    local travel = game.DungeonFastTravel(seedSave and true or false)
+    if travel then log("fast travel: " .. travel) end
     if seedSave and seedCfg.radar and sessionSave() then pcall(radar.tick) end
     if seedSave then
         local ok, line = pcall(game.PalaceSync)

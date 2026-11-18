@@ -104,8 +104,10 @@ function G.MapId() return G.saveMap end
 function G.StoryCounter() return G.story end
 function G.PartyIds() return {1001} end
 function G.Toast() return false end
+function G.GetFlag(i) return false end
 -- the Archipelago page is on by default; its own section below replaces this
-G.APMENU = { Ensure = function() end, Page = function() return nil, "not open" end, Unstick = function() end }
+G.APMENU = { Ensure = function() end, Page = function() return nil, "not open" end, Unstick = function() end,
+             Unlist = function() return false end }
 function G.IsChestOpenInSave(m, uid) return G.saveOpen[m .. ":" .. uid] == true end
 function G.SaveOpenRows(m)
   return setmetatable({}, { __index = function(_, uid) if G.saveOpen[m .. ":" .. uid] == true then return true end end })
@@ -155,6 +157,21 @@ G.QUESTS = { { key = "quest:13", counter = 28, value = 40, map = 2030, before = 
              { key = "quest:34", counter = 44, value = 20, rows = { "SubEv_C05_MogChase_06_NPC01_01" } } }
 function G.QuestsPatch() G.questPatches = (G.questPatches or 0) + 1; return 2 end
 G.MECHABO = { counter = 16, start = 10 }
+function G.MechaboPatch() G.mechaboPatches = (G.mechaboPatches or 0) + 1; return 2 end
+-- the save's visited maps, and the dungeon fast travel rule as last set
+G.visited, G.AIRSHIP_MAPS = {}, { 20001, 20002 }
+function G.MarkVisited(maps)
+  local marked = {}
+  for _, m in ipairs(maps) do
+    if not G.visited[m] then G.visited[m] = true; marked[#marked + 1] = m end
+  end
+  return marked
+end
+function G.DungeonFastTravel(on)
+  if G.fastTravel == on then return nil end
+  G.fastTravel = on
+  return on and "allowed from dungeons" or "refused from dungeons again (the game's rule)"
+end
 G.palaceSyncs = 0
 function G.PalaceSync()
   G.palaceSyncs = G.palaceSyncs + 1
@@ -2144,13 +2161,15 @@ assert "exp 2" in saved and "encounters off" in saved and "encounterrate 5" in s
 G.story = 8000
 tick(20)
 assert list(G.scaleCalls.values()) == [], "scaling off: the seed does not scale"
-# Round 57: the settings apply to a save not linked to the seed too (round 56 kept them off it)
+# Round 84 (the user): a save not linked to the seed plays as the game made it (round 57 had the
+# settings apply to it), and the linked save gets them back
 G.slotOf = L.table_from({"900": 5})
 load(G, "SD_SET_OTHER", "900")
 tick(10)
-assert list(G.rates.values()) == [2, 1, 1] and list(G.encounterTables.values()) == [False, 5], "the player's values"
+assert list(G.rates.values()) == [1, 1, 1] and list(G.encounterTables.values()) == [True, 1], "the game's values"
 load(G, "SD_SET", "0")
 tick(10)
+assert list(G.rates.values()) == [2, 1, 1] and list(G.encounterTables.values()) == [False, 5], "the player's values"
 L2, G2 = boot5("SD_SET2", "0", {})
 L2.execute("tickFn = tickFn")
 assert "exp 2" in read("settings.txt"), "kept for the next run"
@@ -2264,6 +2283,7 @@ L.execute('''
   end
   function G.APMENU.Page(title, makeBody) return nil, "not open" end
   function G.APMENU.Unstick() end
+  function G.APMENU.Unlist() G.APMENU.unlists = (G.APMENU.unlists or 0) + 1; return G.APMENU.unlists == 1 end
 ''')
 apcalls = lambda: list(L.eval("package.loaded.game.APMENU.calls").values())
 tick = lambda n: [L.execute("tickFn()") for _ in range(n)]
@@ -2294,7 +2314,8 @@ L.execute('''
   local G = package.loaded.game
   G.APMENU.done = nil
   G.CONTINENTS = { { name = "grandshelt" }, { name = "lanzelt" }, { name = "kolobos" } }
-  G.PALACE = { item = 25004 }
+  G.PALACE = { counter = 43, met = 10, item = 25004, map = 2031, steps = { 3, 6, 9, 12 } }
+  G.progress[43] = 12
   G.openContinents = { lanzelt = true }
   function G.HeldCount(id) return id == 25004 and 13 or 0 end
   function G.APMENU.Page(title, makeBody) G.APMENU.paged = { title, makeBody() }; return "written" end
@@ -2316,7 +2337,8 @@ assert body.split("\n") == [
     "Tower: party members 3/4, Visions 1/2, Crystal Fragments 2/5",
     "Checks: 12 of 480",
     "Items received: 0",
-    "Tablet Shards held: 13",
+    "Tablet Shards: 13 held",
+    "Oblivion Palace safes: 2 ready to open, 0 opened; the next needs 9 shards in all",
     "",
     "Continents open: Lanzelt",
     "Continents locked: Grandshelt, Kolobos",
@@ -2343,6 +2365,24 @@ assert L.eval("package.loaded.game.APMENU.closed") is True
 assert any("apmenu: close asked; IsOpeningProcess false" in s for s in logged())
 L.execute('commands["ffrap_apmenu"]("ffrap_apmenu", {"tree"})')
 assert read("ffrap_apmenu.txt") == "host x\n  Overlay Overlay_0 (visibility 4)\n"
+# Round 84: shards turned in show once the palace has been read, and every safe paid for
+L.execute("package.loaded.game.PALACE.turned = 9; package.loaded.game.progress[43] = 14")
+tick(2)
+body = list(L.eval("package.loaded.game.APMENU.paged").values())[1].split("\n")
+assert "Tablet Shards: 13 held, 9 turned in" in body and \
+    "Oblivion Palace safes: 4 ready to open, 0 opened; all paid for" in body, body
+# Round 84 (the user): a save not linked to the seed takes the entry out of the menu, once, and
+# the linked save puts it back
+L.execute("logged = {}")
+G.slotOf = L.table_from({"900": 5})
+load(G, "SD_APMENU_OTHER", "900")
+n = len(apcalls())
+tick(3)
+assert L.eval("package.loaded.game.APMENU.unlists") >= 3 and len(apcalls()) == n, "out of the menu, not put back"
+assert sum("apmenu: taken out of the menu" in s for s in logged()) == 1, "logged once"
+load(G, "SD_APMENU", "0")
+tick(1)
+assert len(apcalls()) > n, "back in the menu"
 print("archipelago page lines: ok")
 
 # Round 74: the build, a hash of the mod's scripts, tells test installs apart while the version

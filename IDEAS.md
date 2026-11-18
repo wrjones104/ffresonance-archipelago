@@ -322,8 +322,9 @@ Along the same lines, I would also want an option for players to start with all 
 
 **Built (round 78, mod 0.61.0):** on an open world seed's save, the mod sets `{progress:16}` to 10 whenever it reads 0. The three quests are not locations yet.
 
+**Round 84 result:** Verun is at the forge and asks for the Ipooh drops (`C02_MechaboLvUp_00_yet`), but "Arise, Mechabo!" was not in the quest log. The quest log is fed by each event row's `RequestStateSettings` (Accept, Proceed, Complete), and the Accept of request 17 is in `C02_219_02`, which the skip never plays. **Built (build a87aac00):** `G.MechaboPatch` puts that Accept first in `_00_yet` and `_00_ItemGet`. Quests 26 and 27 are accepted by the chain's own rows (`_02`, `_07`).
+
 **To find out:**
-- Whether the forge still plays Verun's first meeting, or goes straight to the repair request.
 - Whether the steps should be locations: the six abilities and three Magicite rewards, with logic for each material's enemy area. The steps also need Lid in logic if the abilities stay vanilla.
 
 ## 34. Location names a player can find
@@ -422,3 +423,19 @@ Along the same lines, I would also want an option for players to start with all 
 - The menu turns the screen off as soon as Back asks it to close, so the screen's own `FinishedClose` never ran. The page turns on the base class's default finish for a close (`CloseStateProperty.IsEnableDefaultFinisheCall`). A fallback calls `FinishedClose` on a screen off but still closing.
 - `ffrap_apmenu close` is a way out: `OnRequestClose`, or the view model's `PopScene()`.
 
+**Round 84 result (build dc66cdd9):** the page works as a normal feature. **From the user, round 84:**
+- The page leaves the menu on a save not linked to the seed, and the settings go back to the game's own there (built, a87aac00; idea 39 for the rest).
+- Tablet Shards held and turned in, and the safes ready to open, so a player can count without the princess's talk (built, a87aac00).
+- Nicer layout: sections or framed boxes. Not built. FFR Bestiary's way is the guide: `WBP_SystemSubhead` for headings, `WBP_Cmn_Window` for framed panels, `WBP_LeftLineButton` for framed rows, all made and put in the screen from Lua. It needs a probe behind a test command first (round 20 lesson: no font or Slate colour structs to setters).
+
+## 39. Our settings in the Archipelago page
+
+**From the user, 2026-11-18 (round 84).** Move the settings from the bottom of Options > Gameplay into the Archipelago page. On a save not linked to the seed, the page is gone and the settings are the game's own; `/bind` brings them back. This reverses round 57, which applied the settings to every save.
+
+**Built (round 84, build a87aac00):** the second half. `save.vanilla()` in `main.lua` is true with a seed known, a save loaded and the save not the session's. Then `settingsTick` writes `SETTING_DEFAULTS` (the game's own rates and encounters), and the page's entry leaves `DisplaySceneList` (`A.Unlist`). Scaling was already off on such a save. A mod run with no seed at all still applies the settings.
+
+**Not built: the settings in the page.** The page is the Tutorial screen with one text box. Settings need rows the player can move between and change, as the Options screen's rows are. Two ways, both to probe first:
+1. Build rows of the game's own widgets in the page (as FFR Bestiary does), with our own focus and input handling. The most work, and the most to go wrong.
+2. Keep the Options rows, and have the page say what they are set to and where to change them. Cheap. The rows could also be hidden on a save not linked to the seed.
+
+Until then the Options rows stay, and on a save not linked to the seed they change nothing.
