@@ -416,3 +416,9 @@ Along the same lines, I would also want an option for players to start with all 
 **Round 82 result (build 26b6adfa):** the entry works with no pak and sits beside FFR Bestiary's. Our own unregistered tag is enough. The screen it opens can be set from Lua. Tutorial, Options and Journal all opened empty. The Tutorial screen is the host: one framed window, and no other main menu page or mod uses it. Options shares its panel with Help (FFR Bestiary's), and Journal is the Quests page's own class.
 
 **Built (round 83, build 0c2a8b95):** `ffrap_apmenu page` fills the Tutorial screen: the title "Archipelago", the seed's state in the description, and the image box, arrows and page count hidden. The client sends `cfg goal` and `cfg checks` for it. Still to do once the page is seen: turn the entry on by default for a seed, lay the page out with the game's heading and framed-row widgets (as FFR Bestiary does), and decide what the arrows could page through (for example, the received items).
+
+**Round 83 result (build 6a38c39e):** the page works and opens and closes again and again. Three fixes on the way:
+- The page finds its widgets by walking the screen (`GetWidgetFromName` found nothing).
+- The menu turns the screen off as soon as Back asks it to close, so the screen's own `FinishedClose` never ran. The page turns on the base class's default finish for a close (`CloseStateProperty.IsEnableDefaultFinisheCall`). A fallback calls `FinishedClose` on a screen off but still closing.
+- `ffrap_apmenu close` is a way out: `OnRequestClose`, or the view model's `PopScene()`.
+

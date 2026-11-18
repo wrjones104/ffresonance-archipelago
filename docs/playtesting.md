@@ -1205,6 +1205,8 @@ Send the `[FFRAP]` lines of the log.
 - `ffrap_apmenu close`: with our screen open, `OnRequestClose`. With it already off but the menu still on our scene, `CPP_VM_MainMenu:PopScene`.
 - `ffrap_apmenu state` adds `close finish`.
 
+**Fifth try (build 6a38c39e, 2026-11-18): works.** The page opens and closes again and again, and Back works each time. The log was not sent, so it is not known whether the default finish was enough on its own, or the `FinishedClose` fallback also acted. The fallback logs `apmenu: screen off but still closing` when it does.
+
 **1. The page.** In game, run `ffrap_apmenu page`. The log lists the page's lines (`apmenu: page line: ...`). Open the main menu and pick Archipelago. **Does one window show, titled Archipelago, with the lines and no white box, arrows or "1/1"?** Send a screenshot. **Do all the lines fit, or is the text cut off?**
 
 **2. The numbers.** **Do the goal, the tower counts, the checks and the continents match the client and the game?** Open a chest or receive an item, then open the page again. **Do the checks and items received go up?** **Open and close the page three or four times: does it show each time, and does Back always work?** On the second open the log should say `page screen at opacity 0 (...); OnRequestOpen`, and the window should fade in. The log should say `page CloseStateProperty.IsEnableDefaultFinisheCall true` on the first open. On the second open it should say nothing about opacity. If Back does nothing, open the console, run `ffrap_apmenu state`, then `ffrap_inspect CPP_VM_MainMenu` (it writes `inspect_CPP_VM_MainMenu.tsv`), then `ffrap_apmenu close` (once, and again if the screen goes but the empty background stays). Send the log and the file.
