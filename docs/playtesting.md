@@ -1196,6 +1196,8 @@ Send the `[FFRAP]` lines of the log.
 - `inspect_WBP_TutorialLayout_C.tsv`: the class chain is `WBP_TutorialLayout_C < CPP_WBP_Tutorial < CPP_WBP_MuchaActivatable < CPP_EU_WBP_Activatable < CommonActivatableWidget`. `FinishedOpen`, `FinishedClose`, `OnRequestOpen` and `OnRequestClose` are callable. Both `OpenStateProperty` and `CloseStateProperty` have every switch false.
 - The game's exe names `PushScene`, `PopScene`, `RequestScene` and `OnFinishedSceneOpen`, most likely on `CPP_VM_MainMenu`, which holds `SceneDataStack`.
 
+**`inspect_CPP_VM_MainMenu.tsv` (a run still on build da0d250c, 2026-11-18):** the view model has `PopScene()` (no arguments), `CloseMenu()`, `SetScene(tag, option)`, `TurnScene(advance)`, `OnFinishedSceneOpen()` and `GetCurrentScene()`. `AllSceneDataList` holds our row (10 scenes with FFR Bestiary's). Bestiary's row uses the Journal view model and `CPP_JournalSceneOption`; ours is System's copy (no view model, `IsFillScreen` true). The run showed the same stuck second open, as expected for that build.
+
 **Changes (build 6a38c39e):**
 - The page sets our screen's `CloseStateProperty.IsEnableDefaultFinisheCall` to true, so the base class finishes a close itself, the moment Back asks. The next open should then start from "closed", and the menu's own open should play.
 - A fallback: a screen that is off but still "closing" for 1.5 s gets `FinishedClose`, logged as `apmenu: screen off but still closing (...); FinishedClose`.
