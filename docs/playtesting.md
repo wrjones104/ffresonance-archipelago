@@ -1102,3 +1102,9 @@ Built during round 79, before its results. The plan gets the round 79 fixes too.
 **5. If the game crashes:** send `Mods/FFRArchipelago/ap_trace.txt` with the crash folder and the log, before starting the game again. A last line without its `done` names this mod's step. A `done` last means another mod's loop. If the crashes keep coming on the world map, try a session with FFRS_QoL off (`enabled.txt` out of its folder).
 
 Send the `[FFRAP]` lines of the log.
+
+**Round 81 results so far (build 27ed563a, 2026-11-18).**
+- **Empty chest (step 4):** `ffrap_empty chest` in map 3140 marked 5 chests (`15 chest rows emptied`: 5 rows in 3 tables). Chest 3 opened, its check went out, and **the game still showed its own "obtained" pop-up, with the item line**. The mod wrote the Archipelago text into it and hid the line, as with 1 gil. The user: it worked.
+- **Empty shiny:** `ffrap_empty shiny` emptied shinies 10 and 11. Shiny 10 opened and showed the game's pop-up, which the mod rewrote. No new check: the save had been loaded from before a later save (`82 applied (was 83)`), and shiny 10 had been sent already. The mod shows the pop-up again for a known check, and sends nothing.
+- **What this means for idea 15:** way 1 does not take the game's pop-up away. It takes away the 1 gil and keeps the pop-up for the mod to write into. The remaining questions: what the hidden item line said (blank, or "0"), and whether an empty chest is still taken after leaving and coming back.
+- **Quest:** next.
