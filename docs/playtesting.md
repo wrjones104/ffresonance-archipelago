@@ -1156,11 +1156,13 @@ Send the `[FFRAP]` lines of the log.
 - The page lists the goal, the tower lock (party members, Visions, Crystal Fragments), checks done of the total, items received, Tablet Shards held, the continents open and locked, the kinds of locations, and the start.
 - The client sends two new lines when they change: `cfg goal <kind> <shards> <shards needed>` and `cfg checks <done> <total>`.
 
-## Round 83 test plan (mod 0.61.0 build 0c2a8b95, world 0.30.0 build 91d7b935)
+## Round 83 test plan (mod 0.61.0 build afd59819, world 0.30.0 build 91d7b935)
 
 **Install:** copy `FFRArchipelago/Scripts`, and copy `dist/ff_resonance.apworld` into `custom_worlds`. Only the client changed, so the round 79 seed still plays. The client will warn that the seed's build is not its own; that warning is expected this time.
 
-**0. The builds.** The log should say `version 0.61.0 (build 0c2a8b95)`; the client `world version 0.30.0 (build 91d7b935)`.
+**0. The builds.** The log should say `version 0.61.0 (build afd59819)`; the client `world version 0.30.0 (build 91d7b935)`.
+
+**First try (build 0c2a8b95, apworld 109145bc, 2026-11-18).** The entry opened the Tutorial screen, but it stayed blank: "TITLE", the white box, "TEXT". The page lines in the log were right (goal, tower 2/6, 7/12, 2/10, checks 113 of 497, 117 items, 16 shards, 5 continents open). The log said `apmenu: page: no Text_Title or Text_Description on the screen`: `GetWidgetFromName` found neither, on the layout or on `WBP_Tutorial`. The round 82 `tree` walk did reach them (it follows `GetChildAt` and each user widget's `WidgetTree.RootWidget`). **Fix (build afd59819):** the page finds its parts with that same walk. A miss now logs how many widgets the walk saw.
 
 **1. The page.** In game, run `ffrap_apmenu page`. The log lists the page's lines (`apmenu: page line: ...`). Open the main menu and pick Archipelago. **Does one window show, titled Archipelago, with the lines and no white box, arrows or "1/1"?** Send a screenshot. **Do all the lines fit, or is the text cut off?**
 

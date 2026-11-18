@@ -2116,11 +2116,14 @@ print("main menu entry: ok")
 # what differs, so a screen the game fills again is put back on the next tick.
 TUTORIAL_PATH = "/Game/UI/Tutorial/WBP_TutorialLayout.WBP_TutorialLayout_C"
 L.execute(r"""
-local function widget(name, text)
-  local w = { name = name, text = text, vis = 4, cleared = false }
+local function widget(name, text, kids)
+  local w = { name = name, text = text, vis = 4, cleared = false, kids = kids or {} }
   function w:IsValid() return true end
   function w:HasAnyInternalFlags() return false end
   function w:HasAnyFlags() return false end
+  function w:GetFName() local n = self.name; return { ToString = function() return n end } end
+  function w:GetChildrenCount() return #self.kids end
+  function w:GetChildAt(i) return self.kids[i + 1] end
   function w:GetText() local s = self.text; return { ToString = function() return s end } end
   function w:SetText(t) self.text = t:ToString() end
   function w:GetVisibility() return self.vis end
@@ -2129,18 +2132,21 @@ local function widget(name, text)
   return w
 end
 pageParts = {}
-for _, n in ipairs({ "SizeBox_2", "Overlay_ButtonNext", "Overlay_ButtonPreview", "HorizontalBox_215", "SizeBox_1" }) do
+for _, n in ipairs({ "SizeBox_2", "Overlay_ButtonNext", "Overlay_ButtonPreview", "HorizontalBox_215" }) do
   pageParts[n] = widget(n)
 end
 pageParts.Text_Title = widget("Text_Title", "TITLE")
 pageParts.Text_Description = widget("Text_Description", "TEXT")
+pageParts.SizeBox_1 = widget("SizeBox_1", nil, { pageParts.Text_Description })
+-- as in the round 82 tree: the parts are in WBP_Tutorial's own widget tree, under the layout's
+-- root, and the game's GetWidgetFromName found none of them, so the fake has none
 local inner = widget("WBP_Tutorial")
--- the parts are in WBP_Tutorial's tree, not the layout's
-function inner:GetWidgetFromName(n) return pageParts[n:ToString()] end
+inner.WidgetTree = { RootWidget = widget("VerticalBox_0", nil, { pageParts.Text_Title, pageParts.SizeBox_2,
+  pageParts.SizeBox_1, pageParts.HorizontalBox_215, pageParts.Overlay_ButtonNext, pageParts.Overlay_ButtonPreview }) }
 tutorialHost = setmetatable(widget("host"), { __tostring = function() return "WBP_MainMenuLayout_C_1.WBP_TutorialLayout_C_1" end })
+tutorialHost.WidgetTree = { RootWidget = widget("Overlay_0", nil, { widget("WBP_BGDimming"), inner }) }
 tutorialHost.active = true
 function tutorialHost:IsActivated() return self.active end
-function tutorialHost:GetWidgetFromName(n) if n:ToString() == "WBP_Tutorial" then return inner end return nil end
 local prevFAO = FindAllOf
 function FindAllOf(c) if c == "WBP_TutorialLayout_C" then return { tutorialHost } end return prevFAO(c) end
 says = {}
@@ -2157,6 +2163,8 @@ assert page() == "same" and lua("#says") == first, "nothing to write, nothing to
 L.execute('pageParts.Text_Description.text = "TEXT"; pageParts.SizeBox_2.vis = 4')   # the game fills it again
 assert page() == "written" and lua("pageParts.Text_Description.text").startswith("Goal: x")
 assert lua("pageParts.SizeBox_2.vis") == 1 and lua("#says") == first, "the same screen: the steps are told once"
+tree = list(L.eval(f'G.APMENU.Tree("{TUTORIAL_PATH}")').values())
+assert tree[0].startswith("host ") and any(line.startswith("          ? Text_Description") for line in tree), tree
 L.execute("tutorialHost.active = false")
 assert L.eval(f'select(2, G.APMENU.Page("{TUTORIAL_PATH}", "Archipelago", "x", say))') == "not open"
 print("archipelago page: ok")

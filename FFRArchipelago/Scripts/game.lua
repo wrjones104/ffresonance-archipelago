@@ -5457,22 +5457,21 @@ local function openHost(path)
     end
 end
 
--- The open screen's widget tree, one line per widget, into nested user widgets. Returns lines,
--- or nil when that screen is not open under the main menu.
-function A.Tree(path)
-    local host = openHost(path)
-    if not host then return nil end
-    local out = { "host " .. tostring(G.PathOf(host)) }
+-- Every widget of a screen, depth first, into nested user widgets: visit(widget, name, depth).
+-- Round 82: GetWidgetFromName found none of the Tutorial screen's parts, while this walk reached
+-- them all, so the page finds its parts this way.
+local WALK_MAX, WALK_DEPTH = 600, 14
+local function walkScreen(host, visit)
+    local seen = 0
     local function walk(w, depth)
-        if #out > 600 or depth > 14 or not Alive(w) then return end
-        local cls, name, vis = "?", "?", "?"
-        pcall(function() cls = w:GetClass():GetFName():ToString() end)
+        if seen >= WALK_MAX or depth > WALK_DEPTH or not Alive(w) then return end
+        seen = seen + 1
+        local name = "?"
         pcall(function() name = w:GetFName():ToString() end)
-        pcall(function() vis = tostring(w:GetVisibility()) end)
-        out[#out + 1] = string.rep("  ", depth) .. cls .. " " .. name .. " (visibility " .. vis .. ")"
+        visit(w, name, depth)
         local root
         pcall(function() root = w.WidgetTree.RootWidget end)
-        if root and Alive(root) and depth > 0 then walk(root, depth + 1) end
+        if root and Alive(root) then walk(root, depth + 1) end
         local n = 0
         pcall(function() n = w:GetChildrenCount() end)
         for i = 0, n - 1 do
@@ -5484,6 +5483,20 @@ function A.Tree(path)
     local root
     pcall(function() root = host.WidgetTree.RootWidget end)
     walk(root, 1)
+end
+
+-- The open screen's widget tree, one line per widget. Returns lines, or nil when that screen is
+-- not open under the main menu.
+function A.Tree(path)
+    local host = openHost(path)
+    if not host then return nil end
+    local out = { "host " .. tostring(G.PathOf(host)) }
+    walkScreen(host, function(w, name, depth)
+        local cls, vis = "?", "?"
+        pcall(function() cls = w:GetClass():GetFName():ToString() end)
+        pcall(function() vis = tostring(w:GetVisibility()) end)
+        out[#out + 1] = string.rep("  ", depth) .. cls .. " " .. name .. " (visibility " .. vis .. ")"
+    end)
     return out
 end
 
@@ -5526,16 +5539,15 @@ function A.Page(path, title, body, say)
     if not host then return nil, "not open" end
     local full = G.PathOf(host)
     local tell = A.pageHost ~= full and say or quiet
-    local function part(name)
-        local w
-        pcall(function() w = host:GetWidgetFromName(FName(name)) end)
-        if not (w and Alive(w)) then
-            pcall(function() w = host:GetWidgetFromName(FName("WBP_Tutorial")):GetWidgetFromName(FName(name)) end)
-        end
-        return w and Alive(w) and w or nil
+    local parts, count = {}, 0
+    walkScreen(host, function(w, name)
+        count = count + 1
+        if not parts[name] then parts[name] = w end
+    end)
+    local titleText, bodyText = parts.Text_Title, parts.Text_Description
+    if not (titleText and bodyText) then
+        return nil, "no Text_Title or Text_Description among the screen's " .. count .. " widgets"
     end
-    local titleText, bodyText = part("Text_Title"), part("Text_Description")
-    if not (titleText and bodyText) then return nil, "no Text_Title or Text_Description on the screen" end
     local wrote = false
     local function setText(w, name, text)
         local now
@@ -5548,7 +5560,7 @@ function A.Page(path, title, body, say)
     setText(titleText, "title", title)
     setText(bodyText, "text", body)
     for _, name in ipairs(PAGE_HIDE) do
-        local w = part(name)
+        local w = parts[name]
         local vis
         if w then pcall(function() vis = w:GetVisibility() end) end
         if w and vis ~= COLLAPSED then
@@ -5557,7 +5569,7 @@ function A.Page(path, title, body, say)
             wrote = true
         end
     end
-    local box = part("SizeBox_1")
+    local box = parts.SizeBox_1
     if box and A.pageHost ~= full then
         tell("apmenu: page lets the text box grow (ClearHeightOverride)")
         pcall(function() box:ClearHeightOverride() end)
