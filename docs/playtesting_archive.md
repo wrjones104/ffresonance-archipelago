@@ -1296,3 +1296,24 @@ Send the `[FFRAP]` lines of the log.
 - While the page is open, each tick checks that the tables still hold the page (`APMENU.Written`) and writes it again if not, logging it once.
 - `ffrap_apmenu seedrows command` probe: the seed's lines as Command rows, which may take the cursor.
 
+### Round 88 (mod 0.61.0 build ac15f02e, apworld 0.30.0 build c5fec06a)
+
+- **Build:** passed.
+- **First open soon after a load:** passed. Settings showed our settings on the first open. The log once said `apmenu: the Options tables were loaded again with the page open; mode ap: already so`, just after `ffrap_apmenu seedrows command`: the probe command had put the tables back while the page was open, and the page wrote itself again.
+- **A setting kept after close and open:** passed.
+- **Neither Options screen has our settings:** passed, in game and on the title screen.
+- **Seed lines as Command rows:** passed. The cursor moves down the lines and a gamepad scrolls the tab. **From the user:** the Command rows look and feel better than the headings; keep them.
+- **Mog Tag:** failed again, now explained. The game's pop-up ("You obtained: Potion", the stand-in) comes first, then the screen fades and the quest completes. The check (`check quest:34`) came after the pop-up, and 30 s later the mod found no pop-up (`no chest pop-up on screen`). Mog Tag had no early pop-up: each tier's reward runs at two counter values (0 or 10 for the first), so the generator gave it no `before`.
+- **The Call from Beyond:** showed "You obtained a vision!", and the real reward was the scouted Phoenix Pinion. Its early pop-up waited for map 3121, where the chain starts, but `ChrEv_0410_007_01` moves the player to map 2100 (`TransitionLocation`), and the reward row `_007_02` runs there. The log shows `map 3121 -> 2100`, then `check quest:25`.
+- **O General! My General!:** passed.
+- **Mechabo Tackle:** failed in both tries (Lid in the party, and Lid added after). Not yet clear: Mechabo Tackle comes from `C02_MechaboLvUp_03`, which runs at counter 16 = 30 with flag 219, the second delivery of "Mechabo Evolved". The round 88 checklist asked for "the first step", which is `_02` and gives no ability. The log did not show the counter.
+- **Steam Cloud:** passed. A stamped save on a second PC linked by itself (`save is stamped with this seed`) with no items given twice.
+
+**Round 89 build (mod 0.61.0 build c9dab8b2):**
+- The seed's lines are Command rows by default.
+- `quest_steps.tsv` has a new column, `at`: the map each row runs on, following any row on the way that moves the player. The early pop-up uses it (The Call from Beyond: 2100).
+- A quest's `before` can be several values, with `flags` that must be on too: Mog Tag's tiers are `{ 0, 10 }`, `{ 20, 30 }` and `{ 40, 50 }`, with flag 545 (the chase). The early pop-up is written once per quest.
+- A reward row left empty keeps the stand-in Potion, for quests with an early pop-up too.
+- The Quests screen's Rewards name the scouted item: the location's entry in `DT_RequestData`'s `Prize` becomes a text entry (ID 0), as "Attribute Bonus: Fina" is.
+- The log shows Verun's counter, flag 219 and whether Lid has Mechabo Tackle, each time one changes.
+

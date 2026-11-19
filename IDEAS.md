@@ -366,6 +366,11 @@ Along the same lines, I would also want an option for players to start with all 
 
 **Built (round 78, world 0.30.0, mod 0.61.0):** option `include_side_quests` (off by default for now): 28 quest locations, `quest:<id>`. The mod swaps each reward row's first item for the stand-in Potion, takes visions out, and reports a quest when its counter reaches the reward row's value. The 11 quest items left the pool. `data/quests.tsv` lists the quests by hand; `data/game/quests.tsv` and `quest_steps.tsv` come from the dump.
 
+**Round 88 results and fixes (build c9dab8b2):**
+- Mog Tag's pop-up comes before its counter moves, and each tier runs at two counter values, so it had no early pop-up. The generator now allows several values, gated by the flags every step needs (545, the chase).
+- The Call from Beyond's reward runs on map 2100, after a row moves the player there. `quest_steps.tsv`'s new `at` column follows those moves.
+- The user asked for the scouted item in the Quests screen. Its Rewards list is `DT_RequestData`'s `Prize`, where an entry with ID 0 shows its own text; the location's entry becomes that.
+
 ## 37. Open the Oblivion Palace safes with no turn-in
 
 **From the user, 2026-11-18 (during round 79).** The turn-in is slow: every visit to the Enigmatic Princess plays her talk, then the same scene once for each chest earned. The user wants to walk in and open the safes the shards already pay for. Her last talk at 99 shards stays.

@@ -145,12 +145,14 @@ def make_dump(root):
         "Zairu_02": {"encountGroupId": QUEST_FIGHT},
         "Zairu_02_Win": {"ProgressList": progress(20)},
         "Zairu_03": {"ProgressList": progress(30)},
+        # Round 88: a row on the way moves the player, and the reward row runs on that map
+        "Zairu_04_Go": {"TransitionLocation": {"mapId": 2012}, "ContinuousEventList": [{"EventId": "Zairu_04"}]},
         "Zairu_04": {"ProgressList": progress(40), "ObtainItemList": [{"ID": 25000, "Num": 1}, {"ID": -1, "Num": 500}]},
         "Story": {"ProgressList": [{"Condition": "", "ID": 0, "Value": 1110}]},
     }})
     write(root, f"{T}/Event/TalkEvent/CDT_TalkEventData_Prod.json", {"Rows": {"Zairu_03": {"ProgressList": progress(99)}}})
     write(root, f"{T}/Encount/DT_BattleGroup.json", {"Rows": {"zile": {"ID": QUEST_FIGHT, "battleFinishEventId": "Zairu_02_Win"}}})
-    npc_steps = [("{progress:28}==0", "Zairu_01"), ("{progress:28}==10", "Zairu_02"), ("{progress:28}==30", "Zairu_04")]
+    npc_steps = [("{progress:28}==0", "Zairu_01"), ("{progress:28}==10", "Zairu_02"), ("{progress:28}==30", "Zairu_04_Go")]
     zile = {"Type": "BP_MapUnit_NPC_C", "Properties": {
         "m_UniqueId": 13, "m_VisiblFlagCondition": "{progress:28}<=30",
         "m_EventSettings": {"EventList": [{"Condition": c, "EventList": [{"EventId": e, "Weight": 1}]} for c, e in npc_steps]}}}
@@ -268,13 +270,13 @@ def main():
         quests = tsv(game / "quests.tsv")
         assert [(q["id"], q["name"], q["category"], q["prize"]) for q in quests] == [
             ("13", "Rear Support, Ahoy!", "Lanzelt", "25000:1 -1:500")], quests
-        steps = [(s["counter"], s["value"], s["row"], s["map"], s["start"], s["condition"], s["fights"], s["gifts"])
+        steps = [(s["counter"], s["value"], s["row"], s["map"], s["start"], s["condition"], s["fights"], s["gifts"], s["at"])
                  for s in tsv(game / "quest_steps.tsv")]
         assert steps == [
-            ("28", "10", "Zairu_01", "2011", "Zairu_01", "{progress:28}==0", "", ""),
-            ("28", "20", "Zairu_02_Win", "2011", "Zairu_02", "{progress:28}==10", "9001", ""),
-            ("28", "30", "Zairu_03", "", "", "", "", ""),       # no actor leads to it; not the CDT copy's 99
-            ("28", "40", "Zairu_04", "2011", "Zairu_04", "{progress:28}==30", "", "25000:1 -1:500"),
+            ("28", "10", "Zairu_01", "2011", "Zairu_01", "{progress:28}==0", "", "", "2011"),
+            ("28", "20", "Zairu_02_Win", "2011", "Zairu_02", "{progress:28}==10", "9001", "", "2011"),
+            ("28", "30", "Zairu_03", "", "", "", "", "", ""),       # no actor leads to it; not the CDT copy's 99
+            ("28", "40", "Zairu_04", "2011", "Zairu_04_Go", "{progress:28}==30", "", "25000:1 -1:500", "2012"),
         ], steps                                               # the story counter's rows are left out
 
         # The comparison with data/*.tsv.

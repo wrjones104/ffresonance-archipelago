@@ -2073,6 +2073,19 @@ function G.FinishJoin(id)
     return how
 end
 
+-- Whether a unit has learned an ability (activeSkillIdList), or nil with no entry for it.
+function G.UnitHasSkill(id, skill)
+    local sd = G.SaveData()
+    local entry = sd and UnitEntry(sd, id)
+    if not entry then return nil end
+    local has = false
+    pcall(function()
+        local list = entry.activeSkillIdList
+        for i = 1, #list do has = has or Int(list[i]) == skill end
+    end)
+    return has
+end
+
 -- Active Time Chats: the 56 ATCnn rows of DT_ChatEventData (excluding Pinger and Nawatobi
 -- mini-game rows). Save state sits in chat.DataMap (IsReleased, IsAlreadyPlayed) and chat.NoticeQueue.
 local CHAT_NUMBERS = { 1, 2, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 16, 17, 18, 19, 21, 22, 23, 24, 25, 26, 27, 28,
@@ -2418,7 +2431,10 @@ G.QUESTS = require("quests")
 G.MECHABO = { counter = 16, start = 10, request = 17,
               rows = { "C02_MechaboLvUp_00_yet", "C02_MechaboLvUp_00_ItemGet" },
               requestTable = "/Game/Datatable/Request/DT_RequestData.DT_RequestData",
-              requestRow = "C02_MechaboLvUp", accept = "{progress:16}==10" }
+              requestRow = "C02_MechaboLvUp", accept = "{progress:16}==10",
+              -- Round 88: Lid did not learn Mechabo Tackle. It comes from C02_MechaboLvUp_03, run at
+              -- counter 30 with flag 219 (the step's drops delivered); the mod logs all three.
+              delivered = 219, lid = 1004, tackle = 404110 }
 -- Puts an Accept of request 17 first in each of those rows' RequestStateSettings, and request 17's
 -- accept and occurrence tests at Verun's step. Safe to run again. Returns the rows written.
 function G.MechaboPatch()
@@ -2547,13 +2563,54 @@ function G.QuestsPatch()
             end
         end
         if not changed then return end
-        if #keep == 0 and not q.before then keep[1] = { id = BOSS_STAND_IN, num = 1 } end
+        -- An empty list shows "You obtained a vision!" (round 84). Round 88: kept for the quests
+        -- whose pop-up is written early too, for when that write misses.
+        if #keep == 0 then keep[1] = { id = BOSS_STAND_IN, num = 1 } end
         list:Empty()
         for i, e in ipairs(keep) do
             local _ = list[i]
             list[i].ID, list[i].Num = e.id, e.num
         end
         written = written + 1
+    end)
+    return written
+end
+
+-- Round 88 (the user): the Quests screen's Rewards list shows what each quest location holds.
+-- It is DT_RequestData's `Prize`; an entry with ID 0 shows its Text, as "Attribute Bonus: Fina"
+-- does. `labels`: quest key -> text, for the location's entry (the one with its vanilla item);
+-- a quest left out gets its vanilla entry back. Returns the entries written.
+G.PRIZE = { table = "/Game/Datatable/Request/DT_RequestData.DT_RequestData", slots = {} }
+function G.QuestPrizes(labels)
+    local P, byId = G.PRIZE, {}
+    for _, q in ipairs(G.QUESTS) do byId[tonumber(q.key:match("^quest:(%d+)$"))] = q end
+    local requests = G.LoadObject(P.table)
+    if not requests then return 0 end
+    local written = 0
+    pcall(function()
+        requests:ForEachRow(function(_, row)
+            local q = byId[Int(row.ID)]
+            if not q then return end
+            local prize, slot = row.Prize, P.slots[q.key]
+            if not slot then
+                for i = 1, #prize do
+                    if Int(prize[i].ID) == q.item then slot = i end
+                end
+                P.slots[q.key] = slot
+            end
+            if not slot or slot > #prize then return end
+            local label, id, text = labels[q.key], Int(prize[slot].ID), ""
+            pcall(function() text = prize[slot].Text:ToString() end)
+            if label and (id ~= 0 or text ~= label) then
+                prize[slot].ID = 0
+                prize[slot].Text = FText(label)
+                written = written + 1
+            elseif not label and id == 0 then
+                prize[slot].ID = q.item
+                prize[slot].Text = FText("")
+                written = written + 1
+            end
+        end)
     end)
     return written
 end
@@ -5333,10 +5390,11 @@ G.APMENU = {
     split = true,
     SETTINGS_TAB = "Settings",
     SEED_TAB = "Seed",
-    -- Round 88 probe (the user: a gamepad cannot scroll the Seed tab, as no heading takes the
-    -- cursor): `command` makes the seed's lines Command rows (WBP_OP_Command, whose click does
-    -- nothing in its Blueprint), which may take it. ffrap_apmenu seedrows command|heading.
-    seedRows = "heading",
+    -- The seed's lines as Command rows (WBP_OP_Command, whose click does nothing in its
+    -- Blueprint), which take the cursor, so a gamepad scrolls the Seed tab. No heading does
+    -- (round 87). Round 88: the probe worked, and the user liked the look better, so it is the
+    -- default. ffrap_apmenu seedrows heading puts headings back.
+    seedRows = "command",
 }
 local A = G.APMENU
 -- The game opens its Options screen from DT_GameLayoutWidget_System's UI.Layout.Option row, which

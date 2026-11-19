@@ -29,7 +29,7 @@
 --   ffrap_apmenu off|on|state|close|tree  the Archipelago page in the main menu (on by default)
 --   ffrap_apmenu options|text|tabs [only|all]|mode ap|game  rounds 85-86 probe: the Options screen as the page
 --   ffrap_apmenu split on|off  the page's two tabs, Settings and Seed (on), or one (off)
---   ffrap_apmenu seedrows command|heading  round 88 probe: the Seed tab's lines as rows the cursor can take
+--   ffrap_apmenu seedrows command|heading  the Seed tab's lines as rows the cursor can take (the default) or headings
 --   ffrap_logo                   place the Archipelago logo on the mod's title line manually
 --   ffrap_layout <text>          log the panels holding some on-screen text
 --   ffrap_feed [on|off|test [plain]|check]  the item feed at the bottom right of the field HUD
@@ -691,12 +691,43 @@ end
 -- counter still reads `before` on the map its reward rows run on, an item pop-up in an event there
 -- is that quest's. state.questPopups keeps the quests written so, which the check then leaves alone.
 state.questPopups = {}
+-- Whether a quest's reward rows may be running now: its counter at `before` (one value, or one of
+-- several, as for each Mog Tag tier) and its `flags` on (round 88).
+function state.questRewardDue(q)
+    local now, due = game.ProgressValue(q.counter), false
+    for _, v in ipairs(type(q.before) == "table" and q.before or { q.before }) do due = due or now == v end
+    for _, f in ipairs(q.flags or {}) do due = due and game.GetFlag(f) == true end
+    return due
+end
+-- Round 88 (the user): the Quests screen's Rewards show what each quest location holds, on the
+-- seed's save; any other save gets the game's own back. Written again every PRIZE_EVERY ticks, in
+-- case the game loads the table again.
+state.PRIZE_EVERY = 60
+function state.prizeTick()
+    local labels, parts = {}, {}
+    if sessionSave() then
+        for _, q in ipairs(game.QUESTS) do
+            local s = state.scouts[q.key]
+            if s then
+                labels[q.key] = s.own and s.item or (s.player .. "'s " .. s.item)
+                parts[#parts + 1] = q.key .. "=" .. labels[q.key]
+            end
+        end
+    end
+    local sig = table.concat(parts, "|")
+    if sig == state.prizeSig and state.ticks % state.PRIZE_EVERY ~= 0 then return end
+    local written = game.QuestPrizes(labels)
+    if sig ~= state.prizeSig and written > 0 then
+        log("quests: " .. written .. " quest rewards " .. (#parts > 0 and "show the location's item" or "back to the game's own"))
+    end
+    state.prizeSig = sig
+end
 function state.earlyQuestPopup()
     if not (seedCfg.quests and sessionSave()) or game.OnField() then return end
     local mapId = game.CurrentMap()
     for _, q in ipairs(game.QUESTS) do
-        if q.map == mapId and not state.reported["check|" .. q.key]
-            and game.ProgressValue(q.counter) == q.before then
+        if q.map == mapId and not state.reported["check|" .. q.key] and not state.questPopups[q.key]
+            and state.questRewardDue(q) then
             local s = state.scouts[q.key]
             if not s then return end
             local ok, detail = game.ChestPopup(popupText(s))
@@ -1603,6 +1634,7 @@ local function tick()
                     local okQuests, written = pcall(game.QuestsPatch)
                     log("quests: " .. tostring(written) .. " reward rows without the location's item" .. (okQuests and "" or " (failed: " .. tostring(written) .. ")"))
                 end
+                if seedCfg.quests then pcall(state.prizeTick) end
                 if newSave then
                     local okMechabo, written = pcall(game.MechaboPatch)
                     log("mechabo: " .. tostring(written) .. " rows of Verun's first step accept its quest" .. (okMechabo and "" or " (failed)"))
@@ -2683,6 +2715,15 @@ seedExtrasTick = function()
     if seedSave and game.ProgressValue(game.MECHABO.counter) == 0 then
         game.SetProgressValue(game.MECHABO.counter, game.MECHABO.start)
         log("mechabo: progress " .. game.MECHABO.counter .. " set to " .. game.MECHABO.start .. " (Verun's repair request)")
+    end
+    if seedSave then
+        local M = game.MECHABO
+        local has = game.UnitHasSkill(M.lid, M.tackle)
+        local line = string.format("mechabo: progress %d at %s, flag %d %s, Lid %s Mechabo Tackle", M.counter,
+            tostring(game.ProgressValue(M.counter)), M.delivered, game.GetFlag(M.delivered) and "on" or "off",
+            has == nil and "not in the save, so no" or (has and "has" or "has no"))
+        if line ~= state.mechaboLine then log(line) end
+        state.mechaboLine = line
     end
     if seedSave and game.CurrentMap() == game.SHIPYARD_MAP then
         local woke = game.WakeShipyardElevators()

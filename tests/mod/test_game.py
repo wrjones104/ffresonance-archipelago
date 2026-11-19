@@ -1848,8 +1848,8 @@ QUEST_ROWS_TO_CHANGE = 5
 STAND_IN_POTION = "1x1"
 assert L.eval("G.QuestsPatch()") == QUEST_ROWS_TO_CHANGE
 assert L.eval("rewards('SubEv_C01_Zairu_04')") == "-1x500", "the location's item goes, the gil stays"
-assert L.eval("rewards('ChrEv_0340_005_01')") == "", "Amelia: the Magicite is the location's, the vision comes out"
-assert L.eval("rewards('ChrEv_0420_005_01')") == "", "Ayaka: the vision first, then the Magicite Cryst"
+assert L.eval("rewards('ChrEv_0340_005_01')") == STAND_IN_POTION,     "Amelia: the Magicite is the location's, the vision comes out; round 88: an empty row keeps the stand-in"
+assert L.eval("rewards('ChrEv_0420_005_01')") == STAND_IN_POTION, "Ayaka: the vision first, then the Magicite Cryst"
 assert L.eval("rewards('SubEv_C01_Chloe_04')") == "25000x1", "the Prayer Beads are the location's; the Shard stays"
 assert L.eval("rewards('SubEv_C05_MogChase_06_NPC01_01')") == STAND_IN_POTION, \
     "round 84: Mog Tag's row left empty showed a vision pop-up; it keeps the stand-in"
@@ -1859,6 +1859,38 @@ assert L.eval("#G.QUESTS") == 28
 assert L.eval("G.QUESTS[1].key") == "quest:0" and L.eval("G.QUESTS[1].counter") == 1 and L.eval("G.QUESTS[1].value") == 50
 assert L.eval("G.MECHABO.counter") == 16 and L.eval("G.MECHABO.start") == 10
 assert L.eval("G.QUESTS[1].item") == 12050, "the location's item, which the rows lose"
+# Round 88 (the user): the Quests screen's Rewards show the scouted item. DT_RequestData's Prize
+# entry for the location's vanilla item becomes a text entry (ID 0), as the game's stat bonus
+# line is; the other entries stay; a quest left out gets its vanilla entry back.
+L.execute(r"""
+local function prizeEntry(id) return { ID = id, Num = 1, Text = FText("") } end
+requestTable = { rows = {
+  ["カーミル"] = { ID = 25, Prize = { prizeEntry(13033), prizeEntry(25001) } },
+  ChrEv_0010 = { ID = 0, Prize = { prizeEntry(12050) } },
+  NotALocation = { ID = 17, Prize = { prizeEntry(25000) } } } }
+function requestTable:IsValid() return true end
+function requestTable:ForEachRow(fn) for k, r in pairs(self.rows) do fn(fname(k), r) end end
+local prevPrizeFind = StaticFindObject
+function StaticFindObject(p)
+  if p == "/Game/Datatable/Request/DT_RequestData.DT_RequestData" then return requestTable end
+  return prevPrizeFind(p)
+end
+function prizeText(row)
+  local out = {}
+  for _, e in ipairs(requestTable.rows[row].Prize) do out[#out + 1] = e.ID .. ":" .. e.Text:ToString() end
+  return table.concat(out, " ")
+end
+""")
+CALL_LABEL = "Alice's Hookshot"
+assert L.eval(f"G.QuestPrizes({{ ['quest:25'] = \"{CALL_LABEL}\" }})") == 1
+assert L.eval("prizeText('カーミル')") == f"13033: 0:{CALL_LABEL}", "the Magicite is the location's; the Ribbon stays"
+assert L.eval("prizeText('ChrEv_0010')") == "12050:", "a quest with no scout keeps its own"
+assert L.eval("prizeText('NotALocation')") == "25000:"
+assert L.eval(f"G.QuestPrizes({{ ['quest:25'] = \"{CALL_LABEL}\" }})") == 0, "already written"
+requestReload = "requestTable.rows['カーミル'].Prize[2] = { ID = 25001, Num = 1, Text = FText('') }"
+L.execute(requestReload)
+assert L.eval(f"G.QuestPrizes({{ ['quest:25'] = \"{CALL_LABEL}\" }})") == 1, "written again on a table loaded again"
+assert L.eval("G.QuestPrizes({})") == 1 and L.eval("prizeText('カーミル')") == "13033: 25001:", "a save not linked: the game's own"
 print("quest rows: ok")
 
 # Round 84: the open start skips C02_219_02, which accepts request 17 into the quest log. Verun's
@@ -2303,7 +2335,9 @@ function tabText(row) return optionRoot.rows[row].DisplayText:ToString() end
 TITLE_ONLY = 1
 PAGE_LINES = '{ "Goal: win the last battle", "", "Checks: 12 of 480" }'   # a blank line makes no heading
 # Round 87 (the user): two tabs. Gameplay's is our settings, Sound's holds the page's lines with
-# its own rows hidden.
+# its own rows hidden. These run with headings; Command rows, the default since round 88, below.
+assert lua("G.APMENU.seedRows") == "command"
+L.execute("G.APMENU.seedRows = 'heading'")
 lines = list(L.eval(f"G.APMENU.Mode('ap', {PAGE_LINES}, say)").values())
 assert lines[-1] == "mode ap: 4 game rows hidden, 2 heading rows on the Seed tab", lines
 assert lua("tabText('NewRow')") == "Settings" and lua("tabText('NewRow_3')") == "Seed"
@@ -2356,14 +2390,13 @@ L.eval("G.APMENU.Mode('game', {}, say)")
 assert lua("rowText('FFRAP_Info1')") is None and lua("tabText('NewRow')") == "Gameplay"
 assert lua("optionRoot.rows.NewRow_3.Condition:ToString()") == ""
 L.execute("G.APMENU.split = true")
-# Round 88 probe: `seedrows command` makes the seed's lines Command rows
+# Round 88: the seed's lines as Command rows, so the cursor and a gamepad's scroll reach them
 L.execute("G.APMENU.seedRows = 'command'")
 lines = list(L.eval(f"G.APMENU.Mode('ap', {PAGE_LINES}, say)").values())
 assert lines[-1] == "mode ap: 4 game rows hidden, 2 command rows on the Seed tab", lines
 COMMAND_TYPE = 14
 assert lua("soundSetting.rows.FFRAP_Info1.Type") == COMMAND_TYPE
 L.eval("G.APMENU.Mode('game', {}, say)")
-L.execute("G.APMENU.seedRows = 'heading'")
 print("options page probe: ok")
 
 # Round 84 (the user): fast travel from a dungeon. The condition that checks the map type travels

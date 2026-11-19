@@ -458,6 +458,9 @@ def quests(starts):
     a side-quest counter ({progress:N}, N not 0), with the map actor that leads to it. A row is
     reached from an actor's event (`start`) through continuations, choices and battle wins;
     `fights` are the battle groups on the way. A row no actor leads to (a quest board's) has an empty map.
+    `at` is the map the row runs on: the actor's, until a row on the way moves the player (its
+    `TransitionLocation`). Round 88: The Call from Beyond starts on map 3121, and its reward row
+    runs on 2100 after `ChrEv_0410_007_01` moves there.
     """
     log = []
     for key, q in table_rows(QUEST_LOG).items():
@@ -484,12 +487,16 @@ def quests(starts):
     def moves(row):
         return [(p["ID"], p["Value"]) for p in row.get("ProgressList") or [] if p["ID"] != STORY_COUNTER]
 
+    def moved_to(row, at):
+        map_id = (row.get("TransitionLocation") or {}).get("mapId", -1)
+        return map_id if map_id not in (-1, 0, None) else at
+
     steps, reached = {}, set()
     for s in starts:
-        stack = [(s["event"], (), ())]
+        stack = [(s["event"], (), (), s["map"])]
         seen = set()
         while stack:
-            event, fights, conds = stack.pop()
+            event, fights, conds, at = stack.pop()
             if event in seen or event not in rows:
                 continue
             seen.add(event)
@@ -499,16 +506,17 @@ def quests(starts):
                 key = (counter, value, event, s["map"], s["uid"], s["level"], s["event"])
                 steps.setdefault(key, [counter, value, event, s["map"], s["level"], s["actor"], s["uid"]] + s["where"]
                                  + [s["event"], s["visible"], s["condition"], " ".join(conds),
-                                    " ".join(str(f) for f in fights), gifts(row)])
+                                    " ".join(str(f) for f in fights), gifts(row), at])
+            after = moved_to(row, at)
             for nxt, cond, fight in next_rows(row):
-                stack.append((nxt, fights + ((fight,) if fight else ()), conds + ((cond,) if cond else ())))
+                stack.append((nxt, fights + ((fight,) if fight else ()), conds + ((cond,) if cond else ()), after))
     no_actor = ["", "", "", "", "", "", "", "", "", "", "", ""]
     for event, row in rows.items():
         for counter, value in moves(row) if event not in reached else []:
-            steps[(counter, value, event)] = [counter, value, event] + no_actor + [gifts(row)]
+            steps[(counter, value, event)] = [counter, value, event] + no_actor + [gifts(row), ""]
     out = sorted(steps.values(), key=lambda r: (r[0], r[1], r[2], str(r[3]), str(r[6]), r[10]))
     write_tsv("quest_steps.tsv", ["counter", "value", "row", "map", "level", "actor", "uid", "x", "y", "z",
-                                  "start", "visible", "condition", "chain", "fights", "gifts"], out)
+                                  "start", "visible", "condition", "chain", "fights", "gifts", "at"], out)
 
 
 # ---------------------------------------------------------------- comparison with data/*.tsv

@@ -156,7 +156,9 @@ G.QUESTS = { { key = "quest:13", counter = 28, value = 40, map = 2030, before = 
              { key = "quest:6", counter = 7, value = 60, map = 3160, before = 50, rows = { "ChrEv_0070_006_01" } },
              { key = "quest:34", counter = 44, value = 20, rows = { "SubEv_C05_MogChase_06_NPC01_01" } } }
 function G.QuestsPatch() G.questPatches = (G.questPatches or 0) + 1; return 2 end
-G.MECHABO = { counter = 16, start = 10 }
+G.MECHABO = { counter = 16, start = 10, delivered = 219, lid = 1004, tackle = 404110 }
+function G.UnitHasSkill(id, skill) return G.skills and G.skills[skill] end
+function G.QuestPrizes(labels) G.prizes = labels; local n = 0; for _ in pairs(labels) do n = n + 1 end; return n end
 function G.MechaboPatch() G.mechaboPatches = (G.mechaboPatches or 0) + 1; return 2 end
 -- the save's visited maps, and the dungeon fast travel rule as last set
 G.visited, G.AIRSHIP_MAPS = {}, { 20001, 20002 }
@@ -1955,6 +1957,39 @@ tick(4)
 assert "check\tquest:6\n" in read("ap_out.txt"), read("ap_out.txt")[-200:]
 assert len(G.popups) == written + 1, "the check writes no second pop-up"
 G.onField = True
+# Round 88: Mog Tag's tiers run at either of two counter values, while flag 545 (the chase) is on;
+# its Potion pop-up came before the check, so the early pop-up writes it
+L.execute(CAPTURE)
+L.execute("""
+  G.QUESTS[#G.QUESTS + 1] = { key = "quest:34", counter = 44, value = 20, map = 2130, before = { 0, 10 },
+                              flags = { 545 }, rows = { "SubEv_C05_MogChase_06_NPC01_01" } }
+  G.flagsOn = {}
+  local oldFlag = G.GetFlag
+  function G.GetFlag(i) if G.flagsOn[i] ~= nil then return G.flagsOn[i] end return oldFlag(i) end
+""")
+MOG_COUNTER, MOG_FIRST_TIER_BEFORE, MOG_CHASE_FLAG, MYSIDIA_MAP = 44, 10, 545, 2130
+inbox(b64_scout("quest:34", "Mirage Jacket", "Alice", 1, 0))
+tick(2)
+written = len(G.popups)
+L.execute(f"G.progress[{MOG_COUNTER}] = {MOG_FIRST_TIER_BEFORE}")
+G.map, G.onField, G.popupReady = MYSIDIA_MAP, False, True
+tick(2)
+assert len(G.popups) == written, "no chase on: another pop-up in Mysidia is not Mog Tag's"
+L.execute(f"G.flagsOn[{MOG_CHASE_FLAG}] = true")
+tick(2)
+assert len(G.popups) == written + 1 and G.popups[written + 1] == "You found Alice's:\nMirage Jacket", list(G.popups.values())
+G.onField = True
+# Round 88 (the user): the Quests screen's Rewards name what each quest location holds
+tick(70)
+assert L.eval("G.prizes['quest:34']") == "Alice's Mirage Jacket" and L.eval("G.prizes['quest:6']") == "Alice's Seraphim Bow"
+assert any("quest rewards show the location's item" in s for s in logs()), logs()
+# Round 88: Verun's counter, the delivery flag and Lid's Mechabo Tackle are logged when they change
+L.execute("G.skills = { [404110] = true }")
+tick(2)
+assert any("mechabo: progress 16 at 30, flag 219 off, Lid has Mechabo Tackle" in s for s in logs()), logs()
+n = len([s for s in logs() if s.startswith("mechabo: progress")])
+tick(4)
+assert len([s for s in logs() if s.startswith("mechabo: progress")]) == n, "logged once per change"
 
 inbox("seed\tS78n:0:1\ncfg\topenworld\t1\ncfg\tquests\t0\n", "w")
 L, G = boot5("SD_NOQUESTS", "0", {})
