@@ -5328,6 +5328,11 @@ G.APMENU = {
     -- or `text`, the Tutorial screen with the page's lines (rounds 83 to 86; ffrap_apmenu text).
     screen = "options",
     OPTIONS_LAYOUT = "/Game/UI/Option/Widget/WBP_OptionLayout.WBP_OptionLayout_C",
+    -- Round 87 (the user): the page has two tabs, our settings and the seed's lines. false puts the
+    -- lines under the settings in one tab, as the round's first build did (ffrap_apmenu split off).
+    split = true,
+    SETTINGS_TAB = "Settings",
+    SEED_TAB = "Seed",
 }
 local A = G.APMENU
 -- The game opens its Options screen from DT_GameLayoutWidget_System's UI.Layout.Option row, which
@@ -5340,6 +5345,7 @@ local OPTION_ROOT_TABLE = "/Game/Datatable/UI/Option/DT_Option_Root.DT_Option_Ro
 -- A condition the story counter can never meet: a tab with it is left out (probe `tabs only`).
 local NEVER = "{progress:0}<0"
 local GAMEPLAY_CATEGORY = 0   -- FOP_Parent_CommandCategory: Gameplay 0, Graphic 1, KeyboardMouse 2, Gamepad 3, Sound 4
+local SEED_CATEGORY = 4
 local function screenPath() return A.screen == "options" and A.OPTIONS_LAYOUT or A.LAYOUT end
 
 local function quiet() end
@@ -5459,21 +5465,52 @@ end
 
 -- The Options screen as our page (IDEAS.md idea 39; round 85 showed the entry can open it and
 -- that its tabs are read at each open, round 86 that this looks right). `ap` leaves out every tab
--- but Gameplay and names it Archipelago, hides the game's rows in DT_OP_GameSetting (ShowType
--- TitleOnly: not in game) and shows ours, and adds a heading row for each of `lines` (copies of
--- the keyboard tab's first SubHeader; both tables hold OP_BaseMenu_EntryInfo rows). `game` puts
--- it all back and hides ours again. Each step is told to `say` before it runs. Returns lines.
+-- but Gameplay and Sound, hides the game's rows in their tables (ShowType TitleOnly: not in game)
+-- and shows ours, and adds a heading row for each of `lines` (copies of the keyboard tab's first
+-- SubHeader; all these tables hold OP_BaseMenu_EntryInfo rows). Each tab shows the row table its
+-- DT_Option_Root row names, so the Sound tab, its six rows hidden, holds the headings (round 87).
+-- With A.split off, the Sound tab is left out too and the headings go under our settings. `game`
+-- puts it all back and hides ours again. Each step is told to `say` before it runs. Returns lines.
 local KEYBOARD_TABLE = "/Game/Datatable/UI/Option/Root/KeyboardMouseSetting/DT_OP_KeyboardMouseSetting.DT_OP_KeyboardMouseSetting"
 local HEADING_ROW = "SubHeader_共通"
 local GAMEPLAY_TABLE = "/Game/Datatable/UI/Option/Root/GameSetting/DT_OP_GameSetting.DT_OP_GameSetting"
+local SOUND_TABLE = "/Game/Datatable/UI/Option/Root/SoundSetting/DT_OP_SoundSetting.DT_OP_SoundSetting"
+-- Sets every row of the table at `path` but `keep`'s to TitleOnly, its old ShowType saved in
+-- `saved.show[path]`. Returns how many it hid.
+local function hideRows(path, keep, saved, say)
+    local dt, show, hidden = LoadObject(path), {}, 0
+    saved.show[path] = show
+    pcall(function()
+        dt:ForEachRow(function(name, row)
+            local key = ObjText(name)
+            if keep[key] then
+                pcall(function() row.ShowCommandData.ShowType = G.SHOW_TYPE.game end)
+                return
+            end
+            show[key] = Int(row.ShowCommandData.ShowType)
+            say("apmenu: row " .. key .. " ShowType " .. tostring(show[key]) .. " -> TitleOnly")
+            pcall(function() row.ShowCommandData.ShowType = G.SHOW_TYPE.title end)
+            hidden = hidden + 1
+        end)
+    end)
+    return hidden
+end
+local function setShowTypes(path, show)
+    local dt = LoadObject(path)
+    for key, t in pairs(show) do
+        local row
+        pcall(function() row = dt:FindRow(key) end)
+        if row then pcall(function() row.ShowCommandData.ShowType = t end) end
+    end
+end
 function A.Mode(kind, lines, say)
     local out = A.Tabs(kind == "ap" and "only" or "all", say)
     local root, rows = LoadObject(OPTION_ROOT_TABLE), LoadObject(GAMEPLAY_TABLE)
-    local gameplay
+    local tabs = {}
     pcall(function()
-        root:ForEachRow(function(_, row) if Int(row.CommandCategory) == GAMEPLAY_CATEGORY then gameplay = row end end)
+        root:ForEachRow(function(_, row) tabs[Int(row.CommandCategory)] = row end)
     end)
-    if not (gameplay and rows) then
+    if not (tabs[GAMEPLAY_CATEGORY] and rows) then
         out[#out + 1] = "no Gameplay tab or no DT_OP_GameSetting"
         return out
     end
@@ -5481,31 +5518,26 @@ function A.Mode(kind, lines, say)
     for _, o in ipairs(G.OPTION_ROWS) do ours[o.row] = true end
     local saved = A.modeSaved
     if kind == "ap" and not saved then
-        saved = { show = {}, info = {}, hidden = 0 }
-        pcall(function() saved.label = gameplay.DisplayText:ToString() end)
-        say("apmenu: Gameplay tab named " .. A.NAME)
-        pcall(function() gameplay.DisplayText = FText(A.NAME) end)
-        pcall(function()
-            rows:ForEachRow(function(name, row)
-                local key = ObjText(name)
-                if ours[key] then
-                    pcall(function() row.ShowCommandData.ShowType = G.SHOW_TYPE.game end)
-                    return
-                end
-                saved.show[key] = Int(row.ShowCommandData.ShowType)
-                say("apmenu: row " .. key .. " ShowType " .. tostring(saved.show[key]) .. " -> TitleOnly")
-                pcall(function() row.ShowCommandData.ShowType = G.SHOW_TYPE.title end)
-                saved.hidden = saved.hidden + 1
-            end)
-        end)
-        local keyboard, heading = LoadObject(KEYBOARD_TABLE), nil
+        local split = A.split and tabs[SEED_CATEGORY] ~= nil and LoadObject(SOUND_TABLE) ~= nil
+        saved = { show = {}, info = {}, labels = {}, infoPath = split and SOUND_TABLE or GAMEPLAY_TABLE }
+        local names = { [GAMEPLAY_CATEGORY] = split and A.SETTINGS_TAB or A.NAME }
+        if split then names[SEED_CATEGORY] = A.SEED_TAB end
+        for category, label in pairs(names) do
+            local tab = tabs[category]
+            pcall(function() saved.labels[category] = tab.DisplayText:ToString() end)
+            say("apmenu: tab " .. category .. " named " .. label)
+            pcall(function() tab.DisplayText = FText(label) end)
+        end
+        local hidden = hideRows(GAMEPLAY_TABLE, ours, saved, say)
+        if split then hidden = hidden + hideRows(SOUND_TABLE, {}, saved, say) end
+        local keyboard, infoRows, heading = LoadObject(KEYBOARD_TABLE), LoadObject(saved.infoPath), nil
         pcall(function() heading = keyboard:FindRow(HEADING_ROW) end)
         for _, text in ipairs(heading and lines or {}) do
             if text == "" then goto nextLine end
             local name = "FFRAP_Info" .. (#saved.info + 1)
             say("apmenu: heading row " .. name .. ": " .. text)
             local row
-            if pcall(function() rows:AddRow(name, heading) end) then pcall(function() row = rows:FindRow(name) end) end
+            if pcall(function() infoRows:AddRow(name, heading) end) then pcall(function() row = infoRows:FindRow(name) end) end
             if row then
                 pcall(function() row.DisplayText = FText(text) end)
                 saved.info[#saved.info + 1] = name
@@ -5513,25 +5545,21 @@ function A.Mode(kind, lines, say)
             ::nextLine::
         end
         A.modeSaved = saved
-        out[#out + 1] = string.format("mode ap: %d game rows hidden, %d heading rows%s", saved.hidden, #saved.info,
-            heading and "" or " (no SubHeader row to copy)")
+        out[#out + 1] = string.format("mode ap: %d game rows hidden, %d heading rows%s%s", hidden, #saved.info,
+            split and " on the " .. A.SEED_TAB .. " tab" or "", heading and "" or " (no SubHeader row to copy)")
     elseif kind == "game" and saved then
-        say("apmenu: Gameplay tab named " .. tostring(saved.label))
-        if saved.label then pcall(function() gameplay.DisplayText = FText(saved.label) end) end
-        for key, t in pairs(saved.show) do
-            local row
-            pcall(function() row = rows:FindRow(key) end)
-            if row then pcall(function() row.ShowCommandData.ShowType = t end) end
+        for category, label in pairs(saved.labels) do
+            say("apmenu: tab " .. category .. " named " .. label)
+            pcall(function() tabs[category].DisplayText = FText(label) end)
         end
-        for key in pairs(ours) do
-            local row
-            pcall(function() row = rows:FindRow(key) end)
-            if row then pcall(function() row.ShowCommandData.ShowType = G.SHOW_TYPE.title end) end
-        end
-        local removed = 0
+        for path, show in pairs(saved.show) do setShowTypes(path, show) end
+        local hideOurs = {}
+        for key in pairs(ours) do hideOurs[key] = G.SHOW_TYPE.title end
+        setShowTypes(GAMEPLAY_TABLE, hideOurs)
+        local infoRows, removed = LoadObject(saved.infoPath), 0
         for _, name in ipairs(saved.info) do
             say("apmenu: RemoveRow " .. name)
-            if pcall(function() rows:RemoveRow(name) end) then removed = removed + 1 end
+            if pcall(function() infoRows:RemoveRow(name) end) then removed = removed + 1 end
         end
         A.modeSaved = nil
         out[#out + 1] = string.format("mode game: rows shown again, %d of %d heading rows removed", removed, #saved.info)
@@ -5542,7 +5570,8 @@ function A.Mode(kind, lines, say)
 end
 
 -- The Options screen's tabs (DT_Option_Root): `list` reads them; `only` leaves out every tab but
--- Gameplay with a condition never met; `all` puts the conditions back. Returns lines.
+-- Gameplay (and Sound, with A.split) with a condition never met; `all` puts the conditions back.
+-- Returns lines.
 A.tabConditions = {}
 function A.Tabs(mode, say)
     local dt = LoadObject(OPTION_ROOT_TABLE)
@@ -5554,7 +5583,8 @@ function A.Tabs(mode, say)
             pcall(function() cond = row.Condition:ToString() end)
             pcall(function() label = row.DisplayText:ToString() end)
             local category = Int(row.CommandCategory)
-            if mode == "only" and category ~= GAMEPLAY_CATEGORY and cond ~= NEVER then
+            local kept = category == GAMEPLAY_CATEGORY or (A.split and category == SEED_CATEGORY)
+            if mode == "only" and not kept and cond ~= NEVER then
                 A.tabConditions[key] = cond
                 say("apmenu: tab " .. key .. " (" .. label .. ") condition -> " .. NEVER)
                 pcall(function() row.Condition = NEVER end)

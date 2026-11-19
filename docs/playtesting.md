@@ -2,7 +2,7 @@
 
 Only open items that still need to be tested in game live here. Once tested, record the results in [docs/playtesting_archive.md](playtesting_archive.md) and remove completed items from this file. Automated suite tests are documented in [tests/README.md](../tests/README.md).
 
-Current builds: mod `0.61.0` (`ad155ef2`), world `0.30.0` (`c5fec06a`, unchanged since round 86).
+Current builds: mod `0.61.0` (`5acddc01`), world `0.30.0` (`c5fec06a`, unchanged since round 86).
 
 Install: copy `FFRArchipelago/Scripts`, and copy `dist/ff_resonance.apworld` into `custom_worlds`. Send the `[FFRAP]` lines of `UE4SS.log`. If the game crashes, send `Mods/FFRArchipelago/ap_trace.txt`, the crash folder, and the log before starting the game again.
 
@@ -14,9 +14,10 @@ Install: copy `FFRArchipelago/Scripts`, and copy `dist/ff_resonance.apworld` int
 
 Copy `Scripts`. If the game crashes, send `ap_trace.txt` and the log.
 
-- [ ] Verify the log prints `version 0.61.0 (build ad155ef2)` and `apmenu: SetScene hook registered`.
-- [ ] Open the main menu and pick Archipelago, with no console command. Verify one tab named Archipelago, with our settings and the page's lines as headings (no blank heading), none of the game's rows, and the log says `apmenu: mode ap: N game rows hidden, M heading rows` the first time. Change a setting, apply it, and check it takes (`settings: from the Options screen`).
-- [ ] Press Back, then open System > Options. Verify every tab and the game's rows are back, and our settings are not there. Open Archipelago and System > Options a few more times, in either order, and check each shows its own.
+- [ ] Verify the log prints `version 0.61.0 (build 5acddc01)` and `apmenu: SetScene hook registered`.
+- [ ] Open the main menu and pick Archipelago, with no console command. Verify two tabs: **Settings** with our settings and none of the game's rows, and **Seed** with the page's lines as headings (no blank heading) and no volume sliders. The log says `apmenu: mode ap: N game rows hidden, M heading rows on the Seed tab` the first time. Change a setting, apply it, and check it takes (`settings: from the Options screen`).
+- [ ] Switch between the two tabs a few times, with the keyboard and with a gamepad if you have one. Verify the Seed tab shows with nothing to pick and the screen does not lock up, and Back still works from it. On the Seed tab, press the reset key the screen shows (if any), then check System > Options > Sound kept your volumes. If the Seed tab misbehaves, `ffrap_apmenu split off` gives one tab again: say what happened.
+- [ ] Press Back, then open System > Options. Verify every tab and the game's rows are back (Gameplay and Sound by their own names, the volume sliders in Sound), and our settings are not there. Open Archipelago and System > Options a few more times, in either order, and check each shows its own.
 - [ ] Get a check or an item, then open Archipelago again. Verify the headings show the new counts.
 - [ ] On the title screen, open Options. Verify the game's rows and our settings are both under Gameplay.
 - [ ] Close the main menu straight from the Archipelago page (the menu button, if there is one), then open System > Options. Verify it is the game's own.

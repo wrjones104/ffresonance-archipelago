@@ -173,6 +173,7 @@ These commands run in UE4SS's `ConsoleEnablerMod` console for development and de
 | `ffrap_apmenu off\|on\|state\|close\|tree` | The Archipelago page in the main menu (on by default): stop or restart adding it, log its screen's state, close it when Back does nothing, or write its widgets to `ffrap_apmenu.txt` |
 | `ffrap_apmenu options\|text\|tabs [only\|all]` | Which screen the entry opens: the Options screen made our page (`options`, the default since round 87) or the text page on the Tutorial screen (`text`); `tabs` lists the Options tabs, `only` leaves out all but Gameplay, `all` puts them back |
 | `ffrap_apmenu mode ap\|game` | Makes the Options tables our page by hand, and logs the main menu's `SetScene` calls (`game`: puts the tables back, stops the logging). Since round 87 the switch is automatic |
+| `ffrap_apmenu split on\|off` | The page's two tabs, Settings and Seed (`on`, the default), or one Archipelago tab with the seed's lines under the settings (`off`, as round 87 first was) |
 | `ffrap_feed [on\|off\|test [plain]\|check]` | Configure or test the bottom-right HUD item feed |
 | `ffrap_scale <level\|low high\|party [range]\|off> [at %] [hp %] [attack %] [magic %] [power %] [boss] [follow]` | Manual enemy scaling probe in `DT_UnitParameter` (`show <id\|name>` inspects rows) |
 | `ffrap_noland <list\|here\|show [width]\|hide\|lock <box>\|unlock <box>\|refresh\|spawn [half] [top]\|move [half]\|channel <n> <0-2>\|cond <text>\|off>` | Probe and visualize `BP_MapNonLandingArea_C` airship no-landing boxes |

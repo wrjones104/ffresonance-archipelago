@@ -2255,12 +2255,13 @@ assert "apmenu: view models 0 -> 2" in list(L.eval("says").values()), "each step
 L.eval("G.APMENU.Screen('text', say)")
 assert lua("screenOf(sceneDT.rows.FFRAP_Archipelago.LayoutData)") == TEXT_SCREEN, "the page again"
 assert lua("screenOf(subCopy.LayoutData)") == TEXT_SCREEN
-# the Options tabs: `only` leaves out all but Gameplay, `all` puts their conditions back
+# the Options tabs: `only` leaves out all but Gameplay and Sound (round 87: the page's second
+# tab), `all` puts their conditions back
 NEVER = "{progress:0}<0"
 tabs = list(L.eval("G.APMENU.Tabs('only', say)").values())
 assert sorted(tabs) == sorted(['tab NewRow: Gameplay, category 0, condition ""',
                                f'tab NewRow_0: Graphics, category 1, condition "{NEVER}"',
-                               f'tab NewRow_3: Sound, category 4, condition "{NEVER}"']), tabs
+                               'tab NewRow_3: Sound, category 4, condition ""']), tabs
 tabs = list(L.eval("G.APMENU.Tabs('all', say)").values())
 assert all(t.endswith('condition ""') for t in tabs), tabs
 print("options screen probe: ok")
@@ -2286,34 +2287,56 @@ GAMEPLAY_ONLY = 2
 gameSetting = table_({ ["難易度"] = optionRow(GAMEPLAY_ONLY, "Difficulty"), ["初期化"] = optionRow(0, "Reset"),
                        FFRAP_Exp = optionRow(GAMEPLAY_ONLY, "EXP") })
 keyboardSetting = table_({ ["SubHeader_共通"] = optionRow(0, "UI / Main Menu") })
+soundSetting = table_({ NewRow = optionRow(0, "Master"), NewRow_4 = optionRow(0, "Reset") })
 local gameplayTab = optionRoot.rows.NewRow
 local tabStore = { DisplayText = fstr("Gameplay") }
 local prevModeFind = StaticFindObject
 function StaticFindObject(p)
   if p == "/Game/Datatable/UI/Option/Root/GameSetting/DT_OP_GameSetting.DT_OP_GameSetting" then return gameSetting end
   if p == "/Game/Datatable/UI/Option/Root/KeyboardMouseSetting/DT_OP_KeyboardMouseSetting.DT_OP_KeyboardMouseSetting" then return keyboardSetting end
+  if p == "/Game/Datatable/UI/Option/Root/SoundSetting/DT_OP_SoundSetting.DT_OP_SoundSetting" then return soundSetting end
   return prevModeFind(p)
 end
-function rowText(name) local r = gameSetting.rows[name]; return r and r.DisplayText:ToString() end
+function rowText(name, t) local r = (t or gameSetting).rows[name]; return r and r.DisplayText:ToString() end
+function tabText(row) return optionRoot.rows[row].DisplayText:ToString() end
 """)
 TITLE_ONLY = 1
 PAGE_LINES = '{ "Goal: win the last battle", "", "Checks: 12 of 480" }'   # a blank line makes no heading
+# Round 87 (the user): two tabs. Gameplay's is our settings, Sound's holds the page's lines with
+# its own rows hidden.
 lines = list(L.eval(f"G.APMENU.Mode('ap', {PAGE_LINES}, say)").values())
-assert lines[-1] == "mode ap: 2 game rows hidden, 2 heading rows", lines
-assert lua("optionRoot.rows.NewRow.DisplayText:ToString()") == "Archipelago"
+assert lines[-1] == "mode ap: 4 game rows hidden, 2 heading rows on the Seed tab", lines
+assert lua("tabText('NewRow')") == "Settings" and lua("tabText('NewRow_3')") == "Seed"
 assert lua("optionRoot.rows.NewRow_0.Condition:ToString()") == NEVER, "the other tabs are left out"
 assert lua("gameSetting.rows['難易度'].ShowCommandData.ShowType") == TITLE_ONLY
+assert lua("soundSetting.rows.NewRow.ShowCommandData.ShowType") == TITLE_ONLY, "the volume sliders are hidden"
+assert lua("soundSetting.rows.NewRow_4.ShowCommandData.ShowType") == TITLE_ONLY, "so is the Reset button"
 assert lua("gameSetting.rows.FFRAP_Exp.ShowCommandData.ShowType") == 2, "our rows stay"
-assert lua("rowText('FFRAP_Info1')") == "Goal: win the last battle" and lua("rowText('FFRAP_Info2')") == "Checks: 12 of 480"
+assert lua("rowText('FFRAP_Info1', soundSetting)") == "Goal: win the last battle"
+assert lua("rowText('FFRAP_Info2', soundSetting)") == "Checks: 12 of 480"
+assert lua("rowText('FFRAP_Info1')") is None, "not under the settings"
 assert list(L.eval(f"G.APMENU.Mode('ap', {PAGE_LINES}, say)").values())[-1] == "mode ap: already so"
 lines = list(L.eval("G.APMENU.Mode('game', {}, say)").values())
 assert lines[-1] == "mode game: rows shown again, 2 of 2 heading rows removed", lines
-assert lua("optionRoot.rows.NewRow.DisplayText:ToString()") == "Gameplay"
+assert lua("tabText('NewRow')") == "Gameplay" and lua("tabText('NewRow_3')") == "Sound"
 assert lua("gameSetting.rows['難易度'].ShowCommandData.ShowType") == 2 and lua("gameSetting.rows['初期化'].ShowCommandData.ShowType") == 0
-assert lua("rowText('FFRAP_Info1')") is None, "the heading rows are gone"
+assert lua("soundSetting.rows.NewRow.ShowCommandData.ShowType") == 0 and lua("soundSetting.rows.NewRow_4.ShowCommandData.ShowType") == 0
+assert lua("rowText('FFRAP_Info1', soundSetting)") is None, "the heading rows are gone"
 assert lua("gameSetting.rows.FFRAP_Exp.ShowCommandData.ShowType") == TITLE_ONLY, \
     "round 87: our rows leave in-game System > Options again"
 assert lua("optionRoot.rows.NewRow_0.Condition:ToString()") == "", "every tab again"
+# split off: one tab named Archipelago, the lines under our settings, Sound left out (round 87)
+L.execute("G.APMENU.split = false")
+lines = list(L.eval(f"G.APMENU.Mode('ap', {PAGE_LINES}, say)").values())
+assert lines[-1] == "mode ap: 2 game rows hidden, 2 heading rows", lines
+assert lua("tabText('NewRow')") == "Archipelago" and lua("tabText('NewRow_3')") == "Sound"
+assert lua("optionRoot.rows.NewRow_3.Condition:ToString()") == NEVER
+assert lua("soundSetting.rows.NewRow.ShowCommandData.ShowType") == 0, "the sound rows untouched"
+assert lua("rowText('FFRAP_Info1')") == "Goal: win the last battle"
+L.eval("G.APMENU.Mode('game', {}, say)")
+assert lua("rowText('FFRAP_Info1')") is None and lua("tabText('NewRow')") == "Gameplay"
+assert lua("optionRoot.rows.NewRow_3.Condition:ToString()") == ""
+L.execute("G.APMENU.split = true")
 print("options page probe: ok")
 
 # Round 84 (the user): fast travel from a dungeon. The condition that checks the map type travels

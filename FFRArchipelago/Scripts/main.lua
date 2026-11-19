@@ -28,6 +28,7 @@
 --   ffrap_notice [text]          show text with the game's quest-notice banner
 --   ffrap_apmenu off|on|state|close|tree  the Archipelago page in the main menu (on by default)
 --   ffrap_apmenu options|text|tabs [only|all]|mode ap|game  rounds 85-86 probe: the Options screen as the page
+--   ffrap_apmenu split on|off  the page's two tabs, Settings and Seed (on), or one (off)
 --   ffrap_logo                   place the Archipelago logo on the mod's title line manually
 --   ffrap_layout <text>          log the panels holding some on-screen text
 --   ffrap_feed [on|off|test [plain]|check]  the item feed at the bottom right of the field HUD
@@ -2036,6 +2037,15 @@ command("ffrap_apmenu", function(p)
         local lines = A.Mode(kind, kind == "ap" and state.apMenuPage() or {}, log)
         for _, line in ipairs(lines) do log("apmenu: " .. line) end
         notify("Archipelago page " .. lines[#lines])
+    elseif what == "split" then
+        local on = tostring(p[2] or ""):lower()
+        if on ~= "on" and on ~= "off" then
+            notify("Usage: ffrap_apmenu split on | off")
+            return
+        end
+        A.split = on == "on"
+        if A.modeSaved then A.Mode("game", {}, log) end
+        notify("Archipelago page: " .. (A.split and "two tabs" or "one tab") .. " (open it again)")
     elseif what == "off" then
         state.apMenu = nil
         notify("Archipelago page: no longer added (restart the game to take it out of the menu)")
@@ -2044,7 +2054,7 @@ command("ffrap_apmenu", function(p)
         state.apMenuTick()
         notify("Archipelago page: on")
     else
-        notify("Usage: ffrap_apmenu off | on | state | close | tree | options | text | tabs [only | all] | mode ap | game")
+        notify("Usage: ffrap_apmenu off | on | state | close | tree | options | text | tabs [only | all] | mode ap | game | split on | off")
     end
 end)
 

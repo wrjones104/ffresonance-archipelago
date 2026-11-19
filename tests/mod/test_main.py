@@ -2423,6 +2423,14 @@ L.execute('commands["ffrap_apmenu"]("ffrap_apmenu", {"mode", "game"})')
 L.execute("logged = {}")
 set_scene(None, L.eval("{ get = function() return { TagName = { ToString = function() return 'UI.MainMenu.Scene.System' end } } end }"))
 assert not any("SetScene" in s for s in logged()), "not logged after mode game"
+# Round 87: `split off` gives the page one tab, and puts an open page's tables back first
+L.execute("package.loaded.game.APMENU.modeSaved = {}")
+L.execute('commands["ffrap_apmenu"]("ffrap_apmenu", {"split", "off"})')
+assert L.eval("package.loaded.game.APMENU.split") is False
+assert list(L.eval("package.loaded.game.APMENU.modeAsked").values())[0] == "game"
+L.execute("package.loaded.game.APMENU.modeSaved = nil")
+L.execute('commands["ffrap_apmenu"]("ffrap_apmenu", {"split", "on"})')
+assert L.eval("package.loaded.game.APMENU.split") is True
 # Round 87: picking Archipelago makes the tables our page before its screen opens; they go back
 # once the menu has left our scene, at once for another scene, and after 3 s if ours never showed
 L.execute("""
