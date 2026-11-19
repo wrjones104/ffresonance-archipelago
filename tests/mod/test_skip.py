@@ -664,8 +664,9 @@ assert lua(tag("FFRAP_ScalingStrength") + ".Value") == 2 and lua(tag("FFRAP_Scal
 L.execute("FindFirstOf = prevFFOseed; G.ForgetObjects()")
 assert lua("optRows.FFRAP_Exp.EntryTag.TagName:ToString()") == "Delegate.UI.System.Option.Root.GameSetting.FFRAP.FFRAP_Exp"
 assert lua("optRows.FFRAP_Exp.Type") == 2 and lua("optRows.FFRAP_Exp.SliderInfo.MaxValue") == 10
-TITLE_ONLY = 1
-assert lua("optRows.FFRAP_Exp.ShowCommandData.ShowType") == TITLE_ONLY,     "round 87: in game only the Archipelago page shows our rows; the title screen's Options still does"
+SHOW_ALL = 0
+assert lua("optRows.FFRAP_Exp.ShowCommandData.ShowType") == SHOW_ALL, \
+    "round 88: the rows are in the table only while the Archipelago page is open"
 assert lua("optRows.FFRAP_EncounterHalves.SliderInfo.MaxValue") == 6 and lua("optRows.FFRAP_Scaling.Type") == 1
 assert lua("optRows.FFRAP_Exp.DisplayText:ToString()") == "AP: EXP rate"
 assert lua("optRows.b.EntryTag.TagName:ToString()").endswith("GamePad.Sensitivity"), "the game's own row is left alone"

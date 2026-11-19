@@ -2037,10 +2037,10 @@ for far in (True, False, True, False):
     tick(6)
 assert len([x for x in logs() if "trigger was not found" in x]) == 1, logs()
 assert len([x for x in logs() if "final boss lock: sealed" in x]) == 1, logs()
-# Round 57: the menu rows went back in every few seconds; only the first time is logged
+# Round 88: the Options rows are added only for the Archipelago page, not by the tick
 G.menuRowsIn = False
 tick(2)
-assert G.menuAdds >= 2 and len([x for x in logs() if "rows added" in x]) == 1, logs()
+assert not G.menuAdds and not any("rows added" in x for x in logs()), logs()
 inbox("cfg\tfinalboss\t6\t6\t12\t12\n", "a")
 tick(6)
 assert G.sealed is False, "open once both counts are met"
@@ -2212,14 +2212,9 @@ assert list(G.rates.values())[0] == 2 and list(G.encounterTables.values())[0] is
 assert "exp 2" in read("settings.txt") and "encounters off" in read("settings.txt")
 print("menu settings: ok")
 
-# Round 57: the Options rows are checked every tick and put back only when missing, seeded with
-# the current settings
-assert G.menuAdds == 1, G.menuAdds
-assert G.menuSeed["exp"] is not None and G.menuSeed["scaling"] is not None, "seeded with the settings"
-checks = G.menuChecks
-G.menuRowsIn = False      # the game loaded its table again
-tick(4)
-assert G.menuAdds == 2 and G.menuChecks >= checks + 4, (G.menuAdds, G.menuChecks)
+# Round 88: the Options rows are added when the Archipelago page is written, seeded with the
+# current settings; the tick adds none
+assert not G.menuAdds, G.menuAdds
 print("menu rows: ok")
 
 # Round 59: with the seed's cfg, the boss win rows are patched once per save, a boss reports by its
@@ -2437,6 +2432,9 @@ L.execute("""
   local G = package.loaded.game
   G.APMENU.screen, G.APMENU.top, G.APMENU.modes, G.APMENU.TAG = "options", nil, {}, "UI.MainMenu.Scene.FFRAP"
   function G.APMENU.SceneTop() return G.APMENU.top end
+  G.APMENU.written = true
+  function G.APMENU.Written() return G.APMENU.written end
+  G.menuRowsIn, G.menuAdds = false, 0
   function G.APMENU.Mode(kind, lines)
     G.APMENU.modes[#G.APMENU.modes + 1] = kind
     G.APMENU.modeSaved = kind == "ap" and #lines > 0 or nil
@@ -2449,9 +2447,17 @@ modes = lambda: list(L.eval("package.loaded.game.APMENU.modes").values())
 OURS, ROOT = "UI.MainMenu.Scene.FFRAP", "UI.MainMenu.Scene.Root"
 scene(OURS)
 assert modes() == ["ap"], "our page at the click"
+assert L.eval("package.loaded.game.menuAdds") == 1, "round 88: our setting rows added for the page"
+assert L.eval("package.loaded.game.menuSeed.exp") is not None, "seeded with the settings"
 L.execute(f"package.loaded.game.APMENU.top = '{OURS}'")
 tick(4)
 assert modes() == ["ap"], "kept while the menu is on our scene"
+# Round 88: the game loaded the tables again with the page open; written again, logged once
+L.execute("logged = {}; package.loaded.game.APMENU.written = false")
+tick(2)
+assert modes() == ["ap", "ap", "ap"], modes()
+assert len([s for s in logged() if "loaded again with the page open" in s]) == 1, logged()
+L.execute("package.loaded.game.APMENU.written = true; package.loaded.game.APMENU.modes = { 'ap' }")
 L.execute(f"package.loaded.game.APMENU.top = '{ROOT}'")
 tick(1)
 assert modes() == ["ap", "game"], "back once the menu leaves it"
@@ -2464,6 +2470,7 @@ tick(4)
 assert modes()[-1] == "ap", "waits for the menu to show our scene"
 tick(4)
 assert modes()[-1] == "game", "and gives up after 3 s"
+assert any("never showed our scene" in s for s in logged()), "said why"
 L.execute("package.loaded.game.APMENU.screen = 'text'")
 n = len(modes())
 scene(OURS)

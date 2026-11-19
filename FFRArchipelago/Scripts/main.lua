@@ -29,6 +29,7 @@
 --   ffrap_apmenu off|on|state|close|tree  the Archipelago page in the main menu (on by default)
 --   ffrap_apmenu options|text|tabs [only|all]|mode ap|game  rounds 85-86 probe: the Options screen as the page
 --   ffrap_apmenu split on|off  the page's two tabs, Settings and Seed (on), or one (off)
+--   ffrap_apmenu seedrows command|heading  round 88 probe: the Seed tab's lines as rows the cursor can take
 --   ffrap_logo                   place the Archipelago logo on the mod's title line manually
 --   ffrap_layout <text>          log the panels holding some on-screen text
 --   ffrap_feed [on|off|test [plain]|check]  the item feed at the bottom right of the field HUD
@@ -1871,14 +1872,21 @@ state.apMenu = {}
 -- screen opens and reads the tables (round 86). The tick puts them back once the menu has left
 -- our scene, or when it never showed it.
 state.quietly = function() end
+-- Round 88: our setting rows are in the table only while the page is open (the user: not on the
+-- title screen), so they are added here, into whichever copy of the table the game has now.
+state.apMenuWrite = function(say)
+    local added, why = game.EnsureOptionRows(state.currentSettings())
+    if added == nil then log("apmenu: setting rows: " .. tostring(why)) end
+    return game.APMENU.Mode("ap", state.apMenuPage(), say)
+end
 state.apMenuScene = function(name)
     local m, A = state.apMenu, game.APMENU
     if state.apMenuWatch then log("apmenu: SetScene " .. tostring(name)) end
     if not m or A.screen ~= "options" then return end
     if name == A.TAG then
-        local lines = A.Mode("ap", state.apMenuPage(), m.modeTold and state.quietly or log)
+        local lines = state.apMenuWrite(m.modeTold and state.quietly or log)
         if not m.modeTold then log("apmenu: " .. lines[#lines]) end
-        m.modeTold, m.modeAt, m.seenOurs = true, state.ticks, false
+        m.modeTold, m.modeAt, m.seenOurs, m.rewriteTold = true, state.ticks, false, false
     elseif A.modeSaved then
         A.Mode("game", {}, state.quietly)
     end
@@ -1898,7 +1906,17 @@ state.apMenuBack = function(m, A)
     if not A.modeSaved then return end
     if A.SceneTop() == A.TAG then
         m.seenOurs = true
+        -- Round 88: the first open showed the game's rows. The game had loaded the table again
+        -- after the hook wrote it.
+        if not A.Written() then
+            local lines = state.apMenuWrite(state.quietly)
+            if not m.rewriteTold then
+                log("apmenu: the Options tables were loaded again with the page open; " .. lines[#lines])
+                m.rewriteTold = true
+            end
+        end
     elseif m.seenOurs or state.ticks - (m.modeAt or 0) > MODE_GRACE_TICKS then
+        if not m.seenOurs then log("apmenu: the main menu never showed our scene; the Options tables put back") end
         A.Mode("game", {}, state.quietly)
         m.seenOurs = false
     end
@@ -2034,7 +2052,7 @@ command("ffrap_apmenu", function(p)
         end
         state.apMenuWatch = kind == "ap"
         state.apMenuHook()
-        local lines = A.Mode(kind, kind == "ap" and state.apMenuPage() or {}, log)
+        local lines = kind == "ap" and state.apMenuWrite(log) or A.Mode("game", {}, log)
         for _, line in ipairs(lines) do log("apmenu: " .. line) end
         notify("Archipelago page " .. lines[#lines])
     elseif what == "split" then
@@ -2046,6 +2064,15 @@ command("ffrap_apmenu", function(p)
         A.split = on == "on"
         if A.modeSaved then A.Mode("game", {}, log) end
         notify("Archipelago page: " .. (A.split and "two tabs" or "one tab") .. " (open it again)")
+    elseif what == "seedrows" then
+        local kind = tostring(p[2] or ""):lower()
+        if kind ~= "command" and kind ~= "heading" then
+            notify("Usage: ffrap_apmenu seedrows command | heading")
+            return
+        end
+        A.seedRows = kind
+        if A.modeSaved then A.Mode("game", {}, log) end
+        notify("Archipelago page: the seed's lines as " .. kind .. " rows (open it again)")
     elseif what == "off" then
         state.apMenu = nil
         notify("Archipelago page: no longer added (restart the game to take it out of the menu)")
@@ -2054,7 +2081,7 @@ command("ffrap_apmenu", function(p)
         state.apMenuTick()
         notify("Archipelago page: on")
     else
-        notify("Usage: ffrap_apmenu off | on | state | close | tree | options | text | tabs [only | all] | mode ap | game | split on | off")
+        notify("Usage: ffrap_apmenu off | on | state | close | tree | options | text | tabs [only | all] | mode ap | game | split on | off | seedrows command | heading")
     end
 end)
 
@@ -2493,21 +2520,11 @@ local function currentSettings()
     for k in pairs(SETTING_DEFAULTS) do current[k] = setting(k) end
     return current
 end
--- Re-insert custom Options rows whenever the game reloads DT_OP_GameSetting (at title and in-game).
--- Log only the initial insertion or failures.
-local menuFailed, menuAdded = nil, false
+state.currentSettings = currentSettings
+-- Since round 88 our Options rows are added only while the Archipelago page is open
+-- (state.apMenuWrite), and kept there by its tick.
 menuTick = function()
     if state.apMenu then pcall(state.apMenuTick) end
-    local added, detail = game.EnsureOptionRows(currentSettings())
-    if added == nil then
-        if detail ~= menuFailed then log("menu: " .. tostring(detail)) end
-        menuFailed = detail
-    elseif added > 0 then
-        menuFailed = nil
-        -- Log only the first insertion because the game reloads the option table repeatedly.
-        if not menuAdded then log("menu: rows added to the Options screen; " .. tostring(detail)) end
-        menuAdded = true
-    end
 end
 settingsTick = function()
     -- Choices set in the Options UI override ffrap_set values.

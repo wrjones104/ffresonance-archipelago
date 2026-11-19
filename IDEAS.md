@@ -475,6 +475,11 @@ Until then the Options rows stay, and on a save not linked to the seed they chan
 
 **Two tabs (the user, 2026-11-19, built for round 87):** one tab for the settings and one for the seed's state. A sixth tab is not simple (the categories are a fixed enum), but each tab shows the row table named in its `DT_Option_Root` row's `Object`. So the page keeps the Sound tab too, names Gameplay's "Settings" and Sound's "Seed", hides the six rows of `DT_OP_SoundSetting` (the volume sliders and its Reset button), and puts the heading rows there. `ffrap_apmenu split off` gives the one tab again. To find out: whether a tab holding only headings works (nothing on it can take the cursor), and whether the game's reset key on the Seed tab touches the hidden volume rows.
 
+**Round 87 result:** both tabs work with a keyboard and a gamepad. Three findings:
+- The first open showed the game's rows on Settings, likely because the game loaded `DT_OP_GameSetting` again after the hook wrote it. Since round 88, while the page is open each tick checks the tables (`A.Written`) and writes the page again if needed.
+- A gamepad cannot scroll the Seed tab: no heading takes the cursor. The round 88 probe `ffrap_apmenu seedrows command` makes the lines Command rows (`WBP_OP_Command`, whose click is empty in its Blueprint).
+- The user: the settings belong only in the Archipelago entry, not at the title screen. Since round 88 our rows are in the table only while the page is open.
+
 ## 40. Abilities the story gives, which the open start skips
 
 **Found off-line, 2026-11-18 (round 86, looking at Lid).** Story rows add abilities through their `AbilitySettings` (`AddAbilities`, `AddCommandAbilities`), as the Siren row does for both Finas. The open start never plays them, and it adds only Siren's. From `DT_TalkEventData_Chapter*` (MainEvent):

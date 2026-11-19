@@ -1280,3 +1280,19 @@ Send the `[FFRAP]` lines of the log.
 - **Found looking at Lid:** the open start never runs the story's ability rows. Each character's `C08_817_01` ability, Rain's chapter 6 and 8 abilities and Lid's `Lid_LB2_Get` are missing (IDEAS.md idea 40).
 
 **Round 87 build (mod 0.61.0 build 5acddc01):** the Archipelago entry is the Options screen made our page, switched by a `SetScene` pre-hook and back by the tick, with our rows out of in-game System > Options (IDEAS.md idea 39). Before the round was played, the user asked for two tabs: the page now has Settings (the Gameplay tab) and Seed (the Sound tab, its rows hidden, holding the headings). The first build of the round, ad155ef2, had one tab.
+
+### Round 87 (mod 0.61.0 build 5acddc01, apworld 0.30.0 build c5fec06a)
+
+- **Build check:** passed. After a full restart the client and the mod both showed apworld build c5fec06a, so last round's mismatch was a client still running the old world.
+- **Two tabs:** passed, with one fault. Both tabs showed and the player could switch between them, and the Seed tab looked right. On the first open the Settings tab showed the game's rows and not ours; on the next open it showed ours. The log shows the hook wrote the right rows (`mode ap: 21 game rows hidden, 10 heading rows on the Seed tab`) 6 s after the save loaded. Later in the run, `menu: DT_OP_GameSetting could not be loaded` showed that the table was gone for a time. The likely cause: the game loaded the table again after the hook wrote it, and a fresh copy has the game's rows and no changes of ours.
+- **Tabs with keyboard and gamepad:** passed, except that a gamepad cannot scroll the Seed tab. No heading row takes the cursor, and the list scrolls with the cursor.
+- **System > Options after the page:** passed, every time and in either order.
+- **New counts:** passed.
+- **Title screen Options:** passed (our rows and the game's under Gameplay). **From the user:** having the settings at the title screen but not in game System > Options could confuse; keep them only in the Archipelago entry.
+- **Closing the menu from the page:** passed.
+
+**Round 88 build (mod 0.61.0 build ac15f02e):**
+- Our setting rows are in `DT_OP_GameSetting` only while the page is open. They are added when it opens (into whichever copy of the table the game has then) and removed when it closes, so the title screen's Options and System > Options never show them. The tick no longer puts them back.
+- While the page is open, each tick checks that the tables still hold the page (`APMENU.Written`) and writes it again if not, logging it once.
+- `ffrap_apmenu seedrows command` probe: the seed's lines as Command rows, which may take the cursor.
+
