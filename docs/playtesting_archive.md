@@ -1349,3 +1349,13 @@ Send the `[FFRAP]` lines of the log.
 - `ffrap_popup colors on` (probe): the message keeps the lines without the name ("You found Alice's:"), and the name's line goes into a row of our own TextBlocks under it in the dialog's VerticalBox, centred and styled as the message (size 18, letter spacing 4). The row is removed when the pop-up closes. The markup and colour table code is gone.
 - `ffrap_quest colors on` (probe): each Rewards line showing a scouted item gets our row beside its text block (`AddChild` on the block's parent panel), and the block is collapsed. A line the list reuses for another reward gets its own text back.
 
+### Round 91 (mod 0.61.0 build ec671324, apworld 0.30.0 build 88874051)
+
+- **Feed colours with bold names:** passed, with no command.
+- **Pop-up colours:** passed. The log showed each `popup step:` and `text set, item line hidden, the name in its colour` for two chests in a row; the old name was gone from the second.
+- **Quests screen colours:** not working. "Dream of an Idealist" showed its scouted item ("Blessed Pendant", our text line: no icon, no count) in white, and the log had no `quest colours:` line at all. The search found no line to colour and logged nothing when it found none, so it is not known whether it saw the reward lines, their text block, or the text.
+
+**Round 92 build (mod 0.61.0 build 5d85e80c, apworld unchanged, build 88874051):**
+- Pop-up colours are on by default (`ffrap_popup colors off`).
+- The Quests screen probe logs what it sees each time that changes: `quest colours: seen: N reward lines, M on screen: "text" (scouted), ...`. It takes a line's block by its name or by its text (the first text block under the line that shows a scouted label).
+

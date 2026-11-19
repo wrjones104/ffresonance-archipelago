@@ -730,6 +730,8 @@ L.execute("G.FeedTick(30.0)")
 # Round 91 probe: the pop-up's message keeps the lines without the name; the name's line goes into
 # our own coloured row
 SPLIT = 'G.PopupSplit("You found Alice\'s:\\nHookshot", { text = "Hookshot", flags = 1 })'
+assert L.eval("G.POPUP_COLORS.on") is True, "on by default since round 92"
+L.execute("G.POPUP_COLORS.on = false")
 assert L.eval(SPLIT) is None, "off: the message stays as it is"
 L.execute("G.POPUP_COLORS.on = true")
 assert list(L.eval(f"table.pack({SPLIT})").values())[:2] == ["You found Alice's:", "Hookshot"]
@@ -797,7 +799,8 @@ function FindAllOf(c) if c == "WBP_Quest_Reward_Text_C" then return { rewardLine
 questSpans = { ["Alice's Hookshot"] = { text = "Hookshot", flags = 2 } }
 """)
 lines = list(L.eval("G.QuestRewardColors(questSpans)").values())
-assert lines == ["coloured: Alice's Hookshot (in a NamedSlot)"], lines
+SEEN_HOOKSHOT = 'seen: 1 reward lines, 1 on screen: "Alice\'s Hookshot" (scouted)'
+assert lines == [SEEN_HOOKSHOT, "coloured: Alice's Hookshot (in a NamedSlot)"], lines
 assert L.eval("rewardBlock.vis") == 1, "the game's line is hidden"
 assert [L.eval(f"rewardPanel.kids[2].kids[{i}].text") for i in (1, 2)] == ["Alice's ", "Hookshot"]
 SLATEBLUE_R = 0.153
@@ -806,10 +809,13 @@ assert L.eval("rewardPanel.kids[2].kids[2].Font.Justification") is None and L.ev
 assert list(L.eval("G.QuestRewardColors(questSpans)").values()) == [], "once"
 L.execute('rewardBlock.text = "Phoenix Down"')
 lines = list(L.eval("G.QuestRewardColors(questSpans)").values())
-assert lines == ["taken out: Alice's Hookshot"] and L.eval("rewardBlock.vis") == 0 and L.eval("#rewardPanel.kids") == 1, lines
-L.execute('rewardBlock.text = "Alice\'s Hookshot"')
-L.eval("G.QuestRewardColors(questSpans)")
-assert list(L.eval("G.QuestRewardColors({})").values()) == ["taken out: Alice's Hookshot"], "off: all taken out"
+assert lines == ['seen: 1 reward lines, 1 on screen: "Phoenix Down"', "taken out: Alice's Hookshot"], lines
+assert L.eval("rewardBlock.vis") == 0 and L.eval("#rewardPanel.kids") == 1
+# Round 92: a block with another name is taken by its text
+L.execute('rewardBlock.name, rewardBlock.text = "TextBlock_Reward", "Alice\'s Hookshot"')
+lines = list(L.eval("G.QuestRewardColors(questSpans)").values())
+assert lines[-1] == "coloured: Alice's Hookshot (in a NamedSlot)", lines
+assert list(L.eval("G.QuestRewardColors({})").values())[-1] == "taken out: Alice's Hookshot", "off: all taken out"
 
 # the quest-notice banner try
 L.execute(r"""

@@ -1853,8 +1853,9 @@ command("ffrap_feed", function(p)
     end
 end)
 
--- Round 91 probes (the user: item names in their colour in the chest pop-up and the Quests
--- screen). Off at each start. `on` also logs each step of the next coloured line.
+-- Round 91 (the user: item names in their colour in the chest pop-up and the Quests screen).
+-- The pop-up's colours are on by default since round 92; the Quests screen's are a probe, off at
+-- each start. `on` also logs each step of the next coloured line.
 --   ffrap_popup colors on|off   the pop-up's name line as our own coloured row
 --   ffrap_quest colors on|off   the Quests screen's Rewards, the same way
 command("ffrap_popup", function(p)

@@ -1908,8 +1908,9 @@ end
 -- tag with no style row drew the name black. The line holding the name goes into a row of our
 -- own TextBlocks instead (as the feed's), under the message in the dialog's box, styled as the
 -- message's text style (BP_SystemTextStyle: size 18, letter spacing 4, shadow 2, 1 at 0.5).
--- Probe: off until ffrap_popup colors on; `trace` logs each step of the next coloured pop-up.
-G.POPUP_COLORS = { on = false, trace = nil, CENTER = 2,
+-- Round 91's probe worked: on since round 92 (ffrap_popup colors off). `trace` logs each step of the
+-- next coloured pop-up (ffrap_popup colors on).
+G.POPUP_COLORS = { on = true, trace = nil, CENTER = 2,
                    LOOK = { size = 18, spacing = 4, shadow = 0.5, offset = { X = 2, Y = 1 }, justify = 1 } }
 -- The message without the line that holds the span, and that line; or nil with colours off or no span.
 function G.PopupSplit(text, span)
@@ -1944,22 +1945,24 @@ end
 -- and the block shown again.
 G.QUEST_COLORS = { on = false, rows = {}, BLOCK = "CommonTextBlock_194", LINE = "WBP_Quest_Reward_Text_C",
                    LOOK = { size = 18, spacing = 4, shadow = 0.5, offset = { X = 2, Y = 1 }, justify = 0 } }
-function G.FindNamedWidget(w, name, depth)
+-- The first widget under `w` (its own widget tree and its children) that `test(widget, name)`
+-- accepts, or nil.
+function G.FindWidget(w, test, depth)
     depth = depth or 0
     if not (w and Alive(w)) or depth > 12 then return nil end
     local n
     pcall(function() n = w:GetFName():ToString() end)
-    if n == name then return w end
+    if test(w, n) then return w end
     local root
     pcall(function() root = w.WidgetTree.RootWidget end)
-    local found = root and G.FindNamedWidget(root, name, depth + 1)
+    local found = root and G.FindWidget(root, test, depth + 1)
     if found then return found end
     local count = 0
     pcall(function() count = w:GetChildrenCount() end)
     for i = 0, count - 1 do
         local c
         pcall(function() c = w:GetChildAt(i) end)
-        found = G.FindNamedWidget(c, name, depth + 1)
+        found = G.FindWidget(c, test, depth + 1)
         if found then return found end
     end
 end
@@ -1977,13 +1980,27 @@ function G.QuestRewardColors(spans, say)
             out[#out + 1] = "taken out: " .. r.label
         end
     end
+    -- Round 91: nothing was coloured and nothing logged. The line's block is now taken by its
+    -- name or by its text (the first text block showing a scouted label), and what the search
+    -- saw is logged each time it changes.
+    local function textOf(w)
+        local t
+        pcall(function() t = w:GetText():ToString() end)
+        return t
+    end
     local ok, all = pcall(FindAllOf, Q.LINE)
+    local seen = { lines = 0, shown = 0, texts = {} }
     for _, w in ipairs(ok and all or {}) do
+        seen.lines = seen.lines + 1
         if Alive(w) and Shown(w) then
-            local block = G.FindNamedWidget(w, Q.BLOCK)
+            seen.shown = seen.shown + 1
+            local block = G.FindWidget(w, function(c, n)
+                local t = textOf(c)
+                return t ~= nil and (n == Q.BLOCK or spans[t] ~= nil)
+            end)
             local path = block and G.PathOf(block)
-            local text
-            pcall(function() text = block:GetText():ToString() end)
+            local text = block and textOf(block)
+            seen.texts[#seen.texts + 1] = text and ('"' .. text .. '"' .. (spans[text] and " (scouted)" or "")) or "no text block"
             if path and not Q.rows[path] and text and spans[text] then
                 local was = G.feedTrace
                 G.feedTrace = say
@@ -2006,6 +2023,12 @@ function G.QuestRewardColors(spans, say)
                 G.feedTrace = was
             end
         end
+    end
+    local summary = string.format("seen: %d reward lines, %d on screen%s%s", seen.lines, seen.shown,
+        #seen.texts > 0 and ": " or "", table.concat(seen.texts, ", "))
+    if summary ~= Q.lastSeen then
+        table.insert(out, 1, summary)
+        Q.lastSeen = summary
     end
     return out
 end

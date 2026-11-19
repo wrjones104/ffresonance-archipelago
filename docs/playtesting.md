@@ -2,15 +2,14 @@
 
 Only open items that still need to be tested in game live here. Once tested, record the results in [docs/playtesting_archive.md](playtesting_archive.md) and remove completed items from this file. Automated suite tests are documented in [tests/README.md](../tests/README.md).
 
-Current builds: mod `0.61.0` (`ec671324`), world `0.30.0` (`88874051`, unchanged since round 90).
+Current builds: mod `0.61.0` (`5d85e80c`), world `0.30.0` (`88874051`, unchanged since round 90).
 
 Install: copy `FFRArchipelago/Scripts`. The apworld is unchanged. Send the `[FFRAP]` lines of `UE4SS.log`. If the game crashes, send `Mods/FFRArchipelago/ap_trace.txt`, the crash folder, and the log before starting the game again.
 
-## Item colours (Round 91)
+## Item colours (Round 92)
 
-- [ ] Verify the log says `version 0.61.0 (build ec671324)`. With no command, receive or send an item: verify the feed shows the item's name in its colour and in bold, and the rest of the line white and not bold.
-- [ ] Type `ffrap_popup colors on`, then open a chest that is a location. Verify the pop-up shows "You found ...:" and, under it, the item's name in its colour and bold, centred, in the message's font and size. The log has `popup step:` lines and `chest pop-up for ...: text set, item line hidden, the name in its colour`. Close the pop-up and open another chest: verify the old name is gone. If the game crashes, send `ap_trace.txt` and the log: the last `popup step:` line is the call that crashed.
-- [ ] Type `ffrap_quest colors on`, then open the Quests screen and pick a quest that is a location. Verify the Rewards line shows "Alice's" in white and the item's name in its colour and bold, in the same place and font as the game's line. The log says `quest colours: coloured: ... (in a ...)`, and the `quest step:` lines. Move through a few quests and back: verify each line shows its own reward, with no name left over from another quest. If it says `not coloured`, send that line.
+- [ ] Verify the log says `version 0.61.0 (build 5d85e80c)`. With no command, open a chest that is a location: verify the pop-up shows the name in its colour and bold.
+- [ ] Type `ffrap_quest colors on`, open the Quests screen, and pick a quest that is a location. Send the `quest colours:` lines whatever the screen shows: each `seen:` line says how many reward lines the mod found, how many are on screen, and the text in each. If the name shows in its colour, move through a few quests and back and check each line shows its own reward.
 
 ## Side quests (Rounds 78 to 90)
 

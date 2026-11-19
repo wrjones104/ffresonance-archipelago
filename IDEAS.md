@@ -533,3 +533,5 @@ Until then the Options rows stay, and on a save not linked to the seed they chan
 
 **Built (round 91, build ec671324):** feed colours on by default, with the name bold. The pop-up and the Quests screen use the feed's way: a row of our own TextBlocks, styled before it is on screen. The pop-up's row goes under the message, the Rewards line's beside its hidden text block. Both are probes (`ffrap_popup colors on`, `ffrap_quest colors on`).
 
+**Round 91 result:** the feed and the pop-up work, and the pop-up's colours are on by default since round 92. The Quests screen showed no colour and logged nothing. Since round 92 the probe logs what it sees (`seen:` lines) and takes a line's block by its name or by its text.
+
