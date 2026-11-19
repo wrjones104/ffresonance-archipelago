@@ -22,6 +22,8 @@ Outputs (data/game/):
                      passives do in a boss fight: element attacks, heals, cleanses, resistances
     quests.tsv       the game's quest log: id, name, accept and completion tests, prize
     quest_steps.tsv  each talk row that moves a side-quest counter, with the map actor leading to it
+    gifts.tsv        each one-time NPC gift (a talk row that gives items and sets a flag of 1400 to
+                     1413), with the map actor leading to it
 """
 
 import argparse
@@ -519,6 +521,41 @@ def quests(starts):
                                   "start", "visible", "condition", "chain", "fights", "gifts", "at"], out)
 
 
+# Round 97 (the user): the game's one-time NPC gifts (the old man in the Commercial District with
+# the Lunar Sword and the Brigandine). Each gift row sets its own flag in this range.
+GIFT_FLAGS = set(range(1400, 1414))
+
+
+def npc_gifts(starts):
+    """gifts.tsv: each talk row that gives items and sets a gift flag, with the actor leading to it."""
+    rows = talk_rows()
+
+    def next_rows(row):
+        for e in row.get("ContinuousEventList") or []:
+            yield e.get("EventId"), e.get("Condition", "")
+        for c in row.get("ChoicesBranchEventList") or []:
+            for e in c.get("EventList") or []:
+                yield e.get("EventId"), e.get("Condition", "")
+
+    out = {}
+    for s in starts:
+        stack, seen = [(s["event"], ())], set()
+        while stack:
+            event, conds = stack.pop()
+            if event in seen or event not in rows:
+                continue
+            seen.add(event)
+            row = rows[event]
+            flags = sorted(set(row.get("OnFlagList") or []) & GIFT_FLAGS)
+            if flags and row.get("ObtainItemList"):
+                out.setdefault((flags[0], event), [flags[0], event, s["map"], s["level"], s["actor"], s["uid"],
+                                                   s["visible"], s["condition"], " ".join(conds), gifts(row)])
+            for nxt, cond in next_rows(row):
+                stack.append((nxt, conds + ((cond,) if cond else ())))
+    write_tsv("gifts.tsv", ["flag", "row", "map", "level", "actor", "uid", "visible", "condition", "chain", "gifts"],
+              sorted(out.values()))
+
+
 # ---------------------------------------------------------------- comparison with data/*.tsv
 
 def check(item_rows, chest_rows, field_rows, box_rows):
@@ -609,6 +646,7 @@ def main():
     field_rows, box_rows, starts = actors(by_key)
     chest_rows = chests(box_rows)
     quests(starts)
+    npc_gifts(starts)
     if args.check:
         problems = check(item_rows, chest_rows, field_rows, box_rows)
         print(f"\n{problems} differences")

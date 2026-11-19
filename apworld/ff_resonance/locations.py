@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING
 
 from BaseClasses import ItemClassification, Location, LocationProgressType, Region
 
-from .data import (AIRSHIP_AREA, AIRSHIP_ITEM, BOSSES, CHESTS, CONTINENT_UNLOCKS, FRAGMENTS, RADAR, RADAR_ITEM,
+from .data import (AIRSHIP_AREA, AIRSHIP_ITEM, BOSSES, CHESTS, CONTINENT_UNLOCKS, FRAGMENTS, GIFTS, RADAR, RADAR_ITEM,
                    RADAR_PART_CHESTS, CRYSTALS, FINAL_AREA, ITEMS, OPEN_AREA, SHINIES, SIDE_QUESTS, TABLET_SHINIES)
 from .boss_logic import boss_rule
 from .items import FRAGMENT_NAME, GAME, FFResonanceItem, create_item, progression_ids
@@ -12,8 +12,8 @@ from .items import FRAGMENT_NAME, GAME, FFResonanceItem, create_item, progressio
 if TYPE_CHECKING:
     from .world import FFResonanceWorld
 
-ALL_LOCATIONS = (CHESTS + SHINIES + CRYSTALS + TABLET_SHINIES + BOSSES + FRAGMENTS + RADAR + RADAR_PART_CHESTS
-                 + SIDE_QUESTS)
+ALL_LOCATIONS = (CHESTS + SHINIES + CRYSTALS + TABLET_SHINIES + BOSSES + FRAGMENTS + GIFTS + RADAR
+                 + RADAR_PART_CHESTS + SIDE_QUESTS)
 # The quests whose reward gives a vision: with visions not shuffled, the quest holds its own.
 QUEST_VISIONS = [loc for loc in SIDE_QUESTS if "vision" in loc]
 LOCATION_NAME_TO_ID: dict[str, int] = {loc["name"]: loc["id"] for loc in ALL_LOCATIONS}
@@ -87,7 +87,8 @@ def create_regions_and_locations(world: FFResonanceWorld) -> None:
                 regions[here].connect(regions[there], f"{here} to {there} on foot",
                                       lambda state, unlock=UNLOCK_NAMES[there]: state.has(unlock, player))
 
-    chosen = list(CHESTS)
+    # The NPC gifts are always on (round 97); the Magi-tenna's goes with the radar treasures.
+    chosen = list(CHESTS) + [g for g in GIFTS if world.options.include_radar_treasures or not g.get("radar_part")]
     if world.options.include_shinies:
         chosen += SHINIES
     if world.options.include_crystals:
@@ -141,6 +142,9 @@ def create_regions_and_locations(world: FFResonanceWorld) -> None:
             beat = boss_rule(world, loc["past_boss"])
             rules.append(lambda state, beat=beat: state.has(AIRSHIP, player) or beat(state))
         # A radar treasure requires as many Progressive Radars as its tier. The mod opens a whole tier at once.
+        # A gift that needs a place first (the Pharm cat's: the Mysidia cat talked to).
+        if "needs_area" in loc:
+            rules.append(lambda state, area=loc["needs_area"]: state.can_reach_region(area, player))
         if "radar_tier" in loc:
             rules.append(lambda state, n=loc["radar_tier"]: state.has(RADAR_NAME, player, n))
         # A side quest's steps: one place of each group (side_quests.md, section 5). The airship's
@@ -173,6 +177,8 @@ def create_regions_and_locations(world: FFResonanceWorld) -> None:
         # A location that holds its own item adds nothing to the pool.
         if loc["vanilla"] is not None and location.item is None:
             world.vanilla_items.append(loc["vanilla"])
+        # A gift's second item goes into the pool in place of a filler.
+        world.extra_items += loc.get("extra", [])
 
     if world.options.goal.value == world.options.goal.option_tablet_shards:
         goal_region = menu

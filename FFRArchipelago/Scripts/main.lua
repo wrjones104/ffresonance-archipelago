@@ -457,6 +457,8 @@ local function readInbox(initial)
             game.blankRadarParts = seedCfg.radar
         elseif f[1] == "cfg" and f[2] == "quests" then
             seedCfg.quests = f[3] == "1"
+        elseif f[1] == "cfg" and f[2] == "gifts" then
+            seedCfg.gifts = f[3] == "1"
         elseif f[1] == "cfg" and f[2] == "continent" then
             seedCfg.continent = f[3] and f[3]:lower()
         elseif f[1] == "cfg" and f[2] == "finalboss" then
@@ -884,6 +886,16 @@ local function scanBosses()
                 if s and state.questPopups[q.key] ~= save.obj then
                     popup = { text = popupText(s), span = { text = s.item, flags = s.flags }, key = q.key, tries = BOSS_POPUP_TRIES, scene = true }
                 end
+            end
+        end
+    end
+    -- Round 97 (the user): the one-time NPC gifts, by their flags; the pop-up waits for the gift's.
+    if seedCfg.gifts and sessionSave() then
+        for _, g in ipairs(game.GIFTS) do
+            if (seedCfg.radar or not g.radar) and game.GetFlag(g.flag) == true and report("check", g.key) then
+                log("check " .. g.key)
+                local s = state.scouts[g.key]
+                if s then popup = { text = popupText(s), span = { text = s.item, flags = s.flags }, key = g.key, tries = BOSS_POPUP_TRIES } end
             end
         end
     end
@@ -1662,6 +1674,10 @@ local function tick()
                     local okQuests, written = pcall(game.QuestsPatch)
                     log("quests: " .. tostring(written) .. " reward rows without the location's item" .. (okQuests and "" or " (failed: " .. tostring(written) .. ")"))
                 end
+                if newSave and seedCfg.gifts then
+                    local okGifts, written = pcall(game.GiftsPatch, seedCfg.radar)
+                    log("gifts: " .. tostring(written) .. " NPC gift rows give the stand-in" .. (okGifts and "" or " (failed)"))
+                end
                 if seedCfg.quests then pcall(state.prizeTick) end
                 if seedCfg.quests and game.QUEST_COLORS.on then
                     local okColors, err = pcall(state.questColorsTick)
@@ -1883,8 +1899,8 @@ command("ffrap_popup", function(p)
     end
 end)
 -- ffrap_quest colors on|off: the Quests screen's colours (on by default since round 96); `on`
--- also logs every line and the steps of the next one coloured. ffrap_quest instant on|off (round
--- 96 probe): colour each line as the game writes it, by a hook on its SetText.
+-- also logs every line and the steps of the next one coloured. ffrap_quest instant on|off: colour
+-- each line as the game writes it, by a hook on its SetText (on by default since round 97).
 command("ffrap_quest", function(p)
     local Q = game.QUEST_COLORS
     local on = p and (p[2] == "on" or p[2] == "off") and p[2] == "on"

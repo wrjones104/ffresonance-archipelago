@@ -212,6 +212,7 @@ class FFResonanceContext(CommonContext):
         wanted.append(("cfg", "chocobo", int(bool(slot_data.get("start_with_chocobo", True)))))
         wanted.append(("cfg", "radar", int(bool(slot_data.get("include_radar_treasures")))))
         wanted.append(("cfg", "quests", int(bool(slot_data.get("include_side_quests")))))
+        wanted.append(("cfg", "gifts", int(bool(slot_data.get("npc_gifts")))))
         # Legacy seeds without this option started in the airship.
         wanted.append(("cfg", "airship", int(bool(slot_data.get("start_with_airship", True)))))
         if slot_data.get("starting_continent"):

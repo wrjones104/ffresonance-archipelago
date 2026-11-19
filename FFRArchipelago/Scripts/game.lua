@@ -1949,8 +1949,9 @@ end
 -- own SetText writes CommonTextBlock_194, so the block is the line's property of that name, or
 -- else the entry panel's Slot_33_Content (GetContentForSlot). Round 95: it works; on by default
 -- since round 96 (ffrap_quest colors off). The tick colours a line a second late at most;
--- `instant` (ffrap_quest instant on, a probe) hooks the line's own SetText to colour it at once.
-G.QUEST_COLORS = { on = true, instant = false, hooked = nil, rows = {}, spans = {},
+-- `instant` hooks the line's own SetText to colour it at once (round 96's probe worked; on since
+-- round 97, ffrap_quest instant off).
+G.QUEST_COLORS = { on = true, instant = true, hooked = nil, rows = {}, spans = {},
                    LINE = "WBP_Quest_Reward_Text_C", BLOCK = "CommonTextBlock_194",
                    PANEL = "WBP_IconEntryLayoutPanel_76", SLOT = "Slot_33_Content",
                    SET_TEXT = "/Game/UI/Quest/Bounty/widget/Detail/WBP_Quest_Reward_Text.WBP_Quest_Reward_Text_C:SetText",
@@ -2771,6 +2772,8 @@ end
 -- Round 78: side quests that are locations (quests.lua, from data/quests.tsv; docs/side_quests.md).
 -- A quest's check is its counter at or past the value its reward row writes.
 G.QUESTS = require("quests")
+-- Round 97 (the user): the one-time NPC gifts, locations by their flags (gifts.lua).
+G.GIFTS = require("gifts")
 -- The Mechabo quests run on progress 16, which the story's repair request (C02_219_02, at story
 -- 2120 only) sets to 10. Our start skips it, so Verun never shows (IDEAS.md idea 33).
 -- C02_219_02 also accepts "Arise, Mechabo!" (request 17) into the quest log. Round 84: Verun asked
@@ -2926,6 +2929,28 @@ function G.QuestsPatch()
             local _ = list[i]
             list[i].ID, list[i].Num = e.id, e.num
         end
+        written = written + 1
+    end)
+    return written
+end
+
+-- The NPC gifts' rows give the stand-in in place of their items, as the cave masters' do, so the
+-- gift's pop-up comes up for the location's item. The gift sets its flag before the pop-up shows,
+-- so the check writes it. The Magi-tenna's gift is a location only with the radar treasures
+-- (`radar`). Returns the rows written.
+function G.GiftsPatch(radar)
+    local rows = {}
+    for _, g in ipairs(G.GIFTS) do
+        if radar or not g.radar then rows[g.row] = true end
+    end
+    local written = 0
+    EachTalkRow(function(key, row)
+        if not rows[key] then return end
+        local list = row.ObtainItemList
+        if #list == 1 and Int(list[1].ID) == BOSS_STAND_IN and Int(list[1].Num) == 1 then return end
+        list:Empty()
+        local _ = list[1]
+        list[1].ID, list[1].Num = BOSS_STAND_IN, 1
         written = written + 1
     end)
     return written

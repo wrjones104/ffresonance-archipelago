@@ -5,7 +5,7 @@ from worlds import AutoWorld
 from worlds.AutoWorld import call_all
 from test.general import gen_steps
 
-from ..data import AIRSHIP_ITEM, BOSSES, CHESTS, FRAGMENTS, CHOCOBO_ITEM, NO_ROUTE, RADAR, RADAR_ITEM, RADAR_PARTS, RADAR_PART_CHESTS, CONTINENT_UNLOCKS, CRYSTALS, FRAGMENT_ITEM, ITEMS, NO_BOX, SIDE_QUESTS, TABLET_SHINIES, PROGRESSION, SHINIES, SHUFFLE_ID_LIMIT, UNIT_ITEM_BASE
+from ..data import AIRSHIP_ITEM, BOSSES, CHESTS, FRAGMENTS, GIFTS, CHOCOBO_ITEM, NO_ROUTE, RADAR, RADAR_ITEM, RADAR_PARTS, RADAR_PART_CHESTS, CONTINENT_UNLOCKS, CRYSTALS, FRAGMENT_ITEM, ITEMS, NO_BOX, SIDE_QUESTS, TABLET_SHINIES, PROGRESSION, SHINIES, SHUFFLE_ID_LIMIT, UNIT_ITEM_BASE
 from ..boss_logic import awakening, has_capability
 from ..items import CLASSIFICATIONS, FILLER_CATEGORIES, FRAGMENT_NAME, item_name_groups
 from ..locations import GOAL_EVENT, LOCATION_KEY_TO_ID, SEPHIROTH, VICTORY
@@ -25,6 +25,10 @@ QUEST_LOCATIONS = 28    # round 78: the quest log's 33, less the Mechabo three a
 QUEST_ONLY_ITEMS = (20020, 20023, 20024, 20025, 20026, 20027, 20028, 20029, 20030, 20031, 20032)
 CAVE_MASTERS, STORY_BOSSES, OPTIONAL_BOSSES = 15, 21, 4   # round 71: ten more story bosses; round 72: Behemoth out
 FRAGMENT_BOSSES = CAVE_MASTERS + STORY_BOSSES + OPTIONAL_BOSSES   # round 97: every boss gives one
+# Round 97: the NPC gifts are always locations, but the Magi-tenna's, which goes with the radar.
+GIFTS_ON = [g for g in GIFTS if not g.get("radar_part")]
+GIFT_EXTRAS = [i for g in GIFTS_ON for i in g.get("extra", [])]
+BASE = CHESTS + GIFTS_ON
 EARLY_LEVEL, FINA_GROUP_HEAL_LEVEL, MAX_LEVEL = 3, 25, 99   # boss levels: Fina has Cure at 3
 
 
@@ -36,23 +40,23 @@ def chest_location(test, key):
 class TestDefault(FFResonanceTestBase):
     def test_chests_are_the_only_locations(self) -> None:
         names = {loc.name for loc in self.multiworld.get_locations(self.player) if loc.address is not None}
-        self.assertEqual(names, {c["name"] for c in CHESTS})
+        self.assertEqual(names, {c["name"] for c in BASE})
 
     def test_pool_is_the_vanilla_contents_with_progression_in_place_of_filler(self) -> None:
         pool = [item.code for item in self.multiworld.itempool if item.player == self.player]
         starters = {UNIT_ITEM_BASE + 1001, UNIT_ITEM_BASE + 1002}
         unlocks = [ap_id for name, ap_id in CONTINENT_UNLOCKS.items() if name != "Grandshelt"]
         extra = [i for i in PROGRESSION["party"] if i not in starters] + PROGRESSION["vision"] + PROGRESSION["key"] + unlocks
-        self.assertEqual(len(pool), len(CHESTS))
+        self.assertEqual(len(pool), len(BASE))
         for ap_id in extra:
             self.assertEqual(pool.count(ap_id), 1, ITEMS[ap_id]["name"])
         rest = list(pool)
-        for ap_id in extra:
+        for ap_id in extra + GIFT_EXTRAS:
             rest.remove(ap_id)
-        vanilla = [c["vanilla"] for c in CHESTS]
+        vanilla = [c["vanilla"] for c in BASE]
         for ap_id in rest:
-            vanilla.remove(ap_id)            # every other item is some chest's vanilla content
-        self.assertEqual(len(vanilla), len(extra))
+            vanilla.remove(ap_id)            # every other item is some location's vanilla content
+        self.assertEqual(len(vanilla), len(extra) + len(GIFT_EXTRAS))
         self.assertTrue(all(ITEMS[ap_id]["category"] in FILLER_CATEGORIES for ap_id in vanilla))
 
     def test_progression_items_are_progression(self) -> None:
@@ -181,7 +185,7 @@ class TestChocoboItem(FFResonanceTestBase):
 
     def test_the_chocobo_takes_a_filler_place(self) -> None:
         pool = [i for i in self.multiworld.itempool if i.player == self.player]
-        self.assertEqual(len(pool), len(CHESTS))
+        self.assertEqual(len(pool), len(BASE))
         chocobos = [i for i in pool if i.code == CHOCOBO_ITEM]
         self.assertEqual(len(chocobos), 1)
         self.assertTrue(chocobos[0].advancement)
@@ -531,7 +535,7 @@ class TestShinies(FFResonanceTestBase):
 
     def test_shinies_are_locations(self) -> None:
         names = {loc.name for loc in self.multiworld.get_locations(self.player) if loc.address is not None}
-        self.assertEqual(names, {loc["name"] for loc in CHESTS + SHINIES})
+        self.assertEqual(names, {loc["name"] for loc in BASE + SHINIES})
 
 
 class TestTabletShards(FFResonanceTestBase):
@@ -540,7 +544,7 @@ class TestTabletShards(FFResonanceTestBase):
     def test_shards_are_locations_and_items(self) -> None:
         self.assertEqual(len(TABLET_SHINIES), 99)
         names = {loc.name for loc in self.multiworld.get_locations(self.player) if loc.address is not None}
-        self.assertEqual(names, {loc["name"] for loc in CHESTS + TABLET_SHINIES})
+        self.assertEqual(names, {loc["name"] for loc in BASE + TABLET_SHINIES})
         shards = [i for i in self.multiworld.itempool if i.player == self.player and i.name == "Tablet Shard"]
         self.assertEqual(len(shards), len(TABLET_SHINIES))
 
@@ -572,11 +576,11 @@ class TestCrystals(FFResonanceTestBase):
 
     def test_crystals_are_locations(self) -> None:
         names = {loc.name for loc in self.multiworld.get_locations(self.player) if loc.address is not None}
-        self.assertEqual(names, {loc["name"] for loc in CHESTS + CRYSTALS})
+        self.assertEqual(names, {loc["name"] for loc in BASE + CRYSTALS})
 
     def test_there_is_an_item_for_each(self) -> None:
         pool = [item for item in self.multiworld.itempool if item.player == self.player]
-        self.assertEqual(len(pool), len(CHESTS) + len(CRYSTALS))
+        self.assertEqual(len(pool), len(BASE) + len(CRYSTALS))
 
     def test_a_sanctum_is_on_the_continent_of_its_door(self) -> None:
         # Round 63: the Warrior of Light's and Cloud's doors are on Lanzelt, Terra's on Kolobos
@@ -595,7 +599,7 @@ class TestBosses(FFResonanceTestBase):
 
     def test_bosses_are_locations(self) -> None:
         names = {loc.name for loc in self.multiworld.get_locations(self.player) if loc.address is not None}
-        self.assertEqual(names, {loc["name"] for loc in CHESTS + BOSSES + FRAGMENTS})
+        self.assertEqual(names, {loc["name"] for loc in BASE + BOSSES + FRAGMENTS})
 
     def test_every_boss_holds_a_shuffled_item_and_gives_a_fragment(self) -> None:
         """Round 97 (the user): story bosses, cave masters and optional bosses alike."""
@@ -606,7 +610,7 @@ class TestBosses(FFResonanceTestBase):
             self.assertEqual((item.name, item.code, item.advancement), (FRAGMENT_NAME, FRAGMENT_ITEM, True), fragment["name"])
         pool = [item.code for item in self.multiworld.itempool if item.player == self.player]
         self.assertNotIn(FRAGMENT_ITEM, pool)
-        self.assertEqual(len(pool), len(CHESTS) + len(BOSSES))
+        self.assertEqual(len(pool), len(BASE) + len(BOSSES))
 
     def test_a_fragment_needs_what_its_boss_needs(self) -> None:
         boss, fragment = self.boss_location(TARTAROSAURUS), self.multiworld.get_location(
@@ -769,6 +773,41 @@ class TestLabKeyCardsNotShuffled(FFResonanceTestBase):
             self.assertEqual(spot.item.name, f"Level {n} Lab Key Card")
 
 
+class TestGifts(FFResonanceTestBase):
+    """Round 97 (the user): the one-time NPC gifts are locations, always on."""
+    options = {"include_radar_treasures": False}
+    LUNAR_SWORD_GIFT = "Grandshelt - Colosseum - Lunar Sword and Brigandine Gift"
+    PHARM_CAT_GIFT = "Pharm - Town of Sian - Mist Turbo Ether Gift 2"
+
+    def test_the_gifts_are_locations(self) -> None:
+        names = {loc.name for loc in self.multiworld.get_locations(self.player) if loc.address is not None}
+        self.assertTrue({g["name"] for g in GIFTS_ON} <= names)
+        self.assertEqual(len(GIFTS), 10)
+        self.assertNotIn("Gronoa - Gaberada, the Undertown - Magi-tenna Gift", names, "the radar's goes with it")
+
+    def test_a_second_item_goes_into_the_pool(self) -> None:
+        pool = [item.name for item in self.multiworld.itempool if item.player == self.player]
+        self.assertIn("Lunar Sword", pool)
+        self.assertIn("Brigandine", pool)
+
+    def test_the_pharm_cat_needs_mysidia(self) -> None:
+        cat = self.multiworld.get_location(self.PHARM_CAT_GIFT, self.player)
+        self.collect_by_name(["Pharm Unlock"])
+        self.assertFalse(cat.can_reach(self.multiworld.state))
+        self.collect_by_name(["Mysidia Unlock"])
+        self.assertTrue(cat.can_reach(self.multiworld.state))
+
+
+class TestGiftsWithRadar(FFResonanceTestBase):
+    options = {"include_radar_treasures": True}
+
+    def test_the_magi_tenna_npc_is_a_location(self) -> None:
+        names = {loc.name for loc in self.multiworld.get_locations(self.player) if loc.address is not None}
+        self.assertIn("Gronoa - Gaberada, the Undertown - Magi-tenna Gift", names)
+        pool = [item.name for item in self.multiworld.itempool if item.player == self.player]
+        self.assertNotIn("Magi-tenna", pool, "the Progressive Radars take the parts' place")
+
+
 class TestPriorityStoryBosses(FFResonanceTestBase):
     options = {"include_bosses": True, "priority_bosses": False, "priority_story_bosses": True}
 
@@ -820,7 +859,7 @@ class TestTabletShardGoal(FFResonanceTestBase):
 
     def test_the_goal_brings_in_the_shards(self) -> None:
         names = {loc.name for loc in self.multiworld.get_locations(self.player) if loc.address is not None}
-        self.assertEqual(names, {loc["name"] for loc in CHESTS + TABLET_SHINIES})
+        self.assertEqual(names, {loc["name"] for loc in BASE + TABLET_SHINIES})
         self.assertEqual(self.world.fill_slot_data()["include_tablet_shards"], 1)
 
     def test_the_palace_makes_every_shard_progression(self) -> None:
@@ -1048,7 +1087,9 @@ class TestData(FFResonanceTestBase):
         self.assertEqual(LOCATION_KEY_TO_ID[f"boss:{MARAUDER}"], 4_000_000_000 + MARAUDER)
         self.assertEqual(LOCATION_KEY_TO_ID[f"fragment:{MARAUDER}"], 7_000_000_000 + MARAUDER)
         self.assertEqual(len(LOCATION_KEY_TO_ID), len(CHESTS) + len(SHINIES) + len(CRYSTALS) + len(TABLET_SHINIES)
-                         + len(BOSSES) + len(FRAGMENTS) + len(RADAR) + len(RADAR_PART_CHESTS) + len(SIDE_QUESTS))
+                         + len(BOSSES) + len(FRAGMENTS) + len(GIFTS) + len(RADAR) + len(RADAR_PART_CHESTS)
+                         + len(SIDE_QUESTS))
+        self.assertEqual(LOCATION_KEY_TO_ID["gift:1400"], 8_000_000_000 + 1400)
         self.assertEqual(LOCATION_KEY_TO_ID["quest:13"], 6_000_000_000 + 13)
 
 
@@ -1057,12 +1098,14 @@ class TestNoProgression(FFResonanceTestBase):
 
     def test_pool_is_the_vanilla_contents_and_the_unlocks(self) -> None:
         pool = [item.code for item in self.multiworld.itempool if item.player == self.player]
-        self.assertEqual(len(pool), len(CHESTS))
+        self.assertEqual(len(pool), len(BASE))
         rest = [ap_id for ap_id in pool if ITEMS[ap_id]["category"] != "continent"]
-        vanilla = [c["vanilla"] for c in CHESTS]
+        for ap_id in GIFT_EXTRAS:
+            rest.remove(ap_id)
+        vanilla = [c["vanilla"] for c in BASE]
         for ap_id in rest:
             vanilla.remove(ap_id)
-        self.assertEqual(len(pool) - len(rest), len(CONTINENT_UNLOCKS) - 1)
+        self.assertEqual(len(pool) - len(rest) - len(GIFT_EXTRAS), len(CONTINENT_UNLOCKS) - 1)
 
 
 class TestNames(FFResonanceTestBase):

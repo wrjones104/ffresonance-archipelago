@@ -1399,3 +1399,19 @@ Send the `[FFRAP]` lines of the log.
 - Quests screen colours are on by default, and quiet in the log: the first line coloured, and any line not coloured. `ffrap_quest colors on` logs every line again.
 - `ffrap_quest instant on` (probe): a hook on the reward line's own `SetText` (a Blueprint function, so the hook runs after the text is written) colours each line as the game writes it.
 
+### Round 96 (mod 0.61.0 build c2d4d794, apworld 0.30.0 build 88874051)
+
+- **Quests screen colours by default:** passed, with one log line.
+- **Instant colouring (`ffrap_quest instant on`):** passed. The hook registered, and each scouted name showed in its colour at once.
+
+**From the user, before the next release:**
+- The Research Center Ruins' key card spots become locations.
+- The NPCs who give one-time rewards (the old man with the Lunar Sword and the Brigandine) become locations. Always on, no option.
+- Every boss and cave master gives an Archipelago item and a Crystal Fragment, with a pop-up where the fight had none. Options: cave masters priority locations (exists, `priority_bosses`) and story bosses priority locations (new). Decided with the user: all 40 bosses give a fragment; a two-item gift is one location, both items in the pool; the Magi-tenna's NPC is a location; story bosses priority off by default.
+
+**Round 97 build (mod 0.61.0 build 26e942ac, apworld 0.30.0 build 5daa523d):**
+- **Bosses:** all 40 hold a shuffled item, story bosses included, and each gives a Crystal Fragment on a location of its own (`fragment:<group>`, AP id 7,000,000,000 + group), sent with the fight's check. `final_boss_fragments` goes up to 40 (default 14). Finish rows with no reward get the stand-in Potion, so every win shows a pop-up: the six Nameless Ruins rows, Liquid Thunder's, the two barrier fights', Intangir's, Rogue Magitek Weapon's and the Antlion's; the story bosses' shared row (`Gim_EV_Majipot_Delete_02`, also the game's Majipot row) only on their maps. New option `priority_story_bosses` (off); `priority_bosses` reads "Priority Cave Masters".
+- **Lab key cards:** shinies 3220:32, 33 and 37 are locations ("Gronoa - Research Center Ruins - Level N Lab Key Card Shiny"). Each card is in the pool once; the level 2 spot needs the level 1 card, the level 3 spot both; without key item shuffle each spot keeps its card. The mod blanks them.
+- **NPC gifts:** 10 one-time gifts (flags 1400 to 1413, `data/game/gifts.tsv`) are locations (`gift:<flag>`, AP id 8,000,000,000 + flag). Each row gives the stand-in; the check is the gift's flag, set before the pop-up shows, so the pop-up is written as for a cave master. A second item goes into the pool in place of a filler. The Pharm cat's gift needs Mysidia (its cat first). The Magi-tenna's NPC is a location with the radar treasures, like the radar part chests.
+- Quests screen colours are instant by default (`ffrap_quest instant off`).
+

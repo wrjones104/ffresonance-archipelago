@@ -106,6 +106,9 @@ function G.PartyIds() return {1001} end
 function G.Toast() return false end
 G.POPUP_COLORS = { on = false }
 G.QUEST_COLORS = { on = false }
+G.GIFTS = { { key = "gift:1400", flag = 1400, row = "FEV_Town_01Gra_05_981_01" },
+            { key = "gift:1405", flag = 1405, row = "FEV_Town_08Gro_01_1540_01", radar = true } }
+function G.GiftsPatch(radar) G.giftPatches = (G.giftPatches or 0) + 1; G.giftRadar = radar; return 9 end
 function G.QuestColorHook() if G.QUEST_COLORS.hooked then return nil end G.QUEST_COLORS.hooked = true return "registered" end
 function G.QuestRewardColors(spans, say)
   G.questSpans = spans
@@ -2322,8 +2325,9 @@ print("menu rows: ok")
 # Round 59: with the seed's cfg, the boss win rows are patched once per save, a boss reports by its
 # win flag, a Crystal Fragment is applied as nothing, and the tower counts fragments
 MARAUDER, LIQUID_THUNDER = 9079, 9083
-inbox("seed\tS59:0:1\ncfg\topenworld\t1\ncfg\tbosses\t1\ncfg\tfinalboss\t6\t6\t12\t12\t1\t2\n"
-      "item\t0\ttoken\t0\t1\tCrystal Fragment (1/2)\n" + b64_scout(f"boss:{MARAUDER}", "Hookshot", "Alice", 1, 0), "w")
+inbox("seed\tS59:0:1\ncfg\topenworld\t1\ncfg\tbosses\t1\ncfg\tgifts\t1\ncfg\tfinalboss\t6\t6\t12\t12\t1\t2\n"
+      "item\t0\ttoken\t0\t1\tCrystal Fragment (1/2)\n" + b64_scout(f"boss:{MARAUDER}", "Hookshot", "Alice", 1, 0)
+      + b64_scout("gift:1400", "Bow", "Bob", 0, 0), "w")
 L, G = boot5("SD_BOSS", "0", {})
 L.globals().G = G
 L.execute(SCALE_STUB)
@@ -2341,14 +2345,21 @@ assert "check\tboss:" not in read("ap_out.txt"), "no win yet"
 assert "applied\t0" in read("ap_out.txt"), "a fragment is applied, though it is nothing in the game"
 L.execute("G.wonFlags[146] = true")
 tick(4)
+# Round 97 (the user): with the gifts' cfg line, the gift rows are patched once per save, a gift
+# reports by its flag, and its pop-up waits for the gift's; the Magi-tenna's only with the radar
+assert G.giftPatches == 1 and not G.giftRadar, (G.giftPatches, G.giftRadar)
+assert any("gifts: 9 NPC gift rows give the stand-in" in x for x in logs()), logs()
+L.execute("G.wonFlags[1400] = true; G.wonFlags[1405] = true")
+tick(4)
+assert "check\tgift:1400\n" in read("ap_out.txt") and "gift:1405" not in read("ap_out.txt"), read("ap_out.txt")[-300:]
 assert read("ap_out.txt").count(f"check\tboss:{MARAUDER}\n") == 1, read("ap_out.txt")
 assert read("ap_out.txt").count(f"check\tfragment:{MARAUDER}\n") == 1, "round 97: the boss's fragment with it"
 assert f"check\tboss:{LIQUID_THUNDER}" not in read("ap_out.txt")
-# Round 60: the win's pop-up says what the boss held; a boss with no scout asks for none
-assert list(G.popups.values()) == ["You found Alice's:\nHookshot"], list(G.popups.values())
+# Round 60: the win's pop-up says what the boss held; a boss with no scout asks for none (then the gift's)
+assert list(G.popups.values()) == ["You found Alice's:\nHookshot", "You found Bob's:\nBow"], list(G.popups.values())
 L.execute("G.wonFlags[215] = true; G.popupOpen = true; fastFn()")
 assert f"check\tboss:{LIQUID_THUNDER}\n" in read("ap_out.txt"), "the fast check reports a boss as its pop-up comes up"
-assert len(list(G.popups.values())) == 1
+assert len(list(G.popups.values())) == 2, "no more: Liquid Thunder has no scout"
 tick(4)
 assert read("ap_out.txt").count(f"check\tboss:{MARAUDER}\n") == 1, "reported once"
 assert read("ap_out.txt").count(f"check\tfragment:{MARAUDER}\n") == 1, "its fragment once too"
@@ -2616,7 +2627,7 @@ build = mod_build(Path(WORK))
 assert any(f"version {VERSION} (build {build})" in x for x in list(L.eval("logged").values())), "logged on load"
 crlf = tempfile.mkdtemp(prefix="ffrap_crlf_")
 os.makedirs(os.path.join(crlf, "Scripts"))
-for name in ("main.lua", "game.lua", "bridge.lua", "field_items.lua", "quests.lua"):
+for name in ("main.lua", "game.lua", "bridge.lua", "field_items.lua", "quests.lua", "gifts.lua"):
     text = open(os.path.join(WORK, "Scripts", name), "rb").read().replace(b"\r\n", b"\n")
     open(os.path.join(crlf, "Scripts", name), "wb").write(text.replace(b"\n", b"\r\n"))
 B = runtime()

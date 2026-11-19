@@ -75,6 +75,7 @@ class FFResonanceWorld(World):
     def __init__(self, multiworld, player):
         super().__init__(multiworld, player)
         self.vanilla_items: list[int] = []
+        self.extra_items: list[int] = []      # items a location adds to the pool beyond its own
         self.starting_party: list[int] = []
         self.starting_continent = ""
         self.final_boss_characters = 0
@@ -148,6 +149,7 @@ class FFResonanceWorld(World):
             "mod_protocol": MOD_PROTOCOL,
             "world_build": world_build(),
             "open_world": True,
+            "npc_gifts": True,       # round 97: the NPC gifts are locations, always
             "starting_party": self.starting_party,
             "final_boss_characters": self.final_boss_characters,
             "final_boss_visions": self.final_boss_visions,

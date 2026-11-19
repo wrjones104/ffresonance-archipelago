@@ -43,7 +43,7 @@ local B = {}
 -- Round 74: the mod's version changes once per release, so its build (an FNV-1a hash of its
 -- scripts) tells test installs apart. Carriage returns are skipped: a CRLF and an LF copy match.
 -- tests/mod/test_main.py checks it against a Python copy of the same hash.
-B.SCRIPTS = { "main.lua", "game.lua", "bridge.lua", "field_items.lua", "quests.lua" }
+B.SCRIPTS = { "main.lua", "game.lua", "bridge.lua", "field_items.lua", "quests.lua", "gifts.lua" }
 
 function B.build(dir)
     if B.buildId then return B.buildId end

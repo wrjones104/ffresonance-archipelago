@@ -551,3 +551,17 @@ Until then the Options rows stay, and on a save not linked to the seed they chan
 
 **Round 95 result:** the Quests screen works. The user: the colour comes a second late. Since round 96 the screen's colours are on by default; `ffrap_quest instant on` (a probe) hooks the reward line's `SetText` to colour each line as it is written.
 
+## 43. NPC gifts as locations
+
+**From the user, 2026-11-19 (round 96).** The NPCs who give one-time rewards (the old man with the Lunar Sword and the Brigandine) are locations, always on.
+
+**Found off-line:** each one-time gift row sets its own flag in 1400 to 1413 and gives items; `tools/gen_from_dump.py` writes them to `data/game/gifts.tsv` with the map actor leading to each. There are 10, all reachable on the open start; the Pharm cat's (1413) needs flag 1412, from the Mysidia cat. The Cabin Key's row sets no flag and is left out.
+
+**Built (round 97, build 26e942ac):** each gift is a location, `gift:<flag>`, checked by its flag. The row gives the stand-in Potion; like a cave master's win row, it sets its flag before the pop-up, so the check writes the pop-up. One location per NPC: the first item is the location's, a second goes into the pool in place of a filler. The Magi-tenna's NPC goes with the radar treasures.
+
+## 44. The Research Center Ruins' key card spots
+
+**From the user, 2026-11-19 (round 96).** The three lab key card spots are locations.
+
+**Built (round 97, build 26e942ac):** shinies 3220:32, 33 and 37 are locations (`SHUFFLED_KEY_ITEMS` in the generator). Each card is in the pool once (a progression item a chosen location holds is not added again); the level 2 spot is behind the level 1 door, the level 3 spot behind the level 2 door (`data/gates.tsv`); without key item shuffle each spot keeps its card.
+

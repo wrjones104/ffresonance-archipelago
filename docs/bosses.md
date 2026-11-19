@@ -159,6 +159,8 @@ A third way is fragments shuffled into the whole pool, with bosses as plain chec
 
 Boss MRP is `ap` in the battle group, which the mod already scales. A large boss MRP makes bosses pay for growth (idea 25).
 
+**Round 97 (the user):** every boss, story, cave master or optional, holds a shuffled item and gives a Crystal Fragment on a location of its own (`fragment:<group>`), checked by the same win. The finish rows that gave nothing get the stand-in Potion, so each win shows its pop-up: the shared story row only on the story boss maps, as it is the game's Majipot row too. Options: `priority_bosses` (cave masters and optional bosses, Sephiroth left out) and `priority_story_bosses`.
+
 ## 4a. The story boss survey (round 71, off-line)
 
 Every battle group with a Boss-category unit (155), walked back from its fight row to the map actor that starts it: through talk rows, transition event lists, and earlier fights' win rows. For the story fights (groups 9000 to 9099) not yet in the mod:

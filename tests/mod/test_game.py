@@ -851,7 +851,8 @@ assert list(L.eval("G.QuestRewardColors(questSpans)").values()) == ["seen: 1 rew
 # Round 96: on by default; `instant` hooks the line's own SetText (a Blueprint function, so the
 # hook runs after the text is written) and colours that line at once, and puts back a row the
 # line showed for another reward
-assert L.eval("G.QUEST_COLORS.on") is True and L.eval("G.QUEST_COLORS.instant") is False
+assert L.eval("G.QUEST_COLORS.on") is True and L.eval("G.QUEST_COLORS.instant") is True, "round 97: both on"
+L.execute("G.QUEST_COLORS.instant = false")
 L.execute(r"""
 rewardLine.CommonTextBlock_194 = rewardBlock
 rewardBlock.parentWidget, rewardSlot.content, rewardBlock.text = rewardSlot, rewardBlock, "Alice's Hookshot"
@@ -2023,6 +2024,8 @@ questRows = {
   ChrEv_0420_005_01 = { ObtainItemList = itemList({ { 13051, 1 }, { 25002, 1 } }) },
   SubEv_C01_Chloe_04 = { ObtainItemList = itemList({ { 12032, 1 }, { 25000, 1 } }) },
   SubEv_C05_MogChase_06_NPC01_01 = { ObtainItemList = itemList({ { 33, 1 } }) },
+  FEV_Town_01Gra_05_981_01 = { ObtainItemList = itemList({ { 10113, 1 }, { 11014, 1 } }) },
+  FEV_Town_08Gro_01_1540_01 = { ObtainItemList = itemList({ { 27006, 1 } }) },
 }
 questTable = { rows = questRows, ParentTables = {} }
 function questTable:IsValid() return true end
@@ -2051,6 +2054,15 @@ assert L.eval("rewards('SubEv_C01_Chloe_04')") == "25000x1", "the Prayer Beads a
 assert L.eval("rewards('SubEv_C05_MogChase_06_NPC01_01')") == STAND_IN_POTION, \
     "round 84: Mog Tag's row left empty showed a vision pop-up; it keeps the stand-in"
 assert L.eval("G.QuestsPatch()") == 0, "nothing to write the second time: the Shard is not the location's"
+# Round 97 (the user): an NPC gift's row gives the stand-in in place of both its items; the
+# Magi-tenna's only with the radar treasures
+GIFT_ROWS = 10
+assert L.eval("#G.GIFTS") == GIFT_ROWS and L.eval("G.GIFTS[1].key") == "gift:1400" and L.eval("G.GIFTS[1].flag") == 1400
+assert L.eval("G.GiftsPatch(false)") == 1
+assert L.eval("rewards('FEV_Town_01Gra_05_981_01')") == STAND_IN_POTION, "the Lunar Sword and the Brigandine go"
+assert L.eval("rewards('FEV_Town_08Gro_01_1540_01')") == "27006x1", "no radar treasures: the Magi-tenna stays"
+assert L.eval("G.GiftsPatch(true)") == 1 and L.eval("rewards('FEV_Town_08Gro_01_1540_01')") == STAND_IN_POTION
+assert L.eval("G.GiftsPatch(true)") == 0, "once"
 # quests.lua, generated from data/quests.tsv: 28 quests, each with a counter, a value and rows
 assert L.eval("#G.QUESTS") == 28
 assert L.eval("G.QUESTS[1].key") == "quest:0" and L.eval("G.QUESTS[1].counter") == 1 and L.eval("G.QUESTS[1].value") == 50

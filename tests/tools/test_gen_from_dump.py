@@ -149,10 +149,14 @@ def make_dump(root):
         "Zairu_04_Go": {"TransitionLocation": {"mapId": 2012}, "ContinuousEventList": [{"EventId": "Zairu_04"}]},
         "Zairu_04": {"ProgressList": progress(40), "ObtainItemList": [{"ID": 25000, "Num": 1}, {"ID": -1, "Num": 500}]},
         "Story": {"ProgressList": [{"Condition": "", "ID": 0, "Value": 1110}]},
+        # Round 97: a one-time NPC gift sets a flag of 1400 to 1413; a talk with no item is no gift
+        "Zairu_Gift": {"OnFlagList": [1400], "ObtainItemList": [{"ID": 10113, "Num": 1}, {"ID": 11014, "Num": 1}]},
+        "Zairu_Hello": {"OnFlagList": [1402]},
     }})
     write(root, f"{T}/Event/TalkEvent/CDT_TalkEventData_Prod.json", {"Rows": {"Zairu_03": {"ProgressList": progress(99)}}})
     write(root, f"{T}/Encount/DT_BattleGroup.json", {"Rows": {"zile": {"ID": QUEST_FIGHT, "battleFinishEventId": "Zairu_02_Win"}}})
-    npc_steps = [("{progress:28}==0", "Zairu_01"), ("{progress:28}==10", "Zairu_02"), ("{progress:28}==30", "Zairu_04_Go")]
+    npc_steps = [("{progress:28}==0", "Zairu_01"), ("{progress:28}==10", "Zairu_02"), ("{progress:28}==30", "Zairu_04_Go"),
+                 ("!{flag:1400}", "Zairu_Gift"), ("", "Zairu_Hello")]
     zile = {"Type": "BP_MapUnit_NPC_C", "Properties": {
         "m_UniqueId": 13, "m_VisiblFlagCondition": "{progress:28}<=30",
         "m_EventSettings": {"EventList": [{"Condition": c, "EventList": [{"EventId": e, "Weight": 1}]} for c, e in npc_steps]}}}
@@ -278,6 +282,8 @@ def main():
             ("28", "30", "Zairu_03", "", "", "", "", "", ""),       # no actor leads to it; not the CDT copy's 99
             ("28", "40", "Zairu_04", "2011", "Zairu_04_Go", "{progress:28}==30", "", "25000:1 -1:500", "2012"),
         ], steps                                               # the story counter's rows are left out
+        gifts = [(g["flag"], g["row"], g["map"], g["condition"], g["gifts"]) for g in tsv(game / "gifts.tsv")]
+        assert gifts == [("1400", "Zairu_Gift", "2011", "!{flag:1400}", "10113:1 11014:1")], gifts
 
         # The comparison with data/*.tsv.
         assert "missing from item_names.tsv" not in log, log
