@@ -52,6 +52,8 @@ An Archipelago implementation for Final Fantasy Resonance (UE 5.6, game module `
   - `ETextJustify`: Left 0, Center 1, Right 2.
   - `ESlateVisibility`: Visible 0, Collapsed 1, Hidden 2, HitTestInvisible 3, SelfHitTestInvisible 4.
 - **Text with icons is a `RichTextBlock`**, which is not a `TextBlock`. Search both.
+- **To colour part of a text, make our own TextBlocks.** The chest pop-up's CommonRichTextBlock has no decorators, and markup such as `<text color=...>` drew the name black (no style row). Write the colour into a new TextBlock's `ColorAndOpacity.SpecifiedColor` before it is on screen, and put it in a HorizontalBox (round 90).
+- **`DataTable:AddRow(name, luaTable)` added no rows** (round 90). `AddRow(name, existingRow)`, copying a row of the same struct, works.
 - **`GetWidgetFromName` found nothing on the Tutorial screen** (round 83). Find a screen's parts by walking it: `GetChildAt` and each user widget's `WidgetTree.RootWidget` (`walkScreen` in `game.lua`).
 - **Rows added to a game data table do not stay.** The game can load the table again, and the title screen has its own copy. Check for them every tick and add them again (the Options rows, round 57). Changes to its rows are lost the same way: the Archipelago page checks the tables each tick while it is open (round 88).
 - **Never save a label read back as text before its string table has loaded.** It reads `<MISSING STRING TABLE ENTRY>`, and writing that back makes it the label (round 37).

@@ -676,7 +676,8 @@ L.execute('function hud:IsVisible() return true end')
 assert L.execute('return G.FeedLine("after the map change", 10)') is True
 assert L.eval("#hud.kids") == 1 and L.eval("hud.kids[1].kids[1].text") == "after the map change"
 # Round 89 (the user): the item's name in its Archipelago colour, by its flags (1 progression,
-# 2 useful, 4 trap, else filler). Off until ffrap_feed colors on: one TextBlock as before.
+# 2 useful, 4 trap, else filler), and in bold (round 90). On by default since round 91; off, one
+# TextBlock as before.
 assert [L.eval(f"G.ItemClass({f})") for f in (0, 1, 2, 3, 4, 6)] == \
     ["filler", "progression", "useful", "progression", "trap", "useful"]
 L.execute(r"""
@@ -705,6 +706,8 @@ function StaticConstructObject(cls, outer, name)
 end
 """)
 HOOKSHOT_SPAN = '{ span = { text = "Hookshot", flags = 1 } }'
+assert L.eval("G.feedColors") is True
+L.execute("G.feedColors = false")
 L.execute(f'G.FeedLine("Received Hookshot from Alice", 11, {HOOKSHOT_SPAN})')
 last = "hud.kids[1].kids[#hud.kids[1].kids]"
 assert L.eval(f"{last}.text") == "Received Hookshot from Alice", "colours off: one TextBlock"
@@ -716,17 +719,97 @@ PLUM_R, CYAN_R = 0.429, 0.0
 assert L.eval(f"{last}.kids[2].ColorAndOpacity.SpecifiedColor.R") == PLUM_R, "progression: plum"
 assert L.eval(f"{last}.kids[1].ColorAndOpacity.SpecifiedColor.R") == 1, "the rest stays white"
 assert L.eval(f"{last}.kids[2].Font.Size") == 20, "each piece styled as a line is"
+assert L.eval(f"{last}.kids[2].Font.TypefaceFontName:ToString()") == "Bold", "the name in bold (round 90)"
+assert L.eval(f"{last}.kids[1].Font.TypefaceFontName") == "Regular", "the rest keeps the key guide's typeface"
 L.execute('G.FeedLine("Received Potion", 13, { span = { text = "Potion", flags = 0 } })')
 assert L.eval(f"#{last}.kids") == 2 and L.eval(f"{last}.kids[2].ColorAndOpacity.SpecifiedColor.R") == CYAN_R, \
     "nothing after the name: two pieces; filler: cyan"
 L.execute('G.FeedLine("Received 3 items", 14, { span = { text = "Potion", flags = 0 } })')
 assert L.eval(f"{last}.text") == "Received 3 items", "a span not in the text: one TextBlock"
-L.execute("G.FeedTick(30.0); G.feedColors = false")
-# Round 89 probe: the pop-up's item name in markup for the decorator, with the probe on
-assert L.eval('G.ColorMarkup("Hookshot", 1)') == "Hookshot"
+L.execute("G.FeedTick(30.0)")
+# Round 91 probe: the pop-up's message keeps the lines without the name; the name's line goes into
+# our own coloured row
+SPLIT = 'G.PopupSplit("You found Alice\'s:\\nHookshot", { text = "Hookshot", flags = 1 })'
+assert L.eval(SPLIT) is None, "off: the message stays as it is"
 L.execute("G.POPUP_COLORS.on = true")
-assert L.eval('G.ColorMarkup("Hookshot", 1)') == '<text color="progression">Hookshot</>'
+assert list(L.eval(f"table.pack({SPLIT})").values())[:2] == ["You found Alice's:", "Hookshot"]
+assert L.eval('G.PopupSplit("You found:\\nPotion", { text = "Ether", flags = 0 })') is None, "a span not in the text"
 L.execute("G.POPUP_COLORS.on = false")
+# Round 91 probe: with colours on, the pop-up's name line becomes our own row under the message,
+# centred and styled as the message's text; it goes when the pop-up closes
+L.execute(r"""
+local box = rich:GetParent()
+box.kids = { rich, popupLine }
+function box:AddChildToVerticalBox(w)
+  self.kids[#self.kids + 1] = w; w.parent = self
+  local slot = {}
+  function slot:SetHorizontalAlignment(a) self.h = a end
+  w.slot = slot
+  return slot
+end
+rich.GetOuter = function() return hudTree end
+rich.text, rich.shown, popupLine.vis = "You obtained the following:", true, 0
+G.POPUP_COLORS.on = true
+""")
+ok, detail = L.execute('return G.ChestPopup("You found Alice\'s:\\nHookshot", { text = "Hookshot", flags = 1 })')
+assert ok is True and detail == "text set, item line hidden, the name in its colour", detail
+assert L.eval("rich.text") == "You found Alice's:"
+popupRow = "rich:GetParent().kids[3]"
+assert L.eval(f"{popupRow}.cls") == "HorizontalBox" and L.eval(f"{popupRow}.slot.h") == 2, "centred under the message"
+assert L.eval(f"{popupRow}.kids[1].text") == "Hookshot" and L.eval(f"{popupRow}.kids[1].ColorAndOpacity.SpecifiedColor.R") == PLUM_R
+MESSAGE_SIZE, MESSAGE_SPACING = 18, 4
+assert L.eval(f"{popupRow}.kids[1].Font.Size") == MESSAGE_SIZE and L.eval(f"{popupRow}.kids[1].Font.LetterSpacing") == MESSAGE_SPACING
+L.execute("G.ChestPopupRestore()")
+assert L.eval("#rich:GetParent().kids") == 3, "kept while the pop-up is up"
+L.execute("rich.shown = false; G.ChestPopupRestore()")
+assert L.eval("#rich:GetParent().kids") == 2 and L.eval("popupLine.vis") == 0, "gone with the pop-up; the item line back"
+L.execute("G.POPUP_COLORS.on = false")
+# Round 91 probe: a Quests screen Rewards line showing a scouted item gets our row beside its text
+# block, which is hidden; a line the list reuses for another reward gets its own text back
+L.execute(r"""
+local function panelOf(name)
+  local p = { cls = "NamedSlot", name = name, kids = {} }
+  function p:GetFName() local me = self return { ToString = function() return me.name end } end
+  function p:GetClass() local me = self return { GetFName = function() return { ToString = function() return me.cls end } end } end
+  function p:IsValid() return true end
+  function p:HasAnyInternalFlags() return false end
+  function p:HasAnyFlags() return false end
+  function p:GetChildrenCount() return #self.kids end
+  function p:GetChildAt(i) return self.kids[i + 1] end
+  function p:AddChild(w) self.kids[#self.kids + 1] = w; w.parent = self; return {} end
+  function p:GetFullName() return self.cls .. " " .. self.name end
+  return p
+end
+rewardPanel = panelOf("WBP_IconEntryLayoutPanel_76")
+rewardBlock = panelOf("CommonTextBlock_194")
+rewardBlock.cls, rewardBlock.text, rewardBlock.vis = "CommonTextBlock", "Alice's Hookshot", 0
+function rewardBlock:GetText() local me = self return { ToString = function() return me.text end } end
+function rewardBlock:GetParent() return rewardPanel end
+function rewardBlock:GetOuter() return hudTree end
+function rewardBlock:GetVisibility() return self.vis end
+function rewardBlock:SetVisibility(v) self.vis = v end
+rewardPanel.kids = { rewardBlock }
+rewardLine = panelOf("WBP_Quest_Reward_Text_C_3")
+rewardLine.WidgetTree = { RootWidget = rewardPanel }
+function rewardLine:IsVisible() return true end
+local oldFAO9 = FindAllOf
+function FindAllOf(c) if c == "WBP_Quest_Reward_Text_C" then return { rewardLine } end return oldFAO9(c) end
+questSpans = { ["Alice's Hookshot"] = { text = "Hookshot", flags = 2 } }
+""")
+lines = list(L.eval("G.QuestRewardColors(questSpans)").values())
+assert lines == ["coloured: Alice's Hookshot (in a NamedSlot)"], lines
+assert L.eval("rewardBlock.vis") == 1, "the game's line is hidden"
+assert [L.eval(f"rewardPanel.kids[2].kids[{i}].text") for i in (1, 2)] == ["Alice's ", "Hookshot"]
+SLATEBLUE_R = 0.153
+assert L.eval("rewardPanel.kids[2].kids[2].ColorAndOpacity.SpecifiedColor.R") == SLATEBLUE_R
+assert L.eval("rewardPanel.kids[2].kids[2].Font.Justification") is None and L.eval("rewardPanel.kids[2].kids[1].Justification") == 0, "left"
+assert list(L.eval("G.QuestRewardColors(questSpans)").values()) == [], "once"
+L.execute('rewardBlock.text = "Phoenix Down"')
+lines = list(L.eval("G.QuestRewardColors(questSpans)").values())
+assert lines == ["taken out: Alice's Hookshot"] and L.eval("rewardBlock.vis") == 0 and L.eval("#rewardPanel.kids") == 1, lines
+L.execute('rewardBlock.text = "Alice\'s Hookshot"')
+L.eval("G.QuestRewardColors(questSpans)")
+assert list(L.eval("G.QuestRewardColors({})").values()) == ["taken out: Alice's Hookshot"], "off: all taken out"
 
 # the quest-notice banner try
 L.execute(r"""

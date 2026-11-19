@@ -688,9 +688,8 @@ local POPUP_TRIES = 8
 local popup = nil   -- { text, key, tries }
 
 local function popupText(s)
-    local item = game.ColorMarkup(s.item, s.flags)
-    if s.own then return "You found:\n" .. item end
-    return "You found " .. s.player .. "'s:\n" .. item
+    if s.own then return "You found:\n" .. s.item end
+    return "You found " .. s.player .. "'s:\n" .. s.item
 end
 
 -- Round 79: Token Legacy's reward row sets its counter only after its item pop-up and the stat
@@ -712,11 +711,13 @@ end
 state.PRIZE_EVERY = 60
 function state.prizeTick()
     local labels, parts = {}, {}
+    state.prizeSpans = {}
     if sessionSave() then
         for _, q in ipairs(game.QUESTS) do
             local s = state.scouts[q.key]
             if s then
                 labels[q.key] = s.own and s.item or (s.player .. "'s " .. s.item)
+                state.prizeSpans[labels[q.key]] = { text = s.item, flags = s.flags }
                 parts[#parts + 1] = q.key .. "=" .. labels[q.key]
             end
         end
@@ -729,6 +730,14 @@ function state.prizeTick()
     end
     state.prizeSig = sig
 end
+-- Round 91 probe: the Quests screen's Rewards with the item's name in its colour (ffrap_quest).
+function state.questColorsTick()
+    local lines = game.QuestRewardColors(state.prizeSpans or {}, state.questTrace)
+    for _, line in ipairs(lines) do
+        log("quest colours: " .. line)
+        if line:find("^coloured") then state.questTrace = nil end
+    end
+end
 function state.earlyQuestPopup()
     if not (seedCfg.quests and sessionSave()) or game.OnField() then return end
     local mapId = game.CurrentMap()
@@ -738,7 +747,7 @@ function state.earlyQuestPopup()
         if q.map == mapId and state.questPopups[q.key] ~= save.obj and state.questRewardDue(q) then
             local s = state.scouts[q.key]
             if not s then return end
-            local ok, detail = game.ChestPopup(popupText(s))
+            local ok, detail = game.ChestPopup(popupText(s), { text = s.item, flags = s.flags })
             if ok then
                 state.questPopups[q.key] = save.obj
                 log("chest pop-up for " .. q.key .. " before its check: " .. detail)
@@ -754,7 +763,7 @@ local function popupTick()
         state.earlyQuestPopup()
         return
     end
-    local ok, detail = game.ChestPopup(popup.text)
+    local ok, detail = game.ChestPopup(popup.text, popup.span)
     if ok then
         log("chest pop-up for " .. popup.key .. ": " .. detail)
         popup = nil
@@ -838,7 +847,7 @@ local function opened(key, fresh, spot)
     if new or fresh then
         local s = state.scouts[key]
         -- Shinies use the same dialog widget to show their scouted reward.
-        if s and (key:find("^chest:") or key:find("^shiny:")) then popup = { text = popupText(s), key = key, tries = POPUP_TRIES } end
+        if s and (key:find("^chest:") or key:find("^shiny:")) then popup = { text = popupText(s), span = { text = s.item, flags = s.flags }, key = key, tries = POPUP_TRIES } end
     end
     return true
 end
@@ -854,7 +863,7 @@ local function scanBosses()
             if game.GetFlag(t.flag) == true and report("check", key) then
                 log("check " .. key)
                 local s = state.scouts[key]
-                if s then popup = { text = popupText(s), key = key, tries = BOSS_POPUP_TRIES } end
+                if s then popup = { text = popupText(s), span = { text = s.item, flags = s.flags }, key = key, tries = BOSS_POPUP_TRIES } end
             end
         end
     end
@@ -866,7 +875,7 @@ local function scanBosses()
                 log("check " .. q.key)
                 local s = state.scouts[q.key]
                 if s and state.questPopups[q.key] ~= save.obj then
-                    popup = { text = popupText(s), key = q.key, tries = BOSS_POPUP_TRIES, scene = true }
+                    popup = { text = popupText(s), span = { text = s.item, flags = s.flags }, key = q.key, tries = BOSS_POPUP_TRIES, scene = true }
                 end
             end
         end
@@ -877,7 +886,7 @@ local function scanBosses()
         if game.GetFlag(b.flag) == true and report("check", key) then
             log("check " .. key)
             local s = state.scouts[key]
-            if s then popup = { text = popupText(s), key = key, tries = BOSS_POPUP_TRIES } end
+            if s then popup = { text = popupText(s), span = { text = s.item, flags = s.flags }, key = key, tries = BOSS_POPUP_TRIES } end
         end
     end
 end
@@ -1643,6 +1652,7 @@ local function tick()
                     log("quests: " .. tostring(written) .. " reward rows without the location's item" .. (okQuests and "" or " (failed: " .. tostring(written) .. ")"))
                 end
                 if seedCfg.quests then pcall(state.prizeTick) end
+                if seedCfg.quests and game.QUEST_COLORS.on then pcall(state.questColorsTick) end
                 if newSave then
                     local okMechabo, written = pcall(game.MechaboPatch)
                     log("mechabo: " .. tostring(written) .. " rows of Verun's first step accept its quest" .. (okMechabo and "" or " (failed)"))
@@ -1824,7 +1834,7 @@ command("ffrap_feed", function(p)
         for _, line in ipairs(game.FeedReport()) do log("feed check: " .. line) end
         game.Toast("Feed check written to the log")
     elseif what == "colors" then
-        -- Round 89 probe: the item's name in its Archipelago colour. Not saved: off at each start.
+        -- The item's name in its Archipelago colour, on by default since round 91; `on` shows test lines.
         if p[2] == "on" or p[2] == "off" then game.feedColors = p[2] == "on" end
         log("feed: colours " .. (game.feedColors and "on" or "off"))
         if game.feedColors then
@@ -1843,27 +1853,31 @@ command("ffrap_feed", function(p)
     end
 end)
 
--- Round 89 probe (the user: item names in their colour in the chest pop-up). ffrap_popup:
---   probe              the pop-up message's decorators and their colour tables, to the log
---   colors on [attr]   makes the colour table, and the next pop-ups wrap the item's name in
---                      <text attr="class">; attr is "color" unless given
---   colors off         plain names again
+-- Round 91 probes (the user: item names in their colour in the chest pop-up and the Quests
+-- screen). Off at each start. `on` also logs each step of the next coloured line.
+--   ffrap_popup colors on|off   the pop-up's name line as our own coloured row
+--   ffrap_quest colors on|off   the Quests screen's Rewards, the same way
 command("ffrap_popup", function(p)
-    local what, P = p and p[1], game.POPUP_COLORS
-    if what == "probe" then
-        local lines = game.PopupProbe()
-        for _, line in ipairs(lines) do log("popup probe: " .. line) end
-        notify("Pop-up probe: " .. #lines .. " lines in the log")
-    elseif what == "colors" and p[2] == "on" then
-        P.attr = p[3] or "color"
-        local done, why = game.PopupColorTable(log)
-        P.on = done ~= nil
-        notify("Pop-up colours: " .. (done and (done .. ", markup <text " .. P.attr .. "=...>") or ("not on: " .. tostring(why))))
-    elseif what == "colors" and p[2] == "off" then
-        P.on = false
-        notify("Pop-up colours: off")
+    local P = game.POPUP_COLORS
+    if p and p[1] == "colors" and (p[2] == "on" or p[2] == "off") then
+        P.on = p[2] == "on"
+        P.trace = P.on and function(step) log("popup step: " .. step) end or nil
+        notify("Pop-up colours: " .. p[2])
     else
-        notify("Usage: ffrap_popup probe | colors on [attr] | colors off")
+        notify("Usage: ffrap_popup colors on | off")
+    end
+end)
+command("ffrap_quest", function(p)
+    local Q = game.QUEST_COLORS
+    if p and p[1] == "colors" and (p[2] == "on" or p[2] == "off") then
+        Q.on = p[2] == "on"
+        state.questTrace = Q.on and function(step) log("quest step: " .. step) end or nil
+        if not Q.on then
+            for _, line in ipairs(game.QuestRewardColors({})) do log("quest colours: " .. line) end
+        end
+        notify("Quest reward colours: " .. p[2])
+    else
+        notify("Usage: ffrap_quest colors on | off")
     end
 end)
 

@@ -1335,3 +1335,17 @@ Send the `[FFRAP]` lines of the log.
 - `ffrap_feed colors on` (probe, off at each start): a feed line becomes a row of three TextBlocks, with the item's name in its colour, written into the block's fields before it is on screen.
 - `ffrap_popup probe` and `ffrap_popup colors on [attr]` (probe): the chest pop-up's colours (IDEAS.md idea 42).
 
+### Round 90 (mod 0.61.0 build 87f4d742, apworld 0.30.0 build 88874051)
+
+- **Builds:** passed, both in the client and in the mod's log.
+- **Feed colours:** passed. `ffrap_feed colors on` showed the four test lines with each name in its colour (`feed colours test: ok, ok, ok, ok`), and real received and sent lines coloured only the name. **From the user:** bold the name too; the colours alone can be hard to read at a glance.
+- **Pop-up probe:** the message (`Text_Message`) has no decorators: `DecoratorClasses: 0`, `InstanceDecorators: 0`. `RTBD_TextStyle` is not used there.
+- **Pop-up colours:** the name changed colour, but to black. With no decorator, `<text color="...">` is a run whose style the block has no row for, drawn in a fallback style. The colour table also had no rows: `AddRow` with a Lua table added none (`0 colour rows`).
+- **Quests screen:** no colours, as expected; it was not built.
+- The side quests wait until the colours are done (the user).
+
+**Round 91 build (mod 0.61.0 build ec671324, apworld unchanged, build 88874051):**
+- Feed colours are on by default, and the item's name is bold (the SystemText font's Bold typeface).
+- `ffrap_popup colors on` (probe): the message keeps the lines without the name ("You found Alice's:"), and the name's line goes into a row of our own TextBlocks under it in the dialog's VerticalBox, centred and styled as the message (size 18, letter spacing 4). The row is removed when the pop-up closes. The markup and colour table code is gone.
+- `ffrap_quest colors on` (probe): each Rewards line showing a scouted item gets our row beside its text block (`AddChild` on the block's parent panel), and the block is collapsed. A line the list reuses for another reward gets its own text back.
+

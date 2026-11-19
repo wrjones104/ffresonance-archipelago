@@ -529,3 +529,7 @@ Until then the Options rows stay, and on a save not linked to the seed they chan
 
 **Probes (round 90, build 87f4d742):** `ffrap_feed colors on` (four test lines, then real ones); `ffrap_popup probe` (the message's decorators and their tables); `ffrap_popup colors on [attr]` (the table, then markup in the next pop-ups). All are off at each start.
 
+**Round 90 result:** the feed colours work; the user asked for the name in bold too. The pop-up's message has no decorators, so the markup drew the name black, and `AddRow` with a Lua table made no rows. Markup is out for the pop-up.
+
+**Built (round 91, build ec671324):** feed colours on by default, with the name bold. The pop-up and the Quests screen use the feed's way: a row of our own TextBlocks, styled before it is on screen. The pop-up's row goes under the message, the Rewards line's beside its hidden text block. Both are probes (`ffrap_popup colors on`, `ffrap_quest colors on`).
+

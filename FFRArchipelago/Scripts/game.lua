@@ -1477,8 +1477,9 @@ function G.ItemClass(flags)
     if math.floor(flags / 4) % 2 == 1 then return "trap" end
     return "filler"
 end
--- Round 89 probe: feed lines with the item's name in its colour. Off until `ffrap_feed colors on`.
-G.feedColors = false
+-- Feed lines with the item's name in its colour and in bold. Round 90's probe worked; on since
+-- round 91 (ffrap_feed colors off).
+G.feedColors = true
 
 -- When G.feedTrace is set (via `ffrap_feed test`), risky UMG calls log first so crashes pinpoint the call.
 G.feedTrace = nil
@@ -1568,10 +1569,12 @@ local function FeedBox()
     return box
 end
 
--- Style a feed line like the HUD's key guide (Text_Name) at FEED_FONT_SIZE with a dark shadow.
--- Write primitive fields directly onto the TextBlock's Font and ShadowColorOffset/Color instead
--- of calling SetFont(FSlateFontInfo) or passing FSlateColor structs, which crash UE4SS Lua.
-local function StyleLine(tb)
+-- Style a line of text like the HUD's key guide (Text_Name), with a dark shadow. Write primitive
+-- fields directly onto the TextBlock's Font and ShadowColorOffset/Color instead of calling
+-- SetFont(FSlateFontInfo) or passing FSlateColor structs, which crash UE4SS Lua (round 20).
+-- `look`: size (FEED_FONT_SIZE), justify (right), spacing (letter spacing), shadow (opacity, 0.85),
+-- offset ({ X, Y }, the shadow's), bold (the font's Bold typeface), color ({ R, G, B }).
+local function StyleLine(tb, look)
     -- Key guide uses a CommonTextBlock whose style may supply the font while Font.FontObject is
     -- nil; copying an empty FontObject renders invisible text, so only copy when present.
     local fontObject, typeface
@@ -1591,43 +1594,50 @@ local function StyleLine(tb)
         pcall(function() tb.Font.FontObject = fontObject end)
         pcall(function() tb.Font.TypefaceFontName = typeface end)
     end
+    if look.bold and fontObject then
+        -- Round 90, the user: the colours alone can be hard to read at a glance. SystemText has
+        -- Default, Bold and Italic typefaces.
+        step("style: bold typeface (field write)")
+        pcall(function() tb.Font.TypefaceFontName = FName("Bold") end)
+    end
     step("style: font size (field write)")
-    pcall(function() tb.Font.Size = FEED_FONT_SIZE end)
+    pcall(function() tb.Font.Size = look.size or FEED_FONT_SIZE end)
+    if look.spacing then pcall(function() tb.Font.LetterSpacing = look.spacing end) end
     step("style: shadow colour (field writes)")
     pcall(function()
         local c = tb.ShadowColorAndOpacity
-        c.R, c.G, c.B, c.A = 0, 0, 0, 0.85
+        c.R, c.G, c.B, c.A = 0, 0, 0, look.shadow or 0.85
     end)
+    if look.offset then pcall(function() tb.ShadowOffset.X, tb.ShadowOffset.Y = look.offset.X, look.offset.Y end) end
     step("style: justification (field write)")
-    pcall(function() tb.Justification = JUSTIFY_RIGHT end)
+    pcall(function() tb.Justification = look.justify or JUSTIFY_RIGHT end)
+    if look.color then
+        step("colour (field writes)")
+        pcall(function()
+            local c = tb.ColorAndOpacity.SpecifiedColor
+            c.R, c.G, c.B, c.A = look.color.R, look.color.G, look.color.B, 1
+        end)
+    end
 end
 
--- A styled TextBlock holding `text`, made in the feed's tree; `color` (r, g, b) is written into
--- its fields before it goes on screen (round 20: no colour struct to a setter). Nil and why not.
-function feed.text(text, plain, color)
+-- A TextBlock holding `text`, made in `tree` (a widget tree, so it lives as long as its screen),
+-- styled by `look` before it goes on screen; look.plain leaves the styling out. Nil and why not.
+function feed.text(text, look, tree)
     local cls = Find("/Script/UMG.TextBlock")
     if not cls then return nil, "no TextBlock class" end
     local tb
     step("make a line (StaticConstructObject TextBlock)")
-    local okNew, err = pcall(function() tb = StaticConstructObject(cls, feed.tree, FeedName()) end)
+    local okNew, err = pcall(function() tb = StaticConstructObject(cls, tree, FeedName()) end)
     if not (okNew and tb and tb:IsValid()) then return nil, "could not make a line: " .. tostring(err) end
     step("set the line's text")
     pcall(function() tb:SetText(FText(text)) end)
-    if not plain then StyleLine(tb) end
-    if color then
-        step("colour (field writes)")
-        pcall(function()
-            local c = tb.ColorAndOpacity.SpecifiedColor
-            c.R, c.G, c.B, c.A = color.R, color.G, color.B, 1
-        end)
-    end
+    if not look.plain then StyleLine(tb, look) end
     return tb
 end
 
--- With G.feedColors on and opts.span ({ text, flags }) in `text`: a HorizontalBox of the text
--- before the span, the span in its item colour, and the text after. Nil when there is no span.
-function feed.colored(text, opts)
-    local span = G.feedColors and opts and opts.span
+-- A HorizontalBox of `text` before `span` ({ text, flags }), the span in its item colour and in
+-- bold, and the text after. Nil when the span is not in the text.
+function feed.row(text, span, look, tree)
     if not (span and span.text and span.text ~= "") then return nil end
     local from, to = text:find(span.text, 1, true)
     if not from then return nil end
@@ -1635,11 +1645,13 @@ function feed.colored(text, opts)
     if not cls then return nil end
     local row
     step("make a coloured line (StaticConstructObject HorizontalBox)")
-    if not pcall(function() row = StaticConstructObject(cls, feed.tree, FeedName()) end) or not row then return nil end
-    local parts = { { text:sub(1, from - 1) }, { span.text, G.ITEM_COLORS[G.ItemClass(span.flags)] }, { text:sub(to + 1) } }
-    for _, part in ipairs(parts) do
+    if not pcall(function() row = StaticConstructObject(cls, tree, FeedName()) end) or not row then return nil end
+    local name = {}
+    for k, v in pairs(look) do name[k] = v end
+    name.color, name.bold = G.ITEM_COLORS[G.ItemClass(span.flags)], true
+    for _, part in ipairs({ { text:sub(1, from - 1), look }, { span.text, name }, { text:sub(to + 1), look } }) do
         if part[1] ~= "" then
-            local tb = feed.text(part[1], opts.plain, part[2])
+            local tb = feed.text(part[1], part[2], tree)
             step("add a piece to the line (AddChildToHorizontalBox)")
             if not (tb and pcall(function() row:AddChildToHorizontalBox(tb) end)) then return nil end
         end
@@ -1653,9 +1665,10 @@ end
 function G.FeedLine(text, now, opts)
     local box, why = FeedBox()
     if not box then return false, why end
-    local tb = feed.colored(text, opts)
+    local look = { plain = opts and opts.plain }
+    local tb = G.feedColors and opts and feed.row(text, opts.span, look, feed.tree)
     if not tb then
-        tb, why = feed.text(text, opts and opts.plain)
+        tb, why = feed.text(text, look, feed.tree)
         if not tb then return false, why end
     end
     local slot
@@ -1848,7 +1861,7 @@ end
 -- detail, or false and why not (no pop-up on screen yet). A message with no item line beside it is
 -- another dialog: in round 78 a character quest's stat bonus said "obtained" before the item
 -- pop-up came, took the text, and left the item pop-up as the game made it.
-function G.ChestPopup(text)
+function G.ChestPopup(text, span)
     local msg = PopupMessage()
     if not msg then return false, "no chest pop-up on screen" end
     local parent, line
@@ -1862,118 +1875,139 @@ function G.ChestPopup(text)
         if name == POPUP_ITEM_LINE and Alive(child) then line = child end
     end
     if not line then return false, "an \"obtained\" message with no item line: not the item pop-up" end
-    if not pcall(function() msg:SetText(FText(text)) end) then return false, "SetText failed" end
+    local message, nameLine = G.PopupSplit(text, span)
+    if not pcall(function() msg:SetText(FText(message or text)) end) then return false, "SetText failed" end
+    local rowPath, how = nil, ""
+    if nameLine then
+        local P, was = G.POPUP_COLORS, G.feedTrace
+        G.feedTrace, P.trace = P.trace, nil
+        local tree, row, slot
+        pcall(function() tree = msg:GetOuter() end)
+        row = feed.row(nameLine, span, P.LOOK, tree)
+        step("pop-up: add the coloured line (AddChildToVerticalBox)")
+        if row and pcall(function() slot = parent:AddChildToVerticalBox(row) end) and slot then
+            pcall(function() slot:SetHorizontalAlignment(P.CENTER) end)
+            rowPath, how = G.PathOf(row), ", the name in its colour"
+        else
+            pcall(function() msg:SetText(FText(text)) end)
+            how = ", the name plain (the coloured line could not be made)"
+        end
+        step("pop-up: done")
+        G.feedTrace = was
+    end
     popupWasShown = true   -- this pop-up is handled; the fast check waits for the next one
     local was = 0
     pcall(function() was = line:GetVisibility() end)
-    if not pcall(function() line:SetVisibility(COLLAPSED) end) then return true, "text set (the item line would not hide)" end
-    popupHidden = { line = G.PathOf(line), message = G.PathOf(msg), visibility = was }
-    return true, "text set, item line hidden"
+    if not pcall(function() line:SetVisibility(COLLAPSED) end) then return true, "text set (the item line would not hide)" .. how end
+    popupHidden = { line = G.PathOf(line), message = G.PathOf(msg), visibility = was, row = rowPath }
+    return true, "text set, item line hidden" .. how
 end
 
--- Round 89 probe (the user: item names in their colour in the pop-up). The message is a
--- CommonRichTextBlock. The game's decorator, CPP_RTBD_Text (RTBD_TextStyle), reads markup such as
--- <text style="italic"> and has a ColorSet, a DataTable of RTB_Text_Color rows (FontColor); the
--- game ships no such table. The probe logs the message's decorators; `colors` makes the table,
--- gives it to the decorator, and the pop-up text wraps the item's name in markup.
-G.POPUP_COLORS = { on = false, attr = "color", table = nil, tableName = "FFRAP_TextColors",
-                   decorator = "/Game/UI/Text/RTBD/RTBD_TextStyle.Default__RTBD_TextStyle_C" }
-function G.PopupMessageAny()
-    G.PrimePopup()
-    for _, path in ipairs(popupCandidates) do
-        local m = Find(path)
-        if m and Alive(m) then return m end
+-- Round 90 (the user): the item's name in its colour in the pop-up. The message is a
+-- CommonRichTextBlock with no decorators (round 90 probe), so markup cannot colour it: a <text>
+-- tag with no style row drew the name black. The line holding the name goes into a row of our
+-- own TextBlocks instead (as the feed's), under the message in the dialog's box, styled as the
+-- message's text style (BP_SystemTextStyle: size 18, letter spacing 4, shadow 2, 1 at 0.5).
+-- Probe: off until ffrap_popup colors on; `trace` logs each step of the next coloured pop-up.
+G.POPUP_COLORS = { on = false, trace = nil, CENTER = 2,
+                   LOOK = { size = 18, spacing = 4, shadow = 0.5, offset = { X = 2, Y = 1 }, justify = 1 } }
+-- The message without the line that holds the span, and that line; or nil with colours off or no span.
+function G.PopupSplit(text, span)
+    if not (G.POPUP_COLORS.on and span and span.text and span.text ~= "") then return nil end
+    local lines, picked = {}, nil
+    for l in (text .. "\n"):gmatch("(.-)\n") do
+        if not picked and l:find(span.text, 1, true) then picked = l else lines[#lines + 1] = l end
     end
-end
-function G.PopupProbe()
-    local out = {}
-    local msg = G.PopupMessageAny()
-    if not msg then return { "no dialog message made yet (open a chest first)" } end
-    local function name(o)
-        local s = "nil"
-        pcall(function() if o then s = o:GetFullName() end end)
-        return s
-    end
-    out[#out + 1] = "message: " .. name(msg)
-    pcall(function() out[#out + 1] = "TextStyleSet: " .. name(msg.TextStyleSet) end)
-    pcall(function()
-        local list = msg.DecoratorClasses
-        out[#out + 1] = "DecoratorClasses: " .. #list
-        for i = 1, #list do out[#out + 1] = "  class " .. i .. ": " .. name(list[i]) end
-    end)
-    pcall(function()
-        local list = msg.InstanceDecorators
-        out[#out + 1] = "InstanceDecorators: " .. #list
-        for i = 1, #list do
-            local d = list[i]
-            local line = "  decorator " .. i .. ": " .. name(d)
-            pcall(function() line = line .. ", ColorSet " .. name(d.ColorSet) .. ", SizeSet " .. name(d.SizeSet) end)
-            out[#out + 1] = line
-        end
-    end)
-    local cdo = Find(G.POPUP_COLORS.decorator)
-    out[#out + 1] = "RTBD_TextStyle default: " .. name(cdo)
-    pcall(function() out[#out + 1] = "  ColorSet " .. name(cdo.ColorSet) .. ", SizeSet " .. name(cdo.SizeSet) end)
-    return out
-end
-
--- The colour table, made once: a DataTable of RTB_Text_Color with a row per item class, given to
--- the decorator's default and to the message's decorators. Each step is told to `say` first.
-function G.PopupColorTable(say)
-    local P = G.POPUP_COLORS
-    local cdo = Find(G.POPUP_COLORS.decorator)
-    if not cdo then return nil, "RTBD_TextStyle is not loaded" end
-    local dt = P.table and Find(P.table)
-    if not dt then
-        local cls, rowStruct = Find("/Script/Engine.DataTable"), Find("/Script/mucha.RTB_Text_Color")
-        if not (cls and rowStruct) then return nil, "no DataTable class or no RTB_Text_Color" end
-        say("popup colors: StaticConstructObject DataTable")
-        if not pcall(function() dt = StaticConstructObject(cls, cdo, FName(P.tableName)) end) or not dt then
-            return nil, "the table could not be made"
-        end
-        say("popup colors: RowStruct")
-        pcall(function() dt.RowStruct = rowStruct end)
-        for class, c in pairs(G.ITEM_COLORS) do
-            say("popup colors: AddRow " .. class)
-            pcall(function() dt:AddRow(class, { FontColor = { R = c.R, G = c.G, B = c.B, A = 1 } }) end)
-        end
-        P.table = G.PathOf(dt)
-    end
-    say("popup colors: ColorSet on the decorator's default")
-    pcall(function() cdo.ColorSet = dt end)
-    local msg = G.PopupMessageAny()
-    pcall(function()
-        local list = msg.InstanceDecorators
-        for i = 1, #list do
-            say("popup colors: ColorSet on decorator " .. i)
-            list[i].ColorSet = dt
-        end
-    end)
-    local rows = 0
-    pcall(function() dt:ForEachRow(function() rows = rows + 1 end) end)
-    return rows .. " colour rows"
-end
-
--- `name` wrapped in the decorator's markup for its colour, with the probe on.
-function G.ColorMarkup(name, flags)
-    local P = G.POPUP_COLORS
-    if not P.on then return name end
-    return string.format('<text %s="%s">%s</>', P.attr, G.ItemClass(flags), name)
+    if not picked then return nil end
+    return table.concat(lines, "\n"), picked
 end
 
 -- Makes the item line visible again once the pop-up has closed. Call every tick.
 function G.ChestPopupRestore()
     if not popupHidden then return end
     local line = popupHidden.line and Find(popupHidden.line)
-    if not (line and Alive(line)) then
-        popupHidden = nil
-        return
-    end
     local msg = popupHidden.message and Find(popupHidden.message)
-    if msg and Alive(msg) and Shown(msg) then return end
+    if line and Alive(line) and msg and Alive(msg) and Shown(msg) then return end
+    local row = popupHidden.row and Find(popupHidden.row)
+    if row and Alive(row) then pcall(function() row:RemoveFromParent() end) end
     local v = popupHidden.visibility
-    pcall(function() line:SetVisibility(v) end)
+    if line and Alive(line) then pcall(function() line:SetVisibility(v) end) end
     popupHidden = nil
+end
+
+-- Round 90 (the user): the item's name in its colour in the Quests screen's Rewards. Each line is
+-- WBP_Quest_Reward_Text_C, whose CommonTextBlock_194 has one style. Probe: off until
+-- ffrap_quest colors on. A line showing one of `spans` (label -> { text, flags }) gets a row of
+-- our own TextBlocks in the block's parent panel (UPanelWidget AddChild, which takes a widget),
+-- and the block is collapsed. The list can show the line again for another reward: a row whose
+-- block no longer shows its label, or whose label is not in `spans` (the probe off), is taken out
+-- and the block shown again.
+G.QUEST_COLORS = { on = false, rows = {}, BLOCK = "CommonTextBlock_194", LINE = "WBP_Quest_Reward_Text_C",
+                   LOOK = { size = 18, spacing = 4, shadow = 0.5, offset = { X = 2, Y = 1 }, justify = 0 } }
+function G.FindNamedWidget(w, name, depth)
+    depth = depth or 0
+    if not (w and Alive(w)) or depth > 12 then return nil end
+    local n
+    pcall(function() n = w:GetFName():ToString() end)
+    if n == name then return w end
+    local root
+    pcall(function() root = w.WidgetTree.RootWidget end)
+    local found = root and G.FindNamedWidget(root, name, depth + 1)
+    if found then return found end
+    local count = 0
+    pcall(function() count = w:GetChildrenCount() end)
+    for i = 0, count - 1 do
+        local c
+        pcall(function() c = w:GetChildAt(i) end)
+        found = G.FindNamedWidget(c, name, depth + 1)
+        if found then return found end
+    end
+end
+function G.QuestRewardColors(spans, say)
+    local Q, out = G.QUEST_COLORS, {}
+    for blockPath, r in pairs(Q.rows) do
+        local block = Find(blockPath)
+        local text
+        pcall(function() text = block:GetText():ToString() end)
+        if not (block and Alive(block)) or text ~= r.label or not spans[r.label] then
+            local row = Find(r.row)
+            if row and Alive(row) then pcall(function() row:RemoveFromParent() end) end
+            if block and Alive(block) then pcall(function() block:SetVisibility(r.visibility) end) end
+            Q.rows[blockPath] = nil
+            out[#out + 1] = "taken out: " .. r.label
+        end
+    end
+    local ok, all = pcall(FindAllOf, Q.LINE)
+    for _, w in ipairs(ok and all or {}) do
+        if Alive(w) and Shown(w) then
+            local block = G.FindNamedWidget(w, Q.BLOCK)
+            local path = block and G.PathOf(block)
+            local text
+            pcall(function() text = block:GetText():ToString() end)
+            if path and not Q.rows[path] and text and spans[text] then
+                local was = G.feedTrace
+                G.feedTrace = say
+                local parent, tree, row, slot, vis = nil, nil, nil, nil, 0
+                pcall(function() parent = block:GetParent() end)
+                pcall(function() tree = block:GetOuter() end)
+                local parentName = "nil"
+                pcall(function() parentName = parent:GetClass():GetFName():ToString() end)
+                row = parent and feed.row(text, spans[text], Q.LOOK, tree)
+                step("quest: add the coloured line to the " .. parentName .. " (AddChild)")
+                if row and pcall(function() slot = parent:AddChild(row) end) and slot then
+                    pcall(function() vis = block:GetVisibility() end)
+                    step("quest: hide the game's line (SetVisibility)")
+                    pcall(function() block:SetVisibility(COLLAPSED) end)
+                    Q.rows[path] = { row = G.PathOf(row), label = text, visibility = vis }
+                    out[#out + 1] = "coloured: " .. text .. " (in a " .. parentName .. ")"
+                else
+                    out[#out + 1] = "not coloured: " .. text .. " (in a " .. parentName .. ")"
+                end
+                G.feedTrace = was
+            end
+        end
+    end
+    return out
 end
 
 -- Clear cached paths on map load; old map objects are freed and dereferencing stale handles crashes.

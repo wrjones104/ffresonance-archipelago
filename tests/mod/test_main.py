@@ -105,9 +105,14 @@ function G.StoryCounter() return G.story end
 function G.PartyIds() return {1001} end
 function G.Toast() return false end
 G.POPUP_COLORS = { on = false }
-function G.ColorMarkup(name, flags) return G.POPUP_COLORS.on and ("<" .. flags .. ">" .. name .. "</>") or name end
-function G.PopupProbe() return { "message: probe" } end
-function G.PopupColorTable() return "4 colour rows" end
+G.QUEST_COLORS = { on = false }
+function G.QuestRewardColors(spans, say)
+  G.questSpans = spans
+  local out = {}
+  for label in pairs(spans) do if not G.questDone then out[#out + 1] = "coloured: " .. label end end
+  G.questDone = #out > 0 or G.questDone
+  return out
+end
 function G.GetFlag(i) return false end
 -- the Archipelago page is on by default; its own section below replaces this
 G.APMENU = { Ensure = function() end, Page = function() return nil, "not open" end, Unstick = function() end,
@@ -1986,10 +1991,12 @@ inbox("msg\tSent Ether to Bob\tEther\t2\n", "a")
 tick(4)
 assert L.eval("G.feedSpans['Received Hookshot from Alice']") == "Hookshot/1", list(G.feed.values())
 assert L.eval("G.feedSpans['Sent Ether to Bob']") == "Ether/2", list(G.feed.values())
-# and the pop-up's name in markup with ffrap_popup colors on
+# Round 91 probes: ffrap_popup colors on traces the next coloured pop-up; ffrap_quest colors on
+# hands the quest rewards' spans, by label, to the Quests screen each second
 L.execute('commands["ffrap_popup"]("ffrap_popup", {"colors", "on"})')
-assert L.eval("package.loaded.game.POPUP_COLORS.on") is True
+assert L.eval("package.loaded.game.POPUP_COLORS.on") is True and L.eval("type(package.loaded.game.POPUP_COLORS.trace)") == "function"
 L.execute('commands["ffrap_popup"]("ffrap_popup", {"colors", "off"})')
+assert L.eval("package.loaded.game.POPUP_COLORS.trace") is None
 # Round 88: Mog Tag's tiers run at either of two counter values, while flag 545 (the chase) is on;
 # its Potion pop-up came before the check, so the early pop-up writes it
 L.execute(CAPTURE)
@@ -2016,6 +2023,12 @@ G.onField = True
 tick(70)
 assert L.eval("G.prizes['quest:34']") == "Alice's Mirage Jacket" and L.eval("G.prizes['quest:6']") == "Alice's Seraphim Bow"
 assert any("quest rewards show the location's item" in s for s in logs()), logs()
+L.execute('commands["ffrap_quest"]("ffrap_quest", {"colors", "on"})')
+tick(4)
+assert L.eval("G.questSpans[\"Alice's Mirage Jacket\"].text") == "Mirage Jacket" and L.eval("G.questSpans[\"Alice's Mirage Jacket\"].flags") == 1
+assert any("quest colours: coloured: " in s for s in logs()), logs()
+L.execute('commands["ffrap_quest"]("ffrap_quest", {"colors", "off"})')
+assert L.eval("next(G.questSpans)") is None, "off: every row taken out"
 # Round 88: Verun's counter, the delivery flag and Lid's Mechabo Tackle are logged when they change
 L.execute("G.skills = { [404110] = true }")
 tick(2)
