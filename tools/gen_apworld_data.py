@@ -48,14 +48,19 @@ OUT = os.path.join(ROOT, "apworld", "ff_resonance", "data.py")
 FIELD_ITEMS_LUA = os.path.join(ROOT, "FFRArchipelago", "Scripts", "field_items.lua")
 
 SHUFFLE_ID_LIMIT = 13000          # item ids at or above this never move (visions, key items)
+# Round 97 (the user): key items whose own spots are locations, holding the item there: the
+# Research Center Ruins' lab key cards (shinies 3220:32, 33 and 37). The pool has each once.
+SHUFFLED_KEY_ITEMS = {20009, 20010, 20011}
 MAGICITE_IDS = (25000, 25002)     # except these (the mod blanks them too)
 CRYSTAL_LOCATION_BASE = 3_000_000_000    # + the sanctum's map id
 TABLET_SHARD = 25004              # a shiny holding one is a location of its own kind (round 47)
 CONSUMABLE_LIMIT = 1000
 
-# Round 59: a boss fight is a location (data/bosses.tsv). A "story" boss holds a locked Crystal
-# Fragment; a cave master or an optional boss holds a shuffled item.
+# Round 59: a boss fight is a location (data/bosses.tsv). Round 97 (the user): every boss, story,
+# cave master or optional, holds a shuffled item, and gives a Crystal Fragment too: a second
+# location with the fragment locked on it, checked by the same win.
 BOSS_LOCATION_BASE = 4_000_000_000       # + the battle group
+FRAGMENT_LOCATION_BASE = 7_000_000_000   # + the battle group
 FRAGMENT_ITEM = 600_000_001
 FRAGMENT_NAME = "Crystal Fragment"
 # Round 67: the Chocobo, the game's Choboco Saddle (an artifact, 30002), which the game checks.
@@ -390,6 +395,10 @@ def readable_names(chests: list[dict], radar_part_chests: list[dict], shinies: l
         suggested[entry["key"]] = (f"{place} - {item} Chest", "")
     for entry in shinies + radar:
         kind = "Shiny" if entry in shinies else "Radar Treasure"
+        if entry.get("key_item"):
+            name = f"{entry['area']} - {entry['region']} - {items[entry['vanilla']]['name']} Shiny"
+            suggested[entry["key"]] = (name, "")
+            continue
         land, where, dist = world_spot(*spots[entry["key"]], doors, continents)
         note = f"nearest door {dist:.0f} units away" if dist > FAR_FROM_DOORS else ""
         suggested[entry["key"]] = (f"{land} - {kind} {where}", note)
@@ -602,6 +611,9 @@ def main() -> None:
             continue
         map_id, uid = int(r["map"]), int(r["uid"])
         ap_item = item_for(int(r["item"]), int(r["count"]), int(r["money"]))
+        key_item = int(r["item"]) in SHUFFLED_KEY_ITEMS
+        if key_item:
+            ap_item = int(r["item"]) * 1000 + 1
         place = "World Map" if map_id == WORLD_MAP else f"Map {map_id}"
         area = OPEN_AREA
         if map_id == WORLD_MAP and r["x"]:
@@ -610,6 +622,10 @@ def main() -> None:
                  "open_world": holds_at_open_start(r.get("visible") or ""),
                  "id": SHINY_LOCATION_BASE + map_id * 1000 + uid, "vanilla": ap_item,
                  "condition": r.get("visible") or "", "seen": (r["map"], r["uid"]) in seen_shinies}
+        if key_item:
+            # The first shinies off the world map (round 97): their place is their map's.
+            place = ascii_name((maps.get(map_id) or {}).get("name") or f"Map {map_id}")
+            entry.update({"key_item": True, "name": f"{place} Shiny {uid}", "region": place, "area": map_area(map_id)})
         if ap_item is not None and int(r["item"]) == TABLET_SHARD:
             place = ascii_name((maps.get(map_id) or {}).get("name") or f"Map {map_id}")
             entry.update({"name": f"{place} Shard {uid}", "region": "Tablet Shards", "area": map_area(map_id),
@@ -659,7 +675,7 @@ def main() -> None:
         vanilla = item_for(reward, 1, 0) if r["kind"] == "cave" else None
         entry = {"key": f"boss:{group}", "name": name, "region": "Bosses", "area": r.get("area") or map_area(map_id),
                  "open_world": True, "id": BOSS_LOCATION_BASE + group, "vanilla": vanilla,
-                 "fragment": r["kind"] == "story", "tier": r["tier"], "level": int(r["level"])}
+                 "kind": r["kind"], "tier": r["tier"], "level": int(r["level"])}
         if r["kind"] != "cave" and reward >= SHUFFLE_ID_LIMIT:
             entry["vision"] = reward * 1000 + 1
         bosses.append(entry)
@@ -859,9 +875,18 @@ def main() -> None:
             near = key in near_keys or (kind in ("chest", "shiny") and int(place) in near_maps)
             if entry["area"] == area and not near:
                 entry["past_boss"] = group
+    # Each boss's fragment: the fight's own place and logic marks, its own key, name and id.
+    fragments = []
+    for e in bosses:
+        group = int(e["key"].split(":")[1])
+        fragment = {k: v for k, v in e.items() if k not in ("vision", "kind")}
+        fragment.update({"key": f"fragment:{group}", "name": f"{e['name']} - Crystal Fragment",
+                         "region": "Crystal Fragments", "id": FRAGMENT_LOCATION_BASE + group, "vanilla": None,
+                         "boss": group})
+        fragments.append(fragment)
     readable_names(chests, radar_part_chests, shinies, tablet_shinies, radar, items, maps, continents)
     location_names = [e["name"] for e in chests + radar_part_chests + shinies + crystals + tablet_shinies + bosses
-                      + radar + side_quests]
+                      + fragments + radar + side_quests]
     assert len(location_names) == len(set(location_names)), "duplicate location names"
 
     write_field_items_lua()
@@ -880,8 +905,10 @@ def main() -> None:
         f.write("TABLET_SHINIES = " + pprint.pformat(tablet_shinies, width=110, sort_dicts=True) + "\n\n")
         f.write("# The sanctum crystals; vanilla is None, as their visions are in the pool already\n")
         f.write("CRYSTALS = " + pprint.pformat(crystals, width=110, sort_dicts=True) + "\n\n")
-        f.write("# Boss fights (data/bosses.tsv); fragment marks the ones that hold a locked Crystal Fragment\n")
+        f.write("# Boss fights (data/bosses.tsv): kind is story, cave or optional; each holds a shuffled item\n")
         f.write("BOSSES = " + pprint.pformat(bosses, width=110, sort_dicts=True) + "\n\n")
+        f.write("# Each boss's Crystal Fragment, locked on a location of its own; boss is its battle group\n")
+        f.write("FRAGMENTS = " + pprint.pformat(fragments, width=110, sort_dicts=True) + "\n\n")
         f.write("# What helps in a boss fight (data/game/capabilities.tsv): party members by unit id and the\n"
                 "# level they learn it, Visions by AP id and awakening, shop gear by item id with who can\n"
                 "# wear it and the areas whose shops sell it\n")

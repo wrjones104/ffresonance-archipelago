@@ -117,16 +117,17 @@ Final Fantasy Resonance:
 
   final_boss_fragments:
     # With the final_boss goal: how many Crystal Fragments you need before the way to the top of the
-    # Crystal Tower opens. A story boss gives one when you beat it.
+    # Crystal Tower opens. Every boss gives one when you beat it, story bosses, cave masters and the
+    # optional bosses alike.
     #
     # You can define additional values between the minimum and maximum values.
     # Minimum value is 0
-    # Maximum value is 21
+    # Maximum value is 40
     14: 50
     random: 0
     random-low: 0 # random value weighted towards lower values
     random-high: 0 # random value weighted towards higher values
-    random-range-0-21: 0 # random value between 0 and 21
+    random-range-0-40: 0 # random value between 0 and 40
 
   #########
   # Start #
@@ -232,11 +233,17 @@ Final Fantasy Resonance:
     'true': 0
 
   priority_bosses:
-    # The cave masters and the two Dragon's Maw bosses are priority locations: the generator puts
-    # items that someone needs on them first, so they are worth the fight. Story bosses always hold
-    # a Crystal Fragment. Sephiroth is left out, as he can be far too strong for the party.
+    # The cave masters and the optional bosses (the two Dragon's Maw bosses and the Antlion) are
+    # priority locations: the generator puts items that someone needs on them first, so they are
+    # worth the fight. Sephiroth is left out, as he can be far too strong for the party.
     'false': 0
     'true': 50
+
+  priority_story_bosses:
+    # The story bosses are priority locations: the generator puts items that someone needs on them
+    # first.
+    'false': 50
+    'true': 0
 
   excluded_regions:
     # Regions where you only find your own filler items, never anything another player needs. Use

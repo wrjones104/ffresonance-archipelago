@@ -888,13 +888,17 @@ local function scanBosses()
         end
     end
     if not (seedCfg.bosses and sessionSave()) then return end
+    -- Round 97 (the user): every boss also gives a Crystal Fragment, a location of its own sent
+    -- with the fight's (and on its own for a fight won before this build).
     for _, b in ipairs(game.BOSSES) do
         local key = "boss:" .. b.group
-        if game.GetFlag(b.flag) == true and report("check", key) then
+        local won = game.GetFlag(b.flag) == true
+        if won and report("check", key) then
             log("check " .. key)
             local s = state.scouts[key]
             if s then popup = { text = popupText(s), span = { text = s.item, flags = s.flags }, key = key, tries = BOSS_POPUP_TRIES } end
         end
+        if won and report("check", "fragment:" .. b.group) then log("check fragment:" .. b.group) end
     end
 end
 

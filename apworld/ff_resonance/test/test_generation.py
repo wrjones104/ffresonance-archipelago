@@ -5,7 +5,7 @@ from worlds import AutoWorld
 from worlds.AutoWorld import call_all
 from test.general import gen_steps
 
-from ..data import AIRSHIP_ITEM, BOSSES, CHESTS, CHOCOBO_ITEM, NO_ROUTE, RADAR, RADAR_ITEM, RADAR_PARTS, RADAR_PART_CHESTS, CONTINENT_UNLOCKS, CRYSTALS, FRAGMENT_ITEM, ITEMS, NO_BOX, SIDE_QUESTS, TABLET_SHINIES, PROGRESSION, SHINIES, SHUFFLE_ID_LIMIT, UNIT_ITEM_BASE
+from ..data import AIRSHIP_ITEM, BOSSES, CHESTS, FRAGMENTS, CHOCOBO_ITEM, NO_ROUTE, RADAR, RADAR_ITEM, RADAR_PARTS, RADAR_PART_CHESTS, CONTINENT_UNLOCKS, CRYSTALS, FRAGMENT_ITEM, ITEMS, NO_BOX, SIDE_QUESTS, TABLET_SHINIES, PROGRESSION, SHINIES, SHUFFLE_ID_LIMIT, UNIT_ITEM_BASE
 from ..boss_logic import awakening, has_capability
 from ..items import CLASSIFICATIONS, FILLER_CATEGORIES, FRAGMENT_NAME, item_name_groups
 from ..locations import GOAL_EVENT, LOCATION_KEY_TO_ID, SEPHIROTH, VICTORY
@@ -23,7 +23,8 @@ TARTAROSAURUS, BELMODAR, THE_HUNGER = 9112, 9004, 9012   # tier D, and two tier 
 QUEST_LOCATIONS = 28    # round 78: the quest log's 33, less the Mechabo three and two boss quests
 # Quest items the game never tests (docs/side_quests.md, section 2): out of the pool.
 QUEST_ONLY_ITEMS = (20020, 20023, 20024, 20025, 20026, 20027, 20028, 20029, 20030, 20031, 20032)
-CAVE_MASTERS, FRAGMENT_BOSSES = 15, 21   # round 71: ten more story bosses; round 72: Behemoth out
+CAVE_MASTERS, STORY_BOSSES, OPTIONAL_BOSSES = 15, 21, 4   # round 71: ten more story bosses; round 72: Behemoth out
+FRAGMENT_BOSSES = CAVE_MASTERS + STORY_BOSSES + OPTIONAL_BOSSES   # round 97: every boss gives one
 EARLY_LEVEL, FINA_GROUP_HEAL_LEVEL, MAX_LEVEL = 3, 25, 99   # boss levels: Fina has Cure at 3
 
 
@@ -594,18 +595,27 @@ class TestBosses(FFResonanceTestBase):
 
     def test_bosses_are_locations(self) -> None:
         names = {loc.name for loc in self.multiworld.get_locations(self.player) if loc.address is not None}
-        self.assertEqual(names, {loc["name"] for loc in CHESTS + BOSSES})
+        self.assertEqual(names, {loc["name"] for loc in CHESTS + BOSSES + FRAGMENTS})
 
-    def test_a_story_boss_holds_a_fragment_and_the_others_a_shuffled_item(self) -> None:
+    def test_every_boss_holds_a_shuffled_item_and_gives_a_fragment(self) -> None:
+        """Round 97 (the user): story bosses, cave masters and optional bosses alike."""
         for boss in BOSSES:
-            item = self.multiworld.get_location(boss["name"], self.player).item
-            if boss["fragment"]:
-                self.assertEqual((item.name, item.code, item.advancement), (FRAGMENT_NAME, FRAGMENT_ITEM, True), boss["name"])
-            else:
-                self.assertIsNone(item, boss["name"])
+            self.assertIsNone(self.multiworld.get_location(boss["name"], self.player).item, boss["name"])
+        for fragment in FRAGMENTS:
+            item = self.multiworld.get_location(fragment["name"], self.player).item
+            self.assertEqual((item.name, item.code, item.advancement), (FRAGMENT_NAME, FRAGMENT_ITEM, True), fragment["name"])
         pool = [item.code for item in self.multiworld.itempool if item.player == self.player]
         self.assertNotIn(FRAGMENT_ITEM, pool)
-        self.assertEqual(len(pool), len(CHESTS) + len(BOSSES) - FRAGMENT_BOSSES)
+        self.assertEqual(len(pool), len(CHESTS) + len(BOSSES))
+
+    def test_a_fragment_needs_what_its_boss_needs(self) -> None:
+        boss, fragment = self.boss_location(TARTAROSAURUS), self.multiworld.get_location(
+            next(f["name"] for f in FRAGMENTS if f["boss"] == TARTAROSAURUS), self.player)
+        self.collect_by_name(["Pharm Unlock", "Lanzelt Unlock", "Kolobos Unlock", "Dirnado Unlock", "Olderion Unlock"])
+        self.collect_by_name(["Fina", "Lid", "Nichol"])
+        self.assertTrue(boss.can_reach(self.multiworld.state) and fragment.can_reach(self.multiworld.state))
+        self.remove_by_name(["Nichol"])
+        self.assertFalse(boss.can_reach(self.multiworld.state) or fragment.can_reach(self.multiworld.state))
 
     def test_a_cave_master_gives_its_magicite_to_the_pool(self) -> None:
         pool = [item.code for item in self.multiworld.itempool if item.player == self.player]
@@ -618,7 +628,7 @@ class TestBosses(FFResonanceTestBase):
 
     def test_the_goal_needs_the_fragments(self) -> None:
         goal = self.multiworld.get_location(GOAL_EVENT, self.player)
-        fragments = [self.multiworld.get_location(b["name"], self.player).item for b in BOSSES if b["fragment"]]
+        fragments = [self.multiworld.get_location(f["name"], self.player).item for f in FRAGMENTS]
         # No sweep: a sweep would take the fragments from the bosses it can reach.
         state = self.multiworld.state
         for item in self.multiworld.get_items():
@@ -631,11 +641,14 @@ class TestBosses(FFResonanceTestBase):
         state.collect(fragments[2], prevent_sweep=True)
         self.assertTrue(goal.can_reach(state))
 
-    def test_shuffled_bosses_are_priority_but_not_sephiroth(self) -> None:
+    def test_cave_masters_and_optional_bosses_are_priority_but_not_sephiroth(self) -> None:
         for boss in BOSSES:
-            plain = boss["fragment"] or boss["key"] == SEPHIROTH
+            plain = boss["kind"] == "story" or boss["key"] == SEPHIROTH
             wanted = LocationProgressType.DEFAULT if plain else LocationProgressType.PRIORITY
             self.assertEqual(self.multiworld.get_location(boss["name"], self.player).progress_type, wanted, boss["name"])
+        for fragment in FRAGMENTS:
+            self.assertEqual(self.multiworld.get_location(fragment["name"], self.player).progress_type,
+                             LocationProgressType.DEFAULT, fragment["name"])
 
     def test_the_antlion_is_in_lanzelt(self) -> None:
         antlion = self.boss_location(ANTLION)
@@ -730,11 +743,46 @@ class TestBossesNotPriority(FFResonanceTestBase):
         self.assertFalse(priority)
 
 
+class TestLabKeyCards(FFResonanceTestBase):
+    """Round 97 (the user): the Research Center Ruins' key card spots are locations."""
+    options = {"include_shinies": True, "shuffle_key_items": True}
+
+    def test_each_card_is_in_the_pool_once(self) -> None:
+        pool = [item.name for item in self.multiworld.itempool if item.player == self.player]
+        for n in (1, 2, 3):
+            self.assertEqual(pool.count(f"Level {n} Lab Key Card"), 1, n)
+
+    def test_the_second_card_is_behind_the_first_door(self) -> None:
+        spot = self.multiworld.get_location("Gronoa - Research Center Ruins - Level 2 Lab Key Card Shiny", self.player)
+        self.collect_by_name(["Gronoa Unlock"])
+        self.assertFalse(spot.can_reach(self.multiworld.state))
+        self.collect_by_name(["Level 1 Lab Key Card"])
+        self.assertTrue(spot.can_reach(self.multiworld.state))
+
+
+class TestLabKeyCardsNotShuffled(FFResonanceTestBase):
+    options = {"include_shinies": True, "shuffle_key_items": False}
+
+    def test_each_spot_keeps_its_card(self) -> None:
+        for n in (1, 2, 3):
+            spot = self.multiworld.get_location(f"Gronoa - Research Center Ruins - Level {n} Lab Key Card Shiny", self.player)
+            self.assertEqual(spot.item.name, f"Level {n} Lab Key Card")
+
+
+class TestPriorityStoryBosses(FFResonanceTestBase):
+    options = {"include_bosses": True, "priority_bosses": False, "priority_story_bosses": True}
+
+    def test_only_story_bosses_are_priority(self) -> None:
+        priority = {loc.name for loc in self.multiworld.get_locations(self.player)
+                    if loc.progress_type == LocationProgressType.PRIORITY}
+        self.assertEqual(priority, {b["name"] for b in BOSSES if b["kind"] == "story"})
+
+
 class TestPriorityBossInExcludedRegion(FFResonanceTestBase, real_defaults=True):
     options = {"excluded_regions": ["Bosses"]}
 
     def test_excluded_wins(self) -> None:
-        boss = self.multiworld.get_location(next(b["name"] for b in BOSSES if not b["fragment"]), self.player)
+        boss = self.multiworld.get_location(next(b["name"] for b in BOSSES if b["kind"] == "cave"), self.player)
         self.assertEqual(boss.progress_type, LocationProgressType.EXCLUDED)
 
 
@@ -931,11 +979,14 @@ class TestData(FFResonanceTestBase):
 
     def test_no_location_holds_a_key_item(self) -> None:
         # Chests and shinies with key items keep them (the mod blanks only ids below the limit).
-        # Key items reach the pool as extra items instead (world 0.3.0).
+        # Key items reach the pool as extra items instead (world 0.3.0). Round 97: but for the lab
+        # key cards, whose spots are locations.
         for loc in CHESTS + SHINIES:
             info = ITEMS[loc["vanilla"]]
-            if info["kind"] == "item" and info["category"] != "magicite":
+            if info["kind"] == "item" and info["category"] != "magicite" and not loc.get("key_item"):
                 self.assertLess(info["game_id"], SHUFFLE_ID_LIMIT, loc)
+        cards = sorted(ITEMS[s["vanilla"]]["name"] for s in SHINIES if s.get("key_item"))
+        self.assertEqual(cards, [f"Level {n} Lab Key Card" for n in (1, 2, 3)])
 
     def test_chests_with_magicite_are_locations(self) -> None:
         keys = {c["key"]: ITEMS[c["vanilla"]] for c in CHESTS}
@@ -954,10 +1005,19 @@ class TestData(FFResonanceTestBase):
 
     def test_bosses(self) -> None:
         self.assertEqual(sum(1 for b in BOSSES if b["vanilla"] is not None), CAVE_MASTERS)
-        self.assertEqual(sum(1 for b in BOSSES if b["fragment"]), FRAGMENT_BOSSES)
+        kinds = [b["kind"] for b in BOSSES]
+        self.assertEqual((kinds.count("cave"), kinds.count("story"), kinds.count("optional")),
+                         (CAVE_MASTERS, STORY_BOSSES, OPTIONAL_BOSSES))
+        self.assertEqual(len(FRAGMENTS), FRAGMENT_BOSSES)
         areas = {b["key"]: b["area"] for b in BOSSES}
         self.assertEqual((areas[f"boss:{MARAUDER}"], areas[f"boss:{LIQUID_THUNDER}"]), ("Lanzelt", "Dirnado"))
-        self.assertFalse([b["name"] for b in BOSSES if b["fragment"] and b["vanilla"] is not None])
+        self.assertFalse([b["name"] for b in BOSSES if b["kind"] == "story" and b["vanilla"] is not None])
+        # a fragment sits where its boss does, with the same fights before it
+        bosses = {int(b["key"].split(":")[1]): b for b in BOSSES}
+        for f in FRAGMENTS:
+            boss = bosses[f["boss"]]
+            self.assertEqual((f["area"], f.get("after_boss"), f.get("past_boss")),
+                             (boss["area"], boss.get("after_boss"), boss.get("past_boss")), f["name"])
 
     def test_crystals(self) -> None:
         self.assertEqual(len(CRYSTALS), 16)
@@ -975,17 +1035,20 @@ class TestData(FFResonanceTestBase):
         self.assertNotIn("Item 5", {info["name"] for info in ITEMS.values()})
 
     def test_shinies_come_from_the_game_files(self) -> None:
-        self.assertEqual(len(SHINIES), 94)     # round 74: two with a Magicite Shard
+        self.assertEqual(len(SHINIES), 97)     # round 74: two with a Magicite Shard; round 97: three key cards
         self.assertIn("shiny:1000:189", {s["key"] for s in SHINIES})
-        self.assertTrue(all(s["region"] == "World Map" for s in SHINIES))
-        unseen = sorted(int(s["key"].split(":")[2]) for s in SHINIES if not s["seen"])
+        self.assertTrue(all(s["region"] == "World Map" for s in SHINIES if not s.get("key_item")))
+        cards = [s for s in SHINIES if s.get("key_item")]
+        self.assertEqual({(s["region"], s["area"]) for s in cards}, {("Research Center Ruins", "Gronoa")})
+        unseen = sorted(int(s["key"].split(":")[2]) for s in SHINIES if not s["seen"] and not s.get("key_item"))
         self.assertEqual(unseen, [70, 71, 84, 85, 86, 87, 88, 89, 91])
 
     def test_mod_keys_map_to_ids(self) -> None:
         self.assertEqual(LOCATION_KEY_TO_ID["chest:2012:5"], 1_000_000_000 + 2012 * 1000 + 5)
         self.assertEqual(LOCATION_KEY_TO_ID[f"boss:{MARAUDER}"], 4_000_000_000 + MARAUDER)
+        self.assertEqual(LOCATION_KEY_TO_ID[f"fragment:{MARAUDER}"], 7_000_000_000 + MARAUDER)
         self.assertEqual(len(LOCATION_KEY_TO_ID), len(CHESTS) + len(SHINIES) + len(CRYSTALS) + len(TABLET_SHINIES)
-                         + len(BOSSES) + len(RADAR) + len(RADAR_PART_CHESTS) + len(SIDE_QUESTS))
+                         + len(BOSSES) + len(FRAGMENTS) + len(RADAR) + len(RADAR_PART_CHESTS) + len(SIDE_QUESTS))
         self.assertEqual(LOCATION_KEY_TO_ID["quest:13"], 6_000_000_000 + 13)
 
 

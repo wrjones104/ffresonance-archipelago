@@ -326,7 +326,7 @@ POTION = 1
 # Round 60: the reward becomes one Potion, so the win's pop-up still comes up
 L.execute("""
 bossRows = { StrEne_C01_Orge_Destroy = { ObtainItemList = arr({ { ID = 25000, Num = 3 } }), OnFlagList = arr({ 146, 1231 }) },
-  Dng_08Gro_43_BattleEnd_01 = { ProgressList = arr({ { ID = 0, Value = 6123 } }), OnFlagList = arr({ 608 }) },
+  Dng_08Gro_43_BattleEnd_01 = { ProgressList = arr({ { ID = 0, Value = 6123 } }), OnFlagList = arr({ 608 }), ObtainItemList = arr({}, { ID = 0, Num = 0 }) },
   SubEv_BarrierReleased_BattleEnd_01_A = { ProgressList = arr({ { ID = 0, Value = 5110 } }), OnFlagList = arr({ 526 }) },
   C01_008_02 = { EventType = 0, OnFlagList = arr({ 101 }), OffFlagList = arr({}), ProgressList = arr({ { ID = 0, Value = 1045 } }),
                  ContinuousEventList = arr({ { Condition = "x", EventId = nameOf("None") } }) },
@@ -339,7 +339,9 @@ libs["/Game/Datatable/Encount/DT_BattleGroup.DT_BattleGroup"] = {
   HasAnyInternalFlags = function() return false end, HasAnyFlags = function() return false end,
   ForEachRow = function(_, fn) for k, r in pairs(bossGroups) do fn(nameOf(tostring(k)), r) end end }
 shopRows = bossRows""")
-assert lua("G.BossesPatch()") == 5
+assert lua("G.BossesPatch()") == 6
+# Round 97: a finish row with no reward gets the stand-in, so its boss's pop-up comes up
+assert (lua("#bossRows.Dng_08Gro_43_BattleEnd_01.ObtainItemList"), lua("bossRows.Dng_08Gro_43_BattleEnd_01.ObtainItemList[1].ID")) == (1, POTION)
 assert lua("#bossRows.StrEne_C01_Orge_Destroy.ObtainItemList") == 1 and lua("#bossRows.StrEne_C01_Orge_Destroy.OnFlagList") == 2
 assert (lua("bossRows.StrEne_C01_Orge_Destroy.ObtainItemList[1].ID"), lua("bossRows.StrEne_C01_Orge_Destroy.ObtainItemList[1].Num")) == (POTION, 1)
 assert lua("#bossRows.Dng_08Gro_43_BattleEnd_01.ProgressList") == 0 and lua("#bossRows.Dng_08Gro_43_BattleEnd_01.OnFlagList") == 1
@@ -371,7 +373,12 @@ assert lua("G.BlankFieldItem(s1, true, true)") is False, "already blank"
 # Round 47: with the option a Tablet Shard shiny is blanked too; another key item never is
 assert lua("G.BlankFieldItem(s2, false, true)") is True and lua("s2.actor.m_ItemId") == -1
 L.execute("s6 = shiny(20009, -1)")
-assert lua("G.BlankFieldItem(s6, true, true)") is False, "a key card stays"
+assert lua("G.BlankFieldItem(s6, false, true)") is False, "shards only: a key card stays"
+assert lua("G.BlankFieldItem(s6, true, false)") is True and lua("s6.actor.m_ItemId") == -1, \
+    "round 97: a lab key card's spot is a location, blanked"
+CABIN_KEY = 20033
+L.execute(f"s8 = shiny({CABIN_KEY}, -1)")
+assert lua("G.BlankFieldItem(s8, true, true)") is False, "another key item stays"
 # Round 74: a shiny holding a Magicite Shard is a location, as Magicite chests are
 MAGICITE_SHARD = 25000
 L.execute(f"s7 = shiny({MAGICITE_SHARD}, -1)")
@@ -436,7 +443,7 @@ assert ok is False and "load the slot by hand" in detail, detail
 L.execute("""
 talkRows = { ["12Arms_01Sword_1stAwake_Victory"] = { EventType = 0, ObtainItemList = arr({ { ID = 10199 } }), OnFlagList = arr({ 901, 1237 }) },
   ["12Arms_01Sword_1stAwake_Encount"] = { EventType = 0, encountGroupId = 9957 },
-  Gim_EV_Majipot_Delete_02 = { EventType = 0, OnFlagList = arr({ 915 }) },
+  Gim_EV_Majipot_Delete_02 = { EventType = 0, OnFlagList = arr({ 915 }), ObtainItemList = arr({}, { ID = 0, Num = 0 }) },
   Other = { EventType = 0, encountGroupId = 5 } }
 shopRows = talkRows
 siren = { ID = 9013, battleEventId = 77, battleFinishEventId = FName("C01_037_01"), battleFinishLoseEventId = FName("None"),
@@ -527,6 +534,9 @@ assert lua("storyActors.BP_MapGimmick_EventTrigger_C[1].VisibleCondition") == "!
 assert lua("storyActors.BP_MapGimmick_EventTrigger_C[1].m_EventList[1].EventId:ToString()") == "SubEv_C02_SymbolEnemy_Encount"
 assert lua("storyActors.BP_MapUnit_NPC_C[1].bHidden") is False and lua("storyActors.BP_MapUnit_NPC_C[1].col") is True
 assert lua(pot) == 1240 and lua("talkRows.SubEv_C02_SymbolEnemy_Encount.encountGroupId") == 9004
+# Round 97: on a story boss's map the shared win row gives the stand-in, so the boss's pop-up comes up
+potItems = "talkRows.Gim_EV_Majipot_Delete_02.ObtainItemList"
+assert lua(f"#{potItems}") == 1 and lua(f"{potItems}[1].ID") == POTION
 L.execute("sd.Progress.eventFlag[1241] = true")
 ok, detail = L.execute("return G.SyncStoryBossTrigger(say)")
 assert ok is True and "(won true)" in detail
@@ -551,6 +561,10 @@ ok, detail = L.execute("return G.SyncStoryBossTrigger(say)")
 assert ok is True and "(won true)" in detail and "1 transitions" in detail, detail
 assert lua(tellus + ".FlagCondition") == "" and lua(tellus + ".isEventOnly") is False, "a door again"
 assert lua(tellus + ".EventList[1].Condition") == "!{flag:1245}", "the fight row no longer runs"
+# Round 97: off a story boss's map the shared row is the game's Majipot row again, with no stand-in
+L.execute("mockMap = 1000")
+ok, detail = L.execute("return G.SyncStoryBossTrigger(say)")
+assert ok is None and lua(f"#{potItems}") == 0 and lua(pot) == 915, (detail, lua(f"#{potItems}"))
 L.execute("mockMap = 2050")
 ok, detail = L.execute("return G.SyncStoryBossTrigger(say)")
 assert ok is True and lua("storyActors.BP_MapUnit_NPC_C[2].m_VisiblFlagCondition") == "!{flag:1242}"

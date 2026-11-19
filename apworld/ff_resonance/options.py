@@ -21,7 +21,7 @@ class Goal(Choice):
     default = 1
 
 
-FRAGMENT_BOSSES = sum(1 for boss in BOSSES if boss["fragment"])
+FRAGMENT_BOSSES = len(BOSSES)   # every boss gives one (round 97)
 
 
 class TabletShardsRequired(Range):
@@ -54,7 +54,8 @@ class FinalBossVisions(Range):
 class FinalBossFragments(Range):
     """
     With the final_boss goal: how many Crystal Fragments you need before the way to the top of the
-    Crystal Tower opens. A story boss gives one when you beat it.
+    Crystal Tower opens. Every boss gives one when you beat it, story bosses, cave masters and the
+    optional bosses alike.
     """
     display_name = "Final Boss Fragments"
     range_start = 0
@@ -153,8 +154,8 @@ class IncludeCrystals(DefaultOnToggle):
 
 class IncludeBosses(DefaultOnToggle):
     """
-    Boss fights are locations. The 15 cave masters and the optional bosses hold shuffled items.
-    A story boss holds a Crystal Fragment.
+    Boss fights are locations. Every boss, story boss, cave master or optional boss, holds a
+    shuffled item, and gives a Crystal Fragment too.
     """
     display_name = "Include Bosses"
     visibility = Visibility.none
@@ -180,11 +181,19 @@ class IncludeSideQuests(Toggle):
 
 class PriorityBosses(DefaultOnToggle):
     """
-    The cave masters and the two Dragon's Maw bosses are priority locations: the generator puts
-    items that someone needs on them first, so they are worth the fight. Story bosses always hold
-    a Crystal Fragment. Sephiroth is left out, as he can be far too strong for the party.
+    The cave masters and the optional bosses (the two Dragon's Maw bosses and the Antlion) are
+    priority locations: the generator puts items that someone needs on them first, so they are
+    worth the fight. Sephiroth is left out, as he can be far too strong for the party.
     """
-    display_name = "Priority Bosses"
+    display_name = "Priority Cave Masters"
+
+
+class PriorityStoryBosses(Toggle):
+    """
+    The story bosses are priority locations: the generator puts items that someone needs on them
+    first.
+    """
+    display_name = "Priority Story Bosses"
 
 
 class ExcludedRegions(OptionSet):
@@ -260,6 +269,7 @@ class FFResonanceOptions(PerGameCommonOptions):
     include_radar_treasures: IncludeRadarTreasures
     include_side_quests: IncludeSideQuests
     priority_bosses: PriorityBosses
+    priority_story_bosses: PriorityStoryBosses
     excluded_regions: ExcludedRegions
     shuffle_party_members: ShufflePartyMembers
     shuffle_visions: ShuffleVisions

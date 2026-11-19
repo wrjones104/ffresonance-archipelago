@@ -2342,6 +2342,7 @@ assert "applied\t0" in read("ap_out.txt"), "a fragment is applied, though it is 
 L.execute("G.wonFlags[146] = true")
 tick(4)
 assert read("ap_out.txt").count(f"check\tboss:{MARAUDER}\n") == 1, read("ap_out.txt")
+assert read("ap_out.txt").count(f"check\tfragment:{MARAUDER}\n") == 1, "round 97: the boss's fragment with it"
 assert f"check\tboss:{LIQUID_THUNDER}" not in read("ap_out.txt")
 # Round 60: the win's pop-up says what the boss held; a boss with no scout asks for none
 assert list(G.popups.values()) == ["You found Alice's:\nHookshot"], list(G.popups.values())
@@ -2350,6 +2351,8 @@ assert f"check\tboss:{LIQUID_THUNDER}\n" in read("ap_out.txt"), "the fast check 
 assert len(list(G.popups.values())) == 1
 tick(4)
 assert read("ap_out.txt").count(f"check\tboss:{MARAUDER}\n") == 1, "reported once"
+assert read("ap_out.txt").count(f"check\tfragment:{MARAUDER}\n") == 1, "its fragment once too"
+assert f"check\tfragment:{LIQUID_THUNDER}\n" in read("ap_out.txt")
 G.map = 3280
 tick(12)
 assert G.sealed is True, "one fragment of two keeps the tower sealed"

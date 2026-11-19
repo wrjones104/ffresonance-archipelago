@@ -92,7 +92,10 @@ def create_all_items(world: FFResonanceWorld) -> None:
     progression item takes the place of one filler item (a consumable or gil), picked at random.
     """
     pool_ids = list(world.vanilla_items)
-    extra = progression_ids(world)
+    # Round 97: a progression item a chosen location holds (a lab key card on its own spot) is in
+    # the pool already.
+    held = set(pool_ids)
+    extra = [ap_id for ap_id in progression_ids(world) if ap_id not in held]
     filler_at = [i for i, ap_id in enumerate(pool_ids) if ITEMS[ap_id]["category"] in FILLER_CATEGORIES]
     if len(extra) > len(filler_at):
         raise OptionError(f"{world.player_name}: {len(extra)} items to add, but only {len(filler_at)} "

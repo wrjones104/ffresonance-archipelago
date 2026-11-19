@@ -4,15 +4,16 @@ from typing import TYPE_CHECKING
 
 from BaseClasses import ItemClassification, Location, LocationProgressType, Region
 
-from .data import (AIRSHIP_AREA, AIRSHIP_ITEM, BOSSES, CHESTS, CONTINENT_UNLOCKS, RADAR, RADAR_ITEM, RADAR_PART_CHESTS,
-                   CRYSTALS, FINAL_AREA, ITEMS, OPEN_AREA, SHINIES, SIDE_QUESTS, TABLET_SHINIES)
+from .data import (AIRSHIP_AREA, AIRSHIP_ITEM, BOSSES, CHESTS, CONTINENT_UNLOCKS, FRAGMENTS, RADAR, RADAR_ITEM,
+                   RADAR_PART_CHESTS, CRYSTALS, FINAL_AREA, ITEMS, OPEN_AREA, SHINIES, SIDE_QUESTS, TABLET_SHINIES)
 from .boss_logic import boss_rule
 from .items import FRAGMENT_NAME, GAME, FFResonanceItem, create_item, progression_ids
 
 if TYPE_CHECKING:
     from .world import FFResonanceWorld
 
-ALL_LOCATIONS = CHESTS + SHINIES + CRYSTALS + TABLET_SHINIES + BOSSES + RADAR + RADAR_PART_CHESTS + SIDE_QUESTS
+ALL_LOCATIONS = (CHESTS + SHINIES + CRYSTALS + TABLET_SHINIES + BOSSES + FRAGMENTS + RADAR + RADAR_PART_CHESTS
+                 + SIDE_QUESTS)
 # The quests whose reward gives a vision: with visions not shuffled, the quest holds its own.
 QUEST_VISIONS = [loc for loc in SIDE_QUESTS if "vision" in loc]
 LOCATION_NAME_TO_ID: dict[str, int] = {loc["name"]: loc["id"] for loc in ALL_LOCATIONS}
@@ -27,7 +28,8 @@ location_name_groups["Crystals"] = {loc["name"] for loc in CRYSTALS}
 location_name_groups["Tablet Shard Shinies"] = {loc["name"] for loc in TABLET_SHINIES}
 location_name_groups["Radar Treasures"] = {loc["name"] for loc in RADAR}
 location_name_groups["Side Quests"] = {loc["name"] for loc in SIDE_QUESTS}
-location_name_groups["Fragment Bosses"] = {loc["name"] for loc in BOSSES if loc["fragment"]}
+location_name_groups["Story Bosses"] = {loc["name"] for loc in BOSSES if loc["kind"] == "story"}
+location_name_groups["Cave Masters"] = {loc["name"] for loc in BOSSES if loc["kind"] == "cave"}
 
 # Sephiroth takes negligible damage at midgame levels even at minimum scaling, so priority_bosses
 # avoids placing required items on him.
@@ -93,7 +95,7 @@ def create_regions_and_locations(world: FFResonanceWorld) -> None:
     if world.options.include_tablet_shards:
         chosen += TABLET_SHINIES
     if world.options.include_bosses:
-        chosen += BOSSES
+        chosen += BOSSES + FRAGMENTS
     # Round 75: with the radar's treasures on, a chest that held a radar part is a location too.
     if world.options.include_radar_treasures:
         chosen += RADAR + RADAR_PART_CHESTS
@@ -129,6 +131,8 @@ def create_regions_and_locations(world: FFResonanceWorld) -> None:
         fights = list(loc.get("after_boss", []))
         if loc["key"].startswith("boss:"):
             fights.append(int(loc["key"].split(":")[1]))
+        if "boss" in loc:
+            fights.append(loc["boss"])
         rules += [boss_rule(world, group) for group in fights]
         if loc.get("airship") and on_foot:
             rules.append(lambda state: state.has(AIRSHIP, player))
@@ -152,15 +156,20 @@ def create_regions_and_locations(world: FFResonanceWorld) -> None:
                 rules.append(lambda state, places=places: any(state.can_reach_region(p, player) for p in places))
         if rules:
             location.access_rule = lambda state, rules=rules: all(rule(state) for rule in rules)
-        if (world.options.priority_bosses and loc.get("fragment") is False and loc["key"] != SEPHIROTH
-                and location.progress_type == LocationProgressType.DEFAULT):
+        kind = loc.get("kind")
+        priority = ((world.options.priority_bosses and kind in ("cave", "optional") and loc["key"] != SEPHIROTH)
+                    or (world.options.priority_story_bosses and kind == "story"))
+        if priority and location.progress_type == LocationProgressType.DEFAULT:
             location.progress_type = LocationProgressType.PRIORITY
         region.locations.append(location)
-        # Story bosses always award their own Crystal Fragment.
-        if loc.get("fragment"):
+        # Every boss awards its own Crystal Fragment, on a location of its own (round 97).
+        if "boss" in loc:
             location.place_locked_item(create_item(world, FRAGMENT_NAME))
         elif "vision" in loc and not world.options.shuffle_visions:
             location.place_locked_item(create_item(world, ITEMS[loc["vision"]]["name"]))
+        # A key item's own spot keeps it when key items are not shuffled (round 97).
+        elif loc.get("key_item") and not world.options.shuffle_key_items:
+            location.place_locked_item(create_item(world, ITEMS[loc["vanilla"]]["name"]))
         # A location that holds its own item adds nothing to the pool.
         if loc["vanilla"] is not None and location.item is None:
             world.vanilla_items.append(loc["vanilla"])

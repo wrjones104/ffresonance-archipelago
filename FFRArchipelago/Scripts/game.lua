@@ -1524,13 +1524,15 @@ end
 -- Blanks a shiny actor that is an AP location to nothing (matching blanked chests), using the same
 -- shuffle limits (`shinies`) and Tablet Shards (`shards`) filter as the apworld. Returns true if modified.
 local TABLET_SHARD = 25004
+G.SHUFFLED_KEY_ITEMS = { [20009] = true, [20010] = true, [20011] = true }   -- the Research Center's lab key cards
 function G.BlankFieldItem(e, shinies, shards)
     if e.open or not e.actor then return false end
     local id, money = e.itemId or -1, e.money or -1
     if id == BLANK.ItemId and money == BLANK.Money then return false end
     local isShard = id == TABLET_SHARD
     -- Round 74: shinies holding Magicite are locations, as Magicite chests are since round 45.
-    local isLocation = (id >= 0 and id < SHUFFLE_ID_LIMIT) or (id < 0 and money > 0)
+    -- Round 97: the lab key cards' spots are locations too (SHUFFLED_KEY_ITEMS in the generator).
+    local isLocation = (id >= 0 and id < SHUFFLE_ID_LIMIT) or (id < 0 and money > 0) or G.SHUFFLED_KEY_ITEMS[id]
         or (id >= MAGICITE_FIRST and id <= MAGICITE_LAST)
     if not ((shards and isShard) or (shinies and isLocation)) then return false end
     return (pcall(function()
@@ -2641,12 +2643,39 @@ end
 -- overwrite it with the scouted AP item.
 local BOSS_STAND_IN = 1
 
--- Swaps those rewards for the stand-in, takes story values out of win rows, and strips story
--- cutscenes from G.STORY_BOSSES talk and battle-group rows. Safe to run again. Returns the number
--- of rows written.
+-- Round 97 (the user): every boss holds a shuffled item, and its pop-up shows it. These bosses'
+-- finish rows (each fight's battleFinishEventId) give nothing, so no pop-up came: each gets the
+-- stand-in while it has no item. The story bosses the mod brings back share STORY_BOSS_WIN, which
+-- is the game's own Majipot row too: SyncStoryBossTrigger gives it the stand-in on their maps only.
+G.BOSS_ROWS_ADD_STAND_IN = {
+    Dng_08Gro_43_BattleEnd_01 = true, Dng_08Gro_43_BattleEnd_02 = true, Dng_08Gro_43_BattleEnd_03 = true,
+    Dng_08Gro_43_BattleEnd_04 = true, Dng_08Gro_43_BattleEnd_05 = true, Dng_08Gro_43_BattleEnd_06 = true,
+    SubEv_C02_ThunderMountainEnemy_02 = true, SubEv_BarrierReleased_BattleEnd_Left = true,
+    SubEv_BarrierReleased_BattleEnd_Right = true, SubEv_C09_01Gra_41_Delete_01 = true,
+    SubEv_C09_01Gra_41_Delete_02 = true, C01_ArijigokuWin_02 = true,
+}
+-- With `on`, gives an empty reward row the stand-in; without, takes back a lone stand-in. True when written.
+function G.StandIn(row, on)
+    local list = row.ObtainItemList
+    if on and #list == 0 then
+        local _ = list[1]
+        list[1].ID, list[1].Num = BOSS_STAND_IN, 1
+        return true
+    end
+    if not on and #list == 1 and Int(list[1].ID) == BOSS_STAND_IN then
+        list:Empty()
+        return true
+    end
+    return false
+end
+
+-- Swaps those rewards for the stand-in, gives the empty finish rows one, takes story values out of
+-- win rows, and strips story cutscenes from G.STORY_BOSSES talk and battle-group rows. Safe to run
+-- again. Returns the number of rows written.
 function G.BossesPatch()
     local written = 0
     EachTalkRow(function(key, row)
+        if G.BOSS_ROWS_ADD_STAND_IN[key] and G.StandIn(row, true) then written = written + 1 end
         if BOSS_ROWS_NO_REWARD[key] then
             local reward = row.ObtainItemList[1]
             reward.ID, reward.Num = BOSS_STAND_IN, 1
@@ -2955,6 +2984,7 @@ function G.SyncStoryBossTrigger(say)
                 if key == STORY_BOSS_WIN and #row.OnFlagList >= 1 and Int(row.OnFlagList[1]) ~= MAJIPOT_FLAG then
                     row.OnFlagList[1] = MAJIPOT_FLAG
                 end
+                if key == STORY_BOSS_WIN then G.StandIn(row, false) end
             end)
         end
         return nil, "no story boss on map " .. tostring(mapId)
@@ -2971,6 +3001,7 @@ function G.SyncStoryBossTrigger(say)
                 fightRows = fightRows + 1
             elseif key == STORY_BOSS_WIN then
                 for i = 1, #row.OnFlagList do row.OnFlagList[i] = boss.flag end
+                G.StandIn(row, true)
                 winRows = winRows + 1
             end
         end)
