@@ -766,56 +766,73 @@ assert L.eval("#rich:GetParent().kids") == 3, "kept while the pop-up is up"
 L.execute("rich.shown = false; G.ChestPopupRestore()")
 assert L.eval("#rich:GetParent().kids") == 2 and L.eval("popupLine.vis") == 0, "gone with the pop-up; the item line back"
 L.execute("G.POPUP_COLORS.on = false")
-# Round 91 probe: a Quests screen Rewards line showing a scouted item gets our row beside its text
-# block, which is hidden; a line the list reuses for another reward gets its own text back
+# Round 93: a Quests screen Rewards text showing a scouted item is replaced by our row. The blocks
+# are found as CommonTextBlocks in a reward line (round 92: walking down from the line found none).
+# In a one-child slot (the entry panel's named slot) the row takes the block's place; in a panel
+# it goes beside the hidden block. A line the list reuses for another reward gets its own back.
 L.execute(r"""
-local function panelOf(name)
-  local p = { cls = "NamedSlot", name = name, kids = {} }
+local function widget(cls, name)
+  local p = { cls = cls, name = name, kids = {} }
   function p:GetFName() local me = self return { ToString = function() return me.name end } end
   function p:GetClass() local me = self return { GetFName = function() return { ToString = function() return me.cls end } end } end
   function p:IsValid() return true end
   function p:HasAnyInternalFlags() return false end
   function p:HasAnyFlags() return false end
-  function p:GetChildrenCount() return #self.kids end
-  function p:GetChildAt(i) return self.kids[i + 1] end
-  function p:AddChild(w) self.kids[#self.kids + 1] = w; w.parent = self; return {} end
-  function p:GetFullName() return self.cls .. " " .. self.name end
+  function p:GetFullName() return self.cls .. " " .. self.path end
   return p
 end
-rewardPanel = panelOf("WBP_IconEntryLayoutPanel_76")
-rewardBlock = panelOf("CommonTextBlock_194")
-rewardBlock.cls, rewardBlock.text, rewardBlock.vis = "CommonTextBlock", "Alice's Hookshot", 0
+rewardSlot = widget("NamedSlot", "Content")
+rewardSlot.path = "/Engine/Transient.WBP_IconEntryLayoutPanel_C_1.WidgetTree.Content"
+function rewardSlot:AddChild(w) return nil end
+function rewardSlot:SetContent(w) self.content = w; return {} end
+rewardBlock = widget("CommonTextBlock", "CommonTextBlock_194")
+rewardBlock.path = "/Engine/Transient.WBP_Quest_Reward_Text_C_3.WidgetTree.CommonTextBlock_194"
+rewardBlock.text, rewardBlock.vis = "Alice's Hookshot", 0
 function rewardBlock:GetText() local me = self return { ToString = function() return me.text end } end
-function rewardBlock:GetParent() return rewardPanel end
+function rewardBlock:GetParent() return self.parentWidget end
 function rewardBlock:GetOuter() return hudTree end
 function rewardBlock:GetVisibility() return self.vis end
 function rewardBlock:SetVisibility(v) self.vis = v end
-rewardPanel.kids = { rewardBlock }
-rewardLine = panelOf("WBP_Quest_Reward_Text_C_3")
-rewardLine.WidgetTree = { RootWidget = rewardPanel }
-function rewardLine:IsVisible() return true end
+function rewardBlock:IsVisible() return true end
+rewardBlock.parentWidget = rewardSlot
+rewardSlot.content = rewardBlock
+otherBlock = widget("CommonTextBlock", "CommonTextBlock_194")
+otherBlock.path = "/Engine/Transient.WBP_Menu_C_1.WidgetTree.CommonTextBlock_194"
+function otherBlock:GetText() return { ToString = function() return "Alice's Hookshot" end } end
+function otherBlock:IsVisible() return true end
 local oldFAO9 = FindAllOf
-function FindAllOf(c) if c == "WBP_Quest_Reward_Text_C" then return { rewardLine } end return oldFAO9(c) end
+function FindAllOf(c) if c == "CommonTextBlock" then return { otherBlock, rewardBlock } end return oldFAO9(c) end
 questSpans = { ["Alice's Hookshot"] = { text = "Hookshot", flags = 2 } }
 """)
 lines = list(L.eval("G.QuestRewardColors(questSpans)").values())
-SEEN_HOOKSHOT = 'seen: 1 reward lines, 1 on screen: "Alice\'s Hookshot" (scouted)'
-assert lines == [SEEN_HOOKSHOT, "coloured: Alice's Hookshot (in a NamedSlot)"], lines
-assert L.eval("rewardBlock.vis") == 1, "the game's line is hidden"
-assert [L.eval(f"rewardPanel.kids[2].kids[{i}].text") for i in (1, 2)] == ["Alice's ", "Hookshot"]
+SEEN_HOOKSHOT = 'seen: 1 reward texts: "Alice\'s Hookshot" (scouted)'
+assert lines == [SEEN_HOOKSHOT, "coloured: Alice's Hookshot (in a NamedSlot, in its place)"], lines
+assert L.eval("rewardSlot.content.cls") == "HorizontalBox", "the row in the block's place"
+assert L.eval("rewardBlock.vis") == 0, "nothing hidden: the block is out of the slot"
+assert [L.eval(f"rewardSlot.content.kids[{i}].text") for i in (1, 2)] == ["Alice's ", "Hookshot"]
 SLATEBLUE_R = 0.153
-assert L.eval("rewardPanel.kids[2].kids[2].ColorAndOpacity.SpecifiedColor.R") == SLATEBLUE_R
-assert L.eval("rewardPanel.kids[2].kids[2].Font.Justification") is None and L.eval("rewardPanel.kids[2].kids[1].Justification") == 0, "left"
+assert L.eval("rewardSlot.content.kids[2].ColorAndOpacity.SpecifiedColor.R") == SLATEBLUE_R
+assert L.eval("rewardSlot.content.kids[1].Justification") == 0, "left, as the game's line"
 assert list(L.eval("G.QuestRewardColors(questSpans)").values()) == [], "once"
 L.execute('rewardBlock.text = "Phoenix Down"')
 lines = list(L.eval("G.QuestRewardColors(questSpans)").values())
-assert lines == ['seen: 1 reward lines, 1 on screen: "Phoenix Down"', "taken out: Alice's Hookshot"], lines
-assert L.eval("rewardBlock.vis") == 0 and L.eval("#rewardPanel.kids") == 1
-# Round 92: a block with another name is taken by its text
-L.execute('rewardBlock.name, rewardBlock.text = "TextBlock_Reward", "Alice\'s Hookshot"')
+assert lines[-1] == "taken out: Alice's Hookshot" and L.eval("rewardSlot.content == rewardBlock") is True, lines
+# in a panel: the row beside the block, which is hidden
+L.execute(r"""
+rewardPanel = { kids = { rewardBlock }, name = "Box", cls = "HorizontalBox", path = "/Engine/Transient.Box" }
+function rewardPanel:AddChild(w) self.kids[#self.kids + 1] = w; w.parent = self; return {} end
+function rewardPanel:GetClass() local me = self return { GetFName = function() return { ToString = function() return me.cls end } end } end
+function rewardPanel:IsValid() return true end
+function rewardPanel:HasAnyInternalFlags() return false end
+function rewardPanel:HasAnyFlags() return false end
+function rewardPanel:GetFullName() return "HorizontalBox " .. self.path end
+rewardBlock.parentWidget, rewardBlock.text = rewardPanel, "Alice's Hookshot"
+""")
 lines = list(L.eval("G.QuestRewardColors(questSpans)").values())
-assert lines[-1] == "coloured: Alice's Hookshot (in a NamedSlot)", lines
+assert lines[-1] == "coloured: Alice's Hookshot (in a HorizontalBox)", lines
+assert L.eval("rewardBlock.vis") == 1 and L.eval("#rewardPanel.kids") == 2
 assert list(L.eval("G.QuestRewardColors({})").values())[-1] == "taken out: Alice's Hookshot", "off: all taken out"
+assert L.eval("rewardBlock.vis") == 0 and L.eval("#rewardPanel.kids") == 1
 
 # the quest-notice banner try
 L.execute(r"""
@@ -2032,6 +2049,17 @@ requestReload = "requestTable.rows['カーミル'].Prize[2] = { ID = 25001, Num 
 L.execute(requestReload)
 assert L.eval(f"G.QuestPrizes({{ ['quest:25'] = \"{CALL_LABEL}\" }})") == 1, "written again on a table loaded again"
 assert L.eval("G.QuestPrizes({})") == 1 and L.eval("prizeText('カーミル')") == "13033: 25001:", "a save not linked: the game's own"
+# Round 93: the quest log's states, from the save's request.DataMap (round 92: Verun showed no quest)
+L.execute(r"""
+local function entry(k, state) return { get = function() return k end }, { get = function() return { State = state } end } end
+requestSave = { request = { DataMap = { ForEach = function(self, fn)
+  local k, v = entry(17, 1); fn(k, v); k, v = entry(26, 2); fn(k, v) end } } }
+local oldSaveData = G.SaveData
+function G.SaveData() return requestSave end
+requestStates = G.RequestStates({ 17, 26, 27 })
+G.SaveData = oldSaveData
+""")
+assert [L.eval(f"requestStates[{i}]") for i in (17, 26, 27)] == ["open", "done", "not in the log"]
 print("quest rows: ok")
 
 # Round 84: the open start skips C02_219_02, which accepts request 17 into the quest log. Verun's

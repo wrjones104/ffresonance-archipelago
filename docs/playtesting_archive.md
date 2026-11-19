@@ -1359,3 +1359,14 @@ Send the `[FFRAP]` lines of the log.
 - Pop-up colours are on by default (`ffrap_popup colors off`).
 - The Quests screen probe logs what it sees each time that changes: `quest colours: seen: N reward lines, M on screen: "text" (scouted), ...`. It takes a line's block by its name or by its text (the first text block under the line that shows a scouted label).
 
+### Round 92 (mod 0.61.0 build 5d85e80c, apworld 0.30.0 build 88874051)
+
+- **Pop-up colours by default:** passed, on every chest and shiny of the run.
+- **Quests screen colours:** not yet. The probe found the reward lines (`seen: 7 reward lines, 2 on screen`), but under each line on screen it found `no text block`. The text block sits in the entry panel's named slot, which the walk down from the line did not reach.
+- **The Call from Beyond, played again:** passed. `chest pop-up for quest:25 before its check: text set, item line hidden, the name in its colour`, then `check quest:25` (the user: good now).
+- **Mechabo:** Verun showed only "..." and no quest marker, and "Arise, Mechabo!" was not active. This run was a new seed's save with counter 16 at 10, so the step there is "Arise, Mechabo!" (2 Ipooh drops), not "Mechabo Evolved". The log does not say whether the quest log holds request 17.
+
+**Round 93 build (mod 0.61.0 build 2dcd20c4, apworld unchanged, build 88874051):**
+- The Quests screen probe finds the reward texts as CommonTextBlocks whose path is in a reward line. In a one-child slot our row takes the block's place (`SetContent`), and the block goes back when the line shows another reward; in a panel it goes beside the hidden block (`AddChild`).
+- The `mechabo:` line also gives the quest log's state of quests 17, 26 and 27 (open, done, not started, not in the log), from the save's `request.DataMap`.
+

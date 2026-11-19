@@ -326,6 +326,8 @@ Along the same lines, I would also want an option for players to start with all 
 
 **Round 85 result:** still no quest, and Ipooh kills did not count. Request 17's own row (`DT_RequestData` `C02_MechaboLvUp`) is accepted only while `AcceptCondition` holds, `{progress:16}==0&{progress:0}>=2120`, and the start has the counter at 10 already. Its first step lists quest 1001 on quest board 1000: "Ipooh" x2 (`ClearConditionList` ID 55), most likely a hunt that counts only while the quest is accepted. **Built (build b93912a5):** `G.MechaboPatch` also sets request 17's `AcceptCondition` and `Occurrence.Condition` to `{progress:16}==10`.
 
+**Round 92 (a new seed's save, counter 10):** Verun showed only "..." and no quest. Since round 93 the `mechabo:` line gives the quest log's state of quests 17, 26 and 27 from the save (`request.DataMap`).
+
 **To find out:**
 - Whether the steps should be locations: the six abilities and three Magicite rewards, with logic for each material's enemy area. The steps also need Lid in logic if the abilities stay vanilla.
 
@@ -534,4 +536,6 @@ Until then the Options rows stay, and on a save not linked to the seed they chan
 **Built (round 91, build ec671324):** feed colours on by default, with the name bold. The pop-up and the Quests screen use the feed's way: a row of our own TextBlocks, styled before it is on screen. The pop-up's row goes under the message, the Rewards line's beside its hidden text block. Both are probes (`ffrap_popup colors on`, `ffrap_quest colors on`).
 
 **Round 91 result:** the feed and the pop-up work, and the pop-up's colours are on by default since round 92. The Quests screen showed no colour and logged nothing. Since round 92 the probe logs what it sees (`seen:` lines) and takes a line's block by its name or by its text.
+
+**Round 92 result:** the lines were found, but no text block under them: it sits in the entry panel's named slot. Since round 93 the probe finds the reward texts as CommonTextBlocks whose path is in a reward line, and in a one-child slot puts our row in the block's place (`SetContent`).
 

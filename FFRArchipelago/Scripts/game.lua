@@ -1938,85 +1938,70 @@ end
 
 -- Round 90 (the user): the item's name in its colour in the Quests screen's Rewards. Each line is
 -- WBP_Quest_Reward_Text_C, whose CommonTextBlock_194 has one style. Probe: off until
--- ffrap_quest colors on. A line showing one of `spans` (label -> { text, flags }) gets a row of
--- our own TextBlocks in the block's parent panel (UPanelWidget AddChild, which takes a widget),
--- and the block is collapsed. The list can show the line again for another reward: a row whose
--- block no longer shows its label, or whose label is not in `spans` (the probe off), is taken out
--- and the block shown again.
-G.QUEST_COLORS = { on = false, rows = {}, BLOCK = "CommonTextBlock_194", LINE = "WBP_Quest_Reward_Text_C",
+-- ffrap_quest colors on. A block showing one of `spans` (label -> { text, flags }) is replaced by a
+-- row of our own TextBlocks: added beside it in a panel (AddChild) with the block collapsed, or in
+-- a one-child widget (a NamedSlot or a SizeBox) put in its place (SetContent). The list can show
+-- the line again for another reward: a row whose block no longer shows its label, or whose label
+-- is not in `spans` (the probe off), is taken out and the block put back.
+-- Round 92: walking down from the line found no text block (it sits in the entry panel's named
+-- slot), so the blocks are found as CommonTextBlocks whose path is in a reward line.
+G.QUEST_COLORS = { on = false, rows = {}, LINE = "WBP_Quest_Reward_Text_C",
                    LOOK = { size = 18, spacing = 4, shadow = 0.5, offset = { X = 2, Y = 1 }, justify = 0 } }
--- The first widget under `w` (its own widget tree and its children) that `test(widget, name)`
--- accepts, or nil.
-function G.FindWidget(w, test, depth)
-    depth = depth or 0
-    if not (w and Alive(w)) or depth > 12 then return nil end
-    local n
-    pcall(function() n = w:GetFName():ToString() end)
-    if test(w, n) then return w end
-    local root
-    pcall(function() root = w.WidgetTree.RootWidget end)
-    local found = root and G.FindWidget(root, test, depth + 1)
-    if found then return found end
-    local count = 0
-    pcall(function() count = w:GetChildrenCount() end)
-    for i = 0, count - 1 do
-        local c
-        pcall(function() c = w:GetChildAt(i) end)
-        found = G.FindWidget(c, test, depth + 1)
-        if found then return found end
-    end
-end
 function G.QuestRewardColors(spans, say)
     local Q, out = G.QUEST_COLORS, {}
-    for blockPath, r in pairs(Q.rows) do
-        local block = Find(blockPath)
-        local text
-        pcall(function() text = block:GetText():ToString() end)
-        if not (block and Alive(block)) or text ~= r.label or not spans[r.label] then
-            local row = Find(r.row)
-            if row and Alive(row) then pcall(function() row:RemoveFromParent() end) end
-            if block and Alive(block) then pcall(function() block:SetVisibility(r.visibility) end) end
-            Q.rows[blockPath] = nil
-            out[#out + 1] = "taken out: " .. r.label
-        end
-    end
-    -- Round 91: nothing was coloured and nothing logged. The line's block is now taken by its
-    -- name or by its text (the first text block showing a scouted label), and what the search
-    -- saw is logged each time it changes.
     local function textOf(w)
         local t
         pcall(function() t = w:GetText():ToString() end)
         return t
     end
-    local ok, all = pcall(FindAllOf, Q.LINE)
-    local seen = { lines = 0, shown = 0, texts = {} }
-    for _, w in ipairs(ok and all or {}) do
-        seen.lines = seen.lines + 1
-        if Alive(w) and Shown(w) then
-            seen.shown = seen.shown + 1
-            local block = G.FindWidget(w, function(c, n)
-                local t = textOf(c)
-                return t ~= nil and (n == Q.BLOCK or spans[t] ~= nil)
-            end)
-            local path = block and G.PathOf(block)
-            local text = block and textOf(block)
-            seen.texts[#seen.texts + 1] = text and ('"' .. text .. '"' .. (spans[text] and " (scouted)" or "")) or "no text block"
+    for blockPath, r in pairs(Q.rows) do
+        local block = Find(blockPath)
+        local text = block and textOf(block)
+        if not (block and Alive(block)) or text ~= r.label or not spans[r.label] then
+            local row, parent = Find(r.row), r.parent and Find(r.parent)
+            if r.content and parent and Alive(parent) and block and Alive(block) then
+                pcall(function() parent:SetContent(block) end)
+            elseif row and Alive(row) then
+                pcall(function() row:RemoveFromParent() end)
+            end
+            if block and Alive(block) then pcall(function() block:SetVisibility(r.visibility) end) end
+            Q.rows[blockPath] = nil
+            out[#out + 1] = "taken out: " .. r.label
+        end
+    end
+    local ok, all = pcall(FindAllOf, "CommonTextBlock")
+    local seen = {}
+    for _, block in ipairs(ok and all or {}) do
+        local full
+        pcall(function() full = block:GetFullName() end)
+        if Alive(block) and full and full:find(Q.LINE, 1, true) and (Shown(block) or Q.rows[G.PathOf(block)]) then
+            local path, text = G.PathOf(block), textOf(block)
+            seen[#seen + 1] = text and ('"' .. text .. '"' .. (spans[text] and " (scouted)" or "")) or "no text"
             if path and not Q.rows[path] and text and spans[text] then
                 local was = G.feedTrace
                 G.feedTrace = say
-                local parent, tree, row, slot, vis = nil, nil, nil, nil, 0
+                local parent, tree, row, slot, vis, content = nil, nil, nil, nil, 0, false
                 pcall(function() parent = block:GetParent() end)
                 pcall(function() tree = block:GetOuter() end)
                 local parentName = "nil"
                 pcall(function() parentName = parent:GetClass():GetFName():ToString() end)
+                pcall(function() vis = block:GetVisibility() end)
                 row = parent and feed.row(text, spans[text], Q.LOOK, tree)
                 step("quest: add the coloured line to the " .. parentName .. " (AddChild)")
-                if row and pcall(function() slot = parent:AddChild(row) end) and slot then
-                    pcall(function() vis = block:GetVisibility() end)
-                    step("quest: hide the game's line (SetVisibility)")
-                    pcall(function() block:SetVisibility(COLLAPSED) end)
-                    Q.rows[path] = { row = G.PathOf(row), label = text, visibility = vis }
-                    out[#out + 1] = "coloured: " .. text .. " (in a " .. parentName .. ")"
+                if row then pcall(function() slot = parent:AddChild(row) end) end
+                if row and not slot then
+                    step("quest: put the coloured line in the " .. parentName .. "'s place for the game's (SetContent)")
+                    pcall(function() slot = parent:SetContent(row) end)
+                    content = slot ~= nil
+                end
+                if slot then
+                    if not content then
+                        step("quest: hide the game's line (SetVisibility)")
+                        pcall(function() block:SetVisibility(COLLAPSED) end)
+                    end
+                    Q.rows[path] = { row = G.PathOf(row), label = text, visibility = vis, content = content,
+                                     parent = G.PathOf(parent) }
+                    out[#out + 1] = "coloured: " .. text .. " (in a " .. parentName .. (content and ", in its place" or "") .. ")"
                 else
                     out[#out + 1] = "not coloured: " .. text .. " (in a " .. parentName .. ")"
                 end
@@ -2024,8 +2009,7 @@ function G.QuestRewardColors(spans, say)
             end
         end
     end
-    local summary = string.format("seen: %d reward lines, %d on screen%s%s", seen.lines, seen.shown,
-        #seen.texts > 0 and ": " or "", table.concat(seen.texts, ", "))
+    local summary = string.format("seen: %d reward texts%s%s", #seen, #seen > 0 and ": " or "", table.concat(seen, ", "))
     if summary ~= Q.lastSeen then
         table.insert(out, 1, summary)
         Q.lastSeen = summary
@@ -2277,6 +2261,26 @@ function G.FinishJoin(id)
     local entry = sd and UnitEntry(sd, id)
     if entry then Put(entry, "IsUsable", true) end
     return how
+end
+
+-- The quest log's state of each request in `ids`, from the save (request.DataMap, request id ->
+-- SaveData_RequestData): "open" (accepted), "done", "not started", or "not in the log".
+G.REQUEST_STATES = { [0] = "not started", [1] = "open", [2] = "done" }
+function G.RequestStates(ids)
+    local out, want = {}, {}
+    for _, id in ipairs(ids) do
+        want[id] = true
+        out[id] = "not in the log"
+    end
+    local sd = G.SaveData()
+    if not sd then return out end
+    pcall(function()
+        sd.request.DataMap:ForEach(function(k, v)
+            local id = Int(k:get())
+            if want[id] then out[id] = G.REQUEST_STATES[Int(v:get().State)] or "?" end
+        end)
+    end)
+    return out
 end
 
 -- Whether a unit has learned an ability (activeSkillIdList), or nil with no entry for it.
@@ -2640,7 +2644,9 @@ G.MECHABO = { counter = 16, start = 10, request = 17,
               requestRow = "C02_MechaboLvUp", accept = "{progress:16}==10",
               -- Round 88: Lid did not learn Mechabo Tackle. It comes from C02_MechaboLvUp_03, run at
               -- counter 30 with flag 219 (the step's drops delivered); the mod logs all three.
-              delivered = 219, lid = 1004, tackle = 404110 }
+              delivered = 219, lid = 1004, tackle = 404110,
+              -- Arise, Mechabo!; Mechabo Evolved; Mechabo Unleashed (round 92: no quest showed)
+              requests = { 17, 26, 27 } }
 -- Puts an Accept of request 17 first in each of those rows' RequestStateSettings, and request 17's
 -- accept and occurrence tests at Verun's step. Safe to run again. Returns the rows written.
 function G.MechaboPatch()

@@ -165,7 +165,8 @@ G.QUESTS = { { key = "quest:13", counter = 28, value = 40, map = 2030, before = 
              { key = "quest:6", counter = 7, value = 60, map = 3160, before = 50, rows = { "ChrEv_0070_006_01" } },
              { key = "quest:34", counter = 44, value = 20, rows = { "SubEv_C05_MogChase_06_NPC01_01" } } }
 function G.QuestsPatch() G.questPatches = (G.questPatches or 0) + 1; return 2 end
-G.MECHABO = { counter = 16, start = 10, delivered = 219, lid = 1004, tackle = 404110 }
+G.MECHABO = { counter = 16, start = 10, delivered = 219, lid = 1004, tackle = 404110, requests = { 17, 26 } }
+function G.RequestStates(ids) local out = {} for _, id in ipairs(ids) do out[id] = G.requestStates and G.requestStates[id] or "not in the log" end return out end
 function G.UnitHasSkill(id, skill) return G.skills and G.skills[skill] end
 function G.QuestPrizes(labels) G.prizes = labels; local n = 0; for _ in pairs(labels) do n = n + 1 end; return n end
 function G.MechaboPatch() G.mechaboPatches = (G.mechaboPatches or 0) + 1; return 2 end
@@ -2032,7 +2033,11 @@ assert L.eval("next(G.questSpans)") is None, "off: every row taken out"
 # Round 88: Verun's counter, the delivery flag and Lid's Mechabo Tackle are logged when they change
 L.execute("G.skills = { [404110] = true }")
 tick(2)
-assert any("mechabo: progress 16 at 30, flag 219 off, Lid has Mechabo Tackle" in s for s in logs()), logs()
+assert any("mechabo: progress 16 at 30, flag 219 off, quest 17 not in the log, quest 26 not in the log, Lid has Mechabo Tackle"
+           in s for s in logs()), logs()
+L.execute('G.requestStates = { [17] = "done", [26] = "open" }')
+tick(2)
+assert any("quest 17 done, quest 26 open" in s for s in logs()), "round 93: the quests' states, when they change"
 n = len([s for s in logs() if s.startswith("mechabo: progress")])
 tick(4)
 assert len([s for s in logs() if s.startswith("mechabo: progress")]) == n, "logged once per change"
