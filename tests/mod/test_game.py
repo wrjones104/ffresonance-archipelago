@@ -800,12 +800,16 @@ otherBlock = widget("CommonTextBlock", "CommonTextBlock_194")
 otherBlock.path = "/Engine/Transient.WBP_Menu_C_1.WidgetTree.CommonTextBlock_194"
 function otherBlock:GetText() return { ToString = function() return "Alice's Hookshot" end } end
 function otherBlock:IsVisible() return true end
+rewardLine = widget("WBP_Quest_Reward_Text_C", "WBP_Quest_Reward_Text_C_3")
+rewardLine.path = "/Engine/Transient.WBP_Quest_Reward_Text_C_3"
+rewardLine.CommonTextBlock_194 = rewardBlock
+function rewardLine:IsVisible() return true end
 local oldFAO9 = FindAllOf
-function FindAllOf(c) if c == "CommonTextBlock" then return { otherBlock, rewardBlock } end return oldFAO9(c) end
+function FindAllOf(c) if c == "WBP_Quest_Reward_Text_C" then return { rewardLine } end return oldFAO9(c) end
 questSpans = { ["Alice's Hookshot"] = { text = "Hookshot", flags = 2 } }
 """)
 lines = list(L.eval("G.QuestRewardColors(questSpans)").values())
-SEEN_HOOKSHOT = 'seen: 1 reward texts: "Alice\'s Hookshot" (scouted)'
+SEEN_HOOKSHOT = 'seen: 1 reward lines on screen: "Alice\'s Hookshot" (scouted) by property'
 assert lines == [SEEN_HOOKSHOT, "coloured: Alice's Hookshot (in a NamedSlot, in its place)"], lines
 assert L.eval("rewardSlot.content.cls") == "HorizontalBox", "the row in the block's place"
 assert L.eval("rewardBlock.vis") == 0, "nothing hidden: the block is out of the slot"
@@ -833,6 +837,16 @@ assert lines[-1] == "coloured: Alice's Hookshot (in a HorizontalBox)", lines
 assert L.eval("rewardBlock.vis") == 1 and L.eval("#rewardPanel.kids") == 2
 assert list(L.eval("G.QuestRewardColors({})").values())[-1] == "taken out: Alice's Hookshot", "off: all taken out"
 assert L.eval("rewardBlock.vis") == 0 and L.eval("#rewardPanel.kids") == 1
+# no property of that name: the entry panel's named slot gives the block
+L.execute(r"""
+rewardLine.CommonTextBlock_194 = nil
+rewardLine.WBP_IconEntryLayoutPanel_76 = { GetContentForSlot = function(self, name) if name:ToString() == "Slot_33_Content" then return rewardBlock end end }
+""")
+lines = list(L.eval("G.QuestRewardColors(questSpans)").values())
+assert lines[0] == 'seen: 1 reward lines on screen: "Alice\'s Hookshot" (scouted) by slot', lines
+L.eval("G.QuestRewardColors({})")
+L.execute("rewardLine.WBP_IconEntryLayoutPanel_76 = nil")
+assert list(L.eval("G.QuestRewardColors(questSpans)").values()) == ["seen: 1 reward lines on screen: no text block"]
 
 # the quest-notice banner try
 L.execute(r"""
@@ -2060,6 +2074,14 @@ requestStates = G.RequestStates({ 17, 26, 27 })
 G.SaveData = oldSaveData
 """)
 assert [L.eval(f"requestStates[{i}]") for i in (17, 26, 27)] == ["open", "done", "not in the log"]
+# Round 94: a quest board quest's state and kills (round 93: the Ipooh kills did not count)
+L.execute(r"""
+local oldSaveData = G.SaveData
+function G.SaveData() return { questBoardList = { { QuestId = 1001, State = 1, KilledCount = { { ID = 55, DeliveryQuantity = 1 } } } } } end
+boardLines = { G.BoardQuest(1001), G.BoardQuest(1002) }
+G.SaveData = oldSaveData
+""")
+assert list(L.eval("boardLines").values()) == ["ordered, kills 55 x1", "not on the board"]
 print("quest rows: ok")
 
 # Round 84: the open start skips C02_219_02, which accepts request 17 into the quest log. Verun's

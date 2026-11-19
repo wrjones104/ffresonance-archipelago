@@ -1370,3 +1370,12 @@ Send the `[FFRAP]` lines of the log.
 - The Quests screen probe finds the reward texts as CommonTextBlocks whose path is in a reward line. In a one-child slot our row takes the block's place (`SetContent`), and the block goes back when the line shows another reward; in a panel it goes beside the hidden block (`AddChild`).
 - The `mechabo:` line also gives the quest log's state of quests 17, 26 and 27 (open, done, not started, not in the log), from the save's `request.DataMap`.
 
+### Round 93 (mod 0.61.0 build 2dcd20c4, apworld 0.30.0 build 88874051)
+
+- **Quests screen colours:** not yet. The probe logged `seen: 0 reward texts` when it was turned on and never changed, so no CommonTextBlock whose path is in a reward line was found while the screen was open. Off-line since: the line's own `SetText` writes `CommonTextBlock_194` (a variable of the line), and the entry panel (`WBP_IconEntryLayoutPanel`) holds it in its named slot `Slot_33_Content`.
+- **Verun:** `quest 17 open` from the load, so "Arise, Mechabo!" is accepted, but Ipooh kills did not count (the user). Request 17's first step is "Defeat two Ipoohs near the Dwarven Forge": board quest 1001, a hunt of unit 55 (`DeliveryQuantity` 2). Its progress is in the save's `questBoardList` (`State`, `KilledCount`), which the log did not show.
+
+**Round 94 build (mod 0.61.0 build 8aafe048, apworld unchanged, build 88874051):**
+- The Quests screen probe takes each line's block from the line's `CommonTextBlock_194` property, or else from the entry panel's `GetContentForSlot("Slot_33_Content")`, and logs which (`by property`, `by slot`, `no text block`).
+- The `mechabo:` line also gives board quest 1001's state (none, ordered, met, done, failed) and its kills.
+

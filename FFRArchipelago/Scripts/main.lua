@@ -2783,9 +2783,10 @@ seedExtrasTick = function()
         local has = game.UnitHasSkill(M.lid, M.tackle)
         local states, quests = game.RequestStates(M.requests), {}
         for _, id in ipairs(M.requests) do quests[#quests + 1] = "quest " .. id .. " " .. states[id] end
-        local line = string.format("mechabo: progress %d at %s, flag %d %s, %s, Lid %s Mechabo Tackle", M.counter,
-            tostring(game.ProgressValue(M.counter)), M.delivered, game.GetFlag(M.delivered) and "on" or "off",
-            table.concat(quests, ", "), has == nil and "not in the save, so no" or (has and "has" or "has no"))
+        local line = string.format("mechabo: progress %d at %s, flag %d %s, %s, board quest %d %s, Lid %s Mechabo Tackle",
+            M.counter, tostring(game.ProgressValue(M.counter)), M.delivered, game.GetFlag(M.delivered) and "on" or "off",
+            table.concat(quests, ", "), M.hunt, game.BoardQuest(M.hunt),
+            has == nil and "not in the save, so no" or (has and "has" or "has no"))
         if line ~= state.mechaboLine then log(line) end
         state.mechaboLine = line
     end

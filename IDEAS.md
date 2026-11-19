@@ -328,6 +328,8 @@ Along the same lines, I would also want an option for players to start with all 
 
 **Round 92 (a new seed's save, counter 10):** Verun showed only "..." and no quest. Since round 93 the `mechabo:` line gives the quest log's state of quests 17, 26 and 27 from the save (`request.DataMap`).
 
+**Round 93 result:** quest 17 open, but Ipooh kills did not count. Its first step is board quest 1001, a hunt of unit 55, whose state and kills are in the save's `questBoardList` (EQuest_State: None, AfterOrder, ConditionAchievement, QuestSuccessful, QuestFailure). Since round 94 the `mechabo:` line gives them.
+
 **To find out:**
 - Whether the steps should be locations: the six abilities and three Magicite rewards, with logic for each material's enemy area. The steps also need Lid in logic if the abilities stay vanilla.
 
@@ -538,4 +540,6 @@ Until then the Options rows stay, and on a save not linked to the seed they chan
 **Round 91 result:** the feed and the pop-up work, and the pop-up's colours are on by default since round 92. The Quests screen showed no colour and logged nothing. Since round 92 the probe logs what it sees (`seen:` lines) and takes a line's block by its name or by its text.
 
 **Round 92 result:** the lines were found, but no text block under them: it sits in the entry panel's named slot. Since round 93 the probe finds the reward texts as CommonTextBlocks whose path is in a reward line, and in a one-child slot puts our row in the block's place (`SetContent`).
+
+**Round 93 result:** no such CommonTextBlock was found. The line's `SetText` writes `CommonTextBlock_194`, a variable of the line, held in the entry panel's `Slot_33_Content`. Since round 94 the probe takes the block from the line's property, or from `GetContentForSlot`.
 
