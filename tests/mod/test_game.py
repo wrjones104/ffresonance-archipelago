@@ -675,6 +675,58 @@ L.execute('funcList.GetParent = function() return hud end')
 L.execute('function hud:IsVisible() return true end')
 assert L.execute('return G.FeedLine("after the map change", 10)') is True
 assert L.eval("#hud.kids") == 1 and L.eval("hud.kids[1].kids[1].text") == "after the map change"
+# Round 89 (the user): the item's name in its Archipelago colour, by its flags (1 progression,
+# 2 useful, 4 trap, else filler). Off until ffrap_feed colors on: one TextBlock as before.
+assert [L.eval(f"G.ItemClass({f})") for f in (0, 1, 2, 3, 4, 6)] == \
+    ["filler", "progression", "useful", "progression", "trap", "useful"]
+L.execute(r"""
+local hbClass = { IsValid = function() return true end }
+local oldSFO4 = StaticFindObject
+function StaticFindObject(p) if p == "/Script/UMG.HorizontalBox" then return hbClass end return oldSFO4(p) end
+local oldSCO4 = StaticConstructObject
+function StaticConstructObject(cls, outer, name)
+  if cls == hbClass then
+    local row = { cls = "HorizontalBox", name = name:ToString(), kids = {} }
+    function row:IsValid() return true end
+    function row:HasAnyInternalFlags() return false end
+    function row:HasAnyFlags() return false end
+    function row:GetFullName() return "HorizontalBox " .. self.name end
+    function row:AddChildToHorizontalBox(tb) self.kids[#self.kids + 1] = tb; tb.parent = self; return {} end
+    function row:SetRenderOpacity(a) self.opacity = a end
+    function row:RemoveFromParent()
+      local p = self.parent
+      for i, k in ipairs(p.kids) do if k == self then table.remove(p.kids, i) break end end
+    end
+    return row
+  end
+  local made = oldSCO4(cls, outer, name)
+  if made and made.Font then made.ColorAndOpacity = { SpecifiedColor = { R = 1, G = 1, B = 1, A = 1 } } end
+  return made
+end
+""")
+HOOKSHOT_SPAN = '{ span = { text = "Hookshot", flags = 1 } }'
+L.execute(f'G.FeedLine("Received Hookshot from Alice", 11, {HOOKSHOT_SPAN})')
+last = "hud.kids[1].kids[#hud.kids[1].kids]"
+assert L.eval(f"{last}.text") == "Received Hookshot from Alice", "colours off: one TextBlock"
+L.execute("G.feedColors = true")
+L.execute(f'G.FeedLine("Received Hookshot from Alice", 12, {HOOKSHOT_SPAN})')
+assert L.eval(f"{last}.cls") == "HorizontalBox", L.eval(f"{last}.cls")
+assert [L.eval(f"{last}.kids[{i}].text") for i in (1, 2, 3)] == ["Received ", "Hookshot", " from Alice"]
+PLUM_R, CYAN_R = 0.429, 0.0
+assert L.eval(f"{last}.kids[2].ColorAndOpacity.SpecifiedColor.R") == PLUM_R, "progression: plum"
+assert L.eval(f"{last}.kids[1].ColorAndOpacity.SpecifiedColor.R") == 1, "the rest stays white"
+assert L.eval(f"{last}.kids[2].Font.Size") == 20, "each piece styled as a line is"
+L.execute('G.FeedLine("Received Potion", 13, { span = { text = "Potion", flags = 0 } })')
+assert L.eval(f"#{last}.kids") == 2 and L.eval(f"{last}.kids[2].ColorAndOpacity.SpecifiedColor.R") == CYAN_R, \
+    "nothing after the name: two pieces; filler: cyan"
+L.execute('G.FeedLine("Received 3 items", 14, { span = { text = "Potion", flags = 0 } })')
+assert L.eval(f"{last}.text") == "Received 3 items", "a span not in the text: one TextBlock"
+L.execute("G.FeedTick(30.0); G.feedColors = false")
+# Round 89 probe: the pop-up's item name in markup for the decorator, with the probe on
+assert L.eval('G.ColorMarkup("Hookshot", 1)') == "Hookshot"
+L.execute("G.POPUP_COLORS.on = true")
+assert L.eval('G.ColorMarkup("Hookshot", 1)') == '<text color="progression">Hookshot</>'
+L.execute("G.POPUP_COLORS.on = false")
 
 # the quest-notice banner try
 L.execute(r"""

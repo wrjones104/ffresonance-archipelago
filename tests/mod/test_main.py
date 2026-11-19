@@ -104,6 +104,10 @@ function G.MapId() return G.saveMap end
 function G.StoryCounter() return G.story end
 function G.PartyIds() return {1001} end
 function G.Toast() return false end
+G.POPUP_COLORS = { on = false }
+function G.ColorMarkup(name, flags) return G.POPUP_COLORS.on and ("<" .. flags .. ">" .. name .. "</>") or name end
+function G.PopupProbe() return { "message: probe" } end
+function G.PopupColorTable() return "4 colour rows" end
 function G.GetFlag(i) return false end
 -- the Archipelago page is on by default; its own section below replaces this
 G.APMENU = { Ensure = function() end, Page = function() return nil, "not open" end, Unstick = function() end,
@@ -267,7 +271,13 @@ G.orders, G.titleLines = 0, {}
 function G.OrderTitleEntries() G.orders = G.orders + 1; return true, G.orders == 1 and "rebuilt as [0,1,2,5,3,4]" or "already in order" end
 G.describes = 0
 G.FEED_MAX, G.feedReady, G.feed, G.toasts = 5, true, {}, {}
-function G.FeedLine(text, now) if not G.feedReady then return false, "no field HUD" end G.feed[#G.feed + 1] = text; return true end
+function G.FeedLine(text, now, opts)
+  if not G.feedReady then return false, "no field HUD" end
+  G.feed[#G.feed + 1] = text
+  G.feedSpans = G.feedSpans or {}
+  G.feedSpans[text] = opts and opts.span and (opts.span.text .. "/" .. tostring(opts.span.flags)) or nil
+  return true
+end
 function G.FeedTick() return 0 end
 function G.Toast(msg) G.toasts[#G.toasts + 1] = msg; return true end
 G.popups, G.popupReady, G.restores = {}, true, 0
@@ -1957,6 +1967,29 @@ tick(4)
 assert "check\tquest:6\n" in read("ap_out.txt"), read("ap_out.txt")[-200:]
 assert len(G.popups) == written + 1, "the check writes no second pop-up"
 G.onField = True
+# Round 89: Token Legacy played again from an older save of the seed, its check sent already, gets
+# its pop-up again; once for that load
+L.execute("G.stamps['SD_QUESTS_OLDER'] = G.stamps[G.saveObj]")
+load(G, "SD_QUESTS_OLDER", "0")
+L.execute(f"G.progress[{TOKEN_COUNTER}] = {TOKEN_BEFORE}")
+G.map, G.onField, G.popupReady = ZOLDAAD_CASTLE_MAP, False, True
+tick(3)
+assert len(G.popups) == written + 2 and G.popups[written + 2] == "You found Alice's:\nSeraphim Bow", list(G.popups.values())
+L.execute(f"G.progress[{TOKEN_COUNTER}] = {TOKEN_REWARD}")
+G.onField = True
+tick(2)
+# Round 89 (the user): an item line's flags and name, and a sent item's, colour its name in the feed
+L.execute("G.feedReady = true; G.feed = {}; G.feedSpans = {}")
+applied = [int(line.split("\t")[1]) for line in read("ap_out.txt").splitlines() if line.startswith("applied\t")]
+inbox(f"item\t{max(applied, default=-1) + 1}\titem\t1\t1\tHookshot from Alice\t1\tHookshot\n", "a")
+inbox("msg\tSent Ether to Bob\tEther\t2\n", "a")
+tick(4)
+assert L.eval("G.feedSpans['Received Hookshot from Alice']") == "Hookshot/1", list(G.feed.values())
+assert L.eval("G.feedSpans['Sent Ether to Bob']") == "Ether/2", list(G.feed.values())
+# and the pop-up's name in markup with ffrap_popup colors on
+L.execute('commands["ffrap_popup"]("ffrap_popup", {"colors", "on"})')
+assert L.eval("package.loaded.game.POPUP_COLORS.on") is True
+L.execute('commands["ffrap_popup"]("ffrap_popup", {"colors", "off"})')
 # Round 88: Mog Tag's tiers run at either of two counter values, while flag 545 (the chase) is on;
 # its Potion pop-up came before the check, so the early pop-up writes it
 L.execute(CAPTURE)

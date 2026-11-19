@@ -1462,6 +1462,24 @@ local FEED_FONT_SIZE = 20
 local ALIGN_RIGHT, ALIGN_BOTTOM, JUSTIFY_RIGHT = 3, 3, 2
 local feed = { box = nil, host = nil, tree = nil, lines = {}, made = 0 }
 
+-- Round 89 (the user): item names in Archipelago's colours, by the item's flags (1 progression,
+-- 2 useful, 4 trap). The text client's plum, slateblue, salmon and cyan, as linear colours (UMG's).
+G.ITEM_COLORS = {
+    progression = { R = 0.429, G = 0.319, B = 0.863 },   -- #AF99EF
+    useful = { R = 0.153, G = 0.258, B = 0.807 },        -- #6D8BE8
+    trap = { R = 0.956, G = 0.216, B = 0.168 },          -- #FA8072
+    filler = { R = 0.0, G = 0.855, B = 0.855 },          -- #00EEEE
+}
+function G.ItemClass(flags)
+    flags = flags or 0
+    if flags % 2 == 1 then return "progression" end
+    if math.floor(flags / 2) % 2 == 1 then return "useful" end
+    if math.floor(flags / 4) % 2 == 1 then return "trap" end
+    return "filler"
+end
+-- Round 89 probe: feed lines with the item's name in its colour. Off until `ffrap_feed colors on`.
+G.feedColors = false
+
 -- When G.feedTrace is set (via `ffrap_feed test`), risky UMG calls log first so crashes pinpoint the call.
 G.feedTrace = nil
 local function step(what)
@@ -1584,21 +1602,62 @@ local function StyleLine(tb)
     pcall(function() tb.Justification = JUSTIFY_RIGHT end)
 end
 
--- Adds a line to the feed; `now` is the caller's clock in seconds. opts.plain leaves out the
--- styling (font, colour, shadow, justification). Returns true, or false and why not (off the
--- field, say), so the caller can show the text another way.
-function G.FeedLine(text, now, opts)
-    local box, why = FeedBox()
-    if not box then return false, why end
+-- A styled TextBlock holding `text`, made in the feed's tree; `color` (r, g, b) is written into
+-- its fields before it goes on screen (round 20: no colour struct to a setter). Nil and why not.
+function feed.text(text, plain, color)
     local cls = Find("/Script/UMG.TextBlock")
-    if not cls then return false, "no TextBlock class" end
+    if not cls then return nil, "no TextBlock class" end
     local tb
     step("make a line (StaticConstructObject TextBlock)")
     local okNew, err = pcall(function() tb = StaticConstructObject(cls, feed.tree, FeedName()) end)
-    if not (okNew and tb and tb:IsValid()) then return false, "could not make a line: " .. tostring(err) end
+    if not (okNew and tb and tb:IsValid()) then return nil, "could not make a line: " .. tostring(err) end
     step("set the line's text")
     pcall(function() tb:SetText(FText(text)) end)
-    if not (opts and opts.plain) then StyleLine(tb) end
+    if not plain then StyleLine(tb) end
+    if color then
+        step("colour (field writes)")
+        pcall(function()
+            local c = tb.ColorAndOpacity.SpecifiedColor
+            c.R, c.G, c.B, c.A = color.R, color.G, color.B, 1
+        end)
+    end
+    return tb
+end
+
+-- With G.feedColors on and opts.span ({ text, flags }) in `text`: a HorizontalBox of the text
+-- before the span, the span in its item colour, and the text after. Nil when there is no span.
+function feed.colored(text, opts)
+    local span = G.feedColors and opts and opts.span
+    if not (span and span.text and span.text ~= "") then return nil end
+    local from, to = text:find(span.text, 1, true)
+    if not from then return nil end
+    local cls = Find("/Script/UMG.HorizontalBox")
+    if not cls then return nil end
+    local row
+    step("make a coloured line (StaticConstructObject HorizontalBox)")
+    if not pcall(function() row = StaticConstructObject(cls, feed.tree, FeedName()) end) or not row then return nil end
+    local parts = { { text:sub(1, from - 1) }, { span.text, G.ITEM_COLORS[G.ItemClass(span.flags)] }, { text:sub(to + 1) } }
+    for _, part in ipairs(parts) do
+        if part[1] ~= "" then
+            local tb = feed.text(part[1], opts.plain, part[2])
+            step("add a piece to the line (AddChildToHorizontalBox)")
+            if not (tb and pcall(function() row:AddChildToHorizontalBox(tb) end)) then return nil end
+        end
+    end
+    return row
+end
+
+-- Adds a line to the feed; `now` is the caller's clock in seconds. opts.plain leaves out the
+-- styling (font, colour, shadow, justification); opts.span colours the item's name. Returns true,
+-- or false and why not (off the field, say), so the caller can show the text another way.
+function G.FeedLine(text, now, opts)
+    local box, why = FeedBox()
+    if not box then return false, why end
+    local tb = feed.colored(text, opts)
+    if not tb then
+        tb, why = feed.text(text, opts and opts.plain)
+        if not tb then return false, why end
+    end
     local slot
     step("add the line to the box (AddChildToVerticalBox)")
     local okAdd, errAdd = pcall(function() slot = box:AddChildToVerticalBox(tb) end)
@@ -1810,6 +1869,96 @@ function G.ChestPopup(text)
     if not pcall(function() line:SetVisibility(COLLAPSED) end) then return true, "text set (the item line would not hide)" end
     popupHidden = { line = G.PathOf(line), message = G.PathOf(msg), visibility = was }
     return true, "text set, item line hidden"
+end
+
+-- Round 89 probe (the user: item names in their colour in the pop-up). The message is a
+-- CommonRichTextBlock. The game's decorator, CPP_RTBD_Text (RTBD_TextStyle), reads markup such as
+-- <text style="italic"> and has a ColorSet, a DataTable of RTB_Text_Color rows (FontColor); the
+-- game ships no such table. The probe logs the message's decorators; `colors` makes the table,
+-- gives it to the decorator, and the pop-up text wraps the item's name in markup.
+G.POPUP_COLORS = { on = false, attr = "color", table = nil, tableName = "FFRAP_TextColors",
+                   decorator = "/Game/UI/Text/RTBD/RTBD_TextStyle.Default__RTBD_TextStyle_C" }
+function G.PopupMessageAny()
+    G.PrimePopup()
+    for _, path in ipairs(popupCandidates) do
+        local m = Find(path)
+        if m and Alive(m) then return m end
+    end
+end
+function G.PopupProbe()
+    local out = {}
+    local msg = G.PopupMessageAny()
+    if not msg then return { "no dialog message made yet (open a chest first)" } end
+    local function name(o)
+        local s = "nil"
+        pcall(function() if o then s = o:GetFullName() end end)
+        return s
+    end
+    out[#out + 1] = "message: " .. name(msg)
+    pcall(function() out[#out + 1] = "TextStyleSet: " .. name(msg.TextStyleSet) end)
+    pcall(function()
+        local list = msg.DecoratorClasses
+        out[#out + 1] = "DecoratorClasses: " .. #list
+        for i = 1, #list do out[#out + 1] = "  class " .. i .. ": " .. name(list[i]) end
+    end)
+    pcall(function()
+        local list = msg.InstanceDecorators
+        out[#out + 1] = "InstanceDecorators: " .. #list
+        for i = 1, #list do
+            local d = list[i]
+            local line = "  decorator " .. i .. ": " .. name(d)
+            pcall(function() line = line .. ", ColorSet " .. name(d.ColorSet) .. ", SizeSet " .. name(d.SizeSet) end)
+            out[#out + 1] = line
+        end
+    end)
+    local cdo = Find(G.POPUP_COLORS.decorator)
+    out[#out + 1] = "RTBD_TextStyle default: " .. name(cdo)
+    pcall(function() out[#out + 1] = "  ColorSet " .. name(cdo.ColorSet) .. ", SizeSet " .. name(cdo.SizeSet) end)
+    return out
+end
+
+-- The colour table, made once: a DataTable of RTB_Text_Color with a row per item class, given to
+-- the decorator's default and to the message's decorators. Each step is told to `say` first.
+function G.PopupColorTable(say)
+    local P = G.POPUP_COLORS
+    local cdo = Find(G.POPUP_COLORS.decorator)
+    if not cdo then return nil, "RTBD_TextStyle is not loaded" end
+    local dt = P.table and Find(P.table)
+    if not dt then
+        local cls, rowStruct = Find("/Script/Engine.DataTable"), Find("/Script/mucha.RTB_Text_Color")
+        if not (cls and rowStruct) then return nil, "no DataTable class or no RTB_Text_Color" end
+        say("popup colors: StaticConstructObject DataTable")
+        if not pcall(function() dt = StaticConstructObject(cls, cdo, FName(P.tableName)) end) or not dt then
+            return nil, "the table could not be made"
+        end
+        say("popup colors: RowStruct")
+        pcall(function() dt.RowStruct = rowStruct end)
+        for class, c in pairs(G.ITEM_COLORS) do
+            say("popup colors: AddRow " .. class)
+            pcall(function() dt:AddRow(class, { FontColor = { R = c.R, G = c.G, B = c.B, A = 1 } }) end)
+        end
+        P.table = G.PathOf(dt)
+    end
+    say("popup colors: ColorSet on the decorator's default")
+    pcall(function() cdo.ColorSet = dt end)
+    local msg = G.PopupMessageAny()
+    pcall(function()
+        local list = msg.InstanceDecorators
+        for i = 1, #list do
+            say("popup colors: ColorSet on decorator " .. i)
+            list[i].ColorSet = dt
+        end
+    end)
+    local rows = 0
+    pcall(function() dt:ForEachRow(function() rows = rows + 1 end) end)
+    return rows .. " colour rows"
+end
+
+-- `name` wrapped in the decorator's markup for its colour, with the probe on.
+function G.ColorMarkup(name, flags)
+    local P = G.POPUP_COLORS
+    if not P.on then return name end
+    return string.format('<text %s="%s">%s</>', P.attr, G.ItemClass(flags), name)
 end
 
 -- Makes the item line visible again once the pop-up has closed. Call every tick.

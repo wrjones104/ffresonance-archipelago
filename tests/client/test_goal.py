@@ -51,8 +51,11 @@ async def main():
     ctx.items_received = [shard(), shard(2)]
     ctx.write_new_items()
     lines = [line for line in open(in_path, encoding="utf-8").read().splitlines() if line.startswith("item")]
-    check("own shard counts up", lines[0].endswith("Tablet Shard (1/2)"))
-    check("a sent shard counts up", lines[1].endswith("Tablet Shard (2/2) from Rat"))
+    # Round 89: an item line ends with the item's flags and name, after its label
+    label = lambda line: line.split("\t")[5]
+    check("the flags and the name follow the label", lines[1].split("\t")[6:] == ["0", "Tablet Shard (2/2)"])
+    check("own shard counts up", label(lines[0]).endswith("Tablet Shard (1/2)"))
+    check("a sent shard counts up", label(lines[1]).endswith("Tablet Shard (2/2) from Rat"))
     check("enough shards complete the goal", ctx.goal_reached())
     ctx.max_story = 9999
     ctx.items_received = []
@@ -90,8 +93,8 @@ async def main():
     ctx.write_lock()
     check("each fragment counts", lock_lines()[-1] == "cfg\tfinalboss\t2\t2\t0\t0\t3\t2")
     fragment_lines = [line for line in open(in_path, encoding="utf-8").read().splitlines() if line.startswith("item")]
-    check("a fragment is a token with its count", fragment_lines[0] == "item\t0\ttoken\t0\t1\tCrystal Fragment (1/2)")
-    check("past the need only the count shows", fragment_lines[2].endswith("Crystal Fragment (3)"))
+    check("a fragment is a token with its count", fragment_lines[0] == "item\t0\ttoken\t0\t1\tCrystal Fragment (1/2)\t0\tCrystal Fragment (1/2)")
+    check("past the need only the count shows", label(fragment_lines[2]).endswith("Crystal Fragment (3)"))
     # Round 73: party members and visions show their count too, when the lock asks for them. The
     # starting party counts, a member already held adds nothing, and a seed that needs no visions
     # shows none.
@@ -105,23 +108,23 @@ async def main():
     ctx.write_new_items()
     lines = [line for line in open(in_path, encoding="utf-8").read().splitlines() if line.startswith("item")][-7:]
     names = lambda ap_id: ITEMS[ap_id]["name"]
-    check("a party member counts with the starting party", lines[0].endswith(f"{names(UNIT_ITEM_BASE + 1003)} (3/4)"))
-    check("a vision counts", lines[1].endswith(f"{names(vision_ids[0])} (1/2)"))
-    check("a starter received again adds nothing", lines[2].endswith(f"{names(UNIT_ITEM_BASE + 1001)} (3/4)"))
-    check("counts carry over from earlier items", lines[3].endswith(f"{names(vision_ids[1])} (2/2) from Rat"))
-    check("past the need only the count shows", lines[4].endswith(f"{names(vision_ids[2])} (3)"))
-    check("the party fills up", lines[5].endswith("(4/4)") and lines[6].endswith("(5)"))
+    check("a party member counts with the starting party", label(lines[0]).endswith(f"{names(UNIT_ITEM_BASE + 1003)} (3/4)"))
+    check("a vision counts", label(lines[1]).endswith(f"{names(vision_ids[0])} (1/2)"))
+    check("a starter received again adds nothing", label(lines[2]).endswith(f"{names(UNIT_ITEM_BASE + 1001)} (3/4)"))
+    check("counts carry over from earlier items", label(lines[3]).endswith(f"{names(vision_ids[1])} (2/2) from Rat"))
+    check("past the need only the count shows", label(lines[4]).endswith(f"{names(vision_ids[2])} (3)"))
+    check("the party fills up", label(lines[5]).endswith("(4/4)") and label(lines[6]).endswith("(5)"))
     connect(ctx, "G4D", {"goal": "final_boss", "starting_party": [1001, 1002],
                          "final_boss_characters": 3, "final_boss_visions": 0, "final_boss_fragments": 0})
     ctx.items_received = [NetworkItem(vision_ids[0], 1, 1, 0)]
     ctx.write_new_items()
     last = [line for line in open(in_path, encoding="utf-8").read().splitlines() if line.startswith("item")][-1]
-    check("no count for visions the lock does not need", last.endswith("\t" + names(vision_ids[0])))
+    check("no count for visions the lock does not need", label(last) == names(vision_ids[0]))
     connect(ctx, "G5", {"goal": "tablet_shards", "tablet_shards_required": 1})
     ctx.items_received = [shard(), shard()]
     ctx.write_new_items()
     shard_lines = [line for line in open(in_path, encoding="utf-8").read().splitlines() if line.startswith("item")]
-    check("past the goal only the count shows", shard_lines[-1].endswith("Tablet Shard (2)"))
+    check("past the goal only the count shows", label(shard_lines[-1]).endswith("Tablet Shard (2)"))
     # Round 83: the goal and the checks done go to the mod for its Archipelago page, each time
     # they change
     progress_lines = lambda: [line for line in open(in_path, encoding="utf-8").read().splitlines()

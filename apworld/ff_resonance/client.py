@@ -258,7 +258,9 @@ class FFResonanceContext(CommonContext):
                 visions.add(info["game_id"])
                 name = with_count(name, len(visions), need_visions)
             label = name if item.player == self.slot else f"{name} from {sender}"
-            self.write_line("item", index, info["kind"], info["game_id"], info["count"], label)
+            # Round 89 (the user): the item's classification and its name in the label, so the
+            # mod can colour the name as Archipelago does.
+            self.write_line("item", index, info["kind"], info["game_id"], info["count"], label, item.flags, name)
         self.items_written = len(self.items_received)
 
     def lock_holdings(self, received: list[NetworkItem]) -> tuple[set[int], set[int], int]:
@@ -437,7 +439,7 @@ class FFResonanceContext(CommonContext):
             item, receiver = args.get("item"), args.get("receiving")
             if item is not None and item.player == self.slot and receiver != self.slot:
                 name = self.item_names.lookup_in_slot(item.item, receiver)
-                self.write_line("msg", f"Sent {name} to {self.player_names.get(receiver, receiver)}")
+                self.write_line("msg", f"Sent {name} to {self.player_names.get(receiver, receiver)}", name, item.flags)
 
     def reset_server_state(self) -> None:
         super().reset_server_state()

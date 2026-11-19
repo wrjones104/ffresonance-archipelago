@@ -126,22 +126,23 @@ local feedQueueSince = nil   -- when the oldest waiting message came
 local feedShown = false      -- the feed has shown a line in this run
 local feedClock = 0          -- seconds, from the tick count
 
-local function show(msg)
+-- `span` ({ text, flags }): the item's name in `msg`, which the feed can colour (round 89).
+local function show(msg, span)
     if feedOn and game.InGame() then
-        if #feedQueue == 0 and game.FeedLine(msg, feedClock) then
+        if #feedQueue == 0 and game.FeedLine(msg, feedClock, { span = span }) then
             feedShown = true
             return
         end
         if #feedQueue == 0 then feedQueueSince = feedClock end
-        if #feedQueue < FEED_QUEUE_MAX then feedQueue[#feedQueue + 1] = msg end
+        if #feedQueue < FEED_QUEUE_MAX then feedQueue[#feedQueue + 1] = { text = msg, span = span } end
         return
     end
     game.Toast(msg)
 end
 
-local function notify(msg)
+local function notify(msg, span)
     log(msg)
-    show(msg)
+    show(msg, span)
 end
 
 -- Shows what waited for the HUD. A long wait (a login with many items) shows the last few and
@@ -152,7 +153,9 @@ local function flushFeed()
     -- has worked, keep queued items waiting through pop-ups and menus until the HUD returns.
     if not feedShown and feedQueueSince and feedClock - feedQueueSince > FEED_WAIT_MAX then
         log("feed: no HUD on screen for " .. FEED_WAIT_MAX .. " s; " .. #feedQueue .. " message(s) go to the Toast")
-        game.Toast(#feedQueue == 1 and feedQueue[1] or table.concat(feedQueue, " / "))
+        local texts = {}
+        for i, line in ipairs(feedQueue) do texts[i] = line.text end
+        game.Toast(table.concat(texts, " / "))
         feedQueue, feedQueueSince = {}, nil
         return
     end
@@ -162,10 +165,10 @@ local function flushFeed()
         local tail = {}
         for i = #lines - game.FEED_MAX + 2, #lines do tail[#tail + 1] = lines[i] end
         lines = tail
-        table.insert(lines, 1, "and " .. more .. " more")
+        table.insert(lines, 1, { text = "and " .. more .. " more" })
     end
-    for i, msg in ipairs(lines) do
-        if game.FeedLine(msg, feedClock) then
+    for i, line in ipairs(lines) do
+        if game.FeedLine(line.text, feedClock, { span = line.span }) then
             feedShown = true
         else
             -- The HUD went away again: keep what is left for next time.
@@ -482,7 +485,8 @@ local function readInbox(initial)
             local index, id = tonumber(f[2]), tonumber(f[4])
             if index and id then
                 state.items[index] = { kind = f[3], id = id, count = tonumber(f[5]) or 1,
-                    label = (f[6] and f[6] ~= "") and f[6] or (f[3] .. " " .. f[4]) }
+                    label = (f[6] and f[6] ~= "") and f[6] or (f[3] .. " " .. f[4]),
+                    flags = tonumber(f[7]), name = f[8] }
             else
                 log("bad item line: " .. table.concat(f, " | "))
             end
@@ -507,7 +511,7 @@ local function readInbox(initial)
             end
         elseif f[1] == "msg" then
             -- Messages from before this game session started are old news.
-            if not initial then notify(f[2] or "") end
+            if not initial then notify(f[2] or "", f[3] and { text = f[3], flags = tonumber(f[4]) } or nil) end
         end
     end
 end
@@ -542,6 +546,7 @@ local function applyWaiting(names)
             bridge.write("applied", i, code, detail)
             if code == "ok" then
                 names[#names + 1] = it.label
+                names[it.label] = it.name and { text = it.name, flags = it.flags } or nil
             else
                 notify("Could not apply " .. it.label .. ": " .. tostring(detail))
             end
@@ -588,6 +593,7 @@ local function applyItems()
             bridge.write("applied", state.applied, code, detail)
             if code == "ok" then
                 names[#names + 1] = it.label
+                names[it.label] = it.name and { text = it.name, flags = it.flags } or nil
             else
                 notify("Could not apply " .. it.label .. ": " .. tostring(detail))
             end
@@ -604,7 +610,7 @@ local function applyItems()
         end
     elseif feedOn and game.InGame() then
         -- The feed has a line per item.
-        for _, name in ipairs(names) do notify("Received " .. name) end
+        for _, name in ipairs(names) do notify("Received " .. name, names[name]) end
     elseif #names == 1 then
         notify("Received " .. names[1])
     elseif #names > 1 then
@@ -682,8 +688,9 @@ local POPUP_TRIES = 8
 local popup = nil   -- { text, key, tries }
 
 local function popupText(s)
-    if s.own then return "You found:\n" .. s.item end
-    return "You found " .. s.player .. "'s:\n" .. s.item
+    local item = game.ColorMarkup(s.item, s.flags)
+    if s.own then return "You found:\n" .. item end
+    return "You found " .. s.player .. "'s:\n" .. item
 end
 
 -- Round 79: Token Legacy's reward row sets its counter only after its item pop-up and the stat
@@ -726,13 +733,14 @@ function state.earlyQuestPopup()
     if not (seedCfg.quests and sessionSave()) or game.OnField() then return end
     local mapId = game.CurrentMap()
     for _, q in ipairs(game.QUESTS) do
-        if q.map == mapId and not state.reported["check|" .. q.key] and not state.questPopups[q.key]
-            and state.questRewardDue(q) then
+        -- Round 89: a quest played again from an older save, its check sent already, gets its
+        -- pop-up too. Written once per loaded save.
+        if q.map == mapId and state.questPopups[q.key] ~= save.obj and state.questRewardDue(q) then
             local s = state.scouts[q.key]
             if not s then return end
             local ok, detail = game.ChestPopup(popupText(s))
             if ok then
-                state.questPopups[q.key] = true
+                state.questPopups[q.key] = save.obj
                 log("chest pop-up for " .. q.key .. " before its check: " .. detail)
             end
             return
@@ -857,7 +865,7 @@ local function scanBosses()
             if (game.ProgressValue(q.counter) or 0) >= q.value and report("check", q.key) then
                 log("check " .. q.key)
                 local s = state.scouts[q.key]
-                if s and not state.questPopups[q.key] then
+                if s and state.questPopups[q.key] ~= save.obj then
                     popup = { text = popupText(s), key = q.key, tries = BOSS_POPUP_TRIES, scene = true }
                 end
             end
@@ -1815,8 +1823,47 @@ command("ffrap_feed", function(p)
     elseif what == "check" then
         for _, line in ipairs(game.FeedReport()) do log("feed check: " .. line) end
         game.Toast("Feed check written to the log")
+    elseif what == "colors" then
+        -- Round 89 probe: the item's name in its Archipelago colour. Not saved: off at each start.
+        if p[2] == "on" or p[2] == "off" then game.feedColors = p[2] == "on" end
+        log("feed: colours " .. (game.feedColors and "on" or "off"))
+        if game.feedColors then
+            game.feedTrace = function(step) log("feed step: " .. step) end
+            local results = {}
+            for _, t in ipairs({ { "Received Potion", "Potion", 0 }, { "Received Hookshot from Alice", "Hookshot", 1 },
+                                 { "Sent Ether to Alice", "Ether", 2 }, { "Received Bomb Trap", "Bomb Trap", 4 } }) do
+                local ok, why = game.FeedLine(t[1], feedClock, { span = { text = t[2], flags = t[3] } })
+                results[#results + 1] = ok and "ok" or tostring(why)
+            end
+            game.feedTrace = nil
+            log("feed colours test: " .. table.concat(results, ", "))
+        end
     else
-        notify("Item feed is " .. (feedOn and "on" or "off") .. " (ffrap_feed on|off|test)")
+        notify("Item feed is " .. (feedOn and "on" or "off") .. " (ffrap_feed on|off|test|colors on|off)")
+    end
+end)
+
+-- Round 89 probe (the user: item names in their colour in the chest pop-up). ffrap_popup:
+--   probe              the pop-up message's decorators and their colour tables, to the log
+--   colors on [attr]   makes the colour table, and the next pop-ups wrap the item's name in
+--                      <text attr="class">; attr is "color" unless given
+--   colors off         plain names again
+command("ffrap_popup", function(p)
+    local what, P = p and p[1], game.POPUP_COLORS
+    if what == "probe" then
+        local lines = game.PopupProbe()
+        for _, line in ipairs(lines) do log("popup probe: " .. line) end
+        notify("Pop-up probe: " .. #lines .. " lines in the log")
+    elseif what == "colors" and p[2] == "on" then
+        P.attr = p[3] or "color"
+        local done, why = game.PopupColorTable(log)
+        P.on = done ~= nil
+        notify("Pop-up colours: " .. (done and (done .. ", markup <text " .. P.attr .. "=...>") or ("not on: " .. tostring(why))))
+    elseif what == "colors" and p[2] == "off" then
+        P.on = false
+        notify("Pop-up colours: off")
+    else
+        notify("Usage: ffrap_popup probe | colors on [attr] | colors off")
     end
 end)
 

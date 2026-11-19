@@ -1317,3 +1317,21 @@ Send the `[FFRAP]` lines of the log.
 - The Quests screen's Rewards name the scouted item: the location's entry in `DT_RequestData`'s `Prize` becomes a text entry (ID 0), as "Attribute Bonus: Fina" is.
 - The log shows Verun's counter, flag 219 and whether Lid has Mechabo Tackle, each time one changes.
 
+### Round 89 (mod 0.61.0 build c9dab8b2, apworld 0.30.0 build c5fec06a)
+
+- **Build and Seed tab:** passed. The log showed `version 0.61.0 (build c9dab8b2)` and `command row` lines with no console command.
+- **Quest rewards:** passed. The Rewards list named the Archipelago item, the other rewards stayed, and the log said `quests: 28 quest rewards show the location's item` once.
+- **Save not linked:** passed. `quests: 28 quest rewards back to the game's own`, and the screen showed the game's rewards.
+- **Mog Tag:** passed. `chest pop-up for quest:35 before its check: text set, item line hidden`, then `check quest:35`.
+- **The Call from Beyond, played again:** the game's Potion pop-up showed. The quest's check had been sent in round 88, and the early pop-up left out quests whose check was sent. The log shows `map 3121 -> 2100` and no pop-up line, so the map fix itself was not tested.
+- **Mechabo Tackle:** not reached. The log shows counter 16 at 10, then flag 219 on (the Ipooh drops delivered), then 20 ("Arise, Mechabo!" done), and never 30. Mechabo Tackle comes at 40: talk to Verun at 20 to start "Mechabo Evolved" (30), deliver 3 Dhorme Chimera drops (quest 1002), and talk to him again.
+- **Steam Cloud:** passed in round 88 (moved here from the open list).
+
+**From the user, round 89:** item names in Archipelago's colours (light blue filler, dark blue useful, purple progression, red trap), in the item feed, the chest and reward pop-ups and the Quests screen; the name only.
+
+**Round 90 build (mod 0.61.0 build 87f4d742, apworld 0.30.0 build 88874051):**
+- The early quest pop-up is written for a quest played again from an older save, its check sent already: once per loaded save.
+- The client sends each item's flags and name with its item line, and with each "Sent" message.
+- `ffrap_feed colors on` (probe, off at each start): a feed line becomes a row of three TextBlocks, with the item's name in its colour, written into the block's fields before it is on screen.
+- `ffrap_popup probe` and `ffrap_popup colors on [attr]` (probe): the chest pop-up's colours (IDEAS.md idea 42).
+

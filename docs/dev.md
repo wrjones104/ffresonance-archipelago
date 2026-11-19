@@ -173,6 +173,9 @@ These commands run in UE4SS's `ConsoleEnablerMod` console for development and de
 | `ffrap_apmenu off\|on\|state\|close\|tree` | The Archipelago page in the main menu (on by default): stop or restart adding it, log its screen's state, close it when Back does nothing, or write its widgets to `ffrap_apmenu.txt` |
 | `ffrap_apmenu options\|text\|tabs [only\|all]` | Which screen the entry opens: the Options screen made our page (`options`, the default since round 87) or the text page on the Tutorial screen (`text`); `tabs` lists the Options tabs, `only` leaves out all but Gameplay, `all` puts them back |
 | `ffrap_apmenu mode ap\|game` | Makes the Options tables our page by hand, and logs the main menu's `SetScene` calls (`game`: puts the tables back, stops the logging). Since round 87 the switch is automatic |
+| `ffrap_feed colors on\|off` | Round 90 probe: feed lines colour the item's name by its Archipelago class; `on` also shows four test lines, with each step logged |
+| `ffrap_popup probe` | Round 90 probe: the chest pop-up message's rich text decorators and their colour and size tables, to the log |
+| `ffrap_popup colors on [attr]\|off` | Round 90 probe: makes a colour table for the pop-up's text decorator, and wraps the item's name in `<text attr="class">` (attr is `color` unless given) |
 | `ffrap_apmenu seedrows command\|heading` | The Seed tab's lines as Command rows, which take the cursor so a gamepad scrolls (`command`, the default since round 89), or as headings (`heading`) |
 | `ffrap_apmenu split on\|off` | The page's two tabs, Settings and Seed (`on`, the default), or one Archipelago tab with the seed's lines under the settings (`off`, as round 87 first was) |
 | `ffrap_feed [on\|off\|test [plain]\|check]` | Configure or test the bottom-right HUD item feed |

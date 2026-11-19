@@ -4,7 +4,9 @@
 -- through two append-only tab-separated text files in the mod folder.
 --
 --   ap_in.txt   client -> game
---     item <index> <kind> <id> <count> <label>    kind: item | gil | vision | unit | flag | token (unused in game)
+--     item <index> <kind> <id> <count> <label> [<flags> <name>]    kind: item | gil | vision | unit | flag | token (unused in game)
+--                                                 flags: the item's Archipelago classification (1 progression,
+--                                                 2 useful, 4 trap); name: the item's name as the label shows it
 --     msg  <text>                                 shown on screen, not stored
 --     client <world version> <build>              the client that wrote the file
 --     cfg blank <0|1>                             chest blanking

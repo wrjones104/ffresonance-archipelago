@@ -516,3 +516,16 @@ Until then the Options rows stay, and on a save not linked to the seed they chan
   * bank until next battle? Inflict death on all party members?
   * what happens if you enter a battle with all party members in death status?
 * What happens if the player is in a cutscene or shopping?
+
+## 42. Item names in Archipelago's colours
+
+**From the user, 2026-11-19 (round 89).** Show item names in the colours Archipelago's clients use: light blue (cyan) for filler, dark blue (slateblue) for useful, purple (plum) for progression, red (salmon) for traps. In the item feed, the chest and reward pop-ups, and the Quests screen's Rewards. The name only, not the rest of the text.
+
+**Found off-line (round 89):**
+- The client now sends each item's flags (1 progression, 2 useful, 4 trap) and its name with its item line, and with each "Sent" message. A location's scout already had its flags.
+- **The feed** is our own VerticalBox of TextBlocks. A line can be a HorizontalBox of three TextBlocks, the middle one coloured by writing `ColorAndOpacity.SpecifiedColor` before it is on screen. No colour struct goes to a setter (round 20).
+- **The chest pop-up's message** (`Text_Message` in `WBP_DialogBox`) is a CommonRichTextBlock. The game's text decorator, `CPP_RTBD_Text` (`RTBD_TextStyle`), handles `<text style="italic">` and `"bold"` in the game's strings, and has a `ColorSet` and a `SizeSet`: DataTables of `RTB_Text_Color` (`FontColor`) and `RTB_Text_Size` rows. The game ships neither table, and the decorator's default has none. Its attribute names are not readable in the executable. So colour there needs a probe: make the table, give it to the decorator, and try `<text color="progression">`.
+- **The Quests screen's Rewards** line (`WBP_Quest_Reward_Text`) is one CommonTextBlock with the game's text style (`BP_SystemTextStyle`). It cannot colour part of its text, and a line already on screen takes a colour only through a setter that needs a colour struct. Not built. Ways to look at later: a style class the game does not use, given by `SetStyle` (it takes a class); or making the line a rich text block.
+
+**Probes (round 90, build 87f4d742):** `ffrap_feed colors on` (four test lines, then real ones); `ffrap_popup probe` (the message's decorators and their tables); `ffrap_popup colors on [attr]` (the table, then markup in the next pop-ups). All are off at each start.
+
