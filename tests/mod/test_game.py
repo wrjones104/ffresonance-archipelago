@@ -848,6 +848,30 @@ assert lines[0] == 'seen: 1 reward lines on screen: "Alice\'s Hookshot" (scouted
 L.eval("G.QuestRewardColors({})")
 L.execute("rewardLine.WBP_IconEntryLayoutPanel_76 = nil")
 assert list(L.eval("G.QuestRewardColors(questSpans)").values()) == ["seen: 1 reward lines on screen: no text block"]
+# Round 96: on by default; `instant` hooks the line's own SetText (a Blueprint function, so the
+# hook runs after the text is written) and colours that line at once, and puts back a row the
+# line showed for another reward
+assert L.eval("G.QUEST_COLORS.on") is True and L.eval("G.QUEST_COLORS.instant") is False
+L.execute(r"""
+rewardLine.CommonTextBlock_194 = rewardBlock
+rewardBlock.parentWidget, rewardSlot.content, rewardBlock.text = rewardSlot, rewardBlock, "Alice's Hookshot"
+questHooks, instantLog = {}, {}
+function RegisterHook(name, fn) questHooks[name] = fn end
+G.QUEST_COLORS.spans = questSpans
+""")
+assert L.eval("G.QuestColorHook(function(s) instantLog[#instantLog + 1] = s end)") == "registered"
+assert L.eval("G.QuestColorHook(function() end)") is None, "once"
+hook = 'questHooks["/Game/UI/Quest/Bounty/widget/Detail/WBP_Quest_Reward_Text.WBP_Quest_Reward_Text_C:SetText"]'
+L.execute(f"{hook}({{ get = function() return rewardLine end }})")
+assert L.eval("#instantLog") == 0 and L.eval("rewardSlot.content == rewardBlock") is True, "instant off: nothing"
+L.execute("G.QUEST_COLORS.instant = true")
+L.execute(f"{hook}({{ get = function() return rewardLine end }})")
+assert L.eval("rewardSlot.content.cls") == "HorizontalBox", "coloured at once"
+assert list(L.eval("instantLog").values()) == ["quest colours (instant): coloured: Alice's Hookshot (in a NamedSlot, in its place)"]
+L.execute('rewardBlock.text = "Phoenix Down"')
+L.execute(f"{hook}({{ get = function() return rewardLine end }})")
+assert L.eval("rewardSlot.content == rewardBlock") is True, "the line written for another reward: the game's back"
+L.execute("G.QUEST_COLORS.instant = false")
 
 # the quest-notice banner try
 L.execute(r"""

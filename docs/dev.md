@@ -175,7 +175,8 @@ These commands run in UE4SS's `ConsoleEnablerMod` console for development and de
 | `ffrap_apmenu mode ap\|game` | Makes the Options tables our page by hand, and logs the main menu's `SetScene` calls (`game`: puts the tables back, stops the logging). Since round 87 the switch is automatic |
 | `ffrap_feed colors on\|off` | Feed lines colour the item's name by its Archipelago class, in bold (on by default since round 91); `on` also shows four test lines, with each step logged |
 | `ffrap_popup colors on\|off` | The chest pop-up's name line as a coloured row of our own under the message (on by default since round 92); `on` logs each step of the next one |
-| `ffrap_quest colors on\|off` | Round 91 probe: the Quests screen's Rewards lines with the scouted item's name coloured, and `seen:` lines for what the search finds; `off` takes the rows out |
+| `ffrap_quest colors on\|off` | The Quests screen's Rewards lines with the scouted item's name coloured (on by default since round 96); `on` also logs every line and the `seen:` lines, `off` takes the rows out |
+| `ffrap_quest instant on\|off` | Round 96 probe: a hook on the reward line's `SetText` colours each line as the game writes it |
 | `ffrap_apmenu seedrows command\|heading` | The Seed tab's lines as Command rows, which take the cursor so a gamepad scrolls (`command`, the default since round 89), or as headings (`heading`) |
 | `ffrap_apmenu split on\|off` | The page's two tabs, Settings and Seed (`on`, the default), or one Archipelago tab with the seed's lines under the settings (`off`, as round 87 first was) |
 | `ffrap_feed [on\|off\|test [plain]\|check]` | Configure or test the bottom-right HUD item feed |

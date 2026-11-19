@@ -730,12 +730,19 @@ function state.prizeTick()
     end
     state.prizeSig = sig
 end
--- Round 91 probe: the Quests screen's Rewards with the item's name in its colour (ffrap_quest).
+-- The Quests screen's Rewards with the item's name in its colour (on since round 96). Quiet but
+-- for its first line coloured and any it could not colour; ffrap_quest colors on logs it all.
 function state.questColorsTick()
-    local lines = game.QuestRewardColors(state.prizeSpans or {}, state.questTrace)
+    local Q = game.QUEST_COLORS
+    if Q.instant and not Q.hooked and game.QuestColorHook(log) then log("quest colours: SetText hook registered") end
+    local lines = game.QuestRewardColors(state.prizeSpans or {}, Q.trace)
     for _, line in ipairs(lines) do
-        log("quest colours: " .. line)
-        if line:find("^coloured") then state.questTrace = nil end
+        local coloured, failed = line:find("^coloured") ~= nil, line:find("^not coloured") ~= nil
+        if state.questVerbose or failed or (coloured and not state.questWorked) then log("quest colours: " .. line) end
+        if coloured then
+            state.questWorked = true
+            Q.trace = nil
+        end
     end
 end
 function state.earlyQuestPopup()
@@ -1652,7 +1659,10 @@ local function tick()
                     log("quests: " .. tostring(written) .. " reward rows without the location's item" .. (okQuests and "" or " (failed: " .. tostring(written) .. ")"))
                 end
                 if seedCfg.quests then pcall(state.prizeTick) end
-                if seedCfg.quests and game.QUEST_COLORS.on then pcall(state.questColorsTick) end
+                if seedCfg.quests and game.QUEST_COLORS.on then
+                    local okColors, err = pcall(state.questColorsTick)
+                    if not okColors then log("quest colours: failed: " .. tostring(err)) end
+                end
                 if newSave then
                     local okMechabo, written = pcall(game.MechaboPatch)
                     log("mechabo: " .. tostring(written) .. " rows of Verun's first step accept its quest" .. (okMechabo and "" or " (failed)"))
@@ -1868,17 +1878,25 @@ command("ffrap_popup", function(p)
         notify("Usage: ffrap_popup colors on | off")
     end
 end)
+-- ffrap_quest colors on|off: the Quests screen's colours (on by default since round 96); `on`
+-- also logs every line and the steps of the next one coloured. ffrap_quest instant on|off (round
+-- 96 probe): colour each line as the game writes it, by a hook on its SetText.
 command("ffrap_quest", function(p)
     local Q = game.QUEST_COLORS
-    if p and p[1] == "colors" and (p[2] == "on" or p[2] == "off") then
-        Q.on = p[2] == "on"
-        state.questTrace = Q.on and function(step) log("quest step: " .. step) end or nil
-        if not Q.on then
+    local on = p and (p[2] == "on" or p[2] == "off") and p[2] == "on"
+    if p and p[1] == "colors" and on ~= nil then
+        Q.on, state.questVerbose = on, on
+        Q.trace = on and function(step) log("quest step: " .. step) end or nil
+        if not on then
             for _, line in ipairs(game.QuestRewardColors({})) do log("quest colours: " .. line) end
         end
         notify("Quest reward colours: " .. p[2])
+    elseif p and p[1] == "instant" and on ~= nil then
+        Q.instant = on
+        Q.trace = on and function(step) log("quest step: " .. step) end or Q.trace
+        notify("Quest reward colours at once: " .. p[2] .. (on and " (open the Quests screen)" or ""))
     else
-        notify("Usage: ffrap_quest colors on | off")
+        notify("Usage: ffrap_quest colors on | off, or ffrap_quest instant on | off")
     end
 end)
 

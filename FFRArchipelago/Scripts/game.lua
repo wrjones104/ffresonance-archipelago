@@ -1937,99 +1937,108 @@ function G.ChestPopupRestore()
 end
 
 -- Round 90 (the user): the item's name in its colour in the Quests screen's Rewards. Each line is
--- WBP_Quest_Reward_Text_C, whose CommonTextBlock_194 has one style. Probe: off until
--- ffrap_quest colors on. A block showing one of `spans` (label -> { text, flags }) is replaced by a
--- row of our own TextBlocks: added beside it in a panel (AddChild) with the block collapsed, or in
--- a one-child widget (a NamedSlot or a SizeBox) put in its place (SetContent). The list can show
--- the line again for another reward: a row whose block no longer shows its label, or whose label
--- is not in `spans` (the probe off), is taken out and the block put back.
+-- WBP_Quest_Reward_Text_C, whose CommonTextBlock_194 has one style. A block showing one of `spans`
+-- (label -> { text, flags }) is replaced by a row of our own TextBlocks: added beside it in a panel
+-- (AddChild) with the block collapsed, or in a one-child widget (a NamedSlot) put in its place
+-- (SetContent). The list can show the line again for another reward: a row whose block no longer
+-- shows its label, or whose label is not in `spans`, is taken out and the block put back.
 -- Round 92: walking down from the line found no text block (it sits in the entry panel's named
 -- slot); round 93: no CommonTextBlock whose path is in a reward line was found either. The line's
 -- own SetText writes CommonTextBlock_194, so the block is the line's property of that name, or
--- else the entry panel's Slot_33_Content (GetContentForSlot).
-G.QUEST_COLORS = { on = false, rows = {}, LINE = "WBP_Quest_Reward_Text_C", BLOCK = "CommonTextBlock_194",
+-- else the entry panel's Slot_33_Content (GetContentForSlot). Round 95: it works; on by default
+-- since round 96 (ffrap_quest colors off). The tick colours a line a second late at most;
+-- `instant` (ffrap_quest instant on, a probe) hooks the line's own SetText to colour it at once.
+G.QUEST_COLORS = { on = true, instant = false, hooked = nil, rows = {}, spans = {},
+                   LINE = "WBP_Quest_Reward_Text_C", BLOCK = "CommonTextBlock_194",
                    PANEL = "WBP_IconEntryLayoutPanel_76", SLOT = "Slot_33_Content",
+                   SET_TEXT = "/Game/UI/Quest/Bounty/widget/Detail/WBP_Quest_Reward_Text.WBP_Quest_Reward_Text_C:SetText",
                    LOOK = { size = 18, spacing = 4, shadow = 0.5, offset = { X = 2, Y = 1 }, justify = 0 } }
-function G.QuestRewardColors(spans, say)
-    local Q, out = G.QUEST_COLORS, {}
-    local function textOf(w)
-        local t
-        pcall(function() t = w:GetText():ToString() end)
-        return t
+function G.QUEST_COLORS.text(w)
+    local t
+    pcall(function() t = w:GetText():ToString() end)
+    return t
+end
+-- Puts the game's block back in place of our row. Returns a line for the log.
+function G.QUEST_COLORS.restore(blockPath, r)
+    local Q, block = G.QUEST_COLORS, Find(blockPath)
+    local row, parent = Find(r.row), r.parent and Find(r.parent)
+    if r.content and parent and Alive(parent) and block and Alive(block) then
+        pcall(function() parent:SetContent(block) end)
+    elseif row and Alive(row) then
+        pcall(function() row:RemoveFromParent() end)
     end
+    if block and Alive(block) then pcall(function() block:SetVisibility(r.visibility) end) end
+    Q.rows[blockPath] = nil
+    return "taken out: " .. r.label
+end
+-- Colours one reward line `w` if it shows a scouted label, putting back a row it showed before
+-- for another reward. Adds to `out` (lines for the log) and `seen` (what it found). Steps go to `say`.
+function G.QUEST_COLORS.line(w, spans, say, out, seen)
+    local Q = G.QUEST_COLORS
+    local block, how
+    pcall(function() block = w[Q.BLOCK] end)
+    how = "property"
+    if not (block and Alive(block)) then
+        block, how = nil, "slot"
+        pcall(function() block = w[Q.PANEL]:GetContentForSlot(FName(Q.SLOT)) end)
+    end
+    if not (block and Alive(block)) then
+        seen[#seen + 1] = "no text block"
+        return
+    end
+    local path, text = G.PathOf(block), G.QUEST_COLORS.text(block)
+    seen[#seen + 1] = (text and ('"' .. text .. '"' .. (spans[text] and " (scouted)" or "")) or "no text") .. " by " .. how
+    local r = path and Q.rows[path]
+    if r and (text ~= r.label or not spans[r.label]) then out[#out + 1] = Q.restore(path, r) end
+    if not (path and not Q.rows[path] and text and spans[text]) then return end
+    local was = G.feedTrace
+    G.feedTrace = say
+    local parent, tree, row, slot, vis, content = nil, nil, nil, nil, 0, false
+    pcall(function() parent = block:GetParent() end)
+    pcall(function() tree = block:GetOuter() end)
+    local parentName = "nil"
+    pcall(function() parentName = parent:GetClass():GetFName():ToString() end)
+    pcall(function() vis = block:GetVisibility() end)
+    row = parent and feed.row(text, spans[text], Q.LOOK, tree)
+    -- Round 94: a NamedSlot holds one child, so AddChild failed, but UE4SS hands back a null
+    -- object, which Lua takes as true: the block was hidden and the row went nowhere.
+    local function valid(o)
+        local okValid, v = pcall(function() return o:IsValid() end)
+        return okValid and v == true
+    end
+    step("quest: add the coloured line to the " .. parentName .. " (AddChild)")
+    if row then pcall(function() slot = parent:AddChild(row) end) end
+    if not valid(slot) then slot = nil end
+    if row and not slot then
+        step("quest: put the coloured line in the " .. parentName .. "'s place for the game's (SetContent)")
+        pcall(function() slot = parent:SetContent(row) end)
+        if not valid(slot) then slot = nil end
+        content = slot ~= nil
+    end
+    if slot then
+        if not content then
+            step("quest: hide the game's line (SetVisibility)")
+            pcall(function() block:SetVisibility(COLLAPSED) end)
+        end
+        Q.rows[path] = { row = G.PathOf(row), label = text, visibility = vis, content = content, parent = G.PathOf(parent) }
+        out[#out + 1] = "coloured: " .. text .. " (in a " .. parentName .. (content and ", in its place" or "") .. ")"
+    else
+        out[#out + 1] = "not coloured: " .. text .. " (in a " .. parentName .. ")"
+    end
+    G.feedTrace = was
+end
+function G.QuestRewardColors(spans, say)
+    local Q, out, seen = G.QUEST_COLORS, {}, {}
+    Q.spans = spans
     for blockPath, r in pairs(Q.rows) do
         local block = Find(blockPath)
-        local text = block and textOf(block)
-        if not (block and Alive(block)) or text ~= r.label or not spans[r.label] then
-            local row, parent = Find(r.row), r.parent and Find(r.parent)
-            if r.content and parent and Alive(parent) and block and Alive(block) then
-                pcall(function() parent:SetContent(block) end)
-            elseif row and Alive(row) then
-                pcall(function() row:RemoveFromParent() end)
-            end
-            if block and Alive(block) then pcall(function() block:SetVisibility(r.visibility) end) end
-            Q.rows[blockPath] = nil
-            out[#out + 1] = "taken out: " .. r.label
+        if not (block and Alive(block)) or G.QUEST_COLORS.text(block) ~= r.label or not spans[r.label] then
+            out[#out + 1] = Q.restore(blockPath, r)
         end
     end
     local ok, all = pcall(FindAllOf, Q.LINE)
-    local seen = {}
     for _, w in ipairs(ok and all or {}) do
-        local block, how
-        if Alive(w) and Shown(w) then
-            pcall(function() block = w[Q.BLOCK] end)
-            how = "property"
-            if not (block and Alive(block)) then
-                block, how = nil, "slot"
-                pcall(function() block = w[Q.PANEL]:GetContentForSlot(FName(Q.SLOT)) end)
-            end
-            if not (block and Alive(block)) then
-                block = nil
-                seen[#seen + 1] = "no text block"
-            end
-        end
-        if block then
-            local path, text = G.PathOf(block), textOf(block)
-            seen[#seen + 1] = (text and ('"' .. text .. '"' .. (spans[text] and " (scouted)" or "")) or "no text") .. " by " .. how
-            if path and not Q.rows[path] and text and spans[text] then
-                local was = G.feedTrace
-                G.feedTrace = say
-                local parent, tree, row, slot, vis, content = nil, nil, nil, nil, 0, false
-                pcall(function() parent = block:GetParent() end)
-                pcall(function() tree = block:GetOuter() end)
-                local parentName = "nil"
-                pcall(function() parentName = parent:GetClass():GetFName():ToString() end)
-                pcall(function() vis = block:GetVisibility() end)
-                row = parent and feed.row(text, spans[text], Q.LOOK, tree)
-                -- Round 94: a NamedSlot holds one child, so AddChild failed, but UE4SS hands back a
-                -- null object, which Lua takes as true: the block was hidden and the row went nowhere.
-                local function valid(o)
-                    local okValid, v = pcall(function() return o:IsValid() end)
-                    return okValid and v == true
-                end
-                step("quest: add the coloured line to the " .. parentName .. " (AddChild)")
-                if row then pcall(function() slot = parent:AddChild(row) end) end
-                if not valid(slot) then slot = nil end
-                if row and not slot then
-                    step("quest: put the coloured line in the " .. parentName .. "'s place for the game's (SetContent)")
-                    pcall(function() slot = parent:SetContent(row) end)
-                    if not valid(slot) then slot = nil end
-                    content = slot ~= nil
-                end
-                if slot then
-                    if not content then
-                        step("quest: hide the game's line (SetVisibility)")
-                        pcall(function() block:SetVisibility(COLLAPSED) end)
-                    end
-                    Q.rows[path] = { row = G.PathOf(row), label = text, visibility = vis, content = content,
-                                     parent = G.PathOf(parent) }
-                    out[#out + 1] = "coloured: " .. text .. " (in a " .. parentName .. (content and ", in its place" or "") .. ")"
-                else
-                    out[#out + 1] = "not coloured: " .. text .. " (in a " .. parentName .. ")"
-                end
-                G.feedTrace = was
-            end
-        end
+        if Alive(w) and Shown(w) then Q.line(w, spans, say, out, seen) end
     end
     local summary = string.format("seen: %d reward lines on screen%s%s", #seen, #seen > 0 and ": " or "", table.concat(seen, ", "))
     if summary ~= Q.lastSeen then
@@ -2037,6 +2046,26 @@ function G.QuestRewardColors(spans, say)
         Q.lastSeen = summary
     end
     return out
+end
+-- The instant probe: a hook on the reward line's SetText (a Blueprint function, so UE4SS calls it
+-- after the text is written). The class loads with the Quests screen, so it is tried until it
+-- registers. `log` gets the hook's lines. Returns "registered" the time it registers.
+function G.QuestColorHook(log)
+    local Q = G.QUEST_COLORS
+    if Q.hooked then return nil end
+    local ok = pcall(RegisterHook, Q.SET_TEXT, function(self)
+        if not (Q.on and Q.instant) then return end
+        local w
+        pcall(function() w = self:get() end)
+        if not (w and Alive(w)) then return end
+        local out = {}
+        local okLine, err = pcall(Q.line, w, Q.spans, Q.trace, out, {})
+        for _, line in ipairs(out) do log("quest colours (instant): " .. line) end
+        if not okLine then log("quest colours (instant): failed: " .. tostring(err)) end
+    end)
+    if not ok then return nil end
+    Q.hooked = true
+    return "registered"
 end
 
 -- Clear cached paths on map load; old map objects are freed and dereferencing stale handles crashes.

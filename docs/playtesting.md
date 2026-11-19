@@ -2,15 +2,11 @@
 
 Only open items that still need to be tested in game live here. Once tested, record the results in [docs/playtesting_archive.md](playtesting_archive.md) and remove completed items from this file. Automated suite tests are documented in [tests/README.md](../tests/README.md).
 
-Current builds: mod `0.61.0` (`f04c0650`), world `0.30.0` (`88874051`, unchanged since round 90).
+Current builds: mod `0.61.0` (`c2d4d794`), world `0.30.0` (`88874051`, unchanged since round 90).
 
 Install: copy `FFRArchipelago/Scripts`. The apworld is unchanged. Send the `[FFRAP]` lines of `UE4SS.log`. If the game crashes, send `Mods/FFRArchipelago/ap_trace.txt`, the crash folder, and the log before starting the game again.
 
-## Item colours (Round 95)
+## Item colours (Round 96)
 
-- [ ] Verify the log says `version 0.61.0 (build f04c0650)`. Type `ffrap_quest colors on`, open the Quests screen, and pick a quest that is a location. Verify the Rewards line shows "Alice's" in white and the item's name in its colour and bold, and stays. The log should say `coloured: ... (in a NamedSlot, in its place)`. Move through a few quests and back: verify each line shows its own reward, and no line goes blank. Send the `quest colours:` lines.
-
-## Side quests (Rounds 78 to 95)
-
-- [ ] Load the save where "Arise, Mechabo!" is open. Verify the log says `mechabo: board quests 1001 ordered, so their kills count`, then a `mechabo:` line with `board quest 1001 ordered`. Defeat Ipoohs outside the Dwarven Forge: verify the tracker counts them (1/2, 2/2) and the `mechabo:` line's kills go up (`55 x1`, `55 x2`).
-- [ ] Then carry on with Verun: deliver to him (counter 20), talk to him again for "Mechabo Evolved" (counter 30, a `board quests 1002 ordered` line), defeat three dhorme chimerae northeast of Grandport, deliver, and talk to him again (counter 40). Verify Lid has Mechabo Tackle. Send every `mechabo:` line.
+- [ ] Verify the log says `version 0.61.0 (build c2d4d794)`. With no command, open the Quests screen and pick a quest that is a location: verify the name shows in its colour (about a second late, as in round 95). The log says one `quest colours: coloured: ...` line, not one per quest.
+- [ ] Type `ffrap_quest instant on`, then open the Quests screen. Verify the log says `quest colours: SetText hook registered`. Move through quests: verify each scouted name shows in its colour at once, and lines for other rewards are the game's own. The log has `quest colours (instant): coloured: ...` lines and `quest step:` lines for the first one. If the game crashes, send `ap_trace.txt` and the log: the last `quest step:` line is the call that crashed.

@@ -332,6 +332,8 @@ Along the same lines, I would also want an option for players to start with all 
 
 **Round 94 result:** `board quest 1001 none`: never ordered, so kills did not count. **Built (round 95):** for each of Verun's open quests the mod orders the current step's board quests that read none.
 
+**Round 95 result:** the whole chain to Mechabo Tackle works. Only the first hunt (1001) needed the order; the game ordered 1002 itself. "Arise, Mechabo!" gives no skill (the user): it repairs Mechabo and starts the gather quests, and "Mechabo Evolved" gives Mechabo Tackle at counter 40.
+
 **To find out:**
 - Whether the steps should be locations: the six abilities and three Magicite rewards, with logic for each material's enemy area. The steps also need Lid in logic if the abilities stay vanilla.
 
@@ -546,4 +548,6 @@ Until then the Options rows stay, and on a save not linked to the seed they chan
 **Round 93 result:** no such CommonTextBlock was found. The line's `SetText` writes `CommonTextBlock_194`, a variable of the line, held in the entry panel's `Slot_33_Content`. Since round 94 the probe takes the block from the line's property, or from `GetContentForSlot`.
 
 **Round 94 result:** the blocks were found, but the name went blank: the NamedSlot's `AddChild` failed and gave back a null object, which Lua takes as true. Since round 95 a slot counts only when `IsValid()`, and in a NamedSlot our row takes the block's place.
+
+**Round 95 result:** the Quests screen works. The user: the colour comes a second late. Since round 96 the screen's colours are on by default; `ffrap_quest instant on` (a probe) hooks the reward line's `SetText` to colour each line as it is written.
 

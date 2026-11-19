@@ -1388,3 +1388,14 @@ Send the `[FFRAP]` lines of the log.
 - A slot from `AddChild` or `SetContent` counts only when `IsValid()`. In a NamedSlot our row takes the block's place (`SetContent`).
 - On a seed's save, for each of Verun's open quests, the board quests of its current step (`DT_RequestData` `ProgressList[step].QuestList`) that read none are set to ordered in the save's `questBoardList`, and the log says `mechabo: board quests N ordered, so their kills count`.
 
+### Round 95 (mod 0.61.0 build f04c0650, apworld 0.30.0 build 88874051)
+
+- **Quests screen colours:** passed. Each scouted line showed the name in its colour and bold (`coloured: Blessed Pendant (in a NamedSlot, in its place)`), and switching quests put the game's lines back. **From the user:** the colour comes a second late each time; can it be at once?
+- **Verun, "Arise, Mechabo!":** passed. At load the mod ordered board quest 1001 (`mechabo: board quests 1001 ordered, so their kills count`); two Ipooh kills counted (`kills 55 x2`, `met`), the delivery set flag 219, and the counter went to 20 (quest 17 done).
+- **Verun, "Mechabo Evolved":** passed. Talking to him again gave counter 30 and quest 26 open; the dhorme chimera hunt (1002) was ordered by the game itself (no `ordered` line for it); after the delivery the counter went to 40 and Lid had Mechabo Tackle.
+- **From the user:** "Arise, Mechabo!" gives no skill; it repairs Mechabo and starts the gather quests. "Mechabo Evolved" gives the first skill, Mechabo Tackle. Round 88's "no Tackle" came from a checklist that asked for the wrong step: the counter never passed 20. The one real fault was the first hunt (1001), never ordered on the open start (round 94); the game orders the later hunts itself.
+
+**Round 96 build (mod 0.61.0 build c2d4d794, apworld unchanged, build 88874051):**
+- Quests screen colours are on by default, and quiet in the log: the first line coloured, and any line not coloured. `ffrap_quest colors on` logs every line again.
+- `ffrap_quest instant on` (probe): a hook on the reward line's own `SetText` (a Blueprint function, so the hook runs after the text is written) colours each line as the game writes it.
+

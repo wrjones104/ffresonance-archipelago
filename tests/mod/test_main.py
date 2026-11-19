@@ -106,6 +106,7 @@ function G.PartyIds() return {1001} end
 function G.Toast() return false end
 G.POPUP_COLORS = { on = false }
 G.QUEST_COLORS = { on = false }
+function G.QuestColorHook() if G.QUEST_COLORS.hooked then return nil end G.QUEST_COLORS.hooked = true return "registered" end
 function G.QuestRewardColors(spans, say)
   G.questSpans = spans
   local out = {}
@@ -2032,6 +2033,16 @@ assert L.eval("G.questSpans[\"Alice's Mirage Jacket\"].text") == "Mirage Jacket"
 assert any("quest colours: coloured: " in s for s in logs()), logs()
 L.execute('commands["ffrap_quest"]("ffrap_quest", {"colors", "off"})')
 assert L.eval("next(G.questSpans)") is None, "off: every row taken out"
+# Round 96: on by default and quiet. The first line coloured was logged above (with colors on);
+# with them on again by default, no more are
+L.execute("package.loaded.game.QUEST_COLORS.on, G.questDone = true, nil; logged = {}")
+tick(4)
+assert L.eval("G.questDone") is True and not any("quest colours: coloured: " in s for s in logs()), logs()
+# and `instant on` registers the SetText hook while the screen is open
+L.execute('commands["ffrap_quest"]("ffrap_quest", {"instant", "on"})')
+tick(2)
+assert any("quest colours: SetText hook registered" in s for s in logs()), logs()
+L.execute('package.loaded.game.QUEST_COLORS.on = false')
 # Round 88: Verun's counter, the delivery flag and Lid's Mechabo Tackle are logged when they change
 L.execute("G.skills = { [404110] = true }")
 tick(2)
