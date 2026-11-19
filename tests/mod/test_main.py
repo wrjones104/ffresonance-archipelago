@@ -165,10 +165,11 @@ G.CRYSTALS = { { event = 10, map = 10200, flag = 1000 } }
 function G.CrystalsPatch() G.crystalPatches = (G.crystalPatches or 0) + 1; return 3 end
 G.BOSSES = { { group = 9079, flag = 146 }, { group = 9083, flag = 215 } }
 function G.BossesPatch() G.bossPatches = (G.bossPatches or 0) + 1; return 2 end
-G.QUESTS = { { key = "quest:13", counter = 28, value = 40, map = 2030, before = 30, rows = { "SubEv_C01_Zairu_04" } },
+G.QUESTS = { { key = "quest:13", counter = 28, value = 40, map = 2030, before = 30, rows = { "SubEv_C01_Zairu_04" },
+               key2 = "quest2:13", item2 = -1 },
              { key = "quest:6", counter = 7, value = 60, map = 3160, before = 50, rows = { "ChrEv_0070_006_01" } },
              { key = "quest:34", counter = 44, value = 20, rows = { "SubEv_C05_MogChase_06_NPC01_01" } } }
-function G.QuestsPatch() G.questPatches = (G.questPatches or 0) + 1; return 2 end
+function G.QuestsPatch(second) G.questPatches = (G.questPatches or 0) + 1; G.questSecond = second; return 2 end
 G.MECHABO = { counter = 16, start = 10, delivered = 219, lid = 1004, tackle = 404110, requests = { 17, 26 }, hunt = 1001 }
 function G.BoardQuest(id) return G.board or "not on the board" end
 function G.OrderRequestQuests(ids) local out = G.toOrder or {}; G.toOrder = nil; return out end
@@ -1947,6 +1948,7 @@ G.popupReady, G.onField, G.popups = False, False, L.table()
 L.execute(f"G.progress[{ZILE_COUNTER}] = {ZILE_REWARD}; G.progress[{MECHABO_COUNTER}] = {MECHABO_LATER}")
 tick(REWARD_SCENE_TICKS)
 assert "check\tquest:13\n" in read("ap_out.txt") and "quest:34" not in read("ap_out.txt"), read("ap_out.txt")[-200:]
+assert "quest2:13" not in read("ap_out.txt") and not G.questSecond, "a seed with no second rewards: no second check"
 G.popupReady = True
 tick(1)
 assert list(G.popups.values()) == ["You found Alice's:\nHookshot"], list(G.popups.values())
@@ -2071,6 +2073,29 @@ L.execute(f"G.progress[{ZILE_COUNTER}] = {ZILE_REWARD}")
 tick(12)
 assert G.questPatches is None and "quest:13" not in read("ap_out.txt"), "quests off: no patch, no check"
 assert L.eval(f"G.progress[{MECHABO_COUNTER}]") == MECHABO_REQUEST, "the Mechabo start does not need the quests"
+
+# Round 98 (the user): a quest's second reward (Rear Support, Ahoy!'s 500 gil) is a location of its
+# own: the patch takes it out, the check sends both, the pop-up names both and the Quests screen too
+inbox("seed\tS98q:0:1\ncfg\topenworld\t1\ncfg\tquests\t1\ncfg\tquest2\t1\n", "w")
+L, G = boot5("SD_QUEST2", "0", {})
+L.globals().G = G
+L.execute(SCALE_STUB)
+G.chests = L.table()
+G.story = 8000
+tick(12)
+assert G.questSecond is True, "the patch takes the second rewards out too"
+inbox(b64_scout("quest:13", "Hookshot", "Alice", 1, 0), "a")
+inbox(b64_scout("quest2:13", "Potion", "Me", 0, 1), "a")
+tick(2)
+G.popupReady, G.onField, G.popups = True, False, L.table()
+L.execute(f"G.progress[{ZILE_COUNTER}] = {ZILE_REWARD}")
+tick(4)
+out = read("ap_out.txt")
+assert "check\tquest:13\n" in out and "check\tquest2:13\n" in out, out[-200:]
+assert list(G.popups.values()) == ["You found:\nAlice's Hookshot\nPotion"], list(G.popups.values())
+G.onField = True
+tick(70)
+assert L.eval("G.prizes['quest:13']") == "Alice's Hookshot" and L.eval("G.prizes['quest2:13']") == "Potion"
 print("side quests: ok")
 
 # IDEAS.md idea 37: the Oblivion Palace counter is held on a seed's save each tick, and its line

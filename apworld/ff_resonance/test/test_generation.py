@@ -21,6 +21,7 @@ PALACE_SHARDS = 99
 MARAUDER, LIQUID_THUNDER, ANTLION = 9079, 9083, 9060   # battle groups: a cave master, a story boss, an optional boss
 TARTAROSAURUS, BELMODAR, THE_HUNGER = 9112, 9004, 9012   # tier D, and two tier A with no needs
 QUEST_LOCATIONS = 28    # round 78: the quest log's 33, less the Mechabo three and two boss quests
+QUEST_SECOND_REWARDS = 17   # round 98: 9 quests give a second item or a vision, 8 give gil
 # Quest items the game never tests (docs/side_quests.md, section 2): out of the pool.
 QUEST_ONLY_ITEMS = (20020, 20023, 20024, 20025, 20026, 20027, 20028, 20029, 20030, 20031, 20032)
 CAVE_MASTERS, STORY_BOSSES, OPTIONAL_BOSSES = 15, 21, 4   # round 71: ten more story bosses; round 72: Behemoth out
@@ -283,10 +284,25 @@ class TestDirnadoOnFoot(FFResonanceTestBase, real_defaults=True):
     """Round 73: the user's seed. On foot from Dilmagia, Liquid Thunder (tier B) holds the rest of
     Dirnado: three party members and a second continent, or the Airship to fly over it."""
     options = {"start_with_airship": False, "starting_continent": "dirnado", "starting_roster": 2,
-               "starting_character_1": "Lasswell", "starting_character_2": "Archwitch Fina", "shuffle_visions": True}
+               "starting_character_1": "Lasswell", "starting_character_2": "Archwitch Fina", "shuffle_visions": True,
+               "include_side_quests": True}
+    # Round 97 (the user): both end in the Dwarven Forge, past Liquid Thunder, and were in logic at once.
+    FORGE_QUESTS = ("Quest: Lyrical Riddles", "Quest: Elven Maven")
 
     def reachable(self, name: str) -> bool:
         return self.multiworld.get_location(name, self.player).can_reach(self.multiworld.state)
+
+    def test_forge_quests_wait_for_liquid_thunder(self) -> None:
+        for name in self.FORGE_QUESTS:
+            self.assertFalse(self.reachable(name), name)
+        self.collect_by_name(["Lid", "Lanzelt Unlock", "Leah (Vision)"])
+        for name in self.FORGE_QUESTS:
+            self.assertTrue(self.reachable(name), name)
+
+    def test_forge_quests_by_airship(self) -> None:
+        self.collect_by_name(["Airship"])
+        for name in self.FORGE_QUESTS:
+            self.assertTrue(self.reachable(name), name)
 
     def test_only_dilmagia_at_first(self) -> None:
         self.assertTrue(self.reachable("Dirnado - Dilmagia - NE Branch Corridor Chest"))
@@ -452,9 +468,27 @@ class TestSideQuests(FFResonanceTestBase):
 
     def test_quests_are_locations(self) -> None:
         names = {loc.name for loc in self.multiworld.get_locations(self.player)}
-        self.assertEqual(len(SIDE_QUESTS), QUEST_LOCATIONS)
+        self.assertEqual(len(SIDE_QUESTS), QUEST_LOCATIONS + QUEST_SECOND_REWARDS)
         self.assertTrue({q["name"] for q in SIDE_QUESTS} <= names)
         self.assertIn('Quest: "Reunion"', names)
+        self.assertIn('Quest: "Reunion" - Second Reward', names)
+
+    def test_second_rewards_go_to_the_pool(self) -> None:
+        """Round 98 (the user): a quest's second reward is a location of its own, with the same
+        logic as the quest. Its item or gil goes into the pool; a vision is there already."""
+        pool = [i.code for i in self.multiworld.itempool if i.player == self.player]
+        by_key = {q["key"]: q for q in SIDE_QUESTS}
+        secrets, riddles = by_key["quest2:16"], by_key["quest2:18"]
+        self.assertEqual(ITEMS[secrets["vanilla"]]["name"], "Magicite Shard")
+        self.assertEqual(ITEMS[riddles["vanilla"]]["name"], "800 Gil")
+        self.assertIn(riddles["vanilla"], pool)
+        amelia = by_key["quest2:22"]
+        self.assertIsNone(amelia["vanilla"])
+        self.assertNotIn("vision", by_key["quest:22"], "the quest's own location holds the Magicite")
+        for second in (q for q in SIDE_QUESTS if q["key"].startswith("quest2:")):
+            first = by_key["quest:" + second["key"].split(":")[1]]
+            self.assertEqual((second["steps"], second.get("past_boss"), second["after"]),
+                             (first["steps"], first.get("past_boss"), first["after"]), second["name"])
 
     def test_forger_of_wills_needs_all_three_continents(self) -> None:
         # Three NPCs, in Dilmagia, the Rebel Hideout and the Village of Kol, each move the counter
@@ -500,7 +534,10 @@ class TestSideQuestsUnshuffledVisions(FFResonanceTestBase):
     options = {"include_side_quests": True, "shuffle_visions": False}
 
     def test_a_vision_quest_holds_its_vision(self) -> None:
-        for quest in (q for q in SIDE_QUESTS if "vision" in q):
+        """Round 98: on its second reward's location; the quest's own holds a shuffled item."""
+        visions = [q for q in SIDE_QUESTS if "vision" in q]
+        self.assertTrue(visions and all(q["key"].startswith("quest2:") for q in visions))
+        for quest in visions:
             self.assertEqual(self.multiworld.get_location(quest["name"], self.player).item.code, quest["vision"])
 
     def test_no_vision_in_the_pool(self) -> None:

@@ -150,6 +150,7 @@ class FFResonanceWorld(World):
             "world_build": world_build(),
             "open_world": True,
             "npc_gifts": True,       # round 97: the NPC gifts are locations, always
+            "quest_second_rewards": True,   # round 98: a quest's second reward is a location of its own
             "starting_party": self.starting_party,
             "final_boss_characters": self.final_boss_characters,
             "final_boss_visions": self.final_boss_visions,

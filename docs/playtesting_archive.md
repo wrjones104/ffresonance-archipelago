@@ -1415,3 +1415,16 @@ Send the `[FFRAP]` lines of the log.
 - **NPC gifts:** 10 one-time gifts (flags 1400 to 1413, `data/game/gifts.tsv`) are locations (`gift:<flag>`, AP id 8,000,000,000 + flag). Each row gives the stand-in; the check is the gift's flag, set before the pop-up shows, so the pop-up is written as for a cave master. A second item goes into the pool in place of a filler. The Pharm cat's gift needs Mysidia (its cat first). The Magi-tenna's NPC is a location with the radar treasures, like the radar part chests.
 - Quests screen colours are instant by default (`ffrap_quest instant off`).
 
+### Round 97 (mod 0.61.0 build 26e942ac, apworld 0.30.0 build 5daa523d), first part
+
+The user is still playing this seed; the rest of the round's checks stay open.
+
+- **Builds and options:** passed. Both builds in the logs; the template shows `priority_bosses` (Priority Cave Masters), `priority_story_bosses` and `final_boss_fragments` up to 40; a seed with `priority_story_bosses: true` put progression on story bosses.
+- **A story boss the mod brings back:** passed. Its pop-up showed the item, both checks were sent and the fragment came; Majipots gave nothing extra.
+- **Quests screen colours by default:** passed, at once.
+- **From the user (logic):** Lyrical Riddles and Elven Maven were in logic from the start, but both end in the Dwarven Forge, past Liquid Thunder. A quest's steps were tested by continent only, and Dilmagia is in Dirnado, so the boss went unseen. Fixed: a step on a map past Liquid Thunder gives the quest the chests' rule (Liquid Thunder's needs, or the Airship). It also caught Beyond the Blue, The Admirable Apprentice and "Reunion".
+- **From the user:** can a quest with two rewards give both as Archipelago items? Leave out the stat bonuses, unless they can be items too.
+
+**Round 98 build (mod 0.61.0 build 22b9afbc, apworld 0.30.0 build 91355310):**
+- **The Forge quests' logic**, as above (`past_boss` on the quest, from `PAST_BOSS_ON_FOOT`).
+- **Second rewards:** 17 quests give a second reward, and each is a location of its own (`quest2:<id>`, AP id 6,100,000,000 + quest, "Quest: <name> - Second Reward"), with the quest's logic. 8 give gil, 2 a second item (Secrets Unearthed, Rogue Rebel) and 7 a vision. The patch takes the second reward out of the row too (a row left empty keeps the stand-in); the check sends both; the pop-up names both, one line each, each in its colour; the Quests screen names both. A vision quest's own location now holds its Magicite, which with `shuffle_visions` off used to be lost; the vision sits on the second location. The stat bonuses are not items (left as they are). The client sends `cfg quest2` from slot data `quest_second_rewards`; a seed without it keeps the old behaviour.

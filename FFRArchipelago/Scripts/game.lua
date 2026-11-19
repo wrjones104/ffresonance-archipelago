@@ -1877,22 +1877,31 @@ function G.ChestPopup(text, span)
         if name == POPUP_ITEM_LINE and Alive(child) then line = child end
     end
     if not line then return false, "an \"obtained\" message with no item line: not the item pop-up" end
-    local message, nameLine = G.PopupSplit(text, span)
+    local message, nameLines = G.PopupSplit(text, span)
     if not pcall(function() msg:SetText(FText(message or text)) end) then return false, "SetText failed" end
-    local rowPath, how = nil, ""
-    if nameLine then
+    local rowPaths, how = {}, ""
+    if nameLines then
         local P, was = G.POPUP_COLORS, G.feedTrace
         G.feedTrace, P.trace = P.trace, nil
-        local tree, row, slot
+        local tree, added, failed = nil, {}, false
         pcall(function() tree = msg:GetOuter() end)
-        row = feed.row(nameLine, span, P.LOOK, tree)
-        step("pop-up: add the coloured line (AddChildToVerticalBox)")
-        if row and pcall(function() slot = parent:AddChildToVerticalBox(row) end) and slot then
+        for _, picked in ipairs(nameLines) do
+            local row, slot = feed.row(picked.line, picked.span, P.LOOK, tree), nil
+            step("pop-up: add the coloured line (AddChildToVerticalBox)")
+            if not (row and pcall(function() slot = parent:AddChildToVerticalBox(row) end) and slot) then
+                failed = true
+                break
+            end
             pcall(function() slot:SetHorizontalAlignment(P.CENTER) end)
-            rowPath, how = G.PathOf(row), ", the name in its colour"
-        else
+            added[#added + 1] = row
+        end
+        if failed then
+            for _, row in ipairs(added) do pcall(function() row:RemoveFromParent() end) end
             pcall(function() msg:SetText(FText(text)) end)
             how = ", the name plain (the coloured line could not be made)"
+        else
+            for _, row in ipairs(added) do rowPaths[#rowPaths + 1] = G.PathOf(row) end
+            how = #added > 1 and ", the names in their colours" or ", the name in its colour"
         end
         step("pop-up: done")
         G.feedTrace = was
@@ -1901,7 +1910,7 @@ function G.ChestPopup(text, span)
     local was = 0
     pcall(function() was = line:GetVisibility() end)
     if not pcall(function() line:SetVisibility(COLLAPSED) end) then return true, "text set (the item line would not hide)" .. how end
-    popupHidden = { line = G.PathOf(line), message = G.PathOf(msg), visibility = was, row = rowPath }
+    popupHidden = { line = G.PathOf(line), message = G.PathOf(msg), visibility = was, rows = rowPaths }
     return true, "text set, item line hidden" .. how
 end
 
@@ -1914,14 +1923,25 @@ end
 -- next coloured pop-up (ffrap_popup colors on).
 G.POPUP_COLORS = { on = true, trace = nil, CENTER = 2,
                    LOOK = { size = 18, spacing = 4, shadow = 0.5, offset = { X = 2, Y = 1 }, justify = 1 } }
--- The message without the line that holds the span, and that line; or nil with colours off or no span.
+-- The message without the lines that hold the spans, and those lines ({ line, span }, in order);
+-- or nil with colours off or no span found. `span` is one span or a list (a quest's two rewards).
 function G.PopupSplit(text, span)
-    if not (G.POPUP_COLORS.on and span and span.text and span.text ~= "") then return nil end
-    local lines, picked = {}, nil
+    if not (G.POPUP_COLORS.on and span) then return nil end
+    local wanted, lines, picked = span.text and { span } or span, {}, {}
     for l in (text .. "\n"):gmatch("(.-)\n") do
-        if not picked and l:find(span.text, 1, true) then picked = l else lines[#lines + 1] = l end
+        local found
+        for _, s in ipairs(wanted) do
+            if not found and s.text and s.text ~= "" and not s.taken and l:find(s.text, 1, true) then found = s end
+        end
+        if found then
+            found.taken = true
+            picked[#picked + 1] = { line = l, span = found }
+        else
+            lines[#lines + 1] = l
+        end
     end
-    if not picked then return nil end
+    for _, s in ipairs(wanted) do s.taken = nil end
+    if #picked == 0 then return nil end
     return table.concat(lines, "\n"), picked
 end
 
@@ -1931,8 +1951,10 @@ function G.ChestPopupRestore()
     local line = popupHidden.line and Find(popupHidden.line)
     local msg = popupHidden.message and Find(popupHidden.message)
     if line and Alive(line) and msg and Alive(msg) and Shown(msg) then return end
-    local row = popupHidden.row and Find(popupHidden.row)
-    if row and Alive(row) then pcall(function() row:RemoveFromParent() end) end
+    for _, path in ipairs(popupHidden.rows or {}) do
+        local row = Find(path)
+        if row and Alive(row) then pcall(function() row:RemoveFromParent() end) end
+    end
     local v = popupHidden.visibility
     if line and Alive(line) then pcall(function() line:SetVisibility(v) end) end
     popupHidden = nil
@@ -2891,14 +2913,15 @@ function G.PalaceSync()
 end
 
 -- Each reward row loses the quest's location item (`item` in quests.lua) and any vision (an item
--- of its own in the world). Gil and other items stay. Round 81: a row left empty still completes
+-- of its own in the world). With `second` (round 98), the second reward (`item2`, -1 for the gil)
+-- goes too, as it is a location of its own. Otherwise gil and other items stay. Round 81: a row left empty still completes
 -- the quest and shows the game's pop-up for the mod to write into. Round 84: not for Mog Tag. Its
 -- rows hold only the location's item, and left empty they showed "You obtained a vision!", which
 -- the mod did not find to write into. A quest with no `before` (no pop-up armed ahead of its
 -- check) keeps the stand-in Potion in a row that would be left empty. Safe to run again: a row
 -- without the item is left alone. Returns the rows written.
 G.VISION_IDS = { first = 13000, last = 13999 }
-function G.QuestsPatch()
+function G.QuestsPatch(second)
     local quests = {}
     for _, q in ipairs(G.QUESTS) do
         for _, r in ipairs(q.rows) do quests[r] = q end
@@ -2907,15 +2930,17 @@ function G.QuestsPatch()
     EachTalkRow(function(key, row)
         local q = quests[key]
         if not q then return end
-        local item = q.item
+        local item, item2 = q.item, second and q.item2
         local list = row.ObtainItemList
-        local keep, took, changed = {}, false, false
+        local keep, took, took2, changed = {}, false, false, false
         for i = 1, #list do
             local id, num = Int(list[i].ID), Int(list[i].Num)
             if id >= G.VISION_IDS.first and id <= G.VISION_IDS.last then
                 changed = true
             elseif id == item and not took then
                 took, changed = true, true
+            elseif id == item2 and not took2 then
+                took2, changed = true, true
             else
                 keep[#keep + 1] = { id = id, num = num }
             end
@@ -2958,8 +2983,9 @@ end
 
 -- Round 88 (the user): the Quests screen's Rewards list shows what each quest location holds.
 -- It is DT_RequestData's `Prize`; an entry with ID 0 shows its Text, as "Attribute Bonus: Fina"
--- does. `labels`: quest key -> text, for the location's entry (the one with its vanilla item);
--- a quest left out gets its vanilla entry back. Returns the entries written.
+-- does. `labels`: location key -> text, for the location's entry (the one with its vanilla item;
+-- `key2`'s is `item2`'s, round 98); a location left out gets its vanilla entry back. Returns the
+-- entries written.
 G.PRIZE = { table = "/Game/Datatable/Request/DT_RequestData.DT_RequestData", slots = {} }
 function G.QuestPrizes(labels)
     local P, byId = G.PRIZE, {}
@@ -2971,24 +2997,29 @@ function G.QuestPrizes(labels)
         requests:ForEachRow(function(_, row)
             local q = byId[Int(row.ID)]
             if not q then return end
-            local prize, slot = row.Prize, P.slots[q.key]
-            if not slot then
-                for i = 1, #prize do
-                    if Int(prize[i].ID) == q.item then slot = i end
+            local prize = row.Prize
+            for _, part in ipairs({ { q.key, q.item }, q.key2 and { q.key2, q.item2 } or nil }) do
+                local key, item = part[1], part[2]
+                local slot = P.slots[key]
+                if not slot then
+                    for i = 1, #prize do
+                        if Int(prize[i].ID) == item then slot = i end
+                    end
+                    P.slots[key] = slot
                 end
-                P.slots[q.key] = slot
-            end
-            if not slot or slot > #prize then return end
-            local label, id, text = labels[q.key], Int(prize[slot].ID), ""
-            pcall(function() text = prize[slot].Text:ToString() end)
-            if label and (id ~= 0 or text ~= label) then
-                prize[slot].ID = 0
-                prize[slot].Text = FText(label)
-                written = written + 1
-            elseif not label and id == 0 then
-                prize[slot].ID = q.item
-                prize[slot].Text = FText("")
-                written = written + 1
+                if slot and slot <= #prize then
+                    local label, id, shown = labels[key], Int(prize[slot].ID), ""
+                    pcall(function() shown = prize[slot].Text:ToString() end)
+                    if label and (id ~= 0 or shown ~= label) then
+                        prize[slot].ID = 0
+                        prize[slot].Text = FText(label)
+                        written = written + 1
+                    elseif not label and id == 0 then
+                        prize[slot].ID = item
+                        prize[slot].Text = FText("")
+                        written = written + 1
+                    end
+                end
             end
         end)
     end)

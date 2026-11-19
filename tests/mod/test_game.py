@@ -734,7 +734,13 @@ assert L.eval("G.POPUP_COLORS.on") is True, "on by default since round 92"
 L.execute("G.POPUP_COLORS.on = false")
 assert L.eval(SPLIT) is None, "off: the message stays as it is"
 L.execute("G.POPUP_COLORS.on = true")
-assert list(L.eval(f"table.pack({SPLIT})").values())[:2] == ["You found Alice's:", "Hookshot"]
+assert L.eval(f"(select(1, {SPLIT}))") == "You found Alice's:"
+assert L.eval(f"(select(2, {SPLIT}))[1].line") == "Hookshot" and L.eval(f"(select(2, {SPLIT}))[1].span.flags") == 1
+# Round 98: a quest's two rewards, one line each, each with its own span
+SPLIT_TWO = 'G.PopupSplit("You found:\\nPotion\\nAlice\'s Hookshot", { { text = "Potion", flags = 0 }, { text = "Hookshot", flags = 1 } })'
+assert L.eval(f"(select(1, {SPLIT_TWO}))") == "You found:"
+assert L.eval(f"#(select(2, {SPLIT_TWO}))") == 2
+assert L.eval(f"(select(2, {SPLIT_TWO}))[2].line") == "Alice's Hookshot" and L.eval(f"(select(2, {SPLIT_TWO}))[2].span.text") == "Hookshot"
 assert L.eval('G.PopupSplit("You found:\\nPotion", { text = "Ether", flags = 0 })') is None, "a span not in the text"
 L.execute("G.POPUP_COLORS.on = false")
 # Round 91 probe: with colours on, the pop-up's name line becomes our own row under the message,
@@ -765,6 +771,15 @@ L.execute("G.ChestPopupRestore()")
 assert L.eval("#rich:GetParent().kids") == 3, "kept while the pop-up is up"
 L.execute("rich.shown = false; G.ChestPopupRestore()")
 assert L.eval("#rich:GetParent().kids") == 2 and L.eval("popupLine.vis") == 0, "gone with the pop-up; the item line back"
+# Round 98: two rewards, two coloured rows, both gone with the pop-up
+L.execute('rich.text, rich.shown, popupLine.vis = "You obtained the following:", true, 0')
+ok, detail = L.execute('return G.ChestPopup("You found:\\nPotion\\nAlice\'s Hookshot", { { text = "Potion", flags = 0 }, { text = "Hookshot", flags = 1 } })')
+assert ok is True and detail == "text set, item line hidden, the names in their colours", detail
+assert L.eval("rich.text") == "You found:" and L.eval("#rich:GetParent().kids") == 4
+assert L.eval("rich:GetParent().kids[3].kids[1].ColorAndOpacity.SpecifiedColor.R") == CYAN_R
+assert L.eval("rich:GetParent().kids[4].kids[2].ColorAndOpacity.SpecifiedColor.R") == PLUM_R
+L.execute("rich.shown = false; G.ChestPopupRestore()")
+assert L.eval("#rich:GetParent().kids") == 2, "both rows gone with the pop-up"
 L.execute("G.POPUP_COLORS.on = false")
 # Round 93: a Quests screen Rewards text showing a scouted item is replaced by our row. The blocks
 # are found as CommonTextBlocks in a reward line (round 92: walking down from the line found none).
@@ -2054,6 +2069,11 @@ assert L.eval("rewards('SubEv_C01_Chloe_04')") == "25000x1", "the Prayer Beads a
 assert L.eval("rewards('SubEv_C05_MogChase_06_NPC01_01')") == STAND_IN_POTION, \
     "round 84: Mog Tag's row left empty showed a vision pop-up; it keeps the stand-in"
 assert L.eval("G.QuestsPatch()") == 0, "nothing to write the second time: the Shard is not the location's"
+# Round 98 (the user): with second rewards, the gil and the Shard are locations too
+assert L.eval("G.QuestsPatch(true)") == 2
+assert L.eval("rewards('SubEv_C01_Zairu_04')") == STAND_IN_POTION, "the gil goes"
+assert L.eval("rewards('SubEv_C01_Chloe_04')") == STAND_IN_POTION, "the Shard goes"
+assert L.eval("G.QuestsPatch(true)") == 0
 # Round 97 (the user): an NPC gift's row gives the stand-in in place of both its items; the
 # Magi-tenna's only with the radar treasures
 GIFT_ROWS = 10
@@ -2068,6 +2088,7 @@ assert L.eval("#G.QUESTS") == 28
 assert L.eval("G.QUESTS[1].key") == "quest:0" and L.eval("G.QUESTS[1].counter") == 1 and L.eval("G.QUESTS[1].value") == 50
 assert L.eval("G.MECHABO.counter") == 16 and L.eval("G.MECHABO.start") == 10
 assert L.eval("G.QUESTS[1].item") == 12050, "the location's item, which the rows lose"
+assert L.eval("G.QUESTS[1].key2") is None, "A New Leaf: one item and a stat bonus"
 # Round 88 (the user): the Quests screen's Rewards show the scouted item. DT_RequestData's Prize
 # entry for the location's vanilla item becomes a text entry (ID 0), as the game's stat bonus
 # line is; the other entries stay; a quest left out gets its vanilla entry back.
@@ -2100,6 +2121,11 @@ requestReload = "requestTable.rows['カーミル'].Prize[2] = { ID = 25001, Num 
 L.execute(requestReload)
 assert L.eval(f"G.QuestPrizes({{ ['quest:25'] = \"{CALL_LABEL}\" }})") == 1, "written again on a table loaded again"
 assert L.eval("G.QuestPrizes({})") == 1 and L.eval("prizeText('カーミル')") == "13033: 25001:", "a save not linked: the game's own"
+# Round 98: the second reward's location has the vision's entry
+SECOND_LABEL = "Bob's Ether"
+assert L.eval(f"G.QuestPrizes({{ ['quest:25'] = \"{CALL_LABEL}\", ['quest2:25'] = \"{SECOND_LABEL}\" }})") == 2
+assert L.eval("prizeText('カーミル')") == f"0:{SECOND_LABEL} 0:{CALL_LABEL}"
+assert L.eval("G.QuestPrizes({})") == 2 and L.eval("prizeText('カーミル')") == "13033: 25001:"
 # Round 93: the quest log's states, from the save's request.DataMap (round 92: Verun showed no quest)
 L.execute(r"""
 local function entry(k, state) return { get = function() return k end }, { get = function() return { State = state } end } end

@@ -565,3 +565,11 @@ Until then the Options rows stay, and on a save not linked to the seed they chan
 
 **Built (round 97, build 26e942ac):** shinies 3220:32, 33 and 37 are locations (`SHUFFLED_KEY_ITEMS` in the generator). Each card is in the pool once (a progression item a chosen location holds is not added again); the level 2 spot is behind the level 1 door, the level 3 spot behind the level 2 door (`data/gates.tsv`); without key item shuffle each spot keeps its card.
 
+
+## 45. Quest second rewards, and stat bonuses as items
+
+**From the user, 2026-11-19 (round 97).** A quest with two rewards gives both as Archipelago items, to make quests worth doing. Leave out the stat bonuses, unless they can be items too.
+
+**Built (round 98, build 22b9afbc):** 17 quests give a second reward (8 gil, 2 an item, 7 a vision), and each is a location of its own, `quest2:<id>` (docs/side_quests.md, section 6).
+
+**To find out:** what writes a character quest's stat bonus ("Attribute Bonus: Fina" in the Rewards list, an ID 0 entry). If it is a field of the reward row, a stat bonus could be an item the mod applies when it comes in. Not looked at yet.

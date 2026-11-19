@@ -414,7 +414,7 @@ local function newSession(key)
     state.slots, state.slotItems, state.bindPending, state.live = {}, {}, false, nil
     state.scouts = {}
     seedCfg.party, seedCfg.finalboss, seedCfg.chocobo, seedCfg.airship, seedCfg.continent, seedCfg.radar = nil, nil, nil, nil, nil, nil
-    seedCfg.quests, seedCfg.goal, seedCfg.checks = nil, nil, nil
+    seedCfg.quests, seedCfg.quest2, seedCfg.goal, seedCfg.checks = nil, nil, nil, nil
     game.blankRadarParts = false
     if save.apObj ~= nil and save.apObj == save.obj and save.autoDone then save.reskip = true end
     save.obj = nil     -- judge the loaded save again for this session
@@ -459,6 +459,8 @@ local function readInbox(initial)
             seedCfg.quests = f[3] == "1"
         elseif f[1] == "cfg" and f[2] == "gifts" then
             seedCfg.gifts = f[3] == "1"
+        elseif f[1] == "cfg" and f[2] == "quest2" then
+            seedCfg.quest2 = f[3] == "1"
         elseif f[1] == "cfg" and f[2] == "continent" then
             seedCfg.continent = f[3] and f[3]:lower()
         elseif f[1] == "cfg" and f[2] == "finalboss" then
@@ -699,6 +701,17 @@ end
 -- counter still reads `before` on the map its reward rows run on, an item pop-up in an event there
 -- is that quest's. state.questPopups keeps the quests written so, which the check then leaves alone.
 state.questPopups = {}
+-- A quest's pop-up text and span. Round 98 (the user): a quest with a second reward has a second
+-- location, and its pop-up names both, one line each.
+function state.questPopup(q)
+    local s = state.scouts[q.key]
+    if not s then return nil end
+    local s2 = seedCfg.quest2 and q.key2 and state.scouts[q.key2]
+    if not s2 then return popupText(s), { text = s.item, flags = s.flags } end
+    local function line(x) return x.own and x.item or (x.player .. "'s " .. x.item) end
+    return "You found:\n" .. line(s) .. "\n" .. line(s2),
+        { { text = s.item, flags = s.flags }, { text = s2.item, flags = s2.flags } }
+end
 -- Whether a quest's reward rows may be running now: its counter at `before` (one value, or one of
 -- several, as for each Mog Tag tier) and its `flags` on (round 88).
 function state.questRewardDue(q)
@@ -716,11 +729,13 @@ function state.prizeTick()
     state.prizeSpans = {}
     if sessionSave() then
         for _, q in ipairs(game.QUESTS) do
-            local s = state.scouts[q.key]
-            if s then
-                labels[q.key] = s.own and s.item or (s.player .. "'s " .. s.item)
-                state.prizeSpans[labels[q.key]] = { text = s.item, flags = s.flags }
-                parts[#parts + 1] = q.key .. "=" .. labels[q.key]
+            for _, key in ipairs({ q.key, seedCfg.quest2 and q.key2 or nil }) do
+                local s = state.scouts[key]
+                if s then
+                    labels[key] = s.own and s.item or (s.player .. "'s " .. s.item)
+                    state.prizeSpans[labels[key]] = { text = s.item, flags = s.flags }
+                    parts[#parts + 1] = key .. "=" .. labels[key]
+                end
             end
         end
     end
@@ -754,9 +769,9 @@ function state.earlyQuestPopup()
         -- Round 89: a quest played again from an older save, its check sent already, gets its
         -- pop-up too. Written once per loaded save.
         if q.map == mapId and state.questPopups[q.key] ~= save.obj and state.questRewardDue(q) then
-            local s = state.scouts[q.key]
-            if not s then return end
-            local ok, detail = game.ChestPopup(popupText(s), { text = s.item, flags = s.flags })
+            local text, span = state.questPopup(q)
+            if not text then return end
+            local ok, detail = game.ChestPopup(text, span)
             if ok then
                 state.questPopups[q.key] = save.obj
                 log("chest pop-up for " .. q.key .. " before its check: " .. detail)
@@ -880,11 +895,13 @@ local function scanBosses()
     -- comes with the reward row, at the end of the quest's last scene.
     if seedCfg.quests and sessionSave() then
         for _, q in ipairs(game.QUESTS) do
-            if (game.ProgressValue(q.counter) or 0) >= q.value and report("check", q.key) then
+            local done = (game.ProgressValue(q.counter) or 0) >= q.value
+            if done and seedCfg.quest2 and q.key2 and report("check", q.key2) then log("check " .. q.key2) end
+            if done and report("check", q.key) then
                 log("check " .. q.key)
-                local s = state.scouts[q.key]
-                if s and state.questPopups[q.key] ~= save.obj then
-                    popup = { text = popupText(s), span = { text = s.item, flags = s.flags }, key = q.key, tries = BOSS_POPUP_TRIES, scene = true }
+                local text, span = state.questPopup(q)
+                if text and state.questPopups[q.key] ~= save.obj then
+                    popup = { text = text, span = span, key = q.key, tries = BOSS_POPUP_TRIES, scene = true }
                 end
             end
         end
@@ -1671,7 +1688,7 @@ local function tick()
                     log("radar: " .. tostring(written) .. " treasure rewards set to the pop-up's stand-in" .. (okRadar and "" or " (failed)"))
                 end
                 if newSave and seedCfg.quests then
-                    local okQuests, written = pcall(game.QuestsPatch)
+                    local okQuests, written = pcall(game.QuestsPatch, seedCfg.quest2)
                     log("quests: " .. tostring(written) .. " reward rows without the location's item" .. (okQuests and "" or " (failed: " .. tostring(written) .. ")"))
                 end
                 if newSave and seedCfg.gifts then
