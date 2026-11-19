@@ -106,8 +106,10 @@ function G.PartyIds() return {1001} end
 function G.Toast() return false end
 G.POPUP_COLORS = { on = false }
 G.QUEST_COLORS = { on = false }
-G.GIFTS = { { key = "gift:1400", flag = 1400, row = "FEV_Town_01Gra_05_981_01" },
-            { key = "gift:1405", flag = 1405, row = "FEV_Town_08Gro_01_1540_01", radar = true } }
+G.GIFTS = { { key = "gift:1400", flag = 1400, row = "FEV_Town_01Gra_05_981_01", map = 2016, x = 25910, y = -4960 },
+            { key = "gift:1405", flag = 1405, row = "FEV_Town_08Gro_01_1540_01", map = 2150, x = 4635, y = -4670, radar = true },
+            { key = "gift:1401", flag = 1401, row = "FEV_Town_09Pha_01_1232_01", map = 2170, x = 1100, y = 20810 },
+            { key = "gift:1413", flag = 1413, row = "FEV_Town_09Pha_01_9012_02", map = 2170, x = 1165, y = 525 } }
 function G.GiftsPatch(radar) G.giftPatches = (G.giftPatches or 0) + 1; G.giftRadar = radar; return 9 end
 function G.QuestColorHook() if G.QUEST_COLORS.hooked then return nil end G.QUEST_COLORS.hooked = true return "registered" end
 function G.QuestRewardColors(spans, say)
@@ -2389,6 +2391,28 @@ tick(4)
 assert read("ap_out.txt").count(f"check\tboss:{MARAUDER}\n") == 1, "reported once"
 assert read("ap_out.txt").count(f"check\tfragment:{MARAUDER}\n") == 1, "its fragment once too"
 assert f"check\tfragment:{LIQUID_THUNDER}\n" in read("ap_out.txt")
+# Round 98 (the user): a gift's check came after its pop-up had closed. In an event on its map, a
+# pop-up is the gift of the nearest NPC whose check is not sent; the check writes no second one
+SIAN, NEAR_THE_CAT, FAR_FROM_BOTH = 2170, "{ x = 1200, y = 600 }", "{ x = 9000, y = 9000 }"
+inbox(b64_scout("gift:1401", "Ether", "Bob", 0, 0) + b64_scout("gift:1413", "Bell", "Bob", 1, 0), "a")
+tick(2)
+written = len(G.popups)
+L.execute("function G.OnField() return G.onField end")
+L.execute(f"function G.PlayerPose() return {FAR_FROM_BOTH} end")
+G.map, G.onField, G.popupReady = SIAN, False, True
+tick(3)
+assert len(G.popups) == written, "no gift NPC near: another pop-up on the map"
+L.execute(f"function G.PlayerPose() return {NEAR_THE_CAT} end")
+tick(3)
+assert len(G.popups) == written + 1 and G.popups[written + 1] == "You found Bob's:\nBell", list(G.popups.values())
+assert any("chest pop-up for gift:1413 before its check" in x for x in logs()), logs()
+tick(3)
+assert len(G.popups) == written + 1, "once"
+L.execute("G.wonFlags[1413] = true")
+tick(4)
+assert "check\tgift:1413\n" in read("ap_out.txt") and len(G.popups) == written + 1, "the check writes no second pop-up"
+G.onField = True
+L.execute("function G.PlayerPose() return { x = 15000, y = -55300 } end")
 G.map = 3280
 tick(12)
 assert G.sealed is True, "one fragment of two keeps the tower sealed"

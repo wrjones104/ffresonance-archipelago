@@ -56,6 +56,14 @@ async def main():
     check("the flags and the name follow the label", lines[1].split("\t")[6:] == ["0", "Tablet Shard (2/2)"])
     check("own shard counts up", label(lines[0]).endswith("Tablet Shard (1/2)"))
     check("a sent shard counts up", label(lines[1]).endswith("Tablet Shard (2/2) from Rat"))
+    # Round 98 (the user): the server's own items (start inventory -2, !getitem -1) come with flags 0;
+    # the line carries our classification, so the feed colours a shard as progression
+    PROGRESSION_FLAG, SERVER_START_INVENTORY = 1, -2
+    ctx.items_received = [shard(), shard(), NetworkItem(SHARD_ITEM, SERVER_START_INVENTORY, 0, 0)]
+    ctx.write_new_items()
+    lines = [line for line in open(in_path, encoding="utf-8").read().splitlines() if line.startswith("item")]
+    check("a server item is classed by its category", lines[-1].split("	")[6] == str(PROGRESSION_FLAG))
+    check("a found item keeps the server's flags", lines[1].split("	")[6] == "0")
     check("enough shards complete the goal", ctx.goal_reached())
     ctx.max_story = 9999
     ctx.items_received = []

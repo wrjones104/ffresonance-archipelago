@@ -548,11 +548,11 @@ def npc_gifts(starts):
             row = rows[event]
             flags = sorted(set(row.get("OnFlagList") or []) & GIFT_FLAGS)
             if flags and row.get("ObtainItemList"):
-                out.setdefault((flags[0], event), [flags[0], event, s["map"], s["level"], s["actor"], s["uid"],
-                                                   s["visible"], s["condition"], " ".join(conds), gifts(row)])
+                out.setdefault((flags[0], event), [flags[0], event, s["map"], s["level"], s["actor"], s["uid"]]
+                               + s["where"][:2] + [s["visible"], s["condition"], " ".join(conds), gifts(row)])
             for nxt, cond in next_rows(row):
                 stack.append((nxt, conds + ((cond,) if cond else ())))
-    write_tsv("gifts.tsv", ["flag", "row", "map", "level", "actor", "uid", "visible", "condition", "chain", "gifts"],
+    write_tsv("gifts.tsv", ["flag", "row", "map", "level", "actor", "uid", "x", "y", "visible", "condition", "chain", "gifts"],
               sorted(out.values()))
 
 

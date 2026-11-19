@@ -785,6 +785,7 @@ local function popupTick()
     pcall(game.ChestPopupRestore)
     if not popup then
         state.earlyQuestPopup()
+        state.earlyGiftPopup()
         return
     end
     local ok, detail = game.ChestPopup(popup.text, popup.span)
@@ -835,6 +836,31 @@ function PLACE.distance(x, y)
     local pose = PLACE.pose
     if not pose then return nil end
     return math.sqrt((pose.x - x) ^ 2 + (pose.y - y) ^ 2)
+end
+
+-- Round 98: a gift's check was seen only after its pop-up had closed (gift 1400: 30 s of no pop-up),
+-- or it wrote the next chest's (1411, 1405). In an event on a gift's map, with its check not sent
+-- yet (its flag may be on already), an item pop-up is the gift of the nearest such NPC within TALK;
+-- written once per gift and loaded save, which the check then leaves alone.
+state.giftPopups = {}
+state.GIFT_TALK = 500
+function state.earlyGiftPopup()
+    if not (seedCfg.gifts and sessionSave()) or game.OnField() then return end
+    local mapId, best, bestAt = game.CurrentMap(), nil, nil
+    for _, g in ipairs(game.GIFTS) do
+        if g.map == mapId and (seedCfg.radar or not g.radar) and state.giftPopups[g.key] ~= save.obj
+            and not state.reported["check|" .. g.key] and state.scouts[g.key] then
+            local d = PLACE.distance(g.x, g.y)
+            if d and d <= state.GIFT_TALK and (not bestAt or d < bestAt) then best, bestAt = g, d end
+        end
+    end
+    if not best then return end
+    local s = state.scouts[best.key]
+    local ok, detail = game.ChestPopup(popupText(s), { text = s.item, flags = s.flags })
+    if ok then
+        state.giftPopups[best.key] = save.obj
+        log("chest pop-up for " .. best.key .. " before its check: " .. detail)
+    end
 end
 
 -- A level shiny's place on a map: { uid, x, y }, or nil.
@@ -912,7 +938,9 @@ local function scanBosses()
             if (seedCfg.radar or not g.radar) and game.GetFlag(g.flag) == true and report("check", g.key) then
                 log("check " .. g.key)
                 local s = state.scouts[g.key]
-                if s then popup = { text = popupText(s), span = { text = s.item, flags = s.flags }, key = g.key, tries = BOSS_POPUP_TRIES } end
+                if s and state.giftPopups[g.key] ~= save.obj then
+                    popup = { text = popupText(s), span = { text = s.item, flags = s.flags }, key = g.key, tries = BOSS_POPUP_TRIES }
+                end
             end
         end
     end

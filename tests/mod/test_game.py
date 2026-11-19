@@ -2076,8 +2076,9 @@ assert L.eval("rewards('SubEv_C01_Chloe_04')") == STAND_IN_POTION, "the Shard go
 assert L.eval("G.QuestsPatch(true)") == 0
 # Round 97 (the user): an NPC gift's row gives the stand-in in place of both its items; the
 # Magi-tenna's only with the radar treasures
-GIFT_ROWS = 10
+GIFT_ROWS = 8   # round 98: 1407 and 1409 left out
 assert L.eval("#G.GIFTS") == GIFT_ROWS and L.eval("G.GIFTS[1].key") == "gift:1400" and L.eval("G.GIFTS[1].flag") == 1400
+assert L.eval("G.GIFTS[1].map") == 2016 and L.eval("G.GIFTS[1].x") == 25910, "round 98: where the NPC stands"
 assert L.eval("G.GiftsPatch(false)") == 1
 assert L.eval("rewards('FEV_Town_01Gra_05_981_01')") == STAND_IN_POTION, "the Lunar Sword and the Brigandine go"
 assert L.eval("rewards('FEV_Town_08Gro_01_1540_01')") == "27006x1", "no radar treasures: the Magi-tenna stays"

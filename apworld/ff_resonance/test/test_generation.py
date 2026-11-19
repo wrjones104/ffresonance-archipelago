@@ -476,12 +476,11 @@ class TestSideQuests(FFResonanceTestBase):
     def test_second_rewards_go_to_the_pool(self) -> None:
         """Round 98 (the user): a quest's second reward is a location of its own, with the same
         logic as the quest. Its item or gil goes into the pool; a vision is there already."""
-        pool = [i.code for i in self.multiworld.itempool if i.player == self.player]
         by_key = {q["key"]: q for q in SIDE_QUESTS}
         secrets, riddles = by_key["quest2:16"], by_key["quest2:18"]
         self.assertEqual(ITEMS[secrets["vanilla"]]["name"], "Magicite Shard")
         self.assertEqual(ITEMS[riddles["vanilla"]]["name"], "800 Gil")
-        self.assertIn(riddles["vanilla"], pool)
+        self.assertIn(riddles["vanilla"], self.world.vanilla_items, "filler: a progression item may take its place")
         amelia = by_key["quest2:22"]
         self.assertIsNone(amelia["vanilla"])
         self.assertNotIn("vision", by_key["quest:22"], "the quest's own location holds the Magicite")
@@ -819,7 +818,8 @@ class TestGifts(FFResonanceTestBase):
     def test_the_gifts_are_locations(self) -> None:
         names = {loc.name for loc in self.multiworld.get_locations(self.player) if loc.address is not None}
         self.assertTrue({g["name"] for g in GIFTS_ON} <= names)
-        self.assertEqual(len(GIFTS), 10)
+        self.assertEqual(len(GIFTS), 8, "round 98: the Ether NPC (1407) and the castle's Mist Potion NPC (1409) left out")
+        self.assertFalse({g["flag"] for g in GIFTS} & {1407, 1409})
         self.assertNotIn("Gronoa - Gaberada, the Undertown - Magi-tenna Gift", names, "the radar's goes with it")
 
     def test_a_second_item_goes_into_the_pool(self) -> None:

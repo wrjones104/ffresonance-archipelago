@@ -29,6 +29,7 @@ from CommonClient import (ClientCommandProcessor, CommonContext, get_base_parser
 from NetUtils import ClientStatus, NetworkItem
 
 from .data import FRAGMENT_ITEM, ITEMS
+from .items import CLASSIFICATIONS
 from .locations import LOCATION_KEY_TO_ID
 from .version import world_build, world_version
 
@@ -261,8 +262,10 @@ class FFResonanceContext(CommonContext):
                 name = with_count(name, len(visions), need_visions)
             label = name if item.player == self.slot else f"{name} from {sender}"
             # Round 89 (the user): the item's classification and its name in the label, so the
-            # mod can colour the name as Archipelago does.
-            self.write_line("item", index, info["kind"], info["game_id"], info["count"], label, item.flags, name)
+            # mod can colour the name as Archipelago does. Round 98: the server sends its own items
+            # (the start inventory, !getitem) with no classification; ours is in the item's category.
+            flags = item.flags if item.location >= 0 else CLASSIFICATIONS[info["category"]].as_flag()
+            self.write_line("item", index, info["kind"], info["game_id"], info["count"], label, flags, name)
         self.items_written = len(self.items_received)
 
     def lock_holdings(self, received: list[NetworkItem]) -> tuple[set[int], set[int], int]:

@@ -1428,3 +1428,19 @@ The user is still playing this seed; the rest of the round's checks stay open.
 **Round 98 build (mod 0.61.0 build 22b9afbc, apworld 0.30.0 build 91355310):**
 - **The Forge quests' logic**, as above (`past_boss` on the quest, from `PAST_BOSS_ON_FOOT`).
 - **Second rewards:** 17 quests give a second reward, and each is a location of its own (`quest2:<id>`, AP id 6,100,000,000 + quest, "Quest: <name> - Second Reward"), with the quest's logic. 8 give gil, 2 a second item (Secrets Unearthed, Rogue Rebel) and 7 a vision. The patch takes the second reward out of the row too (a row left empty keeps the stand-in); the check sends both; the pop-up names both, one line each, each in its colour; the Quests screen names both. A vision quest's own location now holds its Magicite, which with `shuffle_visions` off used to be lost; the vision sits on the second location. The stat bonuses are not items (left as they are). The client sends `cfg quest2` from slot data `quest_second_rewards`; a seed without it keeps the old behaviour.
+
+### Round 98 (mod 0.61.0 build 22b9afbc, apworld 0.30.0 build 91355310)
+
+- **Builds:** passed (mod 22b9afbc, client 91355310); at load `quests: 86 reward rows without the location's item` and `quests: 45 quest rewards show the location's item`.
+- **Bosses (round 97 checks):** a cave master and a boss whose fight gave nothing before both passed: item pop-up, `check boss:` and `check fragment:`, the fragment in the feed.
+- **Quests screen with two rewards:** passed, both names in their colours.
+- **NPC gifts:** found and checked: 1400, 1401, 1405 (with radar treasures), 1406, 1408, 1411, 1413. **Failed:** every gift showed the game's Potion. The log shows why: gift 1400's check came and no pop-up was on screen for the next 30 s; gifts 1411 and 1405 wrote into the next chest's pop-up (chest:2000:0 then had none). The check is seen only after the gift's scene has ended.
+- **Not found:** the Mist Potion gift in Grandshelt Castle (1409) and the Ether gift in the Commercial District (1407), after talking to every NPC there.
+- **From the user (names):** "Magiapolis - West Hall NE Alcove Chest" is in Sakura's house; the Weapons Factory "SE Jump-Stone Platform" is a conveyor platform. World Map Shiny 91 (Mysidia, between Sunioo and Salome Cave) needs the Airship.
+- **From the user (colours):** items the server sends (the starting continent's unlock, `!getitem`) showed light blue, as filler. The server sends them with no classification (flags 0).
+
+**Round 99 build (mod 0.61.0 build 0e1022be, apworld 0.30.0 build fbcc579c):**
+- **Gift pop-ups:** written early: in an event on a gift's map, with its check not sent yet, an item pop-up is the gift of the nearest gift NPC within 500 units. `gifts.tsv` gains the NPC's `x` and `y`. The check writes no second pop-up.
+- **Gifts 1407 and 1409** are no longer locations (`GIFTS_NOT_FOUND`); their NPCs give their own items. 8 gifts are locations.
+- **Names:** "Mysidia - Magiapolis - Sakura's House Chest", "Zoldaad - Weapons Factory - SE Conveyor Platform Chest". World Map Shiny 91 is in `airship_only.tsv`.
+- **Server items' colour:** an item with no location (start inventory, `!getitem`) is classed by its category in the client (`CLASSIFICATIONS`), so a continent unlock shows purple.

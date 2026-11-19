@@ -283,6 +283,7 @@ def main():
             ("28", "40", "Zairu_04", "2011", "Zairu_04_Go", "{progress:28}==30", "", "25000:1 -1:500", "2012"),
         ], steps                                               # the story counter's rows are left out
         gifts = [(g["flag"], g["row"], g["map"], g["condition"], g["gifts"]) for g in tsv(game / "gifts.tsv")]
+        assert all(g["x"] and g["y"] for g in tsv(game / "gifts.tsv")), "round 98: where the NPC stands"
         assert gifts == [("1400", "Zairu_Gift", "2011", "!{flag:1400}", "10113:1 11014:1")], gifts
 
         # The comparison with data/*.tsv.

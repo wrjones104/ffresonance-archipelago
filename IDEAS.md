@@ -557,7 +557,9 @@ Until then the Options rows stay, and on a save not linked to the seed they chan
 
 **Found off-line:** each one-time gift row sets its own flag in 1400 to 1413 and gives items; `tools/gen_from_dump.py` writes them to `data/game/gifts.tsv` with the map actor leading to each. There are 10, all reachable on the open start; the Pharm cat's (1413) needs flag 1412, from the Mysidia cat. The Cabin Key's row sets no flag and is left out.
 
-**Built (round 97, build 26e942ac):** each gift is a location, `gift:<flag>`, checked by its flag. The row gives the stand-in Potion; like a cave master's win row, it sets its flag before the pop-up, so the check writes the pop-up. One location per NPC: the first item is the location's, a second goes into the pool in place of a filler. The Magi-tenna's NPC goes with the radar treasures.
+**Built (round 97, build 26e942ac):** each gift is a location, `gift:<flag>`, checked by its flag. The row gives the stand-in Potion. One location per NPC: the first item is the location's, a second goes into the pool in place of a filler. The Magi-tenna's NPC goes with the radar treasures.
+
+**Round 98 (the user):** every gift showed the Potion. The check came only after the scene had ended (gift 1400: 30 s with no pop-up on screen), or wrote the next chest's pop-up (1411, 1405). Now the pop-up is written early, as for Token Legacy: in an event on a gift's map, with its check not sent yet, a pop-up is the gift of the nearest gift NPC within 500 units (`gifts.tsv` has where each stands). Two gifts were not found at story 8000 and are left out: the Ether NPC in the Commercial District (1407, standing far from the rest of the map) and the Mist Potion NPC in Grandshelt Castle (1409, map 3020). **To find out:** whether either shows at an earlier story value.
 
 ## 44. The Research Center Ruins' key card spots
 
