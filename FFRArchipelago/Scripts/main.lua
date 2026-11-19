@@ -2780,6 +2780,8 @@ seedExtrasTick = function()
     end
     if seedSave then
         local M = game.MECHABO
+        local ordered = game.OrderRequestQuests(M.requests)
+        if #ordered > 0 then log("mechabo: board quests " .. table.concat(ordered, ", ") .. " ordered, so their kills count") end
         local has = game.UnitHasSkill(M.lid, M.tackle)
         local states, quests = game.RequestStates(M.requests), {}
         for _, id in ipairs(M.requests) do quests[#quests + 1] = "quest " .. id .. " " .. states[id] end

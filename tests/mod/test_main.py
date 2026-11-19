@@ -167,6 +167,7 @@ G.QUESTS = { { key = "quest:13", counter = 28, value = 40, map = 2030, before = 
 function G.QuestsPatch() G.questPatches = (G.questPatches or 0) + 1; return 2 end
 G.MECHABO = { counter = 16, start = 10, delivered = 219, lid = 1004, tackle = 404110, requests = { 17, 26 }, hunt = 1001 }
 function G.BoardQuest(id) return G.board or "not on the board" end
+function G.OrderRequestQuests(ids) local out = G.toOrder or {}; G.toOrder = nil; return out end
 function G.RequestStates(ids) local out = {} for _, id in ipairs(ids) do out[id] = G.requestStates and G.requestStates[id] or "not in the log" end return out end
 function G.UnitHasSkill(id, skill) return G.skills and G.skills[skill] end
 function G.QuestPrizes(labels) G.prizes = labels; local n = 0; for _ in pairs(labels) do n = n + 1 end; return n end
@@ -2036,6 +2037,9 @@ L.execute("G.skills = { [404110] = true }")
 tick(2)
 assert any("mechabo: progress 16 at 30, flag 219 off, quest 17 not in the log, quest 26 not in the log, "
            "board quest 1001 not on the board, Lid has Mechabo Tackle" in s for s in logs()), logs()
+L.execute('G.toOrder = { 1001 }')
+tick(2)
+assert any("mechabo: board quests 1001 ordered, so their kills count" in s for s in logs()), "round 95"
 L.execute('G.requestStates = { [17] = "done", [26] = "open" }')
 tick(2)
 assert any("quest 17 done, quest 26 open" in s for s in logs()), "round 93: the quests' states, when they change"

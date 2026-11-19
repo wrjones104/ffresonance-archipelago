@@ -1379,3 +1379,12 @@ Send the `[FFRAP]` lines of the log.
 - The Quests screen probe takes each line's block from the line's `CommonTextBlock_194` property, or else from the entry panel's `GetContentForSlot("Slot_33_Content")`, and logs which (`by property`, `by slot`, `no text block`).
 - The `mechabo:` line also gives board quest 1001's state (none, ordered, met, done, failed) and its kills.
 
+### Round 94 (mod 0.61.0 build 8aafe048, apworld 0.30.0 build 88874051)
+
+- **Quests screen colours:** found but not shown. The blocks were found by the line's property (`"Blessed Pendant" (scouted) by property`), and the log said `coloured: Blessed Pendant (in a NamedSlot)`. On screen the name showed white, then went. The block's parent is a NamedSlot, which holds one child: `AddChild` failed, but UE4SS gave back a null object, which Lua takes as true. So the block was hidden and our row went nowhere.
+- **Verun:** the hunt was never ordered. The line read `quest 17 open, ... board quest 1001 none, kills 55 x0`, and three Ipooh kills right outside the Dwarven Forge's back exit did not count. The story event that accepts request 17 (`C02_219_02`) holds only the Accept, so the order is not in the event's data; a save that had played the story had it ordered (round 86).
+
+**Round 95 build (mod 0.61.0 build f04c0650, apworld unchanged, build 88874051):**
+- A slot from `AddChild` or `SetContent` counts only when `IsValid()`. In a NamedSlot our row takes the block's place (`SetContent`).
+- On a seed's save, for each of Verun's open quests, the board quests of its current step (`DT_RequestData` `ProgressList[step].QuestList`) that read none are set to ordered in the save's `questBoardList`, and the log says `mechabo: board quests N ordered, so their kills count`.
+

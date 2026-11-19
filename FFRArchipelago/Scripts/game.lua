@@ -2001,11 +2001,19 @@ function G.QuestRewardColors(spans, say)
                 pcall(function() parentName = parent:GetClass():GetFName():ToString() end)
                 pcall(function() vis = block:GetVisibility() end)
                 row = parent and feed.row(text, spans[text], Q.LOOK, tree)
+                -- Round 94: a NamedSlot holds one child, so AddChild failed, but UE4SS hands back a
+                -- null object, which Lua takes as true: the block was hidden and the row went nowhere.
+                local function valid(o)
+                    local okValid, v = pcall(function() return o:IsValid() end)
+                    return okValid and v == true
+                end
                 step("quest: add the coloured line to the " .. parentName .. " (AddChild)")
                 if row then pcall(function() slot = parent:AddChild(row) end) end
+                if not valid(slot) then slot = nil end
                 if row and not slot then
                     step("quest: put the coloured line in the " .. parentName .. "'s place for the game's (SetContent)")
                     pcall(function() slot = parent:SetContent(row) end)
+                    if not valid(slot) then slot = nil end
                     content = slot ~= nil
                 end
                 if slot then
@@ -2278,23 +2286,62 @@ function G.FinishJoin(id)
 end
 
 -- The quest log's state of each request in `ids`, from the save (request.DataMap, request id ->
--- SaveData_RequestData): "open" (accepted), "done", "not started", or "not in the log".
+-- SaveData_RequestData): "open" (accepted), "done", "not started", or "not in the log"; and the
+-- step each is at (ProgressIndex).
 G.REQUEST_STATES = { [0] = "not started", [1] = "open", [2] = "done" }
 function G.RequestStates(ids)
-    local out, want = {}, {}
+    local out, steps, want = {}, {}, {}
     for _, id in ipairs(ids) do
         want[id] = true
         out[id] = "not in the log"
     end
     local sd = G.SaveData()
-    if not sd then return out end
+    if not sd then return out, steps end
     pcall(function()
         sd.request.DataMap:ForEach(function(k, v)
             local id = Int(k:get())
-            if want[id] then out[id] = G.REQUEST_STATES[Int(v:get().State)] or "?" end
+            if want[id] then
+                local e = v:get()
+                out[id] = G.REQUEST_STATES[Int(e.State)] or "?"
+                steps[id] = Int(e.ProgressIndex)
+            end
         end)
     end)
-    return out
+    return out, steps
+end
+
+-- Round 94: on the open start "Arise, Mechabo!" was open, but its hunt (board quest 1001) read
+-- none, never ordered, so the Ipooh kills did not count. On a save that had played the story it
+-- was ordered (round 86). For each open request in `ids`, the board quests of its current step
+-- (DT_RequestData's ProgressList[step].QuestList) that read none are set to ordered. Returns the
+-- quest ids set.
+function G.OrderRequestQuests(ids)
+    local states, steps = G.RequestStates(ids)
+    local want, done = {}, {}
+    local requests = G.LoadObject(G.MECHABO.requestTable)
+    pcall(function()
+        requests:ForEachRow(function(_, row)
+            local id = Int(row.ID)
+            if states[id] ~= "open" or not steps[id] then return end
+            local step = row.ProgressList[steps[id] + 1]
+            if not step then return end
+            for i = 1, #step.QuestList do want[Int(step.QuestList[i])] = true end
+        end)
+    end)
+    if next(want) == nil then return done end
+    local sd = G.SaveData()
+    pcall(function()
+        local list = sd.questBoardList
+        for i = 1, #list do
+            local q = list[i]
+            local qid = Int(q.QuestId)
+            if want[qid] and Int(q.State) == 0 then
+                q.State = 1
+                done[#done + 1] = qid
+            end
+        end
+    end)
+    return done
 end
 
 -- A quest board quest's state and kills, from the save's questBoardList (EQuest_State: None 0,

@@ -783,8 +783,9 @@ local function widget(cls, name)
 end
 rewardSlot = widget("NamedSlot", "Content")
 rewardSlot.path = "/Engine/Transient.WBP_IconEntryLayoutPanel_C_1.WidgetTree.Content"
-function rewardSlot:AddChild(w) return nil end
-function rewardSlot:SetContent(w) self.content = w; return {} end
+-- round 94: a full NamedSlot's AddChild hands back a null object, which Lua takes as true
+function rewardSlot:AddChild(w) return { IsValid = function() return false end } end
+function rewardSlot:SetContent(w) self.content = w; return { IsValid = function() return true end } end
 rewardBlock = widget("CommonTextBlock", "CommonTextBlock_194")
 rewardBlock.path = "/Engine/Transient.WBP_Quest_Reward_Text_C_3.WidgetTree.CommonTextBlock_194"
 rewardBlock.text, rewardBlock.vis = "Alice's Hookshot", 0
@@ -824,7 +825,7 @@ assert lines[-1] == "taken out: Alice's Hookshot" and L.eval("rewardSlot.content
 # in a panel: the row beside the block, which is hidden
 L.execute(r"""
 rewardPanel = { kids = { rewardBlock }, name = "Box", cls = "HorizontalBox", path = "/Engine/Transient.Box" }
-function rewardPanel:AddChild(w) self.kids[#self.kids + 1] = w; w.parent = self; return {} end
+function rewardPanel:AddChild(w) self.kids[#self.kids + 1] = w; w.parent = self; return { IsValid = function() return true end } end
 function rewardPanel:GetClass() local me = self return { GetFName = function() return { ToString = function() return me.cls end } end } end
 function rewardPanel:IsValid() return true end
 function rewardPanel:HasAnyInternalFlags() return false end
@@ -2082,6 +2083,28 @@ boardLines = { G.BoardQuest(1001), G.BoardQuest(1002) }
 G.SaveData = oldSaveData
 """)
 assert list(L.eval("boardLines").values()) == ["ordered, kills 55 x1", "not on the board"]
+# Round 95: an open request's current step's board quests that read none are ordered
+L.execute(r"""
+local oldSaveData = G.SaveData
+board = { { QuestId = 1001, State = 0, KilledCount = {} }, { QuestId = 1002, State = 0, KilledCount = {} },
+          { QuestId = 1003, State = 3, KilledCount = {} } }
+local function entry(k, state, step) return { get = function() return k end }, { get = function() return { State = state, ProgressIndex = step } end } end
+function G.SaveData() return { questBoardList = board, request = { DataMap = { ForEach = function(self, fn)
+  local k, v = entry(17, 1, 0); fn(k, v); k, v = entry(26, 2, 0); fn(k, v) end } } } end
+requestRows = { rows = {
+  C02_MechaboLvUp = { ID = 17, ProgressList = { { QuestList = { 1001 } }, { QuestList = {} } } },
+  C02_MechaboLvUp_02 = { ID = 26, ProgressList = { { QuestList = { 1002 } } } } } }
+function requestRows:IsValid() return true end
+function requestRows:ForEachRow(fn) for k, r in pairs(self.rows) do fn(fname(k), r) end end
+local prevOrderFind = StaticFindObject
+function StaticFindObject(p) if p == G.MECHABO.requestTable then return requestRows end return prevOrderFind(p) end
+ordered = G.OrderRequestQuests({ 17, 26, 27 })
+orderedAgain = G.OrderRequestQuests({ 17, 26, 27 })
+StaticFindObject, G.SaveData = prevOrderFind, oldSaveData
+""")
+assert list(L.eval("ordered").values()) == [1001], "17 is open at step 0; 26 is done, so its hunt is left alone"
+assert L.eval("board[1].State") == 1 and L.eval("board[2].State") == 0 and L.eval("board[3].State") == 3
+assert L.eval("#orderedAgain") == 0, "once"
 print("quest rows: ok")
 
 # Round 84: the open start skips C02_219_02, which accepts request 17 into the quest log. Verun's
