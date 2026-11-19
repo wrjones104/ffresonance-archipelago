@@ -1,4 +1,4 @@
-# Ideas and to-investigate
+was# Ideas and to-investigate
 
 A scratch pad for ideas that are not on the test plan yet. Each one lists what we already know, from logs, dumps and the installed mods, and what to find out.
 
@@ -422,3 +422,12 @@ Along the same lines, I would also want an option for players to start with all 
 - The menu turns the screen off as soon as Back asks it to close, so the screen's own `FinishedClose` never ran. The page turns on the base class's default finish for a close (`CloseStateProperty.IsEnableDefaultFinisheCall`). A fallback calls `FinishedClose` on a screen off but still closing.
 - `ffrap_apmenu close` is a way out: `OnRequestClose`, or the view model's `PopScene()`.
 
+## 39. Deathlink
+
+**Idea**: when the user's party falls in battle, send out a deathlink to the multiworld. Similarly, when a deathlink is received from the multiworld, the party falls.
+
+**Look into**
+* What happens if the player is not in a battle?
+  * bank until next battle? Inflict death on all party members?
+  * what happens if you enter a battle with all party members in death status?
+* What happens if the player is in a cutscene or shopping?
