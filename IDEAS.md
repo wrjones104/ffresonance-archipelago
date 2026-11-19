@@ -1,4 +1,4 @@
-# Ideas and to-investigate
+was# Ideas and to-investigate
 
 A scratch pad for ideas that are not on the test plan yet. Each one lists what we already know, from logs, dumps and the installed mods, and what to find out.
 
@@ -495,3 +495,82 @@ Until then the Options rows stay, and on a save not linked to the seed they chan
 - Whether the start should add them all, or only those a player could have before the tower.
 - The character events (`CharaEvent`) and other tables may add more, such as other characters' second Limit Bursts.
 
+**Round 84 result (build dc66cdd9):** the page works as a normal feature. **From the user, round 84:**
+- The page leaves the menu on a save not linked to the seed, and the settings go back to the game's own there (built, a87aac00; idea 39 for the rest).
+- Tablet Shards held and turned in, and the safes ready to open, so a player can count without the princess's talk (built, a87aac00).
+- Nicer layout: sections or framed boxes. Not built. FFR Bestiary's way is the guide: `WBP_SystemSubhead` for headings, `WBP_Cmn_Window` for framed panels, `WBP_LeftLineButton` for framed rows, all made and put in the screen from Lua. It needs a probe behind a test command first (round 20 lesson: no font or Slate colour structs to setters).
+
+## 39. Our settings in the Archipelago page
+
+**From the user, 2026-11-18 (round 84).** Move the settings from the bottom of Options > Gameplay into the Archipelago page. On a save not linked to the seed, the page is gone and the settings are the game's own; `/bind` brings them back. This reverses round 57, which applied the settings to every save.
+
+**Built (round 84, build a87aac00):** the second half. `save.vanilla()` in `main.lua` is true with a seed known, a save loaded and the save not the session's. Then `settingsTick` writes `SETTING_DEFAULTS` (the game's own rates and encounters), and the page's entry leaves `DisplaySceneList` (`A.Unlist`). Scaling was already off on such a save. A mod run with no seed at all still applies the settings.
+
+**Not built: the settings in the page.** The page is the Tutorial screen with one text box. Settings need rows the player can move between and change, as the Options screen's rows are. Two ways, both to probe first:
+1. Build rows of the game's own widgets in the page (as FFR Bestiary does), with our own focus and input handling. The most work, and the most to go wrong.
+2. Keep the Options rows, and have the page say what they are set to and where to change them. Cheap. The rows could also be hidden on a save not linked to the seed.
+
+Until then the Options rows stay, and on a save not linked to the seed they change nothing.
+
+**The user chose way 1 (2026-11-18).** A third way came out of the dump, and it may be the cheapest that still puts the settings in our entry: let the entry open the game's own Options screen, which already does rows, focus, a gamepad, saving and the description box.
+- The game opens Options from `DT_GameLayoutWidget_System`'s `UI.Layout.Option` row. Its `LayoutData` gives the screen two view models, `CPP_VM_Option` and `CPP_VM_OptionKeyBind` (context name `CPP_VM_KeyBind`), and two more input contexts, `UI_Info` and `OptionMenu`.
+- Main menu rows hold the same `LayoutData`. Round 82 opened Options from our entry with the screen class only, and it came up empty. Journal did too: its row has `VM_Journal`. So the missing view models are the likely cause.
+- The tabs are rows of `DT_Option_Root`, one per category (`FOP_Parent_CommandCategory`: Gameplay, Graphic, KeyboardMouse, Gamepad, Sound). Each has a `Condition` string and `Object`, the row table it lists. The categories are a fixed enum, so a sixth tab of our own is not simple.
+- Option rows (`DT_OP_GameSetting`) have types including `Subheader` and `Command`, and an `ItemDescription`. Section headings and read-only lines for the seed's state could be rows of those types.
+
+**Probe (round 85, build 05f33eda):** `ffrap_apmenu options` writes the Options screen and the layout row's view models and input contexts into our row and the menu subsystem's copy (`A.WriteScreen`). `text` puts the page back. `tabs` lists `DT_Option_Root`; `tabs only` leaves out every tab but Gameplay with a condition never met (`{progress:0}<0`), and `all` puts them back.
+
+**To find out (round 85):**
+- Whether the Options screen works from our entry: rows, Back, saving.
+- Whether the tab list is read again at each open, so tabs can differ between our entry and System > Options.
+- Then: which rows show in our entry (only ours, with the seed's state as headings and lines), and how to keep System > Options as it is.
+
+**Round 85 result (build 05f33eda):** the Options screen works from our entry, settings save from it and from System > Options, and Back returns to the menu. `tabs only` and `tabs all` changed the tabs at the next open, so the tab list is read at each open.
+
+**The plan from here:**
+- Our entry opens the Options screen. When the player picks it, the tables switch to "our page": the Gameplay tab alone, named Archipelago; the game's rows hidden; heading rows with the seed's state. When the menu leaves our scene, they switch back, so System > Options is the game's own again. The title screen's Options would show the game's own too.
+- The moment to switch: the root entry's click calls `CPP_MainMenuSubsystem:SetScene(tag, option)` from Blueprint (`WBP_MainMenuRootEntry.BP_OnClicked`), so a pre-hook sees our tag before our screen opens.
+- Hiding a row: each option row (`OP_BaseMenu_EntryInfo`) has `ShowCommandData.ShowType` (ALL 0, TitleOnly 1, GamePlayOnly 2). TitleOnly should hide it in game.
+- Headings: `DT_OP_KeyboardMouseSetting` has `SubHeader` rows of the same struct to copy, with our text in `DisplayText`. The rows also have `ItemDescription`, the line shown for the focused row, which could hold more of the seed's state.
+
+**Probe (round 86, build b93912a5):** `ffrap_apmenu mode ap` makes the switch by hand (`A.Mode`) and logs each `SetScene` from a pre-hook; `mode game` puts the tables back. To find out: whether the page looks right, whether the hook fires before the screen opens, and whether `RemoveRow` takes the heading rows out again.
+
+**Round 86 result:** it looks right: one tab named Archipelago, our settings, the page's lines as headings, and none of the game's rows. The hook logged `SetScene UI.MainMenu.Scene.FFRAP` on the click. `mode game` put System > Options back.
+
+**Built (round 87):** the entry opens the Options screen by default (`APMENU.screen = "options"`).
+- The `SetScene` pre-hook is registered when the page starts. Our tag makes the tables our page (`A.Mode "ap"`, with the page's lines as headings, blank ones left out); any other tag puts them back.
+- Each tick, once the menu's scene stack has shown our scene and then left it, the tables go back (`state.apMenuBack`). They also go back if our scene never shows within 3 s.
+- Our rows are TitleOnly when made, so in game System > Options no longer has them and the title screen's Options still does. On our page they are GamePlayOnly.
+- The text page stays behind `ffrap_apmenu text`.
+
+## 40. Abilities the story gives, which the open start skips
+
+**Found off-line, 2026-11-18 (round 86, looking at Lid).** Story rows add abilities through their `AbilitySettings` (`AddAbilities`, `AddCommandAbilities`), as the Siren row does for both Finas. The open start never plays them, and it adds only Siren's. From `DT_TalkEventData_Chapter*` (MainEvent):
+
+| Unit | Abilities | Rows |
+|---|---|---|
+| Every character (1001 to 1008) | 1471, and their own `40x300` (Rain 401300, Lasswell 402300, Fina 403300, Lid 404300, Nichol 405300, Jake 406300, Sakura 407300, Archwitch Fina 408300) | `C08_817_01` (and its `_A` to `_H`, `_Nama` copies) |
+| Rain (1001) | 1475 | `C06_624_01` |
+| Rain | 401130 | `C06_626_01` |
+| Rain | 401240 | `C08_820_03` |
+| Rain | 1259 | `C08_819_04` |
+| Rain | 401030, 401040 | `C08_821_01` |
+| Fina (1003) | 210190 | `C06_608_01` |
+| Lid (1004) | 404030 | `Lid_LB2_Get` (chapter 4; by its name, her second Limit Burst) |
+| Fina and Archwitch Fina | 6, 430980, and command ability 6 | `C01_037_01` (chapter 1) |
+| Archwitch Fina (1006) | 220110, 408030, 431120; command abilities 408010, 18, 400010, 7, 400020 | `C01_001D_01`, `C01_001D_02`, `C01_001F_02`; `C03_320_01` |
+
+**To find out:**
+- What each ability is (`data/game/capabilities.tsv` or the skill table), and which of them a player would miss. 1471 and the `40x300` set come at the end of chapter 8, just before the tower.
+- Whether the start should add them all, or only those a player could have before the tower.
+- The character events (`CharaEvent`) and other tables may add more, such as other characters' second Limit Bursts.
+
+## 41. Deathlink
+
+**Idea**: when the user's party falls in battle, send out a deathlink to the multiworld. Similarly, when a deathlink is received from the multiworld, the party falls.
+
+**Look into**
+* What happens if the player is not in a battle?
+  * bank until next battle? Inflict death on all party members?
+  * what happens if you enter a battle with all party members in death status?
+* What happens if the player is in a cutscene or shopping?
