@@ -12,8 +12,12 @@ Commands:
     unit <id> [label]       a party member, e.g.  unit 1002
     flag <index> [0|1]      a story flag
     msg <text>              show text in game
+    bind                    link the loaded save to the fake seed
     log                     show everything the game has written so far
     quit
+
+The mod plays only on a save linked to a seed (round 100), so a fake seed line is written first
+if ap_in.txt has none. Start a game from Archipelago on the title menu, or load a save and bind it.
 
 Standard library only.
 """
@@ -40,6 +44,16 @@ def next_index(in_path: Path) -> int:
                 if len(fields) > 1 and fields[0] == "item" and fields[1].isdigit():
                     highest = max(highest, int(fields[1]))
     return highest + 1
+
+
+FAKE_SEED = "FAKE:0:1"
+
+
+def has_seed(in_path: Path) -> bool:
+    if not in_path.exists():
+        return False
+    with open(in_path, encoding="utf-8") as f:
+        return any(line.startswith("seed\t") for line in f)
 
 
 def clean(text: object) -> str:
@@ -78,6 +92,8 @@ def main() -> None:
     in_path = mod_dir / "ap_in.txt"
     out_path = mod_dir / "ap_out.txt"
     index = next_index(in_path)
+    if not has_seed(in_path):
+        append(in_path, "seed", FAKE_SEED)
     print(f"Bridge: {mod_dir}\nNext item index: {index}. Type 'help' for commands.")
 
     stop = threading.Event()
@@ -100,6 +116,8 @@ def main() -> None:
                 elif cmd == "log":
                     if out_path.exists():
                         print(out_path.read_text(encoding="utf-8").replace("\t", "  "))
+                elif cmd == "bind":
+                    append(in_path, "bind")
                 elif cmd == "msg":
                     append(in_path, "msg", " ".join(args))
                 elif cmd == "item":

@@ -413,6 +413,9 @@ def boot(before=""):
 
 # a 0.3.0-style seen.tsv line is read and converted
 open(path("seen.tsv"), "w", encoding="utf-8", newline="\n").write("xchest\t2002\tu52\trowmap -1\t-1\t1\t-1\t\n")
+# Round 100: with no session no save is the seed's, so these runs have one. Their unsaved new game
+# is linked to it.
+open(path("ap_in.txt"), "w", encoding="utf-8", newline="\n").write("seed\tS0:0:1\n")
 
 L, G = boot(CAPTURE)
 # Round 65: the first GetUniqueId answer of a session is logged even when the call fails
@@ -464,6 +467,7 @@ os.remove(path("ap_out.txt"))
 L, G = boot()
 G.map = 1000
 G.saveOpen = {"2002:7": True, "2002:63": True, "2002:30": True, "2002:54": True}
+[L.execute("tickFn()") for _ in range(12)]                 # round 100: the save is judged first
 L.execute('commands["ffrap_sync"]("ffrap_sync", {})')
 out = read("ap_out.txt")
 for key in ("chest:3020:1", "chest:3020:3", "shiny:2002:30"):
@@ -1640,9 +1644,12 @@ print("input lock probes: ok")
 VISION_EXIT = 'posts["/Script/mucha.CPP_BFL_VisionUpgrade:IsVisionUpgrade"]'
 NO = "{ get = function() return false end }"
 open(path("ap_in.txt"), "w", encoding="utf-8", newline="\n").write("seed\tS:0:1\ncfg\topenworld\t1\n")
+os.remove(path("ap_state.txt"))                             # a new session: its new game is linked
 L, G = boot()
 tick(1)
 assert L.eval(VISION_EXIT) is not None, "hooked at the first tick"
+assert L.execute(f"return {VISION_EXIT}(nil, {NO})") is None, "round 100: not before the save is the seed's"
+tick(12)
 assert L.execute(f"return {VISION_EXIT}(nil, {NO})") is True, "a seed answers true"
 assert L.execute(f"return {VISION_EXIT}(nil, nil)") is True, "even if the game's answer cannot be read"
 open(path("ap_in.txt"), "w", encoding="utf-8", newline="\n").write("seed\tS:0:1\ncfg\topenworld\t0\n")
@@ -1764,6 +1771,53 @@ G.chests = L.table()
 tick(30)
 assert calls() == [], "not an open world seed"
 print("seed scaling: ok")
+
+# Round 100 (the user): a new game of the game's own started Rain at level 55, Fina's prologue
+# level. A save that is not the seed's gets none of the seed's writes: no slot level, no table
+# patches, the game's airship condition and no messages from the client. After the seed's save
+# patched the tables in this run, it is told to restart the game.
+os.remove(path("ap_state.txt"))
+inbox("seed\tS100:0:1\ncfg\topenworld\t1\ncfg\tcrystals\t1\ncfg\tbosses\t1\ncfg\tairship\t0\n", "w")
+L, G = boot5("SD_SEED", "0", {"700": 4})
+L.execute(CAPTURE)
+G.story = 8000
+tick(30)
+assert G.crystalPatches == 1 and G.bossPatches == 1, "the seed's new game is patched"
+seed_syncs = G.slotSyncs
+assert seed_syncs and seed_syncs > 0, "and its unjoined Rain follows the party's level"
+assert list(G.airshipSyncs.values())[-1] is True, "the airship waits for its item"
+G.saveObj, G.saveTicks = "SD_MAIN", "700"                    # the player's own save, in slot 4
+tick(30)
+assert G.crystalPatches == 1 and G.bossPatches == 1, "no patches for the player's own save"
+assert G.slotSyncs == seed_syncs, "Rain's level is left alone"
+assert list(G.airshipSyncs.values())[-1] is False, "the game's own airship condition"
+restart = [s for s in L.eval("logged").values() if "restart the game before playing this save" in s]
+assert len(restart) == 1, list(L.eval("logged").values())
+inbox("msg\tSomeone found their Potion\n")
+tick(3)
+assert not any("Someone found" in s for s in L.eval("logged").values()), "no messages from the client"
+
+# A run that starts on the player's own save writes nothing of the seed's, even before the save is
+# judged: the last save was not the seed's (ap_state.txt's lastok).
+L, G = boot5("SD_MAIN", "700", {"700": 4})
+L.execute(CAPTURE)
+G.story = 8000
+tick(30)
+assert not G.crystalPatches and not G.bossPatches and not G.slotSyncs, (G.crystalPatches, G.slotSyncs)
+assert True not in list(G.airshipSyncs.values()), list(G.airshipSyncs.values())
+assert not any("restart the game" in s for s in L.eval("logged").values()), "nothing was patched in this run"
+
+# With no session at all, no save is the seed's.
+os.remove(path("ap_state.txt"))
+os.remove(path("ap_in.txt"))
+L, G = boot5("SD_NEW", "0", {})
+L.execute(CAPTURE)
+G.story = 8000
+tick(30)
+assert not any("is linked to the seed" in s for s in L.eval("logged").values()), list(L.eval("logged").values())
+assert any("locks: off for a save not linked to the seed" in s for s in L.eval("logged").values())
+assert list(G.log.values()) == []
+print("saves not linked to the seed: ok")
 
 # Round 57: an open world seed's save gets the Chocobo once; round 58: and the shipyard's elevators
 inbox("seed\tS57:0:1\ncfg\topenworld\t1\n", "w")

@@ -3237,15 +3237,17 @@ end
 
 -- Guard the moogle's Vision Enhancement shopkeeper talk rows: when no vision is owned, convert the
 -- three Blueprint rows to empty Sequence rows (no-ops) so the player cannot enter and get stuck.
--- Writes only on state change; pass `force` after save loads in case tables reloaded.
+-- Writes only on state change; pass `force` after save loads in case tables reloaded. `guard` false
+-- (a save not linked to the seed) puts the game's rows back.
 local SHOP_ROWS = { VisionUpgrade = true, VisionUpgrade_Main = true, FEV_Town_10Cry_41_720_01 = true }
 local shopBlocked = nil
-function G.VisionShopGuard(force)
+function G.VisionShopGuard(force, guard)
     local sd = G.SaveData()
     if not sd then return nil end
     local owned
     if not pcall(function() owned = #sd.visionList end) or not owned then return nil end
-    local block = owned == 0
+    local block = guard and owned == 0
+    if not guard and not shopBlocked then return nil end
     if block == shopBlocked and not force then return nil end
     local written = 0
     for _, dt in ipairs(TableFamily(Find(SHOP_TABLE))) do

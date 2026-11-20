@@ -82,6 +82,9 @@ An Archipelago implementation for Final Fantasy Resonance (UE 5.6, game module `
 - **A crash in the engine ends the game before Lua can log.** Ship risky UI work behind a test command, off by default, that logs each step before it runs.
 - **A setting the mod saves by itself can come back as a "choice"** (the `feed 1` crash, round 19). A switch the user sets gets its own key, written only when the user sets it.
 
+**Saves not linked to the seed:**
+- **Ask whether the save is the seed's before any write, not only the seed's config.** `seedCfg` comes back from the last `ap_in.txt` at every start, whatever save is loaded. A plain New Game started Rain at level 55 (`SyncSlotLevel`), and the table patches ran on the player's own saves (round 100). Use `sessionSave()` in game, and `save.seedExpected()` for what must be in place before a map loads. Table patches stay until the game restarts.
+
 **Save and story facts:**
 - The story counter is `Progress.Progress[1]` in Lua (element 0).
 - `eventFlag` is 0-based in snapshots and 1-based in Lua (flag i is element i + 1).

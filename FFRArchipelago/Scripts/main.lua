@@ -265,15 +265,25 @@ function save.writeStamp(force)
     save.stamped = want
 end
 
--- True when the loaded save belongs to the current session (any save counts when running without a session).
+-- True when the loaded save belongs to the current session. Round 100: with no session, only a new
+-- game from the Archipelago title entry counts (judgeSave), so a player's own saves are left alone.
 local function sessionSave()
-    return state.seed == nil or save.ok
+    return save.ok
 end
 
--- Round 84 (the user): a save of the game's own, loaded while there is a seed. It plays as the game
--- made it: our settings are not applied and the Archipelago page leaves the menu. /bind links it.
+-- Round 84 (the user): a save of the game's own. It plays as the game made it: our settings are not
+-- applied and the Archipelago page leaves the menu. /bind links it.
 function save.vanilla()
-    return state.seed ~= nil and save.obj ~= nil and not save.ok
+    return save.obj ~= nil and not save.ok
+end
+
+-- Whether the save in play is the seed's. Between loads (the title screen, a load, before the new
+-- save is judged) it is the last save's verdict, kept in ap_state.txt across runs, or a new game
+-- from the Archipelago entry. For what must be in place before the map loads (round 100: the
+-- airship's condition and the lock boxes were written for a new game of the game's own).
+function save.seedExpected()
+    if save.obj ~= nil then return save.ok end
+    return state.apNewGame or state.lastOk == true
 end
 
 -- A save not linked to the seed has no locks (round 85: they were still on there). Then an
@@ -281,7 +291,7 @@ end
 -- old test must not quietly leave a real seed unlocked. Then the saved switch.
 local lockChoice = nil
 local function locksOn()
-    if save.vanilla() then return false end
+    if not save.seedExpected() then return false end
     if lockChoice ~= nil then return lockChoice end
     return seedCfg.openworld or continentLocks == true
 end
@@ -336,6 +346,7 @@ local function loadState()
             game.OPEN_START = game.OPEN_STARTS[value]
         end
         if key == "seed" and value ~= "" then state.seed = value end
+        if key == "lastok" then state.lastOk = value == "1" end
         if key == "slots" then
             for slot in value:gmatch("%d+") do state.slots[tonumber(slot)] = true end
         end
@@ -357,6 +368,7 @@ local function saveState()
     if openArrival then f:write("openarrival\t", openArrival, "\n") end
     if continentLocks ~= nil then f:write("continentlocks\t", continentLocks and "1" or "0", "\n") end
     f:write("seed\t", state.seed or "", "\n")
+    f:write("lastok\t", state.lastOk and "1" or "0", "\n")
     f:write("slots\t", slotsText(), "\n")
     f:write("slotItems\t", slotsText(true), "\n")
     if save.ok and save.obj then state.live = save.obj .. "|" .. tostring(save.ticks) end
@@ -515,7 +527,8 @@ local function readInbox(initial)
             end
         elseif f[1] == "msg" then
             -- Messages from before this game session started are old news.
-            if not initial then notify(f[2] or "", f[3] and { text = f[3], flags = tonumber(f[4]) } or nil) end
+            -- Round 100: and a save of the game's own shows none.
+            if not initial and not save.vanilla() then notify(f[2] or "", f[3] and { text = f[3], flags = tonumber(f[4]) } or nil) end
         end
     end
 end
@@ -1179,13 +1192,17 @@ local function setOk(ok)
     if state.blank and was ~= ok then
         log("chest blanking " .. (ok and "on" or "off") .. " for this save: " .. game.BlankChests(ok) .. " rows changed")
     end
+    if state.lastOk ~= ok then
+        state.lastOk = ok
+        saveState()
+    end
 end
 
 local titleReady = false   -- the Archipelago title entry is in the menu's data asset
 
 -- Decides whether a save that was just loaded (or a new game) is the session's.
 local function judgeSave()
-    if not state.seed then setOk(true); return end
+    if not state.seed then setOk(save.apObj ~= nil and save.apObj == save.obj); return end
     -- The same save the count was for, still loaded (the mod was reloaded): keep the count.
     local same = state.live ~= nil and state.live == (tostring(save.obj) .. "|" .. tostring(save.ticks))
     local stampCount, stampTag = game.ReadSaveStamp()
@@ -1352,9 +1369,9 @@ local function hookVisionExit()
             pcall(function() was = ret:get() end)
             if was ~= visionExitLast then
                 visionExitLast = was
-                log("vision screen: the game says closable is " .. tostring(was) .. (seedCfg.openworld and "; answering true" or ""))
+                log("vision screen: the game says closable is " .. tostring(was) .. (seedCfg.openworld and sessionSave() and "; answering true" or ""))
             end
-            if seedCfg.openworld then return true end
+            if seedCfg.openworld and sessionSave() then return true end
         end)
     end)
     visionExitHooked = ok
@@ -1687,8 +1704,9 @@ local function tick()
     state.mark("menu")
     if titleReady or game.InGame() then pcall(menuTick) end
     -- Apply the seed's airship spawn condition before a map loads so a new game starts hidden if needed.
+    -- Round 100: only for the seed's save; a save of the game's own gets the game's condition back.
     if state.ticks % LOCKS_EVERY == 0 then
-        local okSync, wrote = pcall(game.AirshipItemSync, seedCfg.airship == false)
+        local okSync, wrote = pcall(game.AirshipItemSync, seedCfg.airship == false and save.seedExpected())
         if okSync and wrote then log("airship: spawn condition " .. wrote) end
     end
     if not game.InGame() then
@@ -1729,12 +1747,25 @@ local function tick()
             state.mark("extras, locks")
             if state.ticks % LOCKS_EVERY == 0 then pcall(seedExtrasTick) end
             if state.ticks % LOCKS_EVERY == 0 then pcall(locksTick) end
-            if state.ticks % STATUS_EVERY == 0 and seedCfg.openworld and game.OnField() then pcall(game.SyncSlotLevel) end
+            -- Round 100: Rain went to level 55 in a new game of the game's own (Fina's prologue level).
+            if state.ticks % STATUS_EVERY == 0 and seedCfg.openworld and sessionSave() and game.OnField() then pcall(game.SyncSlotLevel) end
             state.mark("patches")
             if seedCfg.openworld and state.ticks % LOCKS_EVERY == 0 then
-                local newSave = shopSave ~= save.obj
-                local okShop, blocked, rows = pcall(game.VisionShopGuard, newSave)
-                shopSave = save.obj
+                -- Round 100: the seed's table patches are for the seed's save only. The tables stay
+                -- patched until the game restarts, so a save of the game's own after one is told so.
+                local ours = sessionSave()
+                local newSave = ours and shopSave ~= save.obj
+                local okShop, blocked, rows = pcall(game.VisionShopGuard, newSave, ours)
+                if ours then
+                    shopSave, state.unpatchedSave = save.obj, nil
+                    if newSave then state.tablesPatched = true end
+                elseif state.unpatchedSave ~= save.obj then
+                    state.unpatchedSave, shopSave = save.obj, nil
+                    if state.tablesPatched then
+                        notify("Archipelago: restart the game before playing this save. The seed's changes to the game's data are still loaded.")
+                        log("patches: not applied to a save not linked to the seed, but the seed's are loaded from earlier in this run")
+                    end
+                end
                 if newSave and seedCfg.crystals then
                     local okCrystals, written = pcall(game.CrystalsPatch)
                     log("crystals: " .. tostring(written) .. " event rows set to skip the scene" .. (okCrystals and "" or " (failed)"))
@@ -1771,7 +1802,7 @@ local function tick()
                 end
                 -- Again on each way into the tower, in case the game loaded the skill table again.
                 local inTower = game.CurrentMap() == game.BEHEMOTH.map
-                if newSave or (inTower and not state.inTower) then
+                if ours and (newSave or (inTower and not state.inTower)) then
                     local okBehemoth, written = pcall(game.BehemothPatch)
                     log("behemoth: " .. tostring(written) .. " assist hits set to 1 damage" .. (okBehemoth and "" or " (failed)"))
                 end

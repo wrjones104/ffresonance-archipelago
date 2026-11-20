@@ -298,11 +298,17 @@ libs["/Game/Datatable/Event/TalkEvent/CDT_TalkEventData_Prod.CDT_TalkEventData_P
   HasAnyInternalFlags = function() return false end, HasAnyFlags = function() return false end,
   ForEachRow = function(_, fn) for k, r in pairs(shopRows) do fn(nameOf(k), r) end end }
 sd.visionList = arr({}, 0)""")
-blocked, rows = L.execute("return G.VisionShopGuard()")
+blocked, rows = L.execute("return G.VisionShopGuard(false, true)")
 assert blocked is True and rows == 3 and lua("shopRows.VisionUpgrade.EventType") == 0 and lua("shopRows.Other.EventType") == 1
-assert lua("G.VisionShopGuard()") is None, "no writes while nothing changes"
+assert lua("G.VisionShopGuard(false, true)") is None, "no writes while nothing changes"
+# Round 100: a save not linked to the seed gets the game's rows back, though it owns no vision
+blocked, rows = L.execute("return G.VisionShopGuard(false, false)")
+assert blocked is False and rows == 3 and lua("shopRows.VisionUpgrade.EventType") == 1
+assert lua("G.VisionShopGuard(true, false)") is None, "and is left alone after that"
+blocked, rows = L.execute("return G.VisionShopGuard(true, true)")
+assert blocked is True and rows == 3, "the seed's save closes it again"
 L.execute("sd.visionList = arr({ 13017 }, 0)")
-blocked, rows = L.execute("return G.VisionShopGuard()")
+blocked, rows = L.execute("return G.VisionShopGuard(false, true)")
 assert blocked is False and rows == 3 and lua("shopRows.FEV_Town_10Cry_41_720_01.EventType") == 1
 L.execute("""sd.visionList = nil""")
 # Round 46: the crystals skip to their last row, which keeps its flags and gives nothing
