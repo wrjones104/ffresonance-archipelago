@@ -35,7 +35,7 @@ An Archipelago implementation for Final Fantasy Resonance (UE 5.6, game module `
   - **GitHub releases** (the user makes them): the tag is the apworld's `world_version`, and the title names both, such as "v0.27.0 (apworld 0.27.0, mod 0.58.0)". Every release gets a new world version: when only the mod changed in a cycle, the cycle's first bump still moves the world's patch number. A release ships the mod zip, the apworld and the template yaml together (decided 2026-11-14).
   - **Packaging:** `python tools/package_release.py` writes the three files to `dist/release/v<world>/` and prints both builds. It stops on uncommitted changes in `FFRArchipelago/` or `apworld/`.
   - **When the user says they released:** record it in the "Last release" line below, write `docs/releases/v<world>.md` if they want notes, and commit. The next change after it starts the next cycle's bump.
-  - **Last release:** v0.29.0 (apworld 0.29.0 build c64e56f7, mod 0.60.0 build 08cabc86), the second public playtest pre-release, 2026-11-17, from commit eb60556. The next change bumps to world 0.30.0 and mod 0.61.0.
+  - **Last release:** v0.30.0 (apworld 0.30.0 build fbcc579c, mod 0.61.0 build 0e1022be), the third public playtest build, 2026-11-19, from commit 81bd70a. The next cycle is world 0.31.0 and mod 0.62.0 (bumped in round 100).
 - **Commits:**
   - Commit each finished round on `main` without asking, and say so in the reply.
   - Never push; the user pushes. The user also commits from other machines, so when they mention a commit, `git fetch` and fast-forward first.

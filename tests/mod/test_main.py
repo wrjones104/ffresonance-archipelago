@@ -1694,6 +1694,19 @@ assert len(calls()) == 1, "once"
 G.partyLv = 30
 tick(10)
 assert calls()[-1] == "clamp 29 33 true hp115 atk115 mag115; bosses 31 35 hp110", "the top of the ramp: centre 100% (30), power 115%; bosses 110% (33), 110%"
+# Round 100: above 30 the bands follow 3 levels for every 4 the party gains. Party level 40 counts
+# as 37.5: enemies centre 38, bosses 41 (110%).
+G.partyLv = 40
+tick(10)
+assert calls()[-1] == "clamp 37 41 true hp115 atk115 mag115; bosses 39 43 hp110", calls()
+# Level 60 counts as 52.5: the final boss (Chaotic Darkness, level 55) meets the party at 58, not 66.
+G.partyLv = 60
+tick(10)
+assert calls()[-1] == "clamp 52 56 true hp115 atk115 mag115; bosses 56 60 hp110", calls()
+L.execute('commands["ffrap_set"]("ffrap_set", {"strength", "casual"})')
+tick(10)
+assert calls()[-1] == "clamp 46 48 true hp100 atk100 mag100; bosses 51 55 hp100", "casual at 60: bosses at 53, under the game's own 55"
+L.execute('commands["ffrap_set"]("ffrap_set", {"reset"})')
 G.partyLv = 3
 tick(10)
 assert calls()[-1] == "clamp 2 6 true hp90 atk90 mag90; bosses 1 5 hp105", "below the ramp: centre 90% (3), power 90%; bosses 105%, 105%"

@@ -53,7 +53,7 @@
 -- follows the save slots the linked game is saved to. While any other save is loaded, the mod
 -- grants nothing, reports nothing and leaves the chests vanilla.
 
-local VERSION = "0.61.0"
+local VERSION = "0.62.0"
 local PROTOCOL = 2        -- the bridge protocol; the apworld's MOD_PROTOCOL
 
 local MOD_DIR = (debug.getinfo(1, "S").source:gsub("^@", ""):gsub("\\", "/"):match("^(.*/)Scripts/[^/]+$"))
@@ -3004,7 +3004,12 @@ local SEED_SCALES = {
 }
 -- Round 77: bosses lose `emptySlotCut` % power for each empty slot of the `slots` in the party.
 -- Small parties were wiped by bosses' opening attacks and ran short of turns.
-local SEED_RAMP = { below = 1, bossRange = 2, rampFrom = 5, rampTo = 25, slots = 4, emptySlotCut = 12 }
+-- Round 100: above party level `slowFrom`, the level the bands are taken from grows `slowRate` of
+-- a level for each party level. The enemy curve grows faster than the party: from level 40 to 60
+-- a player's Attack grows x1.4, a curve enemy's x2.05, its HP x6.9. On Normal the user found
+-- level 40 a slog and level 50 too hard, and at 60 lost to the final boss on Casual.
+local SEED_RAMP = { below = 1, bossRange = 2, rampFrom = 5, rampTo = 25, slots = 4, emptySlotCut = 12,
+                    slowFrom = 30, slowRate = 0.75 }
 
 local function seedScale()
     return SEED_SCALES[setting("strength")] or SEED_SCALES[1]
@@ -3024,10 +3029,11 @@ local function seedScaleToParty()
     local size = #(game.PartyIds() or {})
     local empty = math.max(0, SEED_RAMP.slots - size)
     bossPower = math.floor(bossPower * (100 - SEED_RAMP.emptySlotCut * empty) / 100 + 0.5)
-    local a, b, c = game.LevelBand(lv, SEED_RAMP.below, at, s.above)
-    local ba, bb, bc = game.LevelBand(lv, SEED_RAMP.bossRange, bossAt)
-    log(string.format("scale: party level %d (%s), strength %s: enemies centre %d (%d%%), %d to %d, power %d%%; bosses centre %d (%d%%), power %d%% (%d in the party)",
-        lv, detail, STRENGTH_NAMES[setting("strength")] or "?", c, at, math.max(1, a), b, power, bc, bossAt, bossPower, size))
+    local counted = math.min(lv, SEED_RAMP.slowFrom + (lv - SEED_RAMP.slowFrom) * SEED_RAMP.slowRate)
+    local a, b, c = game.LevelBand(counted, SEED_RAMP.below, at, s.above)
+    local ba, bb, bc = game.LevelBand(counted, SEED_RAMP.bossRange, bossAt)
+    log(string.format("scale: party level %d (%s), counted as %g, strength %s: enemies centre %d (%d%%), %d to %d, power %d%%; bosses centre %d (%d%%), power %d%% (%d in the party)",
+        lv, detail, counted, STRENGTH_NAMES[setting("strength")] or "?", c, at, math.max(1, a), b, power, bc, bossAt, bossPower, size))
     local bossKnobs = { hp = bossPower, attack = bossPower, magic = bossPower }
     local n, err = applyScale("clamp", a, b, true, { hp = power, attack = power, magic = power }, { a = ba, b = bb, knobs = bossKnobs })
     return n, err, lv, size
