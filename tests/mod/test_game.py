@@ -780,6 +780,17 @@ assert L.eval("rich:GetParent().kids[3].kids[1].ColorAndOpacity.SpecifiedColor.R
 assert L.eval("rich:GetParent().kids[4].kids[2].ColorAndOpacity.SpecifiedColor.R") == PLUM_R
 L.execute("rich.shown = false; G.ChestPopupRestore()")
 assert L.eval("#rich:GetParent().kids") == 2, "both rows gone with the pop-up"
+# Round 99: a quest's stat bonus and "You can now summon..." came next in the same open dialog,
+# with our names still under them. The rows go when the message changes; the item line stays
+# hidden until the dialog closes.
+L.execute('rich.text, rich.shown, popupLine.vis = "You obtained the following:", true, 0')
+ok, detail = L.execute('return G.ChestPopup("You found Alice\'s:\\nHookshot", { text = "Hookshot", flags = 1 })')
+assert ok is True and L.eval("#rich:GetParent().kids") == 3, detail
+L.execute('rich.text = "Nichol obtained an attribute bonus"; G.ChestPopupRestore()')
+assert L.eval("#rich:GetParent().kids") == 2, "our row gone under the game's next message"
+assert L.eval("popupLine.vis") == 1, "the item line still hidden while the dialog is open"
+L.execute("rich.shown = false; G.ChestPopupRestore()")
+assert L.eval("popupLine.vis") == 0, "the item line back once it closes"
 L.execute("G.POPUP_COLORS.on = false")
 # Round 93: a Quests screen Rewards text showing a scouted item is replaced by our row. The blocks
 # are found as CommonTextBlocks in a reward line (round 92: walking down from the line found none).

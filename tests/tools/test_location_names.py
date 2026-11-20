@@ -72,4 +72,14 @@ for key in ("chest:3180:1", "chest:3180:3", "chest:3180:4", "shiny:3180:14", "bo
 assert "after_boss" not in locs["shiny:3180:13"], "Shard 13 is by the entrance"
 assert locs["shiny:1000:127"]["area"] == "Grandshelt", "the land at the stone bridge's north end"
 print("round 77 data: ok")
+
+# Round 99: gift 1403 is in Zoldaad Castle's dungeon (map 3150) and is named as that map's chests
+# are. Its old name put it in the Imperial Capital, and the user looked for it in the Slums.
+spec_gifts = importlib.util.spec_from_file_location("data_gifts", OUT)
+generated = importlib.util.module_from_spec(spec_gifts)
+spec_gifts.loader.exec_module(generated)
+dungeon_gift = next(g for g in generated.GIFTS if g["key"] == "gift:1403")
+assert dungeon_gift["name"] == "Zoldaad - Dungeon - X-Potion and Mist Ether Gift", dungeon_gift["name"]
+assert locs["chest:3150:0"]["name"].startswith("Zoldaad - Dungeon - "), locs["chest:3150:0"]["name"]
+print("round 99 gift name: ok")
 shutil.rmtree(WORK)

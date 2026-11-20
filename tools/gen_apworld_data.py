@@ -721,11 +721,9 @@ def main() -> None:
             continue
         given = quest_gifts(r["gifts"])
         first, *more = given
+        # Round 99: map 3150 ("Dungeon") was named by its group, the Imperial Capital, and the user
+        # looked for gift 1403 in the Slums. It is Zoldaad Castle's dungeon, as its chests say.
         place = ascii_name((maps.get(map_id) or {}).get("name") or f"Map {map_id}")
-        if place == "Dungeon":
-            # Map 3150, a building in Zoldaad's capital, is named only "Dungeon": its group's name
-            group = int(maps[map_id]["group"])
-            place = ascii_name(maps[group]["name"]) if group in maps else place
         area = map_area(map_id)
         labels = [f"{n} Gil" if i < 0 else ascii_name(names[i]) + (f" x{n}" if n > 1 else "") for i, n in given]
         key = f"gift:{flag}"

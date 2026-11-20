@@ -808,24 +808,35 @@ end
 -- and world-map shinies a continent away each time a player boarded the airship. The game still
 -- had them, and the players picked them up later. A chest or shiny opens with the player at it,
 -- so one read as taken farther away than this waits until the player is near it.
-local PLACE = { same = 150, reach = 1500 }
+-- Round 99: in Waterfall Way two chests nobody opened read open on arrival, and went out once the
+-- player came within 1500. A chest or shiny read as taken without being seen closed on this visit
+-- is sent only when the map's own save row says taken too (the game writes it on opening).
+-- `popup`: such a one gets the pop-up only with the player this close. On a save last played on
+-- another computer, chests opened there were sent again on arrival (the server already had them),
+-- and the last one's pop-up text went into the next chest the player opened.
+local PLACE = { same = 150, reach = 1500, popup = 300 }
 
 -- Round 85: a save bound late in a seed read 80 shinies as taken far away, a line each. They are
 -- logged together, the first few by name.
-PLACE.far = {}
+PLACE.far, PLACE.unsaved = {}, {}
 PLACE.FAR_NAMED = 5
-function PLACE.logFar()
-    local far = PLACE.far
-    if #far == 0 then return end
-    PLACE.far = {}
-    if #far == 1 then
-        log(far[1] .. "; not sent until the player is near it")
+function PLACE.logHeld(held, one, many)
+    if #held == 0 then return end
+    if #held == 1 then
+        log(held[1] .. "; " .. one)
         return
     end
     local named = {}
-    for i = 1, math.min(#far, PLACE.FAR_NAMED) do named[i] = far[i] end
-    log(string.format("%d locations read as taken far from the player, not sent until the player is near each: %s%s",
-        #far, table.concat(named, "; "), #far > PLACE.FAR_NAMED and ("; and " .. (#far - PLACE.FAR_NAMED) .. " more") or ""))
+    for i = 1, math.min(#held, PLACE.FAR_NAMED) do named[i] = held[i] end
+    log(string.format("%d %s: %s%s", #held, many, table.concat(named, "; "),
+        #held > PLACE.FAR_NAMED and ("; and " .. (#held - PLACE.FAR_NAMED) .. " more") or ""))
+end
+function PLACE.logFar()
+    PLACE.logHeld(PLACE.far, "not sent until the player is near it",
+        "locations read as taken far from the player, not sent until the player is near each")
+    PLACE.logHeld(PLACE.unsaved, "never seen closed, and the map's save row does not say taken; not sent until it does",
+        "locations read as taken but never seen closed, and the map's save rows do not say taken; not sent until they do")
+    PLACE.far, PLACE.unsaved = {}, {}
 end
 
 -- How far the player stands from (x, y), or nil when the pawn cannot be read. One pose per scan.
@@ -871,17 +882,25 @@ function PLACE.level(mapId, uid)
 end
 
 -- `fresh` is true when a chest transitions from closed to open in this map visit; request the pop-up
--- rewrite even if the check was already reported (e.g. after reloading an older save). Also request on
--- first report for chests opened before the map's initial scan.
--- `spot` is { x, y, why }: where the location stands (x is nil when not known) and what read it as
--- taken, for the log.
+-- rewrite even if the check was already reported (e.g. after reloading an older save). One read open
+-- from the first scan gets the pop-up on its first report only with the player within PLACE.popup.
+-- `spot` is { x, y, why, saved }: where the location stands (x is nil when not known), what read it
+-- as taken, for the log, and whether the map's own save row says taken (nil: not asked).
 local function opened(key, fresh, spot)
     if not sessionSave() then return end
     local known = state.reported["check|" .. key]
     if known and not fresh then return true end
-    local where = ""
+    local where, d = "", nil
     if spot then
-        local d = spot.x and PLACE.distance(spot.x, spot.y)
+        d = spot.x and PLACE.distance(spot.x, spot.y)
+        if not fresh and spot.saved == false then
+            if not visit.recorded["unsaved:" .. key] then
+                visit.recorded["unsaved:" .. key] = true
+                PLACE.unsaved[#PLACE.unsaved + 1] = string.format("%s reads taken (%s)%s", key, spot.why,
+                    d and (", " .. math.floor(d) .. " from the player") or "")
+            end
+            return false
+        end
         if spot.x and not (d and d <= PLACE.reach) then
             if not known and not visit.recorded["far:" .. key] then
                 visit.recorded["far:" .. key] = true
@@ -894,7 +913,8 @@ local function opened(key, fresh, spot)
     end
     local new = report("check", key)
     if new then log("check " .. key .. where) end
-    if new or fresh then
+    local near = fresh or not (spot and spot.x) or (d and d <= PLACE.popup)
+    if (new or fresh) and near then
         local s = state.scouts[key]
         -- Shinies use the same dialog widget to show their scouted reward.
         if s and (key:find("^chest:") or key:find("^shiny:")) then popup = { text = popupText(s), span = { text = s.item, flags = s.flags }, key = key, tries = POPUP_TRIES } end
@@ -999,7 +1019,18 @@ local function scanChests(mapId)
                 noteGameUid("chest", mapId, c.uniqueId, c.actor)
             end
             if c.open then
-                if not key or opened(key, visit.closed[id] == true, { x = c.x, y = c.y, why = "live open" }) then
+                local spot = { x = c.x, y = c.y, why = "live open" }
+                if key and not visit.closed[id] and not state.reported["check|" .. key] then
+                    -- IsOpenTreasureBox is logged to tell whether the chest loaded open from another
+                    -- map's row with the same uid (round 65's fallback).
+                    rows = rows or game.SaveOpenRows(mapId)
+                    spot.saved = rows[c.uniqueId] == true
+                    spot.why = "live open, save row " .. tostring(spot.saved)
+                    if not spot.saved then
+                        spot.why = spot.why .. ", IsOpenTreasureBox " .. tostring(game.IsChestOpenInSave(mapId, c.uniqueId))
+                    end
+                end
+                if not key or opened(key, visit.closed[id] == true, spot) then
                     visit.closed[id] = nil
                 end
             else
@@ -1052,7 +1083,8 @@ local function scanShinies(mapId)
             local id = "s" .. s.uid
             if hasReward and (s.open or rows[s.uid]) then
                 local why = "live " .. (s.open and "open" or "closed") .. ", save row " .. tostring(rows[s.uid] == true)
-                if opened("shiny:" .. mapId .. ":" .. s.uid, visit.closed[id] == true, { x = s.x, y = s.y, why = why }) then
+                if opened("shiny:" .. mapId .. ":" .. s.uid, visit.closed[id] == true,
+                    { x = s.x, y = s.y, why = why, saved = rows[s.uid] == true }) then
                     visit.closed[id] = nil
                 end
             elseif hasReward then

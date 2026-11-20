@@ -417,6 +417,7 @@ open(path("seen.tsv"), "w", encoding="utf-8", newline="\n").write("xchest\t2002\
 L, G = boot(CAPTURE)
 # Round 65: the first GetUniqueId answer of a session is logged even when the call fails
 G.chests[1].actor = L.table_from({"broken": True})
+G.saveOpen["2002:42"] = True                               # round 99: read open on arrival, so the save row must agree
 tick = lambda n: [L.execute("tickFn()") for _ in range(n)]
 tick(10)
 assert "check" not in read("ap_out.txt"), "nothing may be judged while the map settles"
@@ -1014,6 +1015,8 @@ tick = lambda k: [L.execute("tickFn()") for _ in range(k)]
 G.story = 1000
 G.chests = L.table()
 tick(10)                                   # a new game, linked (no title entry here)
+# these chests appear open with no closed sighting first: the save row agrees, as on a real opening
+G.saveOpen = L.table_from({"2002:63": True, "2002:8": True, "2002:9": True, "2002:10": True})
 G.popupReady = False                       # the pop-up comes up a moment after the check
 G.chests = L.table_from({1: L.table_from({"uid": 3, "open": True, "rowMap": 3020, "rowId": 3, "uniqueId": 63,
                                           "typeId": 63, "itemId": 7, "itemNum": 4, "money": -1})})
@@ -1099,6 +1102,7 @@ inbox(f"scout\tshiny:{ZOLDAAD_CASTLE}:10\tLongshot\tRat2\t1\t0\n"
 G.map = ZOLDAAD_CASTLE
 L.execute(f"package.loaded.game.PlayerPose = function() return {{ x = {SHARD_11_PLACE[0]}, y = {SHARD_11_PLACE[1] + 200}, z = 0 }} end")
 tick(2)
+G.saveOpen[f"{ZOLDAAD_CASTLE}:11"] = True        # taken on the earlier visit
 G.shinies = L.table_from({1: L.table_from({"uid": 10, "open": True, "itemId": 25004, "itemNum": 1, "money": -1,
                                             "x": SHARD_11_PLACE[0] + 20, "y": SHARD_11_PLACE[1] - 30})})
 tick(10)
@@ -1111,7 +1115,7 @@ tick(2)
 G.shinies = L.table()
 # Round 78: checks went out with nothing picked up. The Colosseum's shard (map 2016, uid 2) read
 # taken on arrival, and world-map shinies a continent away each time a player boarded the airship.
-# A chest or shiny read as taken is sent only with the player near it.
+# A chest or shiny read as taken is sent only with the player near it (round 79).
 COLOSSEUM, COLOSSEUM_SHARD = 2016, (25789, -10567)
 COLOSSEUM_DOOR = (28000, -2000)                # far from the shard
 NEAR = 300
@@ -1128,15 +1132,20 @@ G.chests = L.table_from({1: L.table_from({"uid": 9, "open": True, "rowMap": 3020
 tick(10)
 out = read("ap_out.txt")
 assert f"shiny:{COLOSSEUM}:2" not in out and "chest:3020:9" not in out, out[-200:]
-held = [s for s in L.eval("logged").values() if "not sent until the player is near" in s]
-# once per location per visit; round 85: those of one scan on one line
-assert len(held) == 1 and "2 locations read as taken far from the player" in held[0], held
+# Round 99: in Waterfall Way two chests nobody opened read open on arrival. One read taken with no
+# closed sighting on this visit and no save row saying so is held, whatever the distance. Logged
+# once per visit, a scan's together, a chest with what IsOpenTreasureBox says (round 65's fallback).
+held = [s for s in L.eval("logged").values() if "never seen closed" in s]
+assert len(held) == 1 and "2 locations read as taken but never seen closed" in held[0], held
 assert f"shiny:{COLOSSEUM}:2 reads taken (live open, save row false)" in held[0], held
-# the save row alone, for a scouted shiny that is not loaded, is held the same way
+assert "chest:3020:9 reads taken (live open, save row false, IsOpenTreasureBox false)" in held[0], held
+# the save row alone, for a scouted shiny that is not loaded, is held while the player is far
 G.shinies = L.table()
 G.saveOpen[f"{COLOSSEUM}:2"] = True
 tick(4)
 assert f"shiny:{COLOSSEUM}:2" not in read("ap_out.txt")
+far = [s for s in L.eval("logged").values() if "not sent until the player is near it" in s]
+assert len(far) == 1 and f"shiny:{COLOSSEUM}:2 reads taken (save row only)" in far[0], far
 # the pawn cannot be read: still held
 L.execute("package.loaded.game.PlayerPose = function() return nil end")
 tick(4)
@@ -1148,11 +1157,29 @@ tick(2)
 assert f"check\tshiny:{COLOSSEUM}:2\n" in read("ap_out.txt")
 sent = [s for s in L.eval("logged").values() if f"check shiny:{COLOSSEUM}:2" in s]
 assert sent and "(save row only, 300 from the player)" in sent[0], sent
+# the player at the chest, which still has no save row: held
 L.execute(f"local G = package.loaded.game; G.px, G.py = {NEAR}, 0")
 tick(2)
+assert "chest:3020:9" not in read("ap_out.txt")
+# the player opens it, and the game writes its row: sent, with its pop-up
+popups = len(list(G.popups.values()))
+G.saveOpen[f"{COLOSSEUM}:30"] = True
+tick(2)
 assert "check\tchest:3020:9\n" in read("ap_out.txt")
+assert list(G.popups.values())[popups:] == ["You found Rat2's:\nLongshot"], list(G.popups.values())
+# Round 99: a chest opened on another computer reads open on arrival with its save row. It is
+# sent again (the server knows it already), with no pop-up: the last such one's text went into
+# the next chest the player opened.
+inbox(f"scout\tchest:3020:11\tTent\tRat2\t0\t0\n")
+G.saveOpen[f"{COLOSSEUM}:31"] = True
+G.chests = L.table_from({1: L.table_from({"uid": 11, "open": True, "rowMap": 3020, "rowId": 11, "uniqueId": 31,
+                                          "itemId": 7, "itemNum": 1, "money": -1, "x": NEAR + 500, "y": 0})})
+tick(2)
+assert "check\tchest:3020:11\n" in read("ap_out.txt")
+assert list(G.popups.values())[popups + 1:] == [], list(G.popups.values())
 G.chests, G.shinies = L.table(), L.table()
-G.saveOpen[f"{COLOSSEUM}:2"] = None
+for uid in (2, 30, 31):
+    G.saveOpen[f"{COLOSSEUM}:{uid}"] = None
 print("chest pop-up: ok")
 
 # 13. experimental gate and custom key-item probe (0.11.3): works standalone even on unlinked saves

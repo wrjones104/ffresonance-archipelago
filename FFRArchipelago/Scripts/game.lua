@@ -1878,7 +1878,8 @@ function G.ChestPopup(text, span)
     end
     if not line then return false, "an \"obtained\" message with no item line: not the item pop-up" end
     local message, nameLines = G.PopupSplit(text, span)
-    if not pcall(function() msg:SetText(FText(message or text)) end) then return false, "SetText failed" end
+    local written = message or text
+    if not pcall(function() msg:SetText(FText(written)) end) then return false, "SetText failed" end
     local rowPaths, how = {}, ""
     if nameLines then
         local P, was = G.POPUP_COLORS, G.feedTrace
@@ -1897,6 +1898,7 @@ function G.ChestPopup(text, span)
         end
         if failed then
             for _, row in ipairs(added) do pcall(function() row:RemoveFromParent() end) end
+            written = text
             pcall(function() msg:SetText(FText(text)) end)
             how = ", the name plain (the coloured line could not be made)"
         else
@@ -1910,7 +1912,7 @@ function G.ChestPopup(text, span)
     local was = 0
     pcall(function() was = line:GetVisibility() end)
     if not pcall(function() line:SetVisibility(COLLAPSED) end) then return true, "text set (the item line would not hide)" .. how end
-    popupHidden = { line = G.PathOf(line), message = G.PathOf(msg), visibility = was, rows = rowPaths }
+    popupHidden = { line = G.PathOf(line), message = G.PathOf(msg), visibility = was, rows = rowPaths, text = written }
     return true, "text set, item line hidden" .. how
 end
 
@@ -1946,15 +1948,26 @@ function G.PopupSplit(text, span)
 end
 
 -- Makes the item line visible again once the pop-up has closed. Call every tick.
+-- Round 99 (the user): a quest with a stat bonus and an esper showed its next two messages (the
+-- bonus, "You can now summon...") in the same dialog, which stayed open, and our coloured names
+-- stayed under them. The rows go as soon as the message is no longer ours; the item line stays
+-- hidden until the dialog closes, as before.
 function G.ChestPopupRestore()
     if not popupHidden then return end
+    local function RemovePopupRows()
+        for _, path in ipairs(popupHidden.rows) do
+            local row = Find(path)
+            if row and Alive(row) then pcall(function() row:RemoveFromParent() end) end
+        end
+        popupHidden.rows = {}
+    end
     local line = popupHidden.line and Find(popupHidden.line)
     local msg = popupHidden.message and Find(popupHidden.message)
-    if line and Alive(line) and msg and Alive(msg) and Shown(msg) then return end
-    for _, path in ipairs(popupHidden.rows or {}) do
-        local row = Find(path)
-        if row and Alive(row) then pcall(function() row:RemoveFromParent() end) end
+    if line and Alive(line) and msg and Alive(msg) and Shown(msg) then
+        if #popupHidden.rows > 0 and PopupText(msg) ~= popupHidden.text then RemovePopupRows() end
+        return
     end
+    RemovePopupRows()
     local v = popupHidden.visibility
     if line and Alive(line) then pcall(function() line:SetVisibility(v) end) end
     popupHidden = nil
