@@ -2,13 +2,13 @@
 
 Only open items that still need to be tested in game live here. Once tested, record the results in [docs/playtesting_archive.md](playtesting_archive.md) and remove completed items from this file. Automated suite tests are documented in [tests/README.md](../tests/README.md).
 
-Current builds: mod `0.63.0` (`c0ed153e`), world `0.31.1` (`7c8d8ec3`). Packaged for release: v0.31.0 (mod `3245e5b1`, world `7c8d8ec3`).
+Current builds: mod `0.62.0` (`80d9d5af`), world `0.31.0` (`7c8d8ec3`). Released: v0.30.0 (mod `0e1022be`, world `fbcc579c`). v0.31.0 is not posted yet: it will be packaged again from these builds after pre-release testing.
 
-Install: copy `FFRArchipelago/Scripts`, and copy `dist/ff_resonance.apworld` into `custom_worlds` (only its version number changed, so a v0.31.0 seed still works). Close the Launcher and every client window first. The template yaml asks for world 0.31.0. Send the `[FFRAP]` lines of `UE4SS.log`. If the game crashes, send `Mods/FFRArchipelago/ap_trace.txt`, the crash folder, and the log before starting the game again.
+Install: copy `FFRArchipelago/Scripts`, and copy `dist/ff_resonance.apworld` into `custom_worlds` (unchanged since round 100, build `7c8d8ec3`). Close the Launcher and every client window first. The template yaml asks for world 0.31.0. Send the `[FFRAP]` lines of `UE4SS.log`. If the game crashes, send `Mods/FFRArchipelago/ap_trace.txt`, the crash folder, and the log before starting the game again.
 
 ## Round 102
 
-- [ ] Verify the client's first line says `world version 0.31.1 (build 7c8d8ec3)`, and the mod's log says `version 0.63.0 (build c0ed153e)`.
+- [ ] Verify the client's first line says `world version 0.31.0 (build 7c8d8ec3)`, and the mod's log says `version 0.62.0 (build 80d9d5af)`.
 - [ ] Open the Archipelago page. Verify three tabs: **Settings**, **Scaling test** and **Seed**. **Scaling test** should show only our six rows (Scaling preset and the five Custom sliders), with none of the game's graphics rows. If the tab is missing, looks wrong or the game crashes, run `ffrap_apmenu testtab off` and open the page again: the rows should then be at the bottom of **Settings**.
 - [ ] Set **Scaling preset** to 2 and close the page. Verify the log says `settings: from the Options screen: ... preset 2` and a new `scale:` line says `preset B normal`. Restart the game and verify the slider still reads 2.
 - [ ] Set the preset to 4 and move **Custom: enemy HP %** to 60. Verify the `scale:` line says `preset custom 92/60/100/103/105` and `HP 60%`. Move it with a gamepad too, and note whether a range of 100 steps is too slow to use.

@@ -1484,9 +1484,9 @@ The user played one seed on one save over two sessions: on a laptop on 2026-11-1
 
 ### Rounds 101 and 102 (no play yet)
 
-**Round 101 build (mod 0.62.0 build 3245e5b1, apworld 0.31.0 build 7c8d8ec3):** every scaling strength one step softer, enemy HP cut more than Attack, and battle MRP paid at the party's level (docs/open_world.md, round 101). **v0.31.0 packaged** from it (2026-11-21), with notes in `docs/releases/v0.31.0.md`.
+**Round 101 build (mod 0.62.0 build 3245e5b1, apworld 0.31.0 build 7c8d8ec3):** every scaling strength one step softer, enemy HP cut more than Attack, and battle MRP paid at the party's level (docs/open_world.md, round 101). v0.31.0 was packaged from it (2026-11-21) but not posted. Round 102 goes into v0.31.0 too, which is packaged again after the user's pre-release testing.
 
-**Round 102 build (mod 0.63.0 build c0ed153e, apworld 0.31.1 build 7c8d8ec3):**
-- **Versions bumped for the next cycle:** mod 0.63.0, world 0.31.1 (only its number; the template yaml still asks for 0.31.0).
+**Round 102 build (mod 0.62.0 build 80d9d5af, apworld 0.31.0 build 7c8d8ec3):**
+- **No version bump:** a first build bumped to mod 0.63.0 and world 0.31.1, but v0.31.0 had not been posted, so this goes into it.
 - **Scaling test presets** on a third tab of the Archipelago page: a preset slider (A, B, C, Custom) and five Custom sliders. `ffrap_set preset a|b|c|custom` and `ffrap_set elevel|ehp|eatk|blevel|bpower <percent>` set the same. `ffrap_apmenu testtab off` puts the rows under Settings.
 - **A `battle: won` line per battle won**, with the time off the field, the preset and the party's level.

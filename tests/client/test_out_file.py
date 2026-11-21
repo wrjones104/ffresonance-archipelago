@@ -25,8 +25,8 @@ FIRST_CHEST, SECOND_CHEST = "chest:2020:0", "chest:2020:1"
 
 # What the mod wrote in the 2026-11-18 log: an Archipelago new game linked to the old seed, then
 # the client's new seed, with item 0 applied in the same tick.
-OLD_FILE = f"hello\t0.63.0\t2\nseed\t{OLD_SEED}\nstory\t1000\nstory\t1005\n"
-NEW_FILE = f"hello\t0.63.0\t2\nseed\t{NEW_SEED}\napplied\t0\tok\tflag 1421 = true\n"
+OLD_FILE = f"hello\t0.62.0\t2\nseed\t{OLD_SEED}\nstory\t1000\nstory\t1005\n"
+NEW_FILE = f"hello\t0.62.0\t2\nseed\t{NEW_SEED}\napplied\t0\tok\tflag 1421 = true\n"
 
 failures = 0
 
@@ -62,7 +62,7 @@ async def main():
     check("the check after the mod's new seed line is sent", checks == {LOCATION_KEY_TO_ID[FIRST_CHEST]})
     check("the story after it counts", story == 8000)
 
-    write(out_path, f"hello\t0.63.0\t2\nseed\t{NEW_SEED}\ncheck\t{SECOND_CHEST}\n", "a")
+    write(out_path, f"hello\t0.62.0\t2\nseed\t{NEW_SEED}\ncheck\t{SECOND_CHEST}\n", "a")
     checks, _ = ctx.read_new_output()
     check("a game restart appends: only the new check, not the old ones again",
           checks == {LOCATION_KEY_TO_ID[SECOND_CHEST]})
