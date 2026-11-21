@@ -233,6 +233,13 @@ Final Fantasy Resonance:
     'false': 50
     'true': 0
 
+  hide_quest_rewards:
+    # The Quests screen's Rewards show ??? for each quest location, in place of the item it holds.
+    # With this off, they name the item, coloured by its class. Only matters with
+    # include_side_quests on.
+    'false': 50
+    'true': 0
+
   priority_bosses:
     # The cave masters and the optional bosses (the two Dragon's Maw bosses and the Antlion) are
     # priority locations: the generator puts items that someone needs on them first, so they are

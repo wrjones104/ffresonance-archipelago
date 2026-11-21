@@ -268,7 +268,9 @@ PARTY_MEMBER_IDS = [1001, 1002, 1003, 1004, 1005, 1006, 1007, 1008]
 # (29500-29520), and the counted ones (Magicite 25000-25002, Tablet Shards 25004).
 # Artifacts (DT_ArtifactItemData) are left out since round 55: the game has no screen to switch
 # them, and the Bandit Cuff Links showed no effect when switched on (IDEAS.md, idea 26).
-NOT_KEY_ITEMS = {25000, 25001, 25002, 25004, 29500, 29510, 29520}
+# Round 103 (the user): White Jade Stone, Black Jade Stone, Magic Tome and Tunnel Key
+# (20005-20008) open nothing in an open world seed: no item test in the data uses them.
+NOT_KEY_ITEMS = {25000, 25001, 25002, 25004, 29500, 29510, 29520, 20005, 20006, 20007, 20008}
 
 
 def holds_at_open_start(condition: str) -> bool:

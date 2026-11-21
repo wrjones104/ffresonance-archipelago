@@ -29,7 +29,6 @@
 --   ffrap_apmenu off|on|state|close|tree  the Archipelago page in the main menu (on by default)
 --   ffrap_apmenu options|text|tabs [only|all]|mode ap|game  rounds 85-86 probe: the Options screen as the page
 --   ffrap_apmenu split on|off  the page's two tabs, Settings and Seed (on), or one (off)
---   ffrap_apmenu testtab on|off  the scaling test rows on their own tab (the default) or on Settings
 --   ffrap_apmenu seedrows command|heading  the Seed tab's lines as rows the cursor can take (the default) or headings
 --   ffrap_logo                   place the Archipelago logo on the mod's title line manually
 --   ffrap_layout <text>          log the panels holding some on-screen text
@@ -427,7 +426,7 @@ local function newSession(key)
     state.slots, state.slotItems, state.bindPending, state.live = {}, {}, false, nil
     state.scouts = {}
     seedCfg.party, seedCfg.finalboss, seedCfg.chocobo, seedCfg.airship, seedCfg.continent, seedCfg.radar = nil, nil, nil, nil, nil, nil
-    seedCfg.quests, seedCfg.quest2, seedCfg.goal, seedCfg.checks = nil, nil, nil, nil
+    seedCfg.quests, seedCfg.quest2, seedCfg.goal, seedCfg.checks, seedCfg.hidequests = nil, nil, nil, nil, nil
     game.blankRadarParts = false
     if save.apObj ~= nil and save.apObj == save.obj and save.autoDone then save.reskip = true end
     save.obj = nil     -- judge the loaded save again for this session
@@ -474,6 +473,8 @@ local function readInbox(initial)
             seedCfg.gifts = f[3] == "1"
         elseif f[1] == "cfg" and f[2] == "quest2" then
             seedCfg.quest2 = f[3] == "1"
+        elseif f[1] == "cfg" and f[2] == "hidequests" then
+            seedCfg.hidequests = f[3] == "1"
         elseif f[1] == "cfg" and f[2] == "continent" then
             seedCfg.continent = f[3] and f[3]:lower()
         elseif f[1] == "cfg" and f[2] == "finalboss" then
@@ -735,7 +736,8 @@ function state.questRewardDue(q)
     return due
 end
 -- Round 88 (the user): the Quests screen's Rewards show what each quest location holds, on the
--- seed's save; any other save gets the game's own back. Written again every PRIZE_EVERY ticks, in
+-- seed's save; any other save gets the game's own back. Round 103: with hide_quest_rewards, each
+-- shows ??? with no colour. Written again every PRIZE_EVERY ticks, in
 -- case the game loads the table again.
 state.PRIZE_EVERY = 60
 function state.prizeTick()
@@ -745,7 +747,10 @@ function state.prizeTick()
         for _, q in ipairs(game.QUESTS) do
             for _, key in ipairs({ q.key, seedCfg.quest2 and q.key2 or nil }) do
                 local s = state.scouts[key]
-                if s then
+                if s and seedCfg.hidequests then
+                    labels[key] = "???"
+                    parts[#parts + 1] = key .. "=???"
+                elseif s then
                     labels[key] = s.own and s.item or (s.player .. "'s " .. s.item)
                     state.prizeSpans[labels[key]] = { text = s.item, flags = s.flags }
                     parts[#parts + 1] = key .. "=" .. labels[key]
@@ -2306,15 +2311,6 @@ command("ffrap_apmenu", function(p)
         A.split = on == "on"
         if A.modeSaved then A.Mode("game", {}, log) end
         notify("Archipelago page: " .. (A.split and "two tabs" or "one tab") .. " (open it again)")
-    elseif what == "testtab" then
-        local on = tostring(p[2] or ""):lower()
-        if on ~= "on" and on ~= "off" then
-            notify("Usage: ffrap_apmenu testtab on | off")
-            return
-        end
-        if A.modeSaved then A.Mode("game", {}, log) end
-        A.testTab = on == "on"
-        notify("Archipelago page: scaling test rows " .. (A.testTab and "on their own tab" or "on the Settings tab") .. " (open it again)")
     elseif what == "seedrows" then
         local kind = tostring(p[2] or ""):lower()
         if kind ~= "command" and kind ~= "heading" then
@@ -2332,7 +2328,7 @@ command("ffrap_apmenu", function(p)
         state.apMenuTick()
         notify("Archipelago page: on")
     else
-        notify("Usage: ffrap_apmenu off | on | state | close | tree | options | text | tabs [only | all] | mode ap | game | split on | off | testtab on | off | seedrows command | heading")
+        notify("Usage: ffrap_apmenu off | on | state | close | tree | options | text | tabs [only | all] | mode ap | game | split on | off | seedrows command | heading")
     end
 end)
 
@@ -2707,13 +2703,8 @@ local scaleChecks = 0
 -- enemy scaling toggle/strength. These persist per player in settings.txt across all saves and
 -- record only explicit changes via ffrap_set or the Options screen.
 local SETTINGS_FILE = MOD_DIR .. "settings.txt"
--- Round 102: `preset` (1 to 3 the test presets A to C, 4 Custom) and Custom's five percentages:
--- enemy level, HP and attack, boss level and power. The defaults are preset A's top on Normal.
-local SETTING_DEFAULTS = { exp = 1, gil = 1, mrp = 1, encounters = true, encounterrate = 1, scaling = true, strength = 1,
-                           preset = 1, elevel = 92, ehp = 85, eatk = 100, blevel = 103, bpower = 105 }
-local SETTING_RANGES = { exp = { 0, 10 }, gil = { 0, 10 }, mrp = { 0, 10 }, encounterrate = { 0.1, 5 }, strength = { 0, 2 },
-                         preset = { 1, 4 }, elevel = { 50, 120 }, ehp = { 30, 150 }, eatk = { 30, 150 },
-                         blevel = { 70, 130 }, bpower = { 30, 200 } }
+local SETTING_DEFAULTS = { exp = 1, gil = 1, mrp = 1, encounters = true, encounterrate = 1, scaling = true, strength = 1 }
+local SETTING_RANGES = { exp = { 0, 10 }, gil = { 0, 10 }, mrp = { 0, 10 }, encounterrate = { 0.1, 5 }, strength = { 0, 2 } }
 -- Options row button labels match the game's difficulty preset names.
 local STRENGTH_NAMES = { [0] = "casual", [1] = "normal", [2] = "expert" }
 local settingsSet = {}   -- what the player has set
@@ -2746,17 +2737,13 @@ local function writeSettings()
 end
 local function settingsText()
     local parts = {}
-    for _, k in ipairs({ "exp", "gil", "mrp", "encounters", "encounterrate", "scaling", "strength", "preset" }) do
+    for _, k in ipairs({ "exp", "gil", "mrp", "encounters", "encounterrate", "scaling", "strength" }) do
         local v = setting(k)
         local text
         if k == "strength" then text = STRENGTH_NAMES[v] or tostring(v)
-        elseif k == "preset" then text = ({ "A", "B", "C", "custom" })[v] or tostring(v)
         elseif type(v) == "boolean" then text = v and "on" or "off"
         else text = "x" .. tostring(v) end
         parts[#parts + 1] = k .. " " .. text
-    end
-    if setting("preset") == 4 then
-        for _, k in ipairs({ "elevel", "ehp", "eatk", "blevel", "bpower" }) do parts[#parts + 1] = k .. " " .. setting(k) .. "%" end
     end
     return table.concat(parts, ", ")
 end
@@ -2983,8 +2970,7 @@ seedExtrasTick = function()
 end
 
 -- ffrap_set: shows the settings. ffrap_set <exp|gil|mrp|encounterrate> <number>, ffrap_set
--- <encounters|scaling> <on|off>, ffrap_set strength <casual|normal|expert>, ffrap_set preset
--- <a|b|c|custom>, ffrap_set <elevel|ehp|eatk|blevel|bpower> <percent>, ffrap_set reset: all
+-- <encounters|scaling> <on|off>, ffrap_set strength <casual|normal|expert>, ffrap_set reset: all
 -- back to the defaults.
 command("ffrap_set", function(p)
     local key, value = tostring(p[1] or ""):lower(), tostring(p[2] or ""):lower()
@@ -2993,14 +2979,13 @@ command("ffrap_set", function(p)
             if value == name then value = tostring(n) end
         end
     end
-    if key == "preset" then value = ({ a = "1", b = "2", c = "3", custom = "4" })[value] or value end
     if key == "reset" then
         settingsSet = {}
         writeSettings()
     elseif key ~= "" then
         local default = SETTING_DEFAULTS[key]
         if default == nil then
-            notify("Usage: ffrap_set [exp|gil|mrp|encounterrate <number>] [encounters|scaling <on|off>] [strength casual|normal|expert] [preset a|b|c|custom] [elevel|ehp|eatk|blevel|bpower <percent>] [reset]")
+            notify("Usage: ffrap_set [exp|gil|mrp|encounterrate <number>] [encounters|scaling <on|off>] [strength casual|normal|expert] [reset]")
             return
         end
         if type(default) == "boolean" then
@@ -3016,7 +3001,7 @@ command("ffrap_set", function(p)
                 return
             end
             n = math.min(range[2], math.max(range[1], n))
-            if key ~= "encounterrate" and key ~= "exp" and key ~= "gil" and key ~= "mrp" then n = math.floor(n + 0.5) end
+            if key == "strength" then n = math.floor(n + 0.5) end
             settingsSet[key] = n
         end
         writeSettings()
@@ -3052,24 +3037,10 @@ end)
 -- run felt much softer than Normal: Normal's enemies sat at the party's level with 115% power,
 -- and the enemies of regions ahead (half the map) at +3 with 1.5x HP. Hallway fights were long,
 -- and the fights are mostly there for MRP. Expert is the old Normal with 10% less HP.
--- Round 102: test presets, picked on the Archipelago page, so testers can compare curves without a
--- release each. Each has a row per strength. A is round 101's. B is "bosses are the fight":
--- hallway enemies further under the party, bosses over it. C is about halfway between round 100
--- and A. Preset 4 is Custom: the five `custom` settings, flat (no ramp), with A's bands.
-local SEED_PRESETS = {
-    { name = "A",
-      [0] = { at = { 80, 88 }, hp = { 60, 75 }, attack = { 75, 90 }, above = 1, bossAt = { 95, 100 }, bossPower = { 90, 100 } },
-      [1] = { at = { 85, 92 }, hp = { 70, 85 }, attack = { 85, 100 }, above = 1, bossAt = { 100, 103 }, bossPower = { 100, 105 } },
-      [2] = { at = { 90, 100 }, hp = { 80, 105 }, attack = { 90, 115 }, above = 3, bossAt = { 105, 110 }, bossPower = { 105, 110 } } },
-    { name = "B",
-      [0] = { at = { 75, 80 }, hp = { 50, 60 }, attack = { 70, 80 }, above = 1, bossAt = { 97, 100 }, bossPower = { 95, 100 } },
-      [1] = { at = { 80, 85 }, hp = { 60, 70 }, attack = { 80, 90 }, above = 1, bossAt = { 102, 105 }, bossPower = { 105, 110 } },
-      [2] = { at = { 85, 92 }, hp = { 70, 90 }, attack = { 85, 105 }, above = 3, bossAt = { 107, 112 }, bossPower = { 110, 120 } } },
-    { name = "C",
-      [0] = { at = { 84, 90 }, hp = { 70, 88 }, attack = { 80, 95 }, above = 1, bossAt = { 98, 103 }, bossPower = { 95, 103 } },
-      [1] = { at = { 88, 96 }, hp = { 80, 100 }, attack = { 90, 108 }, above = 2, bossAt = { 103, 107 }, bossPower = { 103, 108 } },
-      [2] = { at = { 95, 105 }, hp = { 90, 110 }, attack = { 98, 120 }, above = 4, bossAt = { 110, 117 }, bossPower = { 115, 122 } } },
-    custom = { "elevel", "ehp", "eatk", "blevel", "bpower" },
+local SEED_SCALES = {
+    [0] = { at = { 80, 88 }, hp = { 60, 75 }, attack = { 75, 90 }, above = 1, bossAt = { 95, 100 }, bossPower = { 90, 100 } },
+    [1] = { at = { 85, 92 }, hp = { 70, 85 }, attack = { 85, 100 }, above = 1, bossAt = { 100, 103 }, bossPower = { 100, 105 } },
+    [2] = { at = { 90, 100 }, hp = { 80, 105 }, attack = { 90, 115 }, above = 3, bossAt = { 105, 110 }, bossPower = { 105, 110 } },
 }
 -- Round 77: bosses lose `emptySlotCut` % power for each empty slot of the `slots` in the party.
 -- Small parties were wiped by bosses' opening attacks and ran short of turns.
@@ -3080,18 +3051,8 @@ local SEED_PRESETS = {
 local SEED_RAMP = { below = 1, bossRange = 2, rampFrom = 5, rampTo = 25, slots = 4, emptySlotCut = 12,
                     slowFrom = 30, slowRate = 0.75 }
 
--- The strength's row of the chosen preset, and the preset's name for the log ("custom 92/85/100/
--- 103/105" names its five settings). A change of name rescales at once.
 local function seedScale()
-    local preset = SEED_PRESETS[setting("preset")]
-    local strength = setting("strength")
-    if preset then
-        return preset[strength] or preset[1], preset.name .. " " .. (STRENGTH_NAMES[strength] or "?")
-    end
-    local v = {}
-    for i, key in ipairs(SEED_PRESETS.custom) do v[i] = setting(key) end
-    return { at = { v[1], v[1] }, hp = { v[2], v[2] }, attack = { v[3], v[3] }, above = SEED_PRESETS[1][1].above,
-             bossAt = { v[4], v[4] }, bossPower = { v[5], v[5] } }, "custom " .. table.concat(v, "/")
+    return SEED_SCALES[setting("strength")] or SEED_SCALES[1]
 end
 
 local function ramp(pair, lv)
@@ -3102,7 +3063,7 @@ end
 local function seedScaleToParty()
     local lv, detail = game.PartyLevel()
     if not lv then return nil, "party level unknown (" .. tostring(detail) .. ")" end
-    local s, scaleName = seedScale()
+    local s = seedScale()
     local at, hp, attack = ramp(s.at, lv), ramp(s.hp, lv), ramp(s.attack, lv)
     local bossAt, bossPower = ramp(s.bossAt, lv), ramp(s.bossPower, lv)
     local size = #(game.PartyIds() or {})
@@ -3116,8 +3077,9 @@ local function seedScaleToParty()
     -- visions would get longer as the fights got easier.
     local _, _, even = game.LevelBand(counted, 0, 100)
     local mrpLift, bossMrpLift = math.max(0, even - c), math.max(0, even - bc)
-    log(string.format("scale: party level %d (%s), counted as %g, preset %s: enemies centre %d (%d%%), %d to %d, HP %d%%, attack %d%%; bosses centre %d (%d%%), power %d%%; MRP as level %d (%d in the party)",
-        lv, detail, counted, scaleName, c, at, math.max(1, a), b, hp, attack, bc, bossAt, bossPower, even, size))
+    log(string.format("scale: party level %d (%s), counted as %g, strength %s: enemies centre %d (%d%%), %d to %d, HP %d%%, attack %d%%; bosses centre %d (%d%%), power %d%%; MRP as level %d (%d in the party)",
+        lv, detail, counted, STRENGTH_NAMES[setting("strength")] or "?", c, at, math.max(1, a), b, hp, attack, bc, bossAt,
+        bossPower, even, size))
     local knobs = { hp = hp, attack = attack, magic = attack, mrpLift = mrpLift }
     local bossKnobs = { hp = bossPower, attack = bossPower, magic = bossPower, mrpLift = bossMrpLift }
     local n, err = applyScale("clamp", a, b, true, knobs, { a = ba, b = bb, knobs = bossKnobs })
@@ -3146,8 +3108,8 @@ local function seedScaleTick()
         end
         return
     end
-    -- A new strength, preset or custom value from the Archipelago page rescales at once.
-    if scaleFollow and scaleFollow.seed and scaleFollow.name ~= select(2, seedScale()) then scaleFollow = nil end
+    -- A new strength from the Options screen rescales at once.
+    if scaleFollow and scaleFollow.seed and scaleFollow.strength ~= setting("strength") then scaleFollow = nil end
     if scaleFollow or (game.StoryCounter() or 0) < game.OPEN_START.story then return end
     local n, err, lv, size = seedScaleToParty()
     if n == nil then
@@ -3156,13 +3118,13 @@ local function seedScaleTick()
         return
     end
     seedScaleOn = true
-    scaleFollow = { seed = true, last = lv, size = size, name = select(2, seedScale()) }
+    scaleFollow = { seed = true, last = lv, size = size, strength = setting("strength") }
     log("scale: the seed's scaling is on, following the party's level")
 end
 
--- Round 102: a line per battle won, for comparing the test presets. A battle is a stretch off the
--- field that ends with the battles-won counter up; its length counts the transitions and the
--- results screen too, so it is for comparing presets, not a battle's own time.
+-- Round 102: a line per battle won, for scaling feedback. A battle is a stretch off the field
+-- that ends with the save's battles-won counter up; its length counts the transitions and the
+-- results screen too. The counter includes the prologue's 3 wins.
 state.fight = {}
 state.fightTick = function()
     local f = state.fight
@@ -3176,8 +3138,9 @@ state.fightTick = function()
     end
     local wins = game.WinCount()
     if f.since and wins and f.wins and wins > f.wins then
-        log(string.format("battle: won (%d in all), %.1f s off the field; preset %s, party level %s",
-            wins, (state.ticks - f.since) * TICK_MS / 1000, select(2, seedScale()), tostring(scaleFollow and scaleFollow.last)))
+        log(string.format("battle: won (save's win count %d), %.1f s off the field; strength %s, party level %s",
+            wins, (state.ticks - f.since) * TICK_MS / 1000, STRENGTH_NAMES[setting("strength")] or "?",
+            tostring(scaleFollow and scaleFollow.last)))
     end
     f.since, f.wins = nil, wins
 end

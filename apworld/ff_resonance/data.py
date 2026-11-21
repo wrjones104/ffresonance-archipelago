@@ -420,10 +420,6 @@ ITEMS = {1001: {'category': 'consumable', 'count': 1, 'game_id': 1, 'kind': 'ite
             'name': "Y'shtola (Vision)"},
  13128001: {'category': 'vision', 'count': 1, 'game_id': 13128, 'kind': 'vision', 'name': 'Noctis (Vision)'},
  13130001: {'category': 'vision', 'count': 1, 'game_id': 13130, 'kind': 'vision', 'name': 'Clive (Vision)'},
- 20005001: {'category': 'key', 'count': 1, 'game_id': 20005, 'kind': 'item', 'name': 'White Jade Stone'},
- 20006001: {'category': 'key', 'count': 1, 'game_id': 20006, 'kind': 'item', 'name': 'Black Jade Stone'},
- 20007001: {'category': 'key', 'count': 1, 'game_id': 20007, 'kind': 'item', 'name': 'Magic Tome'},
- 20008001: {'category': 'key', 'count': 1, 'game_id': 20008, 'kind': 'item', 'name': 'Tunnel Key'},
  20009001: {'category': 'key', 'count': 1, 'game_id': 20009, 'kind': 'item', 'name': 'Level 1 Lab Key Card'},
  20010001: {'category': 'key', 'count': 1, 'game_id': 20010, 'kind': 'item', 'name': 'Level 2 Lab Key Card'},
  20011001: {'category': 'key', 'count': 1, 'game_id': 20011, 'kind': 'item', 'name': 'Level 3 Lab Key Card'},
@@ -6074,11 +6070,7 @@ NO_ROUTE = ['chest:2012:1',
 
 # Progression items by group (AP ids): party members, visions, key items. One of each goes
 # in the pool when its option is on, except the party members a player starts with.
-PROGRESSION = {'key': [20005001,
-         20006001,
-         20007001,
-         20008001,
-         20009001,
+PROGRESSION = {'key': [20009001,
          20010001,
          20011001,
          20016001,

@@ -107,7 +107,8 @@ function G.StoryCounter()
     return Int(v)
 end
 
--- The save's battles-won counter (Player.WinNum), or nil.
+-- The save's battles-won counter (Player.WinNum), or nil. The prologue skip sets it to 3, the
+-- prologue's own wins.
 function G.WinCount()
     local sd = G.SaveData()
     if not sd then return nil end
@@ -5587,27 +5588,7 @@ G.OPTION_ROWS = {
     -- RadioButton labels come from referenced DT_RadioButton tables, keeping labels within UI bounds.
     { key = "strength", row = "FFRAP_ScalingStrength", copy = OPTION_CHOICE, choices = 3, default = 1,
       label = "AP: Scaling strength", help = "How strong scaled enemies and bosses are. It stacks with the game's own difficulty." },
-    -- Round 102: the scaling test rows, on their own tab (`tab = "test"`, G.APMENU.testTab). A
-    -- slider for the preset: a radio button's labels come from a DT_RadioButton table of three.
-    { key = "preset", row = "FFRAP_TestPreset", copy = OPTION_SLIDER, min = 1, max = 4, default = 1, tab = "test",
-      label = "Scaling preset (1 to 4)",
-      help = "1: A, this build's curve. 2: B, easy normal fights and harder bosses. 3: C, between A and the last release's. 4: Custom, the five sliders below. The strength row on Settings still applies to 1 to 3." },
-    { key = "elevel", row = "FFRAP_TestEnemyLevel", copy = OPTION_SLIDER, min = 50, max = 120, default = 92, tab = "test",
-      label = "Custom: enemy level %", help = "Custom only: enemies' level, as a % of your party's level." },
-    { key = "ehp", row = "FFRAP_TestEnemyHp", copy = OPTION_SLIDER, min = 30, max = 150, default = 85, tab = "test",
-      label = "Custom: enemy HP %", help = "Custom only: enemies' HP, as a % of an enemy of that level." },
-    { key = "eatk", row = "FFRAP_TestEnemyAttack", copy = OPTION_SLIDER, min = 30, max = 150, default = 100, tab = "test",
-      label = "Custom: enemy attack %", help = "Custom only: enemies' Attack and Intelligence, as a % of an enemy of that level." },
-    { key = "blevel", row = "FFRAP_TestBossLevel", copy = OPTION_SLIDER, min = 70, max = 130, default = 103, tab = "test",
-      label = "Custom: boss level %", help = "Custom only: bosses' level, as a % of your party's level." },
-    { key = "bpower", row = "FFRAP_TestBossPower", copy = OPTION_SLIDER, min = 30, max = 200, default = 105, tab = "test",
-      label = "Custom: boss power %", help = "Custom only: bosses' HP, Attack and Intelligence, as a % of a boss of that level." },
 }
-G.OPTION_TEST_TABLE = "/Game/Datatable/UI/Option/Root/GraphicSetting/DT_OP_GraphicSetting.DT_OP_GraphicSetting"
--- The table a row goes in: the test rows on the test tab's while it is on, else the Settings tab's.
-function G.OptionRowTable(o)
-    return (o.tab == "test" and G.APMENU.testTab) and G.OPTION_TEST_TABLE or OPTION_GAMEPLAY
-end
 
 local ENTRY_SLIDER, ENTRY_RADIO = 1, 2
 
@@ -5661,17 +5642,11 @@ function G.AddOptionRows(say, current)
     end)
     local done, added = {}, 0
     for _, o in ipairs(G.OPTION_ROWS) do
-        local into = dt
-        if G.OptionRowTable(o) ~= OPTION_GAMEPLAY then into = LoadObject(G.OptionRowTable(o)) end
         local row = have[o.row]
-        if into ~= dt then
-            row = nil
-            pcall(function() row = into:FindRow(o.row) end)
-        end
-        if not row and into and templates[o.copy] then
-            say("menu: AddRow " .. o.row .. (into ~= dt and " (test tab)" or ""))
-            if pcall(function() into:AddRow(o.row, templates[o.copy]) end) then
-                pcall(function() row = into:FindRow(o.row) end)
+        if not row and templates[o.copy] then
+            say("menu: AddRow " .. o.row)
+            if pcall(function() dt:AddRow(o.row, templates[o.copy]) end) then
+                pcall(function() row = dt:FindRow(o.row) end)
                 added = added + 1
             end
         end
@@ -5704,17 +5679,8 @@ end
 function G.EnsureOptionRows(current)
     local dt = LoadObject(OPTION_GAMEPLAY)
     if not dt then return nil, "DT_OP_GameSetting could not be loaded" end
-    -- Each table can be loaded again on its own, so each must still hold its first row of ours.
-    local present, firsts = true, {}
-    for _, o in ipairs(G.OPTION_ROWS) do
-        local path = G.OptionRowTable(o)
-        if not firsts[path] then
-            firsts[path] = true
-            local into, found = LoadObject(path), false
-            pcall(function() found = into:FindRow(o.row) ~= nil end)
-            present = present and found
-        end
-    end
+    local present = false
+    pcall(function() present = dt:FindRow(G.OPTION_ROWS[1].row) ~= nil end)
     if present then
         if not optionEntriesSeeded then SeedOptionEntries(current or {}) end
         return 0
@@ -5869,11 +5835,6 @@ G.APMENU = {
     split = true,
     SETTINGS_TAB = "Settings",
     SEED_TAB = "Seed",
-    -- Round 102: the scaling test rows get their own tab, the Graphics tab made ours as the Sound
-    -- tab is the Seed tab. false puts them under the settings (ffrap_apmenu testtab off).
-    testTab = true,
-    TEST_TAB = "Scaling test",
-    TEST_CATEGORY = 1,   -- Graphics
     -- The seed's lines as Command rows (WBP_OP_Command, whose click does nothing in its
     -- Blueprint), which take the cursor, so a gamepad scrolls the Seed tab. No heading does
     -- (round 87). Round 88: the probe worked, and the user liked the look better, so it is the
@@ -5891,7 +5852,8 @@ local OPTION_ROOT_TABLE = "/Game/Datatable/UI/Option/DT_Option_Root.DT_Option_Ro
 -- A condition the story counter can never meet: a tab with it is left out (probe `tabs only`).
 local NEVER = "{progress:0}<0"
 local GAMEPLAY_CATEGORY = 0   -- FOP_Parent_CommandCategory: Gameplay 0, Graphic 1, KeyboardMouse 2, Gamepad 3, Sound 4
-local SEED_CATEGORY = 4
+-- Round 103 (the user): the Seed tab is the Graphics tab, for its monitor icon (it was Sound's).
+local SEED_CATEGORY = 1
 local function screenPath() return A.screen == "options" and A.OPTIONS_LAYOUT or A.LAYOUT end
 
 local function quiet() end
@@ -6011,16 +5973,16 @@ end
 
 -- The Options screen as our page (IDEAS.md idea 39; round 85 showed the entry can open it and
 -- that its tabs are read at each open, round 86 that this looks right). `ap` leaves out every tab
--- but Gameplay and Sound, hides the game's rows in their tables (ShowType TitleOnly: not in game)
--- and shows ours, and adds a heading row for each of `lines` (copies of the keyboard tab's first
--- SubHeader; all these tables hold OP_BaseMenu_EntryInfo rows). Each tab shows the row table its
--- DT_Option_Root row names, so the Sound tab, its six rows hidden, holds the headings (round 87).
--- With A.split off, the Sound tab is left out too and the headings go under our settings. `game`
--- puts it all back and hides ours again. Each step is told to `say` before it runs. Returns lines.
+-- but Gameplay and Graphics, hides the game's rows in their tables (ShowType TitleOnly: not in
+-- game) and shows ours, and adds a heading row for each of `lines` (copies of the keyboard tab's
+-- first SubHeader; all these tables hold OP_BaseMenu_EntryInfo rows). Each tab shows the row table
+-- its DT_Option_Root row names, so the Graphics tab, its rows hidden, holds the headings (round 87,
+-- on the Sound tab until round 103). With A.split off, that tab is left out too and the headings go
+-- under our settings. `game` puts it all back and hides ours again. Each step is told to `say` before it runs. Returns lines.
 local KEYBOARD_TABLE = "/Game/Datatable/UI/Option/Root/KeyboardMouseSetting/DT_OP_KeyboardMouseSetting.DT_OP_KeyboardMouseSetting"
 local HEADING_ROW = "SubHeader_共通"
 local GAMEPLAY_TABLE = "/Game/Datatable/UI/Option/Root/GameSetting/DT_OP_GameSetting.DT_OP_GameSetting"
-local SOUND_TABLE = "/Game/Datatable/UI/Option/Root/SoundSetting/DT_OP_SoundSetting.DT_OP_SoundSetting"
+local SEED_TABLE = "/Game/Datatable/UI/Option/Root/GraphicSetting/DT_OP_GraphicSetting.DT_OP_GraphicSetting"
 -- Sets every row of the table at `path` but `keep`'s to TitleOnly, each old ShowType kept in
 -- `saved.show[path]` (a value kept from before the game loaded the table again stays). Returns
 -- how many it hid.
@@ -6051,9 +6013,12 @@ local function setShowTypes(path, show)
         if row then pcall(function() row.ShowCommandData.ShowType = t end) end
     end
 end
+-- Round 103: last first. The row map reuses freed slots last-freed-first, so rows removed in
+-- order came back reversed at the next open, and the page's rows changed order at each open.
 local function removeRows(path, names, say)
     local dt, removed = LoadObject(path), 0
-    for _, name in ipairs(names) do
+    for i = #names, 1, -1 do
+        local name = names[i]
         say("apmenu: RemoveRow " .. name)
         if pcall(function() dt:RemoveRow(name) end) then removed = removed + 1 end
     end
@@ -6075,9 +6040,6 @@ function A.Written()
         end)
         ok = label == saved.name and rows:FindRow(G.OPTION_ROWS[1].row) ~= nil
             and (#saved.info == 0 or info:FindRow(saved.info[1]) ~= nil)
-        for path, names in pairs(saved.ours) do
-            ok = ok and LoadObject(path):FindRow(names[1]) ~= nil
-        end
     end)
     return ok
 end
@@ -6095,25 +6057,20 @@ function A.Mode(kind, lines, say)
         out[#out + 1] = "no Gameplay tab or no DT_OP_GameSetting"
         return out
     end
-    -- Our rows by table: the Settings tab's, and the test tab's while it is on.
-    local ours, ourNames, testOurs = {}, {}, {}
+    local ours, ourNames = {}, {}
     for _, o in ipairs(G.OPTION_ROWS) do
-        if G.OptionRowTable(o) == GAMEPLAY_TABLE then ours[o.row] = true else testOurs[o.row] = true end
-        local path = G.OptionRowTable(o)
-        ourNames[path] = ourNames[path] or {}
-        table.insert(ourNames[path], o.row)
+        ours[o.row] = true
+        ourNames[#ourNames + 1] = o.row
     end
     local before = A.modeSaved
     if kind == "ap" and before and A.Written() then
         out[#out + 1] = "mode ap: already so"
     elseif kind == "ap" then
-        local split = A.split and tabs[SEED_CATEGORY] ~= nil and LoadObject(SOUND_TABLE) ~= nil
-        local testPath = A.testTab and tabs[A.TEST_CATEGORY] and next(testOurs) and G.OptionRowTable({ tab = "test" })
+        local split = A.split and tabs[SEED_CATEGORY] ~= nil and LoadObject(SEED_TABLE) ~= nil
         local saved = { show = before and before.show or {}, labels = before and before.labels or {}, info = {},
-                        infoPath = split and SOUND_TABLE or GAMEPLAY_TABLE, ours = ourNames }
+                        infoPath = split and SEED_TABLE or GAMEPLAY_TABLE }
         local names = { [GAMEPLAY_CATEGORY] = split and A.SETTINGS_TAB or A.NAME }
         if split then names[SEED_CATEGORY] = A.SEED_TAB end
-        if testPath then names[A.TEST_CATEGORY] = A.TEST_TAB end
         saved.name = names[GAMEPLAY_CATEGORY]
         for category, label in pairs(names) do
             local tab = tabs[category]
@@ -6122,8 +6079,7 @@ function A.Mode(kind, lines, say)
             pcall(function() tab.DisplayText = FText(label) end)
         end
         local hidden = hideRows(GAMEPLAY_TABLE, ours, saved, say)
-        if split then hidden = hidden + hideRows(SOUND_TABLE, {}, saved, say) end
-        if testPath then hidden = hidden + hideRows(testPath, testOurs, saved, say) end
+        if split then hidden = hidden + hideRows(SEED_TABLE, {}, saved, say) end
         local keyboard, infoRows, heading = LoadObject(KEYBOARD_TABLE), LoadObject(saved.infoPath), nil
         pcall(function() heading = keyboard:FindRow(HEADING_ROW) end)
         local command = A.seedRows == "command"
@@ -6159,7 +6115,7 @@ function A.Mode(kind, lines, say)
         end
         for path, show in pairs(before.show) do setShowTypes(path, show) end
         local removed = removeRows(before.infoPath, before.info, say)
-        for path, names in pairs(before.ours) do removeRows(path, names, say) end
+        removeRows(GAMEPLAY_TABLE, ourNames, say)
         A.modeSaved = nil
         out[#out + 1] = string.format("mode game: rows shown again, %d of %d heading rows removed", removed, #before.info)
     else
@@ -6169,7 +6125,7 @@ function A.Mode(kind, lines, say)
 end
 
 -- The Options screen's tabs (DT_Option_Root): `list` reads them; `only` leaves out every tab but
--- Gameplay (and Sound, with A.split) with a condition never met; `all` puts the conditions back.
+-- Gameplay (and Graphics, with A.split) with a condition never met; `all` puts the conditions back.
 -- Returns lines.
 A.tabConditions = {}
 function A.Tabs(mode, say)
@@ -6183,7 +6139,6 @@ function A.Tabs(mode, say)
             pcall(function() label = row.DisplayText:ToString() end)
             local category = Int(row.CommandCategory)
             local kept = category == GAMEPLAY_CATEGORY or (A.split and category == SEED_CATEGORY)
-                or (A.testTab and category == A.TEST_CATEGORY)
             if mode == "only" and not kept and cond ~= NEVER then
                 A.tabConditions[key] = cond
                 say("apmenu: tab " .. key .. " (" .. label .. ") condition -> " .. NEVER)

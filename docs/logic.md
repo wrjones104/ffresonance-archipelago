@@ -90,9 +90,9 @@ Filled from progression.md and IDEAS.md idea 5.
 | Radar: Resonance Stone | 27007 | tier 2 world-map treasures | unknown | no | |
 | Radar: High-Power Generator | 27008 | tier 3 world-map treasures | unknown | no | |
 | Gaia Hammer (field skill) | unknown | the sealing stone in Grandshelt Desert, to Titan | unknown (from Colosseum, proofs 29000-29003) | no | |
-| White Jade Stone | 20005 | Holy, which clears the Bog of No Return: western Gronoa, Odin | no item test in the data (2026-11-17) | no | |
+| White Jade Stone | 20005 | Holy, which clears the Bog of No Return: western Gronoa, Odin | no item test in the data (2026-11-17) | no | out of the pool from round 103 (with Black Jade Stone, Magic Tome and Tunnel Key): they open nothing |
 | Lab Key Cards 1-3 | 20009-20011 | Research Center Ruins | unknown | no | |
-| Tunnel Key | 20008 | probably the Zoldaad tunnels | unknown | no | |
+| Tunnel Key | 20008 | probably the Zoldaad tunnels | unknown | no | out of the pool from round 103 |
 | Dungeon Key, Throne Room Key | 20019, 20021 | Zoldaad Castle | unknown | no | |
 | Ruby Fragment (x3) | 20030 | Carbuncle | the quest's counter, not the item (side_quests.md, section 2) | no | |
 | Broken Sword Hilt, Blade | 20031, 20032 | Odin (Iron Splitter) | the quest's counter, not the item (side_quests.md, section 2) | no | |

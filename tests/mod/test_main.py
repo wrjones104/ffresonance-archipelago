@@ -1747,33 +1747,7 @@ assert len(calls()) == n, "no rescale while nothing changes"
 G.party = L.table_from([1001, 1002, 1003, 1004])
 tick(10)
 assert calls()[-1] == NORMAL_3, calls()
-# Round 102: test presets. B on Normal at party level 30: centre 85% (26), HP 70%, attack 90%;
-# bosses 105% (32), 110%. A new preset rescales at once.
-G.partyLv = 30
-L.execute('commands["ffrap_set"]("ffrap_set", {"preset", "b"})')
-tick(10)
-assert calls()[-1] == "clamp 25 27 true hp70 atk90 mag90; bosses 30 34 hp110; MRP +4/+0", calls()
-L.execute('commands["ffrap_set"]("ffrap_set", {"preset", "c"})')
-tick(10)
-assert calls()[-1] == "clamp 28 31 true hp100 atk108 mag108; bosses 30 34 hp108; MRP +1/+0", "C: 96% (29), 2 over; bosses 107% (32)"
-# Custom: the five settings, flat, with A's band (1 over); strength does not change it
-L.execute(CAPTURE)
-L.execute('commands["ffrap_set"]("ffrap_set", {"preset", "custom"})')
-L.execute('commands["ffrap_set"]("ffrap_set", {"ehp", "60"})')
-tick(10)
-assert calls()[-1] == "clamp 27 29 true hp60 atk100 mag100; bosses 29 33 hp105; MRP +2/+0", calls()
-L.execute('commands["ffrap_set"]("ffrap_set", {"blevel", "120"})')
-tick(10)
-assert calls()[-1] == "clamp 27 29 true hp60 atk100 mag100; bosses 34 38 hp105; MRP +2/+0", "a custom value rescales at once"
-L.execute('commands["ffrap_set"]("ffrap_set", {"eatk", "400"})')
-tick(10)
-assert "atk150" in calls()[-1], "held to the slider's range"
-assert any("preset custom 92/60/150/120/105" in l for l in L.eval("logged").values()), "the log names the custom values"
-L.execute('commands["ffrap_set"]("ffrap_set", {"reset"})')
-G.partyLv = 3
-tick(10)
-assert calls()[-1] == NORMAL_3, calls()
-# Round 102: a line per battle won: the time off the field, the preset and the party's level.
+# Round 102: a line per battle won: the time off the field, the strength and the party's level.
 # A menu (off the field, no win) logs nothing.
 TICK_S, BATTLE_TICKS = 0.5, 4
 G.wins = 5
@@ -1783,14 +1757,14 @@ G.onField = False
 tick(BATTLE_TICKS)
 G.onField = True
 tick(1)
-assert not any(l.startswith("[FFRAP] battle:") or "battle: won" in l for l in L.eval("logged").values()), "no win, no line"
+assert not any("battle: won" in l for l in L.eval("logged").values()), "no win, no line"
 G.onField = False
 tick(BATTLE_TICKS)
 G.wins = 6
 G.onField = True
 tick(1)
 won = [l for l in L.eval("logged").values() if "battle: won" in l]
-assert len(won) == 1 and f"battle: won (6 in all), {BATTLE_TICKS * TICK_S:.1f} s off the field; preset A normal, party level 3" in won[0], won
+assert len(won) == 1 and f"battle: won (save's win count 6), {BATTLE_TICKS * TICK_S:.1f} s off the field; strength normal, party level 3" in won[0], won
 G.saveObj, G.saveTicks = "SD_OTHER", "600"     # a save in a slot the seed does not hold
 tick(30)
 assert calls()[-1].startswith("off "), calls()
@@ -2240,6 +2214,13 @@ assert list(G.popups.values()) == ["You found:\nAlice's Hookshot\nPotion"], list
 G.onField = True
 tick(70)
 assert L.eval("G.prizes['quest:13']") == "Alice's Hookshot" and L.eval("G.prizes['quest2:13']") == "Potion"
+# Round 103 (the user): hide_quest_rewards shows ??? on the Quests screen, with no colour; the
+# pop-up when the quest is done still names the item
+HIDDEN = "???"
+inbox("cfg\thidequests\t1\n", "a")
+tick(70)
+assert L.eval("G.prizes['quest:13']") == HIDDEN and L.eval("G.prizes['quest2:13']") == HIDDEN, L.eval("G.prizes['quest:13']")
+assert L.eval("G.questSpans and next(G.questSpans)") in (None, False), "no colour for a hidden reward"
 print("side quests: ok")
 
 # IDEAS.md idea 37: the Oblivion Palace counter is held on a seed's save each tick, and its line

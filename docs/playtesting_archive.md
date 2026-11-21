@@ -1490,3 +1490,31 @@ The user played one seed on one save over two sessions: on a laptop on 2026-11-1
 - **No version bump:** a first build bumped to mod 0.63.0 and world 0.31.1, but v0.31.0 had not been posted, so this goes into it.
 - **Scaling test presets** on a third tab of the Archipelago page: a preset slider (A, B, C, Custom) and five Custom sliders. `ffrap_set preset a|b|c|custom` and `ffrap_set elevel|ehp|eatk|blevel|bpower <percent>` set the same. `ffrap_apmenu testtab off` puts the rows under Settings.
 - **A `battle: won` line per battle won**, with the time off the field, the preset and the party's level.
+
+### Round 102 and older open items (mod 0.62.0 build 80d9d5af, apworld 0.31.0 build 7c8d8ec3)
+
+The user tested before v0.31.0 goes out (2026-11-21).
+
+- **Builds:** passed.
+- **The Scaling test tab:** it showed, and the sliders worked. Preset 2 gave `preset B normal` and stayed 2 after a restart. Custom with enemy HP 60 gave `preset custom 92/60/100/103/105`. The Graphics tab in System > Options was normal after the page closed. Problems:
+  - **The page's rows came in a different order at each open.** Our rows are removed when the page closes and added again when it opens. The row map reuses freed slots last-freed-first, so rows removed in order came back reversed, and back again at the next open. The Seed lines move the same way.
+  - The help text at the bottom of the screen was cut off at about 140 characters (the preset row's).
+  - The user asked for the preset to move the Custom sliders, and a Custom slider to move the preset to 4. Moot: see below.
+- **The `battle: won` line worked**, but the first battle said 4 in all. The prologue skip sets the save's battles-won counter to 3, the prologue's own wins.
+- **Round 101 scaling (preset A, Normal):** passed. The scale line, short hallway fights, MRP per fight and bosses past level 30 ("much better"), and levels 40 to 60 with the final boss. Expert is not tried yet.
+- **Round 100:** `chest:3100:3` was sent only when opened, with its pop-up; `never seen closed` lines matched what the game showed; the stat bonus and esper messages had no coloured line; a plain New Game and the user's own saves got none of the seed's writes; the seed's save then an own save asked for a restart. The second computer and the crash test are still open.
+- **Rounds 97 to 99:** the Dirnado quests' logic passed in the tracker.
+
+**The user's decisions after it:**
+- Keep preset A and take the Scaling test tab out: letting every tester set their own curve would add more noise than help.
+- The Seed tab gets the Graphics tab's monitor icon in place of Sound's speaker.
+- White Jade Stone, Black Jade Stone, Magic Tome and Tunnel Key leave the pool: they open nothing.
+- A yaml option to show `???` in white for every quest reward.
+
+**Round 103 build (mod 0.62.0 build 7b90595e, apworld 0.31.0 build 66073f7e), still for v0.31.0:**
+- The Scaling test tab, presets B and C, Custom and their settings are gone. The `battle: won` line stays, and says `save's win count N`.
+- The Seed tab is the Graphics tab (`SEED_CATEGORY` 1, `DT_OP_GraphicSetting`).
+- The page's rows are removed last first, so they come back in the same order (`removeRows`).
+- `NOT_KEY_ITEMS` gains 20005 to 20008.
+- `hide_quest_rewards` (off by default): the client sends `cfg hidequests 1`, and the Quests screen's Rewards read `???` with no colour span. The completion pop-up still names the item.
+

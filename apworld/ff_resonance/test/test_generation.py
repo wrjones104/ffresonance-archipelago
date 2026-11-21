@@ -1174,9 +1174,9 @@ class TestNames(FFResonanceTestBase):
         self.assertTrue(all(ITEMS[i]["kind"] == "vision" for i in PROGRESSION["vision"]))
         self.assertIn("Charlotte (Vision)", {ITEMS[i]["name"] for i in PROGRESSION["vision"]})
         keys = {ITEMS[i]["name"] for i in PROGRESSION["key"]}
-        self.assertIn("Tunnel Key", keys)
         self.assertIn("Cabin Key", keys)
-        for left_out in ("Magicite", "Tablet Shard", "Magitek Armor Key"):
+        for left_out in ("Magicite", "Tablet Shard", "Magitek Armor Key", "White Jade Stone", "Black Jade Stone",
+                         "Magic Tome", "Tunnel Key"):
             self.assertNotIn(left_out, keys)
         self.assertFalse([n for n in keys if n.startswith("[TEMP]") or not n.isascii()])
         self.assertEqual(set(CLASSIFICATIONS), {i["category"] for i in ITEMS.values()})

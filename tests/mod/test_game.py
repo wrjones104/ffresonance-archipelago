@@ -2582,23 +2582,15 @@ assert "apmenu: view models 0 -> 2" in list(L.eval("says").values()), "each step
 L.eval("G.APMENU.Screen('text', say)")
 assert lua("screenOf(sceneDT.rows.FFRAP_Archipelago.LayoutData)") == TEXT_SCREEN, "the page again"
 assert lua("screenOf(subCopy.LayoutData)") == TEXT_SCREEN
-# the Options tabs: `only` leaves out all but Gameplay and Sound (round 87: the page's second
+# the Options tabs: `only` leaves out all but Gameplay and Graphics (round 87: the page's second
 # tab), `all` puts their conditions back
 NEVER = "{progress:0}<0"
-assert lua("G.APMENU.testTab") is True, "round 102: the scaling test tab is on by default"
-L.execute("G.APMENU.testTab = false")
 tabs = list(L.eval("G.APMENU.Tabs('only', say)").values())
 assert sorted(tabs) == sorted(['tab NewRow: Gameplay, category 0, condition ""',
-                               f'tab NewRow_0: Graphics, category 1, condition "{NEVER}"',
-                               'tab NewRow_3: Sound, category 4, condition ""']), tabs
+                               'tab NewRow_0: Graphics, category 1, condition ""',
+                               f'tab NewRow_3: Sound, category 4, condition "{NEVER}"']), tabs
 tabs = list(L.eval("G.APMENU.Tabs('all', say)").values())
 assert all(t.endswith('condition ""') for t in tabs), tabs
-# Round 102: with the test tab on, Graphics stays (it becomes the scaling test tab)
-L.execute("G.APMENU.testTab = true")
-tabs = list(L.eval("G.APMENU.Tabs('only', say)").values())
-assert 'tab NewRow_0: Graphics, category 1, condition ""' in tabs, tabs
-L.eval("G.APMENU.Tabs('all', say)")
-L.execute("G.APMENU.testTab = false")
 print("options screen probe: ok")
 
 # Round 86 probe: `mode ap` makes the Options screen our page. One tab, named Archipelago; the
@@ -2622,14 +2614,14 @@ GAMEPLAY_ONLY = 2
 gameSetting = table_({ ["難易度"] = optionRow(GAMEPLAY_ONLY, "Difficulty"), ["初期化"] = optionRow(0, "Reset"),
                        FFRAP_Exp = optionRow(GAMEPLAY_ONLY, "EXP") })
 keyboardSetting = table_({ ["SubHeader_共通"] = optionRow(0, "UI / Main Menu") })
-soundSetting = table_({ NewRow = optionRow(0, "Master"), NewRow_4 = optionRow(0, "Reset") })
+seedSetting = table_({ NewRow = optionRow(0, "Master"), NewRow_4 = optionRow(0, "Reset") })
 local gameplayTab = optionRoot.rows.NewRow
 local tabStore = { DisplayText = fstr("Gameplay") }
 local prevModeFind = StaticFindObject
 function StaticFindObject(p)
   if p == "/Game/Datatable/UI/Option/Root/GameSetting/DT_OP_GameSetting.DT_OP_GameSetting" then return gameSetting end
   if p == "/Game/Datatable/UI/Option/Root/KeyboardMouseSetting/DT_OP_KeyboardMouseSetting.DT_OP_KeyboardMouseSetting" then return keyboardSetting end
-  if p == "/Game/Datatable/UI/Option/Root/SoundSetting/DT_OP_SoundSetting.DT_OP_SoundSetting" then return soundSetting end
+  if p == "/Game/Datatable/UI/Option/Root/GraphicSetting/DT_OP_GraphicSetting.DT_OP_GraphicSetting" then return seedSetting end
   return prevModeFind(p)
 end
 function rowText(name, t) local r = (t or gameSetting).rows[name]; return r and r.DisplayText:ToString() end
@@ -2637,34 +2629,35 @@ function tabText(row) return optionRoot.rows[row].DisplayText:ToString() end
 """)
 TITLE_ONLY = 1
 PAGE_LINES = '{ "Goal: win the last battle", "", "Checks: 12 of 480" }'   # a blank line makes no heading
-# Round 87 (the user): two tabs. Gameplay's is our settings, Sound's holds the page's lines with
+# Round 87 (the user): two tabs. Gameplay's is our settings, Graphics' holds the page's lines with
 # its own rows hidden. These run with headings; Command rows, the default since round 88, below.
 assert lua("G.APMENU.seedRows") == "command"
 L.execute("G.APMENU.seedRows = 'heading'")
 lines = list(L.eval(f"G.APMENU.Mode('ap', {PAGE_LINES}, say)").values())
 assert lines[-1] == "mode ap: 4 game rows hidden, 2 heading rows on the Seed tab", lines
-assert lua("tabText('NewRow')") == "Settings" and lua("tabText('NewRow_3')") == "Seed"
-assert lua("optionRoot.rows.NewRow_0.Condition:ToString()") == NEVER, "the other tabs are left out"
+# Round 103 (the user): the Seed tab is the Graphics tab, for its monitor icon
+assert lua("tabText('NewRow')") == "Settings" and lua("tabText('NewRow_0')") == "Seed"
+assert lua("optionRoot.rows.NewRow_3.Condition:ToString()") == NEVER, "the other tabs are left out"
 assert lua("gameSetting.rows['難易度'].ShowCommandData.ShowType") == TITLE_ONLY
-assert lua("soundSetting.rows.NewRow.ShowCommandData.ShowType") == TITLE_ONLY, "the volume sliders are hidden"
-assert lua("soundSetting.rows.NewRow_4.ShowCommandData.ShowType") == TITLE_ONLY, "so is the Reset button"
+assert lua("seedSetting.rows.NewRow.ShowCommandData.ShowType") == TITLE_ONLY, "the graphics rows are hidden"
+assert lua("seedSetting.rows.NewRow_4.ShowCommandData.ShowType") == TITLE_ONLY, "so is the Reset button"
 assert lua("gameSetting.rows.FFRAP_Exp.ShowCommandData.ShowType") == 2, "our rows stay"
-assert lua("rowText('FFRAP_Info1', soundSetting)") == "Goal: win the last battle"
-assert lua("rowText('FFRAP_Info2', soundSetting)") == "Checks: 12 of 480"
+assert lua("rowText('FFRAP_Info1', seedSetting)") == "Goal: win the last battle"
+assert lua("rowText('FFRAP_Info2', seedSetting)") == "Checks: 12 of 480"
 assert lua("rowText('FFRAP_Info1')") is None, "not under the settings"
 assert lua("G.APMENU.Written()") is True
 assert list(L.eval(f"G.APMENU.Mode('ap', {PAGE_LINES}, say)").values())[-1] == "mode ap: already so"
-# Round 88: the game loads a table again with the page open (here the Sound tab's); the page is
+# Round 88: the game loads a table again with the page open (here the Seed tab's); the page is
 # written again, and the ShowTypes saved first still put the game's rows back
 L.execute("""
 local function fresh(label) return { ShowCommandData = { ShowType = 0 }, DisplayText = { ToString = function() return label end } } end
-soundSetting.rows = { NewRow = fresh("Master"), NewRow_4 = fresh("Reset") }
+seedSetting.rows = { NewRow = fresh("Master"), NewRow_4 = fresh("Reset") }
 """)
 assert lua("G.APMENU.Written()") is False
 lines = list(L.eval(f"G.APMENU.Mode('ap', {PAGE_LINES}, say)").values())
 assert lines[-1] == "mode ap: 4 game rows hidden, 2 heading rows on the Seed tab (written again)", lines
-assert lua("rowText('FFRAP_Info1', soundSetting)") == "Goal: win the last battle"
-assert lua("soundSetting.rows.NewRow.ShowCommandData.ShowType") == TITLE_ONLY
+assert lua("rowText('FFRAP_Info1', seedSetting)") == "Goal: win the last battle"
+assert lua("seedSetting.rows.NewRow.ShowCommandData.ShowType") == TITLE_ONLY
 assert lua("G.APMENU.Written()") is True
 # the tab list loaded again: its names are the game's, so the page is written again too
 L.execute("optionRoot.rows.NewRow.DisplayText = FText('Gameplay')")
@@ -2673,64 +2666,37 @@ assert list(L.eval(f"G.APMENU.Mode('ap', {PAGE_LINES}, say)").values())[-1].ends
 assert lua("tabText('NewRow')") == "Settings"
 lines = list(L.eval("G.APMENU.Mode('game', {}, say)").values())
 assert lines[-1] == "mode game: rows shown again, 2 of 2 heading rows removed", lines
-assert lua("tabText('NewRow')") == "Gameplay" and lua("tabText('NewRow_3')") == "Sound"
+# Round 103: removed last first, so the row map's freed slots take them back in order at the next
+# open (the page's rows changed order at each open)
+removes = [l for l in L.eval("says").values() if l.startswith("apmenu: RemoveRow FFRAP_")]
+assert removes[:2] == ["apmenu: RemoveRow FFRAP_Info2", "apmenu: RemoveRow FFRAP_Info1"], removes
+assert lua("tabText('NewRow')") == "Gameplay" and lua("tabText('NewRow_0')") == "Graphics"
 assert lua("gameSetting.rows['難易度'].ShowCommandData.ShowType") == 2 and lua("gameSetting.rows['初期化'].ShowCommandData.ShowType") == 0
-assert lua("soundSetting.rows.NewRow.ShowCommandData.ShowType") == 0 and lua("soundSetting.rows.NewRow_4.ShowCommandData.ShowType") == 0
-assert lua("rowText('FFRAP_Info1', soundSetting)") is None, "the heading rows are gone"
+assert lua("seedSetting.rows.NewRow.ShowCommandData.ShowType") == 0 and lua("seedSetting.rows.NewRow_4.ShowCommandData.ShowType") == 0
+assert lua("rowText('FFRAP_Info1', seedSetting)") is None, "the heading rows are gone"
 assert lua("tabText('NewRow')") == "Gameplay", "the name saved before the tab list was loaded again"
 assert lua("gameSetting.rows.FFRAP_Exp") is None, \
     "round 88: our rows leave the table, so System > Options and the title screen lack them"
-assert lua("optionRoot.rows.NewRow_0.Condition:ToString()") == "", "every tab again"
-# split off: one tab named Archipelago, the lines under our settings, Sound left out (round 87)
+assert lua("optionRoot.rows.NewRow_3.Condition:ToString()") == "", "every tab again"
+# split off: one tab named Archipelago, the lines under our settings, Graphics left out (round 87)
 L.execute("G.APMENU.split = false")
 lines = list(L.eval(f"G.APMENU.Mode('ap', {PAGE_LINES}, say)").values())
 assert lines[-1] == "mode ap: 2 game rows hidden, 2 heading rows", lines
-assert lua("tabText('NewRow')") == "Archipelago" and lua("tabText('NewRow_3')") == "Sound"
-assert lua("optionRoot.rows.NewRow_3.Condition:ToString()") == NEVER
-assert lua("soundSetting.rows.NewRow.ShowCommandData.ShowType") == 0, "the sound rows untouched"
+assert lua("tabText('NewRow')") == "Archipelago" and lua("tabText('NewRow_0')") == "Graphics"
+assert lua("optionRoot.rows.NewRow_0.Condition:ToString()") == NEVER
+assert lua("seedSetting.rows.NewRow.ShowCommandData.ShowType") == 0, "the graphics rows untouched"
 assert lua("rowText('FFRAP_Info1')") == "Goal: win the last battle"
 L.eval("G.APMENU.Mode('game', {}, say)")
 assert lua("rowText('FFRAP_Info1')") is None and lua("tabText('NewRow')") == "Gameplay"
-assert lua("optionRoot.rows.NewRow_3.Condition:ToString()") == ""
+assert lua("optionRoot.rows.NewRow_0.Condition:ToString()") == ""
 L.execute("G.APMENU.split = true")
 # Round 88: the seed's lines as Command rows, so the cursor and a gamepad's scroll reach them
 L.execute("G.APMENU.seedRows = 'command'")
 lines = list(L.eval(f"G.APMENU.Mode('ap', {PAGE_LINES}, say)").values())
 assert lines[-1] == "mode ap: 4 game rows hidden, 2 command rows on the Seed tab", lines
 COMMAND_TYPE = 14
-assert lua("soundSetting.rows.FFRAP_Info1.Type") == COMMAND_TYPE
+assert lua("seedSetting.rows.FFRAP_Info1.Type") == COMMAND_TYPE
 L.eval("G.APMENU.Mode('game', {}, say)")
-# Round 102: the scaling test rows on their own tab, the Graphics tab renamed, its rows hidden
-L.execute(r"""
-local function fstr(v) return { ToString = function() return v end } end
-graphicSetting = { rows = { ["解像度"] = { ShowCommandData = { ShowType = 0 }, DisplayText = fstr("Resolution") } } }
-function graphicSetting:IsValid() return true end
-function graphicSetting:ForEachRow(fn) for k, r in pairs(self.rows) do fn(fname(k), r) end end
-function graphicSetting:FindRow(n) return self.rows[n] end
-function graphicSetting:RemoveRow(n) self.rows[n] = nil end
-for _, o in ipairs(G.OPTION_ROWS) do
-  if o.tab == "test" then graphicSetting.rows[o.row] = { ShowCommandData = { ShowType = 0 }, DisplayText = fstr(o.label) } end
-end
-gameSetting.rows.FFRAP_Exp = { ShowCommandData = { ShowType = 0 }, DisplayText = fstr("EXP") }
-local prevGraphicFind = StaticFindObject
-function StaticFindObject(p)
-  if p == "/Game/Datatable/UI/Option/Root/GraphicSetting/DT_OP_GraphicSetting.DT_OP_GraphicSetting" then return graphicSetting end
-  return prevGraphicFind(p)
-end
-G.APMENU.testTab = true
-""")
-lines = list(L.eval(f"G.APMENU.Mode('ap', {PAGE_LINES}, say)").values())
-assert lines[-1] == "mode ap: 5 game rows hidden, 2 command rows on the Seed tab", lines
-assert lua("tabText('NewRow_0')") == "Scaling test" and lua("optionRoot.rows.NewRow_0.Condition:ToString()") == ""
-assert lua("graphicSetting.rows['解像度'].ShowCommandData.ShowType") == TITLE_ONLY, "the game's graphics rows are hidden"
-assert lua("graphicSetting.rows.FFRAP_TestPreset.ShowCommandData.ShowType") == 2, "ours stay"
-assert lua("G.APMENU.Written()") is True
-L.execute("graphicSetting.rows.FFRAP_TestPreset = nil")
-assert lua("G.APMENU.Written()") is False, "the test tab's table lost our rows"
-L.execute("graphicSetting.rows.FFRAP_TestPreset = { ShowCommandData = { ShowType = 0 }, DisplayText = FText('x') }")
-L.eval("G.APMENU.Mode('game', {}, say)")
-assert lua("tabText('NewRow_0')") == "Graphics" and lua("graphicSetting.rows.FFRAP_TestBossPower") is None
-assert lua("graphicSetting.rows['解像度'].ShowCommandData.ShowType") == 0, "the graphics rows come back"
 print("options page probe: ok")
 
 # Round 84 (the user): fast travel from a dungeon. The condition that checks the map type travels

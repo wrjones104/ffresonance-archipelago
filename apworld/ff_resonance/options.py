@@ -180,6 +180,15 @@ class IncludeSideQuests(Toggle):
     display_name = "Include Side Quests"
 
 
+class HideQuestRewards(Toggle):
+    """
+    The Quests screen's Rewards show ??? for each quest location, in place of the item it holds.
+    With this off, they name the item, coloured by its class. Only matters with
+    include_side_quests on.
+    """
+    display_name = "Hide Quest Rewards"
+
+
 class PriorityBosses(DefaultOnToggle):
     """
     The cave masters and the optional bosses (the two Dragon's Maw bosses and the Antlion) are
@@ -269,6 +278,7 @@ class FFResonanceOptions(PerGameCommonOptions):
     include_bosses: IncludeBosses
     include_radar_treasures: IncludeRadarTreasures
     include_side_quests: IncludeSideQuests
+    hide_quest_rewards: HideQuestRewards
     priority_bosses: PriorityBosses
     priority_story_bosses: PriorityStoryBosses
     excluded_regions: ExcludedRegions
@@ -282,6 +292,7 @@ option_groups = [
     OptionGroup("Start", [StartingContinent, StartingRoster, StartingCharacter1, StartingCharacter2,
                           StartingCharacter3, StartingCharacter4, StartWithChocobo,
                           StartWithAirship]),
-    OptionGroup("Locations", [IncludeRadarTreasures, IncludeSideQuests, PriorityBosses, ExcludedRegions]),
+    OptionGroup("Locations", [IncludeRadarTreasures, IncludeSideQuests, HideQuestRewards, PriorityBosses,
+                              ExcludedRegions]),
     OptionGroup("Items", [ShufflePartyMembers, ShuffleVisions, ShuffleKeyItems]),
 ]
