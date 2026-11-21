@@ -2585,12 +2585,20 @@ assert lua("screenOf(subCopy.LayoutData)") == TEXT_SCREEN
 # the Options tabs: `only` leaves out all but Gameplay and Sound (round 87: the page's second
 # tab), `all` puts their conditions back
 NEVER = "{progress:0}<0"
+assert lua("G.APMENU.testTab") is True, "round 102: the scaling test tab is on by default"
+L.execute("G.APMENU.testTab = false")
 tabs = list(L.eval("G.APMENU.Tabs('only', say)").values())
 assert sorted(tabs) == sorted(['tab NewRow: Gameplay, category 0, condition ""',
                                f'tab NewRow_0: Graphics, category 1, condition "{NEVER}"',
                                'tab NewRow_3: Sound, category 4, condition ""']), tabs
 tabs = list(L.eval("G.APMENU.Tabs('all', say)").values())
 assert all(t.endswith('condition ""') for t in tabs), tabs
+# Round 102: with the test tab on, Graphics stays (it becomes the scaling test tab)
+L.execute("G.APMENU.testTab = true")
+tabs = list(L.eval("G.APMENU.Tabs('only', say)").values())
+assert 'tab NewRow_0: Graphics, category 1, condition ""' in tabs, tabs
+L.eval("G.APMENU.Tabs('all', say)")
+L.execute("G.APMENU.testTab = false")
 print("options screen probe: ok")
 
 # Round 86 probe: `mode ap` makes the Options screen our page. One tab, named Archipelago; the
@@ -2692,6 +2700,37 @@ assert lines[-1] == "mode ap: 4 game rows hidden, 2 command rows on the Seed tab
 COMMAND_TYPE = 14
 assert lua("soundSetting.rows.FFRAP_Info1.Type") == COMMAND_TYPE
 L.eval("G.APMENU.Mode('game', {}, say)")
+# Round 102: the scaling test rows on their own tab, the Graphics tab renamed, its rows hidden
+L.execute(r"""
+local function fstr(v) return { ToString = function() return v end } end
+graphicSetting = { rows = { ["解像度"] = { ShowCommandData = { ShowType = 0 }, DisplayText = fstr("Resolution") } } }
+function graphicSetting:IsValid() return true end
+function graphicSetting:ForEachRow(fn) for k, r in pairs(self.rows) do fn(fname(k), r) end end
+function graphicSetting:FindRow(n) return self.rows[n] end
+function graphicSetting:RemoveRow(n) self.rows[n] = nil end
+for _, o in ipairs(G.OPTION_ROWS) do
+  if o.tab == "test" then graphicSetting.rows[o.row] = { ShowCommandData = { ShowType = 0 }, DisplayText = fstr(o.label) } end
+end
+gameSetting.rows.FFRAP_Exp = { ShowCommandData = { ShowType = 0 }, DisplayText = fstr("EXP") }
+local prevGraphicFind = StaticFindObject
+function StaticFindObject(p)
+  if p == "/Game/Datatable/UI/Option/Root/GraphicSetting/DT_OP_GraphicSetting.DT_OP_GraphicSetting" then return graphicSetting end
+  return prevGraphicFind(p)
+end
+G.APMENU.testTab = true
+""")
+lines = list(L.eval(f"G.APMENU.Mode('ap', {PAGE_LINES}, say)").values())
+assert lines[-1] == "mode ap: 5 game rows hidden, 2 command rows on the Seed tab", lines
+assert lua("tabText('NewRow_0')") == "Scaling test" and lua("optionRoot.rows.NewRow_0.Condition:ToString()") == ""
+assert lua("graphicSetting.rows['解像度'].ShowCommandData.ShowType") == TITLE_ONLY, "the game's graphics rows are hidden"
+assert lua("graphicSetting.rows.FFRAP_TestPreset.ShowCommandData.ShowType") == 2, "ours stay"
+assert lua("G.APMENU.Written()") is True
+L.execute("graphicSetting.rows.FFRAP_TestPreset = nil")
+assert lua("G.APMENU.Written()") is False, "the test tab's table lost our rows"
+L.execute("graphicSetting.rows.FFRAP_TestPreset = { ShowCommandData = { ShowType = 0 }, DisplayText = FText('x') }")
+L.eval("G.APMENU.Mode('game', {}, say)")
+assert lua("tabText('NewRow_0')") == "Graphics" and lua("graphicSetting.rows.FFRAP_TestBossPower") is None
+assert lua("graphicSetting.rows['解像度'].ShowCommandData.ShowType") == 0, "the graphics rows come back"
 print("options page probe: ok")
 
 # Round 84 (the user): fast travel from a dungeon. The condition that checks the map type travels

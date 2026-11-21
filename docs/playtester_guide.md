@@ -34,7 +34,8 @@ Download the `FFRArchipelago` mod zip and `ff_resonance.apworld` from the [lates
 - If you have it, make sure `FFRRandomizer` is disabled. If you use `FFRS_QoL` for map markers, leave its encounter rate at `1` and turn off its EXP, Gil, MRP, and encounter overrides so they do not conflict with `FFRArchipelago`.
 - Known conflict: the `ModSettings` Lua mod (`Mods/ModSettings`) can crash the game a second or two after a map change. Turn off **Hint on map load** in its F10 panel, or set `ModSettings : 0` in `Mods/mods.txt`.
 - Connect the **Final Fantasy Resonance Client** to the server before starting a new game, and start the run from **New Game (Archipelago)** on the title screen (not the regular **New Game**).
-- You can change EXP, Gil, MRP, random encounters, encounter rate, enemy scaling, and scaling strength (`Casual`, `Normal`, `Expert`) at any time in **Options > Gameplay** at the bottom of the list. Note that `AP: Scaling strength` stacks with the game's own difficulty setting.
+- You can change EXP, Gil, MRP, random encounters, encounter rate, enemy scaling, and scaling strength (`Casual`, `Normal`, `Expert`) at any time on the **Settings** tab of the **Archipelago** entry in the main menu. Note that `AP: Scaling strength` stacks with the game's own difficulty setting.
+- From mod 0.63.0, the **Scaling test** tab on the same page has a **Scaling preset** slider (1 to 3 are presets A, B and C; 4 is Custom) and five Custom sliders. These are there so we can compare scaling curves. Pick one and play a while on it before you switch.
 
 Feel free to play with whatever YAML settings look fun to you. Testing different combinations (`final_boss` vs. `tablet_shards`, starting with or without the Airship or Chocobo, different starting continents and party sizes, solo or multiworld) helps catch issues we have not hit yet.
 
@@ -43,7 +44,8 @@ Feel free to play with whatever YAML settings look fun to you. Testing different
 ### 1. Enemy and boss scaling
 
 Enemy levels and stats scale to your party level by default, with bosses scaling higher than regular encounters. We want to know how combat feels across the whole curve of a run:
-- Which **AP: Scaling strength** setting (`Casual`, `Normal`, `Expert`) and in-game difficulty did you use?
+- Which **AP: Scaling strength** setting (`Casual`, `Normal`, `Expert`), **Scaling preset**, and in-game difficulty did you use? If you switched presets, from what party level? For Custom, copy the `preset custom ...` part of a `scale:` line in `UE4SS.log`.
+- From mod 0.63.0 the log has a `battle: won` line per battle, with the time off the field. Sending the log helps us compare presets.
 - How did fights feel early on (around levels 1 to 15 with a small party and limited gear), in the mid-game (around levels 20 to 35), and near the end?
 - Did any specific boss or regular enemy feel unfair, overly spongy, or trivial for the point where logic expected you to fight it?
 - From world 0.25.0, logic puts a boss in reach only when your party can hit its weakness and heal, and for some bosses get through their worst attack (cleanse a status, resist an element). A skill counts once a character would have learned it by the boss's own level. A Vision skill counts once you have the Magicite for that awakening: two of each tier up to it (from world 0.28.0; before, opened continents stood in for Magicite). Places behind a boss wait for that boss. Gear counts only when a shop you can reach sells it, never from a chest. If a boss was in logic and you could not beat it, tell us your party (members and levels), your Visions, your Magicite and your gear.
@@ -88,7 +90,7 @@ You can copy and fill out whatever parts apply when posting your feedback:
 Version (mod / apworld):
 Seed type (solo / multiworld) and goal:
 Notable YAML options (start_with_airship, start_with_chocobo, starting_roster, etc.):
-Game difficulty + AP scaling strength:
+Game difficulty + AP scaling strength + scaling preset:
 
 1. Scaling feel (early / mid / late / bosses):
 2. Crashes or freezes (and what happened right before):

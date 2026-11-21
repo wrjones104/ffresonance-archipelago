@@ -661,6 +661,19 @@ optDT = { GetFullName = function() return "opt" end, IsValid = function() return
     optRows[name] = copy end,
   FindRow = function(_, name) return optRows[name] end }
 libs["/Game/Datatable/UI/Option/Root/GameSetting/DT_OP_GameSetting.DT_OP_GameSetting"] = optDT
+-- Round 102: the scaling test rows go in the Graphics tab's table, made the page's test tab
+testRows = { g = { Type = 2 } }
+testDT = { GetFullName = function() return "graphic" end, IsValid = function() return true end,
+  HasAnyInternalFlags = function() return false end, HasAnyFlags = function() return false end,
+  ForEachRow = function(_, fn) for k, r in pairs(testRows) do fn(nameOf(k), r) end end,
+  AddRow = function(_, name, template)
+    local copy = {} for k, v in pairs(template) do copy[k] = v end
+    copy.EntryTag = { TagName = template.EntryTag.TagName }
+    copy.ShowCommandData = { ShowType = 2 }
+    if template.SliderInfo then copy.SliderInfo = { MinValue = 0, MaxValue = 0, DefaultValue = 0 } end
+    testRows[name] = copy end,
+  FindRow = function(_, name) return testRows[name] end }
+libs["/Game/Datatable/UI/Option/Root/GraphicSetting/DT_OP_GraphicSetting.DT_OP_GraphicSetting"] = testDT
 FText = FText or function(text) return { ToString = function() return text end } end""")
 L.execute("""
 savedOptions = { rows = { ["Delegate.UI.System.Option.Root.GameSetting.FFRAP.FFRAP_Gil"] = { Value = 7 } } }
@@ -672,9 +685,13 @@ seedSave = { IsValid = function() return true end, HasAnyInternalFlags = functio
 prevFFOseed = FindFirstOf
 function FindFirstOf(c) if c == "CPP_MuchaOptionSaveData" then return seedSave end return prevFFOseed(c) end""")
 ok, detail, added = L.execute("return G.AddOptionRows(say, { exp = 4, encounters = false, encounterrate = 9, strength = 2 })")
-assert added == 7, added
+SETTINGS_ROWS, TEST_ROWS = 7, 6
+assert added == SETTINGS_ROWS + TEST_ROWS, added
 assert ok is True and "3 rows before" in detail and "not added" not in detail and "failed" not in detail, detail
-assert "6 option save entries added" in detail, detail
+assert "12 option save entries added" in detail, detail
+assert lua("optRows.FFRAP_TestPreset") is None and lua("testRows.FFRAP_TestPreset.SliderInfo.MaxValue") == 4, "on the test tab's table"
+assert lua("testRows.FFRAP_TestBossPower.SliderInfo.MaxValue") == 200 and lua("testRows.FFRAP_TestEnemyHp.SliderInfo.DefaultValue") == 85
+assert lua("testRows.FFRAP_TestPreset.EntryTag.TagName:ToString()").endswith("FFRAP.FFRAP_TestPreset")
 tag = lambda r: 'savedOptions.rows["Delegate.UI.System.Option.Root.GameSetting.FFRAP.' + r + '"]'
 assert lua(tag("FFRAP_Exp") + ".Value") == 4 and lua(tag("FFRAP_Exp") + ".Type") == 1, "seeded from the settings"
 assert lua(tag("FFRAP_Gil") + ".Value") == 7, "a value the player set is kept"
@@ -704,12 +721,17 @@ optSave = { IsValid = function() return true end, HasAnyInternalFlags = function
     fn(entry("Delegate.UI.System.Option.Root.GameSetting.FFRAP.FFRAP_EncounterRate", 4))
     fn(entry("Delegate.UI.System.Option.Root.GameSetting.FFRAP.FFRAP_Scaling", 0))
     fn(entry("Delegate.UI.System.Option.Root.GameSetting.FFRAP.FFRAP_ScalingStrength", 2))
+    fn(entry("Delegate.UI.System.Option.Root.GameSetting.FFRAP.FFRAP_TestPreset", 4))
+    fn(entry("Delegate.UI.System.Option.Root.GameSetting.FFRAP.FFRAP_TestEnemyHp", 60))
     fn(entry("Delegate.UI.System.Option.Root.GameSetting.EncountSensor", 1)) end } }
 local prevFFO = FindFirstOf
 function FindFirstOf(c) if c == "CPP_MuchaOptionSaveData" then return optSave end return prevFFO(c) end""")
 values = L.execute("return G.ReadOptionValues()")
 # Round 60: the encounter slider counts in halves, and the old row's saved value is not read
-assert dict(values) == {"exp": 3, "encounters": False, "encounterrate": 2.5, "scaling": True, "strength": 2}, dict(values)
+# Round 102: the test tab's sliders are read the same way, as plain numbers
+CUSTOM_PRESET, CUSTOM_ENEMY_HP = 4, 60
+assert dict(values) == {"exp": 3, "encounters": False, "encounterrate": 2.5, "scaling": True, "strength": 2,
+                        "preset": CUSTOM_PRESET, "ehp": CUSTOM_ENEMY_HP}, dict(values)
 # Round 57: the rows are put back when the game's table has lost them, and left alone when there
 added = L.execute("return (G.EnsureOptionRows({}))")
 assert added == 0, "the rows are there"
@@ -717,6 +739,15 @@ for name in ("FFRAP_Exp", "FFRAP_Gil", "FFRAP_Mrp", "FFRAP_Encounters", "FFRAP_E
     L.execute('optRows["%s"] = nil' % name)
 added = L.execute("return (G.EnsureOptionRows({}))")
 assert added == 7 and lua("optRows.FFRAP_Exp.DisplayText:ToString()") == "AP: EXP rate", added
+# Round 102: the test tab's table is loaded again on its own; its rows come back alone
+L.execute("for k in pairs(testRows) do if k ~= 'g' then testRows[k] = nil end end")
+added = L.execute("return (G.EnsureOptionRows({}))")
+assert added == 6 and lua("testRows.FFRAP_TestPreset.DisplayText:ToString()") == "Scaling preset (1 to 4)", added
+# with the test tab off, the test rows go under the settings
+L.execute("G.APMENU.testTab = false; optRows.FFRAP_Exp = nil")
+added = L.execute("return (G.EnsureOptionRows({}))")
+assert added == 7 and lua("optRows.FFRAP_TestBossLevel.SliderInfo.MaxValue") == 130, added
+L.execute("G.APMENU.testTab = true")
 # Round 58: the shipyard's two stopped elevators are turned on, the others left alone
 L.execute("""
 function elevator(uid, condition)
