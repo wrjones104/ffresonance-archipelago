@@ -4314,8 +4314,9 @@ for n = 1, 13 do G.RADAR[n] = { n = n, flag = 703 + n, row = string.format("SubE
 -- so turning scaling off restores current table values rather than stale pre-mod values.
 local scaleOriginals = {}   -- unit id -> { Level = n, MaxHitPoint = n, ... } as the game last had it
 -- Battle-group MRP (`ap`) lives on the battle group table and scales with group average level.
+-- `mrpLevels` is unit id -> the level its MRP is paid at (its new level plus the band's mrpLift).
 local groupOriginals, groupWrote = {}, {}   -- battle group id -> MRP as shipped, and as last written
-local function ScaleBattleGroups(mode, wanted)
+local function ScaleBattleGroups(mode, mrpLevels)
     local changed = 0
     for _, dt in ipairs(TableFamily(Find(BATTLE_GROUP_TABLE))) do
         pcall(function()
@@ -4329,8 +4330,8 @@ local function ScaleBattleGroups(mode, wanted)
                         local units = row.UnitIdList
                         for i = 1, #units do
                             local unit = Int(units[i])
-                            if wanted[unit] and scaleOriginals[unit] then
-                                from, to, n = from + scaleOriginals[unit].Level, to + wanted[unit], n + 1
+                            if mrpLevels[unit] and scaleOriginals[unit] then
+                                from, to, n = from + scaleOriginals[unit].Level, to + mrpLevels[unit], n + 1
                             end
                         end
                         if n > 0 then
@@ -4369,7 +4370,9 @@ end
 
 -- Rescales every enemy row (and bosses too, if withBosses) by mode, a, b, as in ScaledLevel,
 -- with the tuning knobs of ScaledStats. `bossBand` ({ a, b, knobs }) gives bosses their own band
--- and knobs. mode "off" restores the originals. Returns how many
+-- and knobs. A knobs table's `mrpLift` (levels, optional) pays battle MRP as if the band were
+-- that many levels higher, so a band set under the party's level does not cut MRP.
+-- mode "off" restores the originals. Returns how many
 -- rows changed, one sample line (the first enemy that changed) for the log, a line per changed
 -- row (for scale.txt), and how many rows something else had changed since our last write
 -- (their values became the new originals).
@@ -4377,7 +4380,7 @@ function G.ScaleEnemies(mode, a, b, withBosses, knobs, bossBand)
     local family = TableFamily(Find(UNIT_TABLE))
     if #family == 0 then return nil, "DT_UnitParameter not loaded" end
     local changed, sample, lines, gameChanged = 0, nil, {}, 0
-    local wanted = {}
+    local wanted, mrpLevels = {}, {}
     local bossUnits, arenaUnits = BossUnitIds()
     local fields = { "Level" }
     for _, k in ipairs(GROWTH_ORDER) do fields[#fields + 1] = k end
@@ -4405,7 +4408,7 @@ function G.ScaleEnemies(mode, a, b, withBosses, knobs, bossBand)
                         orig = now
                         scaleOriginals[id] = orig
                     end
-                    local want = orig
+                    local want, mrpLevel = orig, nil
                     if mode ~= "off" then
                         local base = orig
                         if bossUnits[id] and orig.Experience == 0 then
@@ -4416,8 +4419,13 @@ function G.ScaleEnemies(mode, a, b, withBosses, knobs, bossBand)
                         local band = (isBoss and bossBand) or { a = a, b = b, knobs = knobs }
                         want = G.ScaledStats(base, G.ScaledLevel(orig.Level, mode, band.a, band.b), band.knobs,
                                              isBoss and G.BOSS_CURVE or nil)
+                        local lift = band.knobs and band.knobs.mrpLift or 0
+                        if lift > 0 then
+                            mrpLevel = G.ScaledLevel(orig.Level, mode, band.a + lift, band.b and (band.b + lift))
+                        end
                     end
                     wanted[id] = want.Level
+                    mrpLevels[id] = mrpLevel or want.Level
                     local diff = false
                     for _, k in ipairs(fields) do
                         if now[k] ~= want[k] then
@@ -4445,7 +4453,7 @@ function G.ScaleEnemies(mode, a, b, withBosses, knobs, bossBand)
             end)
         end)
     end
-    local groups = ScaleBattleGroups(mode, wanted)
+    local groups = ScaleBattleGroups(mode, mrpLevels)
     if groups > 0 then sample = (sample and (sample .. "; ") or "") .. "MRP changed in " .. groups .. " battle groups" end
     local bossCount, arenaCount = 0, 0
     for _ in pairs(bossUnits) do bossCount = bossCount + 1 end

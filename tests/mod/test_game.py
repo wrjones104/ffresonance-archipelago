@@ -1308,6 +1308,13 @@ expect = max(1, int(100 * L.eval("G.CurveRatio('BattleMRP', 1, 20)") + 0.5))
 assert L.eval("groupRows.a.ap") == expect, (L.eval("groupRows.a.ap"), expect)
 assert L.eval("groupRows.b.ap") == max(1, int(50 * L.eval("G.CurveRatio('BattleMRP', 4, 20)") + 0.5))
 assert L.eval("groupRows.c.ap") == 0 and L.eval("groupRows.d.ap") == 7
+# Round 101: mrpLift pays MRP as if the band were that many levels higher. The rows keep the
+# band's level; a band with no lift (the bosses' here) pays at its own level.
+MRP_LIFT = 5
+L.execute(f"G.ScaleEnemies('clamp', 20, 20, true, {{ hp = 50, mrpLift = {MRP_LIFT} }}, {{ a = 20, b = 20, knobs = {{ hp = 100 }} }})")
+assert L.eval("unitRows.bat.Level") == 20, "the row keeps the band's level"
+assert L.eval("groupRows.a.ap") == max(1, int(100 * L.eval(f"G.CurveRatio('BattleMRP', 1, {20 + MRP_LIFT})") + 0.5))
+assert L.eval("groupRows.b.ap") == max(1, int(50 * L.eval("G.CurveRatio('BattleMRP', 4, 20)") + 0.5)), "the boss's group: no lift"
 L.execute("G.ScaleEnemies('clamp', 1, 99, true, { hp = 50 })")      # every enemy back at its own level
 assert L.eval("groupRows.a.ap") == 100 and L.eval("groupRows.b.ap") == 50, "worked out from the shipped value"
 L.execute("G.ScaleEnemies('clamp', 5, 15, true, { hp = 50 })")

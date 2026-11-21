@@ -3022,16 +3022,18 @@ end)
 
 -- Automatic enemy scaling for open-world seeds (waits until after prologue so the prologue party
 -- does not skew level, and restores vanilla enemies on non-seed saves).
--- Casual scales enemies 75%-100% power at 80%-90% party level and bosses 100% at party level.
--- Normal and Expert step levels and power up, stacking with the game's own difficulty multipliers.
--- Non-boss enemies clamp [1 under, `above` over] relative to band center; bosses stay +/- 2.
--- Round 74: Normal's bosses came down from 110-115% level and 115-120% power. A tester on Normal
--- met story bosses that killed a two-member party on turn one or two, and the user found the HP
--- spongy.
+-- Each pair ramps from party level 5 to 25. `at` is the enemies' level centre as a % of the party's
+-- level; `hp` and `attack` (Attack and Intelligence) are % of the curve's stats. These stack with
+-- the game's own difficulty multipliers. Enemies clamp [1 under, `above` over] the centre; bosses
+-- stay +/- 2.
+-- Round 101: every strength came down one step, and enemies lose more HP than Attack. A vanilla
+-- run felt much softer than Normal: Normal's enemies sat at the party's level with 115% power,
+-- and the enemies of regions ahead (half the map) at +3 with 1.5x HP. Hallway fights were long,
+-- and the fights are mostly there for MRP. Expert is the old Normal with 10% less HP.
 local SEED_SCALES = {
-    [0] = { at = { 80, 90 }, power = { 75, 100 }, above = 1, bossAt = { 100, 100 }, bossPower = { 100, 100 } },
-    [1] = { at = { 90, 100 }, power = { 90, 115 }, above = 3, bossAt = { 105, 110 }, bossPower = { 105, 110 } },
-    [2] = { at = { 100, 110 }, power = { 105, 130 }, above = 5, bossAt = { 115, 125 }, bossPower = { 125, 135 } },
+    [0] = { at = { 80, 88 }, hp = { 60, 75 }, attack = { 75, 90 }, above = 1, bossAt = { 95, 100 }, bossPower = { 90, 100 } },
+    [1] = { at = { 85, 92 }, hp = { 70, 85 }, attack = { 85, 100 }, above = 1, bossAt = { 100, 103 }, bossPower = { 100, 105 } },
+    [2] = { at = { 90, 100 }, hp = { 80, 105 }, attack = { 90, 115 }, above = 3, bossAt = { 105, 110 }, bossPower = { 105, 110 } },
 }
 -- Round 77: bosses lose `emptySlotCut` % power for each empty slot of the `slots` in the party.
 -- Small parties were wiped by bosses' opening attacks and ran short of turns.
@@ -3055,7 +3057,7 @@ local function seedScaleToParty()
     local lv, detail = game.PartyLevel()
     if not lv then return nil, "party level unknown (" .. tostring(detail) .. ")" end
     local s = seedScale()
-    local at, power = ramp(s.at, lv), ramp(s.power, lv)
+    local at, hp, attack = ramp(s.at, lv), ramp(s.hp, lv), ramp(s.attack, lv)
     local bossAt, bossPower = ramp(s.bossAt, lv), ramp(s.bossPower, lv)
     local size = #(game.PartyIds() or {})
     local empty = math.max(0, SEED_RAMP.slots - size)
@@ -3063,10 +3065,17 @@ local function seedScaleToParty()
     local counted = math.min(lv, SEED_RAMP.slowFrom + (lv - SEED_RAMP.slowFrom) * SEED_RAMP.slowRate)
     local a, b, c = game.LevelBand(counted, SEED_RAMP.below, at, s.above)
     local ba, bb, bc = game.LevelBand(counted, SEED_RAMP.bossRange, bossAt)
-    log(string.format("scale: party level %d (%s), counted as %g, strength %s: enemies centre %d (%d%%), %d to %d, power %d%%; bosses centre %d (%d%%), power %d%% (%d in the party)",
-        lv, detail, counted, STRENGTH_NAMES[setting("strength")] or "?", c, at, math.max(1, a), b, power, bc, bossAt, bossPower, size))
-    local bossKnobs = { hp = bossPower, attack = bossPower, magic = bossPower }
-    local n, err = applyScale("clamp", a, b, true, { hp = power, attack = power, magic = power }, { a = ba, b = bb, knobs = bossKnobs })
+    -- Round 101: MRP is paid as if the band's centre were the (counted) party level. A band under
+    -- the party's level would otherwise cut MRP per battle by 12% to 27%, and the grind for
+    -- visions would get longer as the fights got easier.
+    local _, _, even = game.LevelBand(counted, 0, 100)
+    local mrpLift, bossMrpLift = math.max(0, even - c), math.max(0, even - bc)
+    log(string.format("scale: party level %d (%s), counted as %g, strength %s: enemies centre %d (%d%%), %d to %d, HP %d%%, attack %d%%; bosses centre %d (%d%%), power %d%%; MRP as level %d (%d in the party)",
+        lv, detail, counted, STRENGTH_NAMES[setting("strength")] or "?", c, at, math.max(1, a), b, hp, attack, bc, bossAt,
+        bossPower, even, size))
+    local knobs = { hp = hp, attack = attack, magic = attack, mrpLift = mrpLift }
+    local bossKnobs = { hp = bossPower, attack = bossPower, magic = bossPower, mrpLift = bossMrpLift }
+    local n, err = applyScale("clamp", a, b, true, knobs, { a = ba, b = bb, knobs = bossKnobs })
     return n, err, lv, size
 end
 
