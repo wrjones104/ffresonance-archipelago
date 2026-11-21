@@ -70,8 +70,9 @@ GIFT_LOCATION_BASE = 8_000_000_000       # + the gift's flag
 GIFT_NEEDS_AREA = {1413: "Mysidia"}
 # Round 98 (the user): not found at story 8000 after talking to every NPC there. The Ether NPC
 # in the Commercial District (1407) and the Mist Potion NPC in Grandshelt Castle (1409, a map of
-# the chapter 1 castle) may need an earlier story state. Left out until one is found.
-GIFTS_NOT_FOUND = {1407, 1409}
+# the chapter 1 castle) may need an earlier story state. The Zoldaad Dungeon gift (1403) is also
+# unreachable in an 8000 story save. Left out until one is found.
+GIFTS_NOT_FOUND = {1403, 1407, 1409}
 GIFTS_LUA = os.path.join(ROOT, "FFRArchipelago", "Scripts", "gifts.lua")
 FRAGMENT_ITEM = 600_000_001
 FRAGMENT_NAME = "Crystal Fragment"
@@ -382,9 +383,10 @@ def world_spot(x: float, y: float, doors: list[tuple[str, float, float]],
 
 
 def readable_names(chests: list[dict], radar_part_chests: list[dict], shinies: list[dict],
-                   tablet_shinies: list[dict], radar: list[dict], items: dict[int, dict],
-                   maps: dict[int, dict], continents: dict[str, dict]) -> None:
-    """Gives each chest, shiny, Tablet Shard and radar treasure its readable name, in place."""
+                   tablet_shinies: list[dict], radar: list[dict], gifts: list[dict],
+                   items: dict[int, dict], maps: dict[int, dict],
+                   continents: dict[str, dict]) -> None:
+    """Gives each chest, shiny, Tablet Shard, radar treasure and NPC gift its readable name, in place."""
     doors = []
     for x, y, targets in read_exits()[0].values():
         named = [ascii_name(maps[t]["name"]) for t in targets if t in maps and maps[t]["name"] not in ("", "Field")]
@@ -421,9 +423,11 @@ def readable_names(chests: list[dict], radar_part_chests: list[dict], shinies: l
         for n, entry in enumerate(entries, start=1):
             number = f" {n}" if len(entries) > 1 else ""
             suggested[entry["key"]] = (f"{place} - Tablet Shard{number}", "where in the place: needs a person")
+    for entry in gifts:
+        suggested[entry["key"]] = (entry["name"], "where in the place: needs a person")
 
     # Names that come out the same are numbered, in id order.
-    everything = sorted(chests + radar_part_chests + shinies + tablet_shinies + radar, key=lambda e: e["id"])
+    everything = sorted(chests + radar_part_chests + shinies + tablet_shinies + radar + gifts, key=lambda e: e["id"])
     counts = collections.Counter(suggested[e["key"]][0] for e in everything)
     seen: collections.Counter = collections.Counter()
     for entry in everything:
@@ -721,8 +725,6 @@ def main() -> None:
             continue
         given = quest_gifts(r["gifts"])
         first, *more = given
-        # Round 99: map 3150 ("Dungeon") was named by its group, the Imperial Capital, and the user
-        # looked for gift 1403 in the Slums. It is Zoldaad Castle's dungeon, as its chests say.
         place = ascii_name((maps.get(map_id) or {}).get("name") or f"Map {map_id}")
         area = map_area(map_id)
         labels = [f"{n} Gil" if i < 0 else ascii_name(names[i]) + (f" x{n}" if n > 1 else "") for i, n in given]
@@ -986,7 +988,7 @@ def main() -> None:
                          "region": "Crystal Fragments", "id": FRAGMENT_LOCATION_BASE + group, "vanilla": None,
                          "boss": group})
         fragments.append(fragment)
-    readable_names(chests, radar_part_chests, shinies, tablet_shinies, radar, items, maps, continents)
+    readable_names(chests, radar_part_chests, shinies, tablet_shinies, radar, gifts, items, maps, continents)
     location_names = [e["name"] for e in chests + radar_part_chests + shinies + crystals + tablet_shinies + bosses
                       + fragments + gifts + radar + side_quests]
     assert len(location_names) == len(set(location_names)), "duplicate location names"

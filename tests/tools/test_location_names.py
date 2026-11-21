@@ -21,6 +21,8 @@ gen = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(gen)
 gen.DATA, gen.OUT = str(WORK / "data"), str(OUT)
 gen.write_field_items_lua = lambda: None
+gen.write_gifts_lua = lambda _: None
+gen.write_quests_lua = lambda *_: None
 
 NAMES = WORK / "data" / "location_names.tsv"
 SHINY_167 = "shiny:1000:167"
@@ -33,7 +35,7 @@ def run() -> dict[str, dict]:
     spec_out = importlib.util.spec_from_file_location("data_out", OUT)
     data = importlib.util.module_from_spec(spec_out)
     spec_out.loader.exec_module(data)
-    every = data.CHESTS + data.SHINIES + data.RADAR + data.TABLET_SHINIES + data.RADAR_PART_CHESTS + data.BOSSES
+    every = data.CHESTS + data.SHINIES + data.RADAR + data.TABLET_SHINIES + data.RADAR_PART_CHESTS + data.BOSSES + data.GIFTS
     return {loc["key"]: loc for loc in every}
 
 
@@ -73,13 +75,12 @@ assert "after_boss" not in locs["shiny:3180:13"], "Shard 13 is by the entrance"
 assert locs["shiny:1000:127"]["area"] == "Grandshelt", "the land at the stone bridge's north end"
 print("round 77 data: ok")
 
-# Round 99: gift 1403 is in Zoldaad Castle's dungeon (map 3150) and is named as that map's chests
-# are. Its old name put it in the Imperial Capital, and the user looked for it in the Slums.
+# Gift 1403 (Zoldaad Castle's dungeon) is unreachable at story 8000; remaining gifts use place names.
 spec_gifts = importlib.util.spec_from_file_location("data_gifts", OUT)
 generated = importlib.util.module_from_spec(spec_gifts)
 spec_gifts.loader.exec_module(generated)
-dungeon_gift = next(g for g in generated.GIFTS if g["key"] == "gift:1403")
-assert dungeon_gift["name"] == "Zoldaad - Dungeon - X-Potion and Mist Ether Gift", dungeon_gift["name"]
+assert all(g["key"] != "gift:1403" for g in generated.GIFTS)
+assert locs["gift:1408"]["name"] == "Kolobos - Town of Felicitas - East Bridge Gift", locs["gift:1408"]["name"]
 assert locs["chest:3150:0"]["name"].startswith("Zoldaad - Dungeon - "), locs["chest:3150:0"]["name"]
-print("round 99 gift name: ok")
+print("gift names: ok")
 shutil.rmtree(WORK)

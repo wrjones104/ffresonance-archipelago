@@ -415,3 +415,10 @@ radar:10	Radar Treasure 10	Sea - Radar Treasure SE of Salome Cave	Open Sea - Wor
 radar:11	Radar Treasure 11	Sea - Radar Treasure NW of Sanctum of Tidus	Open Sea - World Map - Radar Treasure in Central Sea West of Olderion	nearest door 5701 units away
 radar:12	Radar Treasure 12	Sea - Radar Treasure SW of Mt. Reizan	Open Sea - World Map - Radar Treasure in Far-SW Sea SW of Pharm	nearest door 12202 units away
 radar:13	Radar Treasure 13	Sea - Radar Treasure N of Whirlpool Hollow	Open Sea - World Map - Radar Treasure in North Sea North of Whirlpool Hollow	nearest door 5849 units away
+gift:1400	Grandshelt - Colosseum - Lunar Sword and Brigandine Gift	Grandshelt - Colosseum - Lunar Sword and Brigandine Gift	Grandshelt - Colosseum - Upper East Terrace Gift	where in the place: needs a person
+gift:1401	Pharm - Town of Sian - Mist Turbo Ether Gift 1	Pharm - Town of Sian - Mist Turbo Ether Gift 1	Pharm - Town of Sian - NE House Gift	where in the place: needs a person
+gift:1405	Gronoa - Gaberada, the Undertown - Magi-tenna Gift	Gronoa - Gaberada, the Undertown - Magi-tenna Gift	Gronoa - Gaberada - West Edge Upper Alcove Gift	where in the place: needs a person
+gift:1406	Grandshelt - Commercial District - Potion x3 Gift	Grandshelt - Commercial District - Potion x3 Gift	Grandshelt - Commercial District - East Terrace Gift	where in the place: needs a person
+gift:1408	Kolobos - Town of Felicitas - Mist Potion Gift	Kolobos - Town of Felicitas - Mist Potion Gift	Kolobos - Town of Felicitas - East Bridge Gift	where in the place: needs a person
+gift:1411	Grandshelt - Town of Mitra - 200 Gil Gift	Grandshelt - Town of Mitra - 200 Gil Gift	Grandshelt - Town of Mitra - Rain's House Gift	where in the place: needs a person
+gift:1413	Pharm - Town of Sian - Mist Turbo Ether Gift 2	Pharm - Town of Sian - Mist Turbo Ether Gift 2	Pharm - Town of Sian - Central Terrace Cat Gift	where in the place: needs a person

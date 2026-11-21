@@ -575,3 +575,9 @@ Until then the Options rows stay, and on a save not linked to the seed they chan
 **Built (round 98, build 22b9afbc):** 17 quests give a second reward (8 gil, 2 an item, 7 a vision), and each is a location of its own, `quest2:<id>` (docs/side_quests.md, section 6).
 
 **To find out:** what writes a character quest's stat bonus ("Attribute Bonus: Fina" in the Rewards list, an ID 0 entry). If it is a field of the reward row, a stat bonus could be an item the mod applies when it comes in. Not looked at yet.
+
+## 46. Supporting custom vision mods
+
+**Idea:** Many users have asked for the ability to use custom visions in the AP mod. I haven't looked into how custom visions are done in-game and what sorts of data tables they manipulate, so I don't know how feasible this is technically. We'd also need to think through how this could work functionally in the game. Without having dynamic custom locations, I'm not sure that we could support more than the base number of visions that FFRS has. I do think (and users have suggested) that we could possibly just take the user's full list of available visions (base + mods) and put them into the pool, either with amount caps (pool of 50 total visions gets truncated to 26 for the final available pool), or possibly sacrifice some filler for others. I lean towards truncating to 26, but open to exploring other options.
+
+**Research:** I believe most custom visions are created with https://github.com/FFBE-JP-Translation/FFR-Vision-Studio, though I'm sure there are other methods. An example of a custom vision mod: https://www.nexusmods.com/finalfantasyresonance/mods/321

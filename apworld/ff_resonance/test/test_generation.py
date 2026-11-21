@@ -812,15 +812,15 @@ class TestLabKeyCardsNotShuffled(FFResonanceTestBase):
 class TestGifts(FFResonanceTestBase):
     """Round 97 (the user): the one-time NPC gifts are locations, always on."""
     options = {"include_radar_treasures": False}
-    LUNAR_SWORD_GIFT = "Grandshelt - Colosseum - Lunar Sword and Brigandine Gift"
-    PHARM_CAT_GIFT = "Pharm - Town of Sian - Mist Turbo Ether Gift 2"
+    LUNAR_SWORD_GIFT = "Grandshelt - Colosseum - Upper East Terrace Gift"
+    PHARM_CAT_GIFT = "Pharm - Town of Sian - Central Terrace Cat Gift"
 
     def test_the_gifts_are_locations(self) -> None:
         names = {loc.name for loc in self.multiworld.get_locations(self.player) if loc.address is not None}
         self.assertTrue({g["name"] for g in GIFTS_ON} <= names)
-        self.assertEqual(len(GIFTS), 8, "round 98: the Ether NPC (1407) and the castle's Mist Potion NPC (1409) left out")
-        self.assertFalse({g["flag"] for g in GIFTS} & {1407, 1409})
-        self.assertNotIn("Gronoa - Gaberada, the Undertown - Magi-tenna Gift", names, "the radar's goes with it")
+        self.assertEqual(len(GIFTS), 7, "1403 (Zoldaad Dungeon), 1407 (Ether NPC), and 1409 (castle Mist Potion NPC) left out")
+        self.assertFalse({g["flag"] for g in GIFTS} & {1403, 1407, 1409})
+        self.assertNotIn("Gronoa - Gaberada - West Edge Upper Alcove Gift", names, "the radar's goes with it")
 
     def test_a_second_item_goes_into_the_pool(self) -> None:
         pool = [item.name for item in self.multiworld.itempool if item.player == self.player]
@@ -840,7 +840,7 @@ class TestGiftsWithRadar(FFResonanceTestBase):
 
     def test_the_magi_tenna_npc_is_a_location(self) -> None:
         names = {loc.name for loc in self.multiworld.get_locations(self.player) if loc.address is not None}
-        self.assertIn("Gronoa - Gaberada, the Undertown - Magi-tenna Gift", names)
+        self.assertIn("Gronoa - Gaberada - West Edge Upper Alcove Gift", names)
         pool = [item.name for item in self.multiworld.itempool if item.player == self.player]
         self.assertNotIn("Magi-tenna", pool, "the Progressive Radars take the parts' place")
 

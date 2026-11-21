@@ -5,7 +5,6 @@
 return {
     { key = "gift:1400", flag = 1400, row = "FEV_Town_01Gra_05_981_01", map = 2016, x = 25910, y = -4960 },
     { key = "gift:1401", flag = 1401, row = "FEV_Town_09Pha_01_1232_01", map = 2170, x = 1100, y = 20810 },
-    { key = "gift:1403", flag = 1403, row = "FEV_Town_06Zol_43_1013_02", map = 3150, x = 515, y = -37240 },
     { key = "gift:1405", flag = 1405, row = "FEV_Town_08Gro_01_1540_01", map = 2150, x = 4635, y = -4670, radar = true },
     { key = "gift:1406", flag = 1406, row = "DT_Town_01Gra_04_01_1170_1", map = 2015, x = 25755, y = 9542 },
     { key = "gift:1408", flag = 1408, row = "FEV_Town_03Kol_20_1320_01_03", map = 2040, x = -2833, y = 311 },
