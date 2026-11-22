@@ -254,3 +254,58 @@ Along the same lines, I would also want an option for players to start with all 
 **Idea:** Many users have asked for the ability to use custom visions in the AP mod. I haven't looked into how custom visions are done in-game and what sorts of data tables they manipulate, so I don't know how feasible this is technically. We'd also need to think through how this could work functionally in the game. Without having dynamic custom locations, I'm not sure that we could support more than the base number of visions that FFRS has. I do think (and users have suggested) that we could possibly just take the user's full list of available visions (base + mods) and put them into the pool, either with amount caps (pool of 50 total visions gets truncated to 26 for the final available pool), or possibly sacrifice some filler for others. I lean towards truncating to 26, but open to exploring other options.
 
 **Research:** I believe most custom visions are created with https://github.com/FFBE-JP-Translation/FFR-Vision-Studio, though I'm sure there are other methods. An example of a custom vision mod: https://www.nexusmods.com/finalfantasyresonance/mods/321
+## 47. A PopTracker pack
+
+**From the user and a tester, 2026-11-22.** [PopTracker](http://poptracker.github.io/) is a map-based tracker with Archipelago auto-tracking. Players like it for the overview a map gives. On the list, not a priority ([docs/roadmap.md](docs/roadmap.md), milestone 6).
+
+**Known so far (PopTracker's PACKS.md and AUTOTRACKING.md):**
+- A pack is a folder or zip: `manifest.json`, `scripts/init.lua`, JSON for items, locations, maps and layouts, and the images.
+- Logic is rule strings in the locations' JSON: comma-separated codes are AND, array entries are OR, `item:3` is a count, `$func|arg` calls the pack's Lua, `@location/section` reuses another location's rule.
+- Map pins are `map_locations` with x and y in the map image's pixels.
+- Auto-tracking: the variant's `ap` flag, then `Archipelago:AddClearHandler` (gets slot data), `AddItemHandler` and `AddLocationHandler`. The pack maps Archipelago's ids to its own codes itself.
+- Universal Tracker already rebuilds our logic from slot data (round 72), so players have a logic tracker today, without a map.
+
+**To find out:**
+- Map images: the world map, and one picture per town or dungeon, or one pin per place with its checks as sections.
+- Pin positions: `data/game` has x and y for chests, shinies and radar treasures. A script can turn them into image pixels, as the location names (idea 34) use them.
+- Generating the pack's locations and rules from `data.py` and the apworld's rules, so the pack does not drift from the logic. Boss rules (`boss_logic.py`) are the hard part: they count party, visions and Magicite, which suits `$func` rules.
+- The options that change the location list (`include_side_quests` and the like), read from slot data in the clear handler.
+
+**Order:** after idea 40, side quests on by default, and the last location renames, so the pack is not rebuilt each round.
+
+## 48. Item pool pass: drop-only gear, more Magicite, an early healer
+
+**From a tester, 2026-11-22 (v0.31.0, a full seed to the goal at party level 30).** Status effects were hard: no Ribbon, few cures. Magicite was tight but fair; they liked choosing. They hinted for a Ribbon and it was not in the pool. The user wants more status gear and Magicite in the pool, and an option to put a support vision early.
+
+**Why Ribbon is missing:** the pool is each location's own vanilla item, with progression items in place of random filler (`items.create_all_items`). Ribbon (12065) is in no chest, shiny, quest or gift. It drops from Archwitch Fina's story fight (gone on our start) and is a rare steal from Messalina (level 52). `DT_UnitParameter` has `DropNormalItem`, `DropRareItem`, `StealNormalItem` and `StealRareItem` per unit.
+
+**Accessories with no location, from the dump (2026-11-22):**
+
+| Source | Accessories |
+|---|---|
+| Enemies only (drop or steal) | Ribbon, Angel Ring (Regen), Aeolian Misanga, Iron Sandals, Gale Hairpin, Poison Charm, Ring of Rage, Arcane Pendant, Vampire Charm, Adamantine Beads, and the four imbue charms (Solar Pendant, Azure Amulet, Golem Core, Halo Ring; three of them drop from story bosses) |
+| Shops only | Star Pendant (Poison), Silver-Rimmed Glasses (Blind), Safety Bit (Death), Alarm Earrings, Precognizant Beads, Tiara of Frost, Scintillating Ring, Heart Anklet, Life Charm, Hairband. The Arena shop: Reflect, Protect and Barrier Rings, Warding Bell, Foe Attractor, Circlet of Enlightenment |
+| Not-yet locations (Arena ranks, Twelve Arms, rope jumping, chapter 9 quests, DLC) | Super Ribbon, Dragon Seal, Omega Badge, Gold Hairpin(+), Genji Gloves, Ultima Reactor, Swift Badge, Hairpin of Grace, Mastery Ring. These come with those locations (roadmap milestone 4), not now |
+
+The single-status accessories are mostly in shops already, and Headband, Jeweled Ring and Calm Armlet are in chests too. So the gap is Ribbon, and early access before a shop's continent is open.
+
+**The pool today (5 seeds each, world 0.31.0):**
+
+| | Locations | Consumables | Gil | Equipment | Magicite (Shard / Magicite / Cryst) |
+|---|---|---|---|---|---|
+| Defaults | 519 | 151 | 7 | 131 | 37 (12 / 12 / 13) |
+| Side quests on | 564 | 162 | 12 | 143 | 54 (18 / 19 / 17) |
+
+Awakening a vision fully costs one of each tier, so 26 visions need 78. A default seed has enough for about 12. The Arena shop sells all three tiers, behind the Arena's medals.
+
+**Healing visions** (`capabilities.tsv`, Cure or Esuna at awakening 0): Leah, Ayaka (both), Warrior of Light, Cecil, Tidus, Y'shtola, Lightning (Esuna). Fina is the only party member with Cure (level 3), and the start is Rain and Lasswell.
+
+**The plan (not built):**
+- Added items, a list of our own (`data/pool_additions.tsv`: item, count), each taking a filler's place as progression items do. The generator puts them in `ITEMS`. The mod's item path already gives any item id.
+- They replace the cheapest filler first (shop price times count; gil by amount), so a Megalixir is never lost to a Ribbon. Progression items keep their random pick, so their spread does not change.
+- If filler runs out, additions are left out with a warning, not an error: they are nice to have.
+- More Magicite as added items, with a yaml count.
+- `early_healing_vision`: one of the healing visions goes in the player's own sphere 1 (`multiworld.local_early_items`). Only with `shuffle_visions`.
+- Until then a player can name a vision in `early_items` in their yaml.
+
+**To decide (the user):** which items and how many, the Magicite count, and the new option's default.
