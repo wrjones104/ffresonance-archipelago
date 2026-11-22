@@ -1518,3 +1518,9 @@ The user tested before v0.31.0 goes out (2026-11-21).
 - `NOT_KEY_ITEMS` gains 20005 to 20008.
 - `hide_quest_rewards` (off by default): the client sends `cfg hidequests 1`, and the Quests screen's Rewards read `???` with no colour span. The completion pop-up still names the item.
 
+### Round 103 (mod 0.62.0 build 7b90595e, apworld 0.31.0 build 66073f7e)
+
+The user's pre-release test (2026-11-21): every round 103 check passed. The builds; two tabs, Settings on the gear and Seed on the monitor; the same row order at each open; System > Options' own tabs normal after the page closed; the `battle: won` line with the save's win count; `hide_quest_rewards` on (`???` in white, the completion pop-up still naming the item) and off (coloured names); and no White Jade Stone, Black Jade Stone, Magic Tome or Tunnel Key in the spoiler or the tracker.
+
+**v0.31.0 packaged** from these builds (2026-11-21). The open items carried over in `docs/playtesting.md` go to the user and the v0.31.0 testers.
+
