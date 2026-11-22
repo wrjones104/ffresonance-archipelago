@@ -13,6 +13,8 @@ And by hand, from the dump (docs/bosses.md):
     data/quests.tsv                side quests that are locations (docs/side_quests.md): counter,
                                    the reward row's value, reward rows; with data/game/quests.tsv
                                    and data/game/quest_steps.tsv from the dump
+    data/pool_additions.tsv        items no location holds, added to the pool in place of filler
+                                   (IDEAS.md, idea 48)
 
 A chest table row is a location only when a box for it is placed on some map (the boxes
 column; gen_from_dump.box_matches says how a box is matched to its row). The rounds agree:
@@ -926,6 +928,20 @@ def main() -> None:
         if item_id not in QUEST_ONLY_ITEMS:
             progression[category].append(ap_id)
 
+    # Round 104: gear no location holds (enemy drops and steals) goes into the pool in place of filler.
+    pool_additions = []
+    for r in read_tsv("pool_additions.tsv"):
+        ap_id = item_for(int(r["item"]), 1, -1)
+        assert ap_id is not None and items[ap_id]["category"] == "equipment", f"pool_additions.tsv: {r['item']} is not gear"
+        assert names[int(r["item"])] == r["name"], f"pool_additions.tsv: {r['item']} is {names[int(r['item'])]}"
+        pool_additions += [ap_id] * int(r["count"])
+    magicite_items = [item_for(i, 1, -1) for i in range(MAGICITE_IDS[0], MAGICITE_IDS[1] + 1)]
+    # What a filler item is worth, so the pool gives up the cheapest first: shop price times count.
+    # The game's unsold items (Elixir, Megalixir) are priced 500000, so they go last.
+    prices = {int(r["id"]): int(r["buy"] or 0) for r in item_rows}
+    filler_value = {ap_id: (info["count"] if info["category"] == "gil" else prices[info["game_id"]] * info["count"])
+                    for ap_id, info in items.items() if info["category"] in ("consumable", "gil")}
+
     # Item names must be unique: two ids with one English name get the id appended. A vision
     # shares its name with a party member or a unit (Charlotte): it gets "Vision" after it.
     for ap_id, info in items.items():
@@ -1045,6 +1061,12 @@ def main() -> None:
         f.write("# Progression items by group (AP ids): party members, visions, key items. One of each goes\n"
                 "# in the pool when its option is on, except the party members a player starts with.\n")
         f.write("PROGRESSION = " + pprint.pformat(progression, width=110, sort_dicts=True) + "\n\n")
+        f.write("# Items no location holds, added to the pool in place of filler (data/pool_additions.tsv)\n")
+        f.write("POOL_ADDITIONS = " + pprint.pformat(pool_additions, width=110) + "\n\n")
+        f.write("# Magicite Shard, Magicite, Magicite Cryst: the awakening tiers, lowest first\n")
+        f.write(f"MAGICITE_ITEMS = {magicite_items!r}\n\n")
+        f.write("# Filler item -> what it is worth (gil, or shop price times count): the cheapest go first\n")
+        f.write("FILLER_VALUE = " + pprint.pformat(filler_value, width=110, sort_dicts=True) + "\n\n")
         f.write("# Continent name -> the AP id of its unlock item\n")
         f.write("CONTINENT_UNLOCKS = " + pprint.pformat(unlocks, width=110, sort_dicts=False) + "\n\n")
         f.write(f"UNIT_ITEM_BASE = {UNIT_ITEM_BASE}\n")

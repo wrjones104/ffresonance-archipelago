@@ -1,9 +1,10 @@
 from test.bases import WorldTestBase
 
 # Most tests look at a small pool: chests only. A test of shinies, crystals, shards or bosses turns
-# its own option on.
+# its own option on. Round 104: no extra Magicite, as so small a pool has little filler to give.
 CHESTS_ONLY = {"goal": "final_boss", "include_shinies": False, "include_crystals": False,
-               "include_tablet_shards": False, "include_bosses": False, "include_radar_treasures": False}
+               "include_tablet_shards": False, "include_bosses": False, "include_radar_treasures": False,
+               "extra_magicite": 0}
 
 
 class FFResonanceTestBase(WorldTestBase):

@@ -25,6 +25,8 @@ Each milestone is about one release. The first three are in the order I would do
 
 ### 1. Item pool pass (next release)
 
+**Built in round 104** (world 0.32.0 build 94562703): the gear, `extra_magicite` and `early_healing_vision`. IDEAS.md, idea 48. Still to do in this milestone: Lid's airship line.
+
 Straight from the feedback, and mostly apworld work.
 
 - Add items the pool has never had because they are drops or steals, not chest or quest rewards: Ribbon first, then the status-resist accessories. Each one takes a filler slot.

@@ -300,12 +300,16 @@ Awakening a vision fully costs one of each tier, so 26 visions need 78. A defaul
 
 **Healing visions** (`capabilities.tsv`, Cure or Esuna at awakening 0): Leah, Ayaka (both), Warrior of Light, Cecil, Tidus, Y'shtola, Lightning (Esuna). Fina is the only party member with Cure (level 3), and the start is Rain and Lasswell.
 
-**The plan (not built):**
-- Added items, a list of our own (`data/pool_additions.tsv`: item, count), each taking a filler's place as progression items do. The generator puts them in `ITEMS`. The mod's item path already gives any item id.
-- They replace the cheapest filler first (shop price times count; gil by amount), so a Megalixir is never lost to a Ribbon. Progression items keep their random pick, so their spread does not change.
-- If filler runs out, additions are left out with a warning, not an error: they are nice to have.
-- More Magicite as added items, with a yaml count.
-- `early_healing_vision`: one of the healing visions goes in the player's own sphere 1 (`multiworld.local_early_items`). Only with `shuffle_visions`.
-- Until then a player can name a vision in `early_items` in their yaml.
+**The user's choices (2026-11-22):** two Ribbons and one of each enemy-only accessory; 9 extra Magicite by default, as a yaml option; the early healer on by default.
 
-**To decide (the user):** which items and how many, the Magicite count, and the new option's default.
+**Built (round 104, world 0.32.0 build 94562703):**
+- `data/pool_additions.tsv` lists the gear: 2 Ribbons and 13 enemy-only accessories, 15 items. `tools/gen_apworld_data.py` writes them to `POOL_ADDITIONS`, with `MAGICITE_ITEMS` and `FILLER_VALUE` (a filler item's shop price times its count; gil by its amount).
+- `extra_magicite` (0 to 30, default 9) adds Magicite split over the three tiers, the lower tiers first when it does not split evenly.
+- Progression items still take filler at random. Then each addition takes the cheapest filler left, so a Megalixir is never lost to a Ribbon. Gear comes before the extra Magicite.
+- The pool keeps one filler item for each excluded location (the Oblivion Palace's chests, `excluded_regions`, the yaml's `exclude_locations`), as those take filler only. The first test run found this: chests-only test pools failed to fill. If there is not room, additions are left out from the end, with a warning.
+- `early_healing_vision` (on by default, with `shuffle_visions`): one of the seven healing visions goes in `multiworld.local_early_items`.
+- No mod change: the mod's item path gives any item id.
+
+**The pool now (10 full fills, real defaults):** equipment 131 to 146, Magicite 37 to 46, consumables 151 to 133, gil 7 to 1 (the small gil amounts are the cheapest filler). The healer was in sphere 0 in all 10.
+
+**To find out (round 104):** that a Ribbon and an imbue charm received from Archipelago land in the bag and can be equipped; whether the tester's status problem is gone.

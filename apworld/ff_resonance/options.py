@@ -257,6 +257,26 @@ class StartWithAirship(DefaultOnToggle):
     display_name = "Start With Airship"
 
 
+class ExtraMagicite(Range):
+    """
+    Magicite added to the pool beyond what the chests, shinies and bosses hold, split evenly
+    between Magicite Shards, Magicite and Magicite Crysts. Each takes the place of a cheap
+    consumable. A default seed holds about 37 of its own; awakening all 26 visions fully takes 78.
+    """
+    display_name = "Extra Magicite"
+    range_start = 0
+    range_end = 30
+    default = 9
+
+
+class EarlyHealingVision(DefaultOnToggle):
+    """
+    One vision that can cast Cure or Esuna from the start (Leah, Ayaka, Warrior of Light, Cecil,
+    Tidus, Y'shtola or Lightning) is placed early in your own world. Only with shuffle_visions on.
+    """
+    display_name = "Early Healing Vision"
+
+
 @dataclass
 class FFResonanceOptions(PerGameCommonOptions):
     goal: Goal
@@ -285,6 +305,8 @@ class FFResonanceOptions(PerGameCommonOptions):
     shuffle_party_members: ShufflePartyMembers
     shuffle_visions: ShuffleVisions
     shuffle_key_items: ShuffleKeyItems
+    extra_magicite: ExtraMagicite
+    early_healing_vision: EarlyHealingVision
 
 
 option_groups = [
@@ -294,5 +316,5 @@ option_groups = [
                           StartWithAirship]),
     OptionGroup("Locations", [IncludeRadarTreasures, IncludeSideQuests, HideQuestRewards, PriorityBosses,
                               ExcludedRegions]),
-    OptionGroup("Items", [ShufflePartyMembers, ShuffleVisions, ShuffleKeyItems]),
+    OptionGroup("Items", [ShufflePartyMembers, ShuffleVisions, ShuffleKeyItems, ExtraMagicite, EarlyHealingVision]),
 ]

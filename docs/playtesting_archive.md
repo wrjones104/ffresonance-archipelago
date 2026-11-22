@@ -1524,3 +1524,10 @@ The user's pre-release test (2026-11-21): every round 103 check passed. The buil
 
 **v0.31.0 packaged** from these builds (2026-11-21). The open items carried over in `docs/playtesting.md` go to the user and the v0.31.0 testers.
 
+### A tester's full seed on v0.31.0 (2026-11-22)
+
+The first full seed by a tester to the goal (Normal scaling, progression balancing 65). Their `UE4SS.log`: about 7.5 hours from the start to `Goal complete!`, the last battle at party level 30, 107 battles won (median 36 s off the field, 90% under 3 minutes), 286 checks (121 chests, 120 shinies, 14 bosses with their 14 fragments, 12 crystals, 3 gifts, 2 radar), side quests off. No errors.
+
+What they said: fun and well-rounded; early and mid game fast, late game fine; status effects hard with no Ribbon and few cures; Magicite tight but fair; they took level scaling for a gate at first; their partner's items felt late. They asked for a save folder per seed and a PopTracker pack (IDEAS.md, ideas 11 and 47). The pool findings are idea 48.
+
+**Round 104 build (mod 0.63.0 build c02e6de5, apworld 0.32.0 build 94562703):** the first change after v0.31.0, so both versions move. The pool gains 2 Ribbons and 13 enemy-only accessories (`data/pool_additions.tsv`), 9 extra Magicite (`extra_magicite`), and an early healing vision (`early_healing_vision`). The additions take the cheapest filler, and the pool keeps one filler item per excluded location (IDEAS.md, idea 48). The mod changes only its version.

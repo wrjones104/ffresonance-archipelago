@@ -1,15 +1,15 @@
 from argparse import Namespace
 
-from BaseClasses import CollectionState, LocationProgressType, MultiWorld
+from BaseClasses import CollectionState, ItemClassification, LocationProgressType, MultiWorld
 from worlds import AutoWorld
 from worlds.AutoWorld import call_all
 from test.general import gen_steps
 
-from ..data import AIRSHIP_ITEM, BOSSES, CHESTS, FRAGMENTS, GIFTS, CHOCOBO_ITEM, NO_ROUTE, RADAR, RADAR_ITEM, RADAR_PARTS, RADAR_PART_CHESTS, CONTINENT_UNLOCKS, CRYSTALS, FRAGMENT_ITEM, ITEMS, NO_BOX, SIDE_QUESTS, TABLET_SHINIES, PROGRESSION, SHINIES, SHUFFLE_ID_LIMIT, UNIT_ITEM_BASE
+from ..data import AIRSHIP_ITEM, BOSSES, CHESTS, FILLER_VALUE, FRAGMENTS, GIFTS, CHOCOBO_ITEM, MAGICITE_ITEMS, NO_ROUTE, POOL_ADDITIONS, RADAR, RADAR_ITEM, RADAR_PARTS, RADAR_PART_CHESTS, CONTINENT_UNLOCKS, CRYSTALS, FRAGMENT_ITEM, ITEMS, NO_BOX, SIDE_QUESTS, TABLET_SHINIES, PROGRESSION, SHINIES, SHUFFLE_ID_LIMIT, UNIT_ITEM_BASE
 from ..boss_logic import awakening, has_capability
-from ..items import CLASSIFICATIONS, FILLER_CATEGORIES, FRAGMENT_NAME, item_name_groups
+from ..items import CLASSIFICATIONS, FILLER_CATEGORIES, FRAGMENT_NAME, HEALING_VISIONS, additions, item_name_groups
 from ..locations import GOAL_EVENT, LOCATION_KEY_TO_ID, SEPHIROTH, VICTORY
-from ..options import FinalBossFragments, Goal, TabletShardsRequired
+from ..options import ExtraMagicite, FinalBossFragments, Goal, TabletShardsRequired
 from . import FFResonanceTestBase
 
 # Round 77: location names are readable now; tests that pick a place by its number use the key.
@@ -31,6 +31,10 @@ GIFTS_ON = [g for g in GIFTS if not g.get("radar_part")]
 GIFT_EXTRAS = [i for g in GIFTS_ON for i in g.get("extra", [])]
 BASE = CHESTS + GIFTS_ON
 EARLY_LEVEL, FINA_GROUP_HEAL_LEVEL, MAX_LEVEL = 3, 25, 99   # boss levels: Fina has Cure at 3
+RIBBON = 12065001
+RIBBONS = 2     # round 104: Ribbon is a rare steal and a story boss's drop, so no location holds one
+HEALERS = {"Leah (Vision)", "Ayaka (Vision)", "Warrior of Light (Vision)", "Cecil (Vision)", "Tidus (Vision)",
+           "Y'shtola (Vision)", "Lightning (Vision)"}
 
 
 def chest_location(test, key):
@@ -52,13 +56,41 @@ class TestDefault(FFResonanceTestBase):
         for ap_id in extra:
             self.assertEqual(pool.count(ap_id), 1, ITEMS[ap_id]["name"])
         rest = list(pool)
-        for ap_id in extra + GIFT_EXTRAS:
+        added = additions(self.world)
+        for ap_id in extra + GIFT_EXTRAS + added:
             rest.remove(ap_id)
         vanilla = [c["vanilla"] for c in BASE]
         for ap_id in rest:
             vanilla.remove(ap_id)            # every other item is some location's vanilla content
-        self.assertEqual(len(vanilla), len(extra) + len(GIFT_EXTRAS))
+        self.assertEqual(len(vanilla), len(extra) + len(GIFT_EXTRAS) + len(added))
         self.assertTrue(all(ITEMS[ap_id]["category"] in FILLER_CATEGORIES for ap_id in vanilla))
+
+    def test_the_pool_has_the_gear_no_location_holds(self) -> None:
+        """Round 104: two Ribbons and one of each enemy-only accessory (data/pool_additions.tsv)."""
+        pool = [item.code for item in self.multiworld.itempool if item.player == self.player]
+        self.assertEqual(pool.count(RIBBON), RIBBONS)
+        for ap_id in set(POOL_ADDITIONS):
+            self.assertFalse([c for c in CHESTS if c["vanilla"] == ap_id], ITEMS[ap_id]["name"])
+            self.assertEqual(pool.count(ap_id), POOL_ADDITIONS.count(ap_id), ITEMS[ap_id]["name"])
+            self.assertEqual(CLASSIFICATIONS[ITEMS[ap_id]["category"]], ItemClassification.useful)
+
+    def test_additions_take_the_cheapest_filler(self) -> None:
+        """Progression takes filler at random; the additions then take the cheapest left. So every
+        filler item still in the pool is worth at least as much as each one the additions took."""
+        pool = [item.code for item in self.multiworld.itempool if item.player == self.player]
+        left = [ap_id for ap_id in pool if ap_id in FILLER_VALUE]
+        gone = [c["vanilla"] for c in BASE if c["vanilla"] in FILLER_VALUE]
+        for ap_id in left:
+            gone.remove(ap_id)
+        floor = min(FILLER_VALUE[ap_id] for ap_id in left)
+        cheap = [ap_id for ap_id in gone if FILLER_VALUE[ap_id] <= floor]
+        self.assertGreaterEqual(len(cheap), len(additions(self.world)))
+
+    def test_a_healing_vision_is_placed_early(self) -> None:
+        early = self.multiworld.local_early_items[self.player]
+        self.assertEqual(len(early), 1)
+        self.assertIn(next(iter(early)), HEALERS)
+        self.assertEqual({ITEMS[ap_id]["name"] for ap_id in HEALING_VISIONS}, HEALERS)
 
     def test_progression_items_are_progression(self) -> None:
         for item in self.multiworld.itempool:
@@ -381,6 +413,9 @@ class TestUnshuffledVisions(FFResonanceTestBase):
         pool = [i for i in self.multiworld.itempool if i.player == self.player]
         self.assertFalse([i.name for i in pool if ITEMS[i.code]["category"] == "vision"])
 
+    def test_no_early_vision(self) -> None:
+        self.assertFalse(self.multiworld.local_early_items[self.player])
+
 
 class TestTrackerRebuild(FFResonanceTestBase):
     """Round 72: Universal Tracker builds the world again from the slot data alone. A seed that
@@ -664,7 +699,8 @@ class TestBosses(FFResonanceTestBase):
             from_chests = sum(1 for c in CHESTS if c["vanilla"] == ap_id)
             from_caves = sum(1 for b in BOSSES if b["vanilla"] == ap_id)
             self.assertGreater(from_caves, 0, name)
-            self.assertEqual(pool.count(ap_id), from_chests + from_caves, name)
+            extra = additions(self.world).count(ap_id)
+            self.assertEqual(pool.count(ap_id), from_chests + from_caves + extra, name)
 
     def test_the_goal_needs_the_fragments(self) -> None:
         goal = self.multiworld.get_location(GOAL_EVENT, self.player)
@@ -1137,12 +1173,69 @@ class TestNoProgression(FFResonanceTestBase):
         pool = [item.code for item in self.multiworld.itempool if item.player == self.player]
         self.assertEqual(len(pool), len(BASE))
         rest = [ap_id for ap_id in pool if ITEMS[ap_id]["category"] != "continent"]
-        for ap_id in GIFT_EXTRAS:
+        for ap_id in GIFT_EXTRAS + additions(self.world):
             rest.remove(ap_id)
         vanilla = [c["vanilla"] for c in BASE]
         for ap_id in rest:
             vanilla.remove(ap_id)
-        self.assertEqual(len(pool) - len(rest) - len(GIFT_EXTRAS), len(CONTINENT_UNLOCKS) - 1)
+        self.assertEqual(len(pool) - len(rest) - len(GIFT_EXTRAS) - len(additions(self.world)),
+                         len(CONTINENT_UNLOCKS) - 1)
+
+
+class TestPoolRealDefaults(FFResonanceTestBase, real_defaults=True):
+    def test_extra_magicite_is_split_over_the_tiers(self) -> None:
+        pool = [item.code for item in self.multiworld.itempool if item.player == self.player]
+        held = self.world.vanilla_items + self.world.extra_items
+        per_tier = ExtraMagicite.default // len(MAGICITE_ITEMS)
+        for ap_id in MAGICITE_ITEMS:
+            self.assertEqual(pool.count(ap_id), held.count(ap_id) + per_tier, ITEMS[ap_id]["name"])
+
+    def test_every_addition_fits(self) -> None:
+        pool = [item.code for item in self.multiworld.itempool if item.player == self.player]
+        self.assertEqual(pool.count(RIBBON), RIBBONS)
+        held = self.world.vanilla_items + self.world.extra_items
+        added = additions(self.world)
+        for ap_id in set(added):
+            self.assertEqual(pool.count(ap_id) - held.count(ap_id), added.count(ap_id), ITEMS[ap_id]["name"])
+
+
+class TestNoExtraMagicite(FFResonanceTestBase, real_defaults=True):
+    options = {"extra_magicite": 0, "early_healing_vision": False}
+
+    def test_only_the_locations_magicite(self) -> None:
+        pool = [item.code for item in self.multiworld.itempool if item.player == self.player]
+        held = self.world.vanilla_items + self.world.extra_items
+        for ap_id in MAGICITE_ITEMS:
+            self.assertEqual(pool.count(ap_id), held.count(ap_id), ITEMS[ap_id]["name"])
+
+    def test_no_early_vision(self) -> None:
+        self.assertFalse(self.multiworld.local_early_items[self.player])
+
+
+class TestUnevenExtraMagicite(FFResonanceTestBase):
+    options = {"extra_magicite": 10}
+
+    def test_the_lower_tiers_get_the_rest(self) -> None:
+        self.assertEqual([additions(self.world).count(ap_id) for ap_id in MAGICITE_ITEMS], [4, 3, 3])
+
+
+class TestAdditionsShortOfFiller(FFResonanceTestBase):
+    """Chests only and the most Magicite: more additions than filler. The pool takes what fits and
+    keeps one filler item for each excluded location (the Oblivion Palace's chests), so the fill
+    still works (the test base's own fill test)."""
+    options = {"extra_magicite": ExtraMagicite.range_end}
+
+    def test_the_excluded_locations_keep_their_filler(self) -> None:
+        pool = [item for item in self.multiworld.itempool if item.player == self.player]
+        self.assertEqual(len(pool), len(BASE))
+        excluded = [loc for loc in self.world.get_locations() if loc.progress_type == LocationProgressType.EXCLUDED]
+        self.assertTrue(excluded)
+        filler = [item for item in pool if ITEMS[item.code]["category"] in FILLER_CATEGORIES]
+        self.assertEqual(len(filler), len(excluded))
+        magicite = sum(1 for item in pool if item.code in MAGICITE_ITEMS)
+        held = sum(1 for ap_id in self.world.vanilla_items + self.world.extra_items if ap_id in MAGICITE_ITEMS)
+        self.assertLess(magicite - held, ExtraMagicite.range_end, "the test needs a pool short of filler")
+        self.assertEqual(sum(1 for item in pool if item.code == RIBBON), RIBBONS, "gear comes before the extra Magicite")
 
 
 class TestNames(FFResonanceTestBase):

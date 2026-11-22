@@ -34,7 +34,7 @@ game: Final Fantasy Resonance
 requires:
   version: 0.6.7 # Version of Archipelago required for this yaml to work as expected.
   game:
-    Final Fantasy Resonance: 0.31.0 # Version of the world required for this yaml to work as expected.
+    Final Fantasy Resonance: 0.32.0 # Version of the world required for this yaml to work as expected.
 
 Final Fantasy Resonance:
   ################
@@ -276,6 +276,26 @@ Final Fantasy Resonance:
   shuffle_key_items:
     # The key items are items: keys, key cards, quest items and Colosseum proofs. Some doors and
     # chests need them.
+    'false': 0
+    'true': 50
+
+  extra_magicite:
+    # Magicite added to the pool beyond what the chests, shinies and bosses hold, split evenly
+    # between Magicite Shards, Magicite and Magicite Crysts. Each takes the place of a cheap
+    # consumable. A default seed holds about 37 of its own; awakening all 26 visions fully takes 78.
+    #
+    # You can define additional values between the minimum and maximum values.
+    # Minimum value is 0
+    # Maximum value is 30
+    9: 50
+    random: 0
+    random-low: 0 # random value weighted towards lower values
+    random-high: 0 # random value weighted towards higher values
+    random-range-0-30: 0 # random value between 0 and 30
+
+  early_healing_vision:
+    # One vision that can cast Cure or Esuna from the start (Leah, Ayaka, Warrior of Light, Cecil,
+    # Tidus, Y'shtola or Lightning) is placed early in your own world. Only with shuffle_visions on.
     'false': 0
     'true': 50
 

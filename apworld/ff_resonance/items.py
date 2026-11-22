@@ -1,11 +1,13 @@
 from __future__ import annotations
 
+import logging
 from typing import TYPE_CHECKING
 
-from BaseClasses import Item, ItemClassification
+from BaseClasses import Item, ItemClassification, LocationProgressType
 from Options import OptionError
 
-from .data import AIRSHIP_ITEM, CHOCOBO_ITEM, RADAR_ITEM, RADAR_PARTS, CONTINENT_UNLOCKS, FRAGMENT_ITEM, ITEMS, PROGRESSION, UNIT_ITEM_BASE
+from .data import (AIRSHIP_ITEM, CAPABILITIES, CHOCOBO_ITEM, CONTINENT_UNLOCKS, FILLER_VALUE, FRAGMENT_ITEM, ITEMS,
+                   MAGICITE_ITEMS, POOL_ADDITIONS, PROGRESSION, RADAR_ITEM, RADAR_PARTS, UNIT_ITEM_BASE)
 
 if TYPE_CHECKING:
     from .world import FFResonanceWorld
@@ -50,6 +52,9 @@ item_name_groups: dict[str, set[str]] = {
 FILLER_NAMES = sorted(item_name_groups["Consumables"])
 FILLER_CATEGORIES = {"consumable", "gil"}
 STARTER_VISIONS = (13024001, 13045001)      # Tronn and Leah (Mitra story C01_014_03)
+# Round 104: the visions that cast Cure or Esuna unawakened (data/game/capabilities.tsv).
+HEALING_VISIONS = sorted({ap_id for capability in ("heal", "cleanse")
+                          for ap_id, needed in CAPABILITIES[capability]["vision"].items() if needed == 0})
 
 
 class FFResonanceItem(Item):
@@ -86,10 +91,21 @@ def progression_ids(world: FFResonanceWorld) -> list[int]:
     return chosen
 
 
+def additions(world: FFResonanceWorld) -> list[int]:
+    """Items no location holds: the gear of data/pool_additions.tsv, then extra_magicite split
+    evenly over the three tiers, lowest first. The pool drops them from the end when short."""
+    count = world.options.extra_magicite.value
+    tiers = len(MAGICITE_ITEMS)
+    magicite = [ap_id for tier, ap_id in enumerate(MAGICITE_ITEMS)
+                for _ in range(count // tiers + (tier < count % tiers))]
+    return list(POOL_ADDITIONS) + magicite
+
+
 def create_all_items(world: FFResonanceWorld) -> None:
     """
     One item per location. Each location's own vanilla content goes into the pool, then each
     progression item takes the place of one filler item (a consumable or gil), picked at random.
+    Then each addition takes the place of the cheapest filler left.
     """
     pool_ids = list(world.vanilla_items)
     # Round 97: a progression item a chosen location holds (a lab key card on its own spot) is in
@@ -100,9 +116,23 @@ def create_all_items(world: FFResonanceWorld) -> None:
     if len(extra) > len(filler_at):
         raise OptionError(f"{world.player_name}: {len(extra)} items to add, but only {len(filler_at)} "
                           f"filler items to replace. Turn off a shuffle option.")
-    for i in sorted(world.random.sample(filler_at, len(extra)), reverse=True):
-        pool_ids.pop(i)
-    pool = [create_item(world, ITEMS[ap_id]["name"]) for ap_id in pool_ids + extra]
+    taken = set(world.random.sample(filler_at, len(extra)))
+    # Round 104: the random tiebreak keeps the same Potion from always going first.
+    cheapest = sorted((i for i in filler_at if i not in taken),
+                      key=lambda i: (FILLER_VALUE[pool_ids[i]], world.random.random()))
+    # Excluded locations (the Oblivion Palace's, excluded_regions, the yaml's exclude_locations) take
+    # filler only, so that much filler stays.
+    excluded = {loc.name for loc in world.get_locations() if loc.progress_type == LocationProgressType.EXCLUDED}
+    excluded |= world.options.exclude_locations.value & {loc.name for loc in world.get_locations()}
+    room = max(0, len(cheapest) - len(excluded))
+    added = additions(world)
+    if len(added) > room:
+        logging.warning(f"{world.player_name}: {len(added) - room} of {len(added)} added items left out: "
+                        f"{len(cheapest)} filler items are left, and {len(excluded)} excluded locations need filler.")
+        added = added[:room]
+    taken.update(cheapest[:len(added)])
+    pool_ids = [ap_id for i, ap_id in enumerate(pool_ids) if i not in taken]
+    pool = [create_item(world, ITEMS[ap_id]["name"]) for ap_id in pool_ids + extra + added]
     unfilled = len(world.multiworld.get_unfilled_locations(world.player))
     pool += [world.create_filler() for _ in range(unfilled - len(pool))]
     world.multiworld.itempool += pool
@@ -111,6 +141,9 @@ def create_all_items(world: FFResonanceWorld) -> None:
     if not world.options.shuffle_visions:
         for ap_id in STARTER_VISIONS:
             world.multiworld.push_precollected(create_item(world, ITEMS[ap_id]["name"]))
+    elif world.options.early_healing_vision:
+        healer = world.random.choice(HEALING_VISIONS)
+        world.multiworld.local_early_items[world.player][ITEMS[healer]["name"]] = 1
 
 
 def get_filler_item_name(world: FFResonanceWorld) -> str:
