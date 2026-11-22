@@ -511,6 +511,44 @@ The "Back" prompt that menus and the chest pop-up show at the bottom right also 
 
 **Still to tune:** the size, the place, colours (Archipelago's item colours for progression, useful and trap items need the item flags from the client), and whether the time on screen feels right.
 
+## 16. Map blockers and custom forced gates
+
+**Status:** Implemented (`2199350`, mod 0.53.0; `91ccc24`, mod 0.53.1; `df19f59`, mod 0.54.0 / world 0.21.0). Walking crossings between continents use cart blockers built into the mod when starting without the Airship; game-owned barriers and triggers (Crystal Tower, Oblivion Palace) are toggled via collision or progress counters instead of custom key items. See [open_world.md](open_world.md), section 4.
+
+**Idea:** Introduce "blocking" elements on the world map or in town/dungeon maps (e.g. new forced gates or barriers on a bridge or choke point until specific items, characters, or flags are collected) to control routing and enforce progression logic.
+
+**Known so far:**
+- Story gates in the game read `{progress: N}` and `{flag: N}` conditions (e.g. in `DT_MainScenario` and `VisibleCondition` for field gimmicks/shinies).
+- Towns, dungeons, and the world map contain collision barriers, door gimmicks (`BP_MapGimmick_*`), and NPC actors with attached collision and interaction scripts.
+- The mod and FFRSLib can read and manipulate flags, items, roster join state, and story state at runtime.
+
+**Probe results (2026-11-06, mod 0.11.3, `ffrap_gate`):**
+- **`BP_MapGimmick_*` blockers work everywhere.** Spawning cooked gimmick Blueprints with `world:SpawnActor` (loaded via `KismetSystemLibrary:LoadAsset_Blocking`) worked with full collision in towns, dungeons, and on the overworld (`map 1000`):
+  - `BP_MapGimmick_BlockingBox` (invisible collision box),
+  - `BP_MapGimmick_BlockingBase_Child_MagicPot` (visible sparkling Magic Pot),
+  - `BP_MapGimmick_BlockingBase_Rock` (rock barrier),
+  - `BP_MapGimmick_BlockObject_Gate` (gate barrier),
+  - `BP_MapGimmick_BlockingBase_Wld01Gra_01` (overworld barrier).
+- **Scaling works.** `SetActorScale3D` scales both the visual mesh and its collision cleanly, so a single blocker can span a wide world-map bridge or choke point.
+- **Player pawn naming is inverted.** In the log, town and dungeon maps use `BP_MapUnit_Player_C` (`scale 1.00`), while the overworld (`map 1000`) uses `BP_MapUnit_Player_Field_C` (`scale 1.00`).
+- **Raw NPC pawns do not work (and are not needed).** Spawning `BP_MapUnit_NPC` on the overworld placed an actor that destroyed itself on the next tick (~0.11 s later), showing nothing. Spawning `BP_MapUnit_NPC_Field` in a town (`map 2000`) crashed the game inside `SpawnActor`. `CPP_MapUnit_NPC` expects `CPP_MapManager` and `DT_MapUnitPlacementAsset` setup; `BP_MapGimmick_*` actors have no such dependency and cover all blocker needs.
+- **Live conditional unlocking works.** Toggling `SetActorHiddenInGame` and `SetActorEnableCollision` hides and disables a blocker on the spot and restores it cleanly when locked again. Polling item counts (`FindInventory`) on the 500 ms tick showed `"Gate locked: need ..."` in the HUD feed on approach and removed the gate as soon as the 3rd copy was granted. Spawned actors are not written to the save and clear themselves on map change.
+- **Custom key items work in `DT_ValuableItemData`, except for the display name.** Adding row `FFRAP_Key_29901` (`ID = 29901`, cloned from row `20008` Tunnel Key) via `AddRow` grew `DT_ValuableItemData` from 37 to 38 rows. `AddInventory(29901, n)` and `FindInventory(29901)` tracked the count (`0 -> 1 -> 3`) and the new item appeared live in the Valuables menu without a restart. However, the menu displayed `"Tunnel Key"` even though `r.nameSg` read back `"Bridge Crest"` in Lua, meaning the UI reads another property or localization key copied from template row `20008`.
+- **Bypass behaviour.** Because gates are spawned by the mod at runtime, disabling UE4SS removes the physical barrier. Archipelago's server logic still withholds downstream progression items, and if stricter anti-bypass is ever needed the mod can check region coordinates on load or gate transitions directly.
+
+**Still to find out:**
+- **Exact item text fields:** `tools/dump_game` completed the game data dump, generating `data/game/items.tsv` across all 6 item tables. Still to check: which field controls the on-screen name of a dynamically added custom row in `DT_ValuableItemData`.
+- **Save safety with custom item IDs:** check what happens if a save holding item `29901` is loaded with the mod disabled (or keep custom gate tokens in Archipelago's bridge state instead of `SaveDataInventory` if the vanilla menu dislikes unknown IDs).
+- **Gate catalog:** scout exact `(mapId, X, Y, Z, Yaw, Scale)` coordinates, gimmick visuals, and unlock rules for actual world-map bridges and dungeon doors (`ffrap_gate` can scout these in game).
+
+**From the game data dump (2026-11-06).** The maps already hold many blockers of their own. `data/game/gimmicks.tsv` lists them with their map, position and condition:
+- 178 `BP_MapGimmick_BlockingBox_C` and 104 `CPP_MapGimmick_BlockingBox`. Some are switched by a condition, for example `!{flag:928}` on `Dng_01Gra_41` (uid 7).
+- 43 `BP_MapGimmick_NoEntry_C`, which play an event and turn the player back. 20 have a condition, such as `{progress:0}>=4000 & {progress:3}!=10` on `Dng_01Gra_40`.
+- 41 blocking bases, 12 of them magic pots.
+- To find out: whether the mod can change a blocker's condition (or its flag) at run time. If it can, an item can open one of the game's own gates, and we may not need to add new blockers.
+
+**Round 67 (mod 0.53.0): the first real use.** No door or cave joins two continents. The routes without the airship are the ferry and walking on the world map (`open_world.md`, section 4, "Routes between continents"). The ferry is gated by rewriting its menu rows. Walking crossings are this idea's blockers, placed from `crossings.txt`, which the user fills in game with `ffrap_gate mark`. Round 68: the carts are in the mod, sized and turned by the user. Mod 0.54.0 and world 0.21.0 add the start without the airship (`open_world.md`, section 4).
+
 ## 17. Airship landing restrictions for continent gating
 
 **Status:** Implemented (`1218481`, mod 0.14.0; `7b8f44e`, mod 0.15.0; `54dc893`, mod 0.20.0; `3029a9b`, mod 0.22.0; `c80a1b0`, mod 0.23.0; `a72e30a`, mod 0.24.0; `b3b6f17`, mod 0.25.0 / world 0.4.0). See [open_world.md](open_world.md), section 4.
@@ -622,6 +660,34 @@ The "Back" prompt that menus and the chest pop-up show at the bottom right also 
 
 **Round 32 (2026-11-07):** members given by `ffrap_grant unit` work: they go into the active party when there is room, and into the roster when it is full, and you can swap them in. They join at their own story levels: Lid 11, Nichol 19, Archwitch Fina 3, Fina 6, next to a level 3 Rain. For open world, a member should probably join at the party's level (or its average). This also matters for enemy scaling, because the band follows the party's average level: Lid and Nichol joining moved it from 2 to 7.
 
+## 21. NPC gifts as checks
+
+**Status:** Implemented / superseded (side quests, character events, and vision events in idea 36; one-time free-talk NPC gifts in idea 43; strong enemies in [bosses.md](bosses.md); sanctum legend events in idea 23). Remaining untouched talk-reward groups (Arena, Twelve Arms, non-Siren Espers, `Nawatobi`) are tracked in [side_quests.md](side_quests.md) and [bosses.md](bosses.md); merchant ships are in idea 31.
+
+**Idea:** many NPCs hand out an item when you talk to them, some in the story and some not. These could be Archipelago locations: the gift is blanked and reported as a check, like a chest.
+
+**From the game data dump (round 30, 2026-11-06):** talk events carry an `ObtainItemList` (item `ID`, `Num`, and a `Condition`). About 200 talk events give items. Grouped by event table:
+- **Free talk with town NPCs** (`FreeTalk/<region>/...`), about 20. For example Mage's Glasses in Mitra, Lunar Sword and Brigandine at the Colosseum, the Magi-tenna in Gaberada and the Cabin Key in Sian. Also Phoenix Down x5 and the Transporter (from Charlotte) in Grandshelt Castle.
+- **Side quests** (`SubEvent/SubEv_Chapter01` to `09`), about 75. Rewards and gil from quest givers, the MogChase rewards in chapter 5, and the Aileen weapons in chapter 6.
+- **Character events** (`CharaEvent`): 8 accessories from the party members' own events, and 9 vision events that give a vision plus Magicite (Amelia, Camille, Ayaka, Charlotte, Victoria, Wilhelm and more).
+- **Story** (`MainEvent`): C01_014_03 gives the first two visions (Tronn and Leah), and C06_606_01 gives the White Jade Stone.
+- **Others:** the Arena rank rewards and proofs, 12 Arms weapon awakenings (24), the strong enemies (15), the rope-jumping game (`Nawatobi`, 6), the summon events (7), the legend events (17) and the merchant ship (5).
+
+**What it needs:**
+- **The table as the location list.** A `tools/gen_from_dump.py` step that writes `data/game/talk_rewards.tsv`, with the event, map, items, condition and flags. Then pick which groups become locations. Free talk and side quests are the natural first set.
+- **A way to see the gift.** Either a hook on the call that runs a talk event's `ObtainItemList`, or a check on the event's own done-flag (`OnFlagList`) after the event.
+- **A way to blank it.** Set the row's `ObtainItemList` items to nothing, as chest blanking does for chest rows, before the event runs.
+
+**Probe results (round 30, `ffrap_find ObtainItem`):** `TalkEventData.ObtainItemList` (the table rows), `CPP_TalkEventManager.m_ObtainItemList` (the list of the event that is running), `CPP_TalkEventSceneData.m_ExternalObtainItemList`, and the call `CPP_BFL_TalkEvent.SetExternalObtainItemList`.
+- **To see a gift:** watch `CPP_TalkEventManager.m_ObtainItemList` while an event runs. When it holds items, the event is a gift, and the manager says which event it is.
+- **To blank a gift:** the talk event tables are data tables, like the chest table (`CDT_TalkEventData_Prod` is a composite). Their `ObtainItemList` rows can be emptied the same way.
+
+**Side quests (2026-11-17):** planned in [side_quests.md](side_quests.md) (idea 36). Free-talk gifts stay here.
+
+**To find out:** whether emptying a row's `ObtainItemList` stops the gift and leaves the event's text as it was; and, for open world, which gifts are still there at story 9000 (open_world.md, section 6).
+
+**Off-line pass (round 48):** side quests use their own counters (`{progress:15}==10`), not the main story's. 74 gift rows fall into about 20 quests. 11 of those have a start trigger in `gimmicks.tsv`, and no story test blocks any of the 11 at story 8000. This pass ignored flags and quest counters, and quests started by an NPC are not in that table. Mod 0.29.0's crystals already use `ObtainItemList:Empty()` on a talk row, so the blanking is proven.
+
 ## 23. Shinies and vision crystals as real checks
 
 **Status:** Implemented (`a623de5`, mod 0.29.0 / world 0.5.0; `189c8d9`, mod 0.30.0 / world 0.6.0; `e7783b5`, mod 0.31.0; `9f98ea7`, mod 0.52.3 / world 0.19.1).
@@ -692,3 +758,308 @@ The "Back" prompt that menus and the chest pop-up show at the bottom right also 
 **Round 58: the Chest Radar (world 0.15.0, mod 0.46.0), at the user's request.** `minimap_chest_icons` is now `start_with` (the default, as before), `item` or `off`. With `item`, a Chest Radar takes the place of one filler item in the pool (classed useful). It is a flag item: it turns on event flag 1430, which nothing in the game uses (1430 to 1449 are free; the boss test uses 1440). The mod shows the icons once the flag is on, so it stays with the save. The name keeps it apart from the airship's Treasure Radar quest.
 
 **Round 57: built as a yaml option.** `minimap_chest_icons` (on by default) goes to the mod in slot data. On the seed's save, mod 0.43.0 writes the Treasure entry as the pak has it (shown, the `TreasureBox` icon, also at the low zoom state) and the icon binding; on any other save it puts back what the assets held. Chests only: the pak also shows `Check` spots and map exits, which may be shinies and doors. Not seen in game yet.
+
+## 29. What a boss fight needs, in logic
+
+**Status:** Implemented (`640712a`, world 0.25.0: `data/game/capabilities.tsv`, `apworld/ff_resonance/boss_logic.py`, and per-boss capability rules; `862f260`, world 0.28.0: Magicite awakening logic and double-action party rules). See [boss_logic.md](boss_logic.md).
+
+**Idea (round 63, the user):** with scaling, a boss is a real gate. The right party and visions matter more than levels. So a boss location should need, in logic, the tools to win. For example, Salome could need at least one member or vision with wind skills, and one with healing magic.
+
+**Why it matters now:**
+- Round 63: on Normal, the Nameless Ruins bosses and Mom Bomb could not be won with what the seed had given by then. The user raised the party's level by hand to finish them.
+- Universal Tracker showed many fights in logic that were not winnable without more members, visions or gear.
+- Cave masters are priority locations (`priority_bosses`), so a progression item is likely to sit at a fight like that.
+
+**What is known:**
+- Each unit row in `DT_UnitParameter` has `ElementResistanceList` (element to resistance) and `StatusConditionResistanceList`, so weaknesses are in the off-line data. It also has an `IsBoss` field.
+- The skills are under `Datatable/Skill`. Which member and which vision gives which element or healing is not tabled yet.
+
+**What to find out:**
+- A table: each member's and each vision's elements, healing and buffs, by level or by vision rank.
+- A table: each boss's weaknesses and a rough tier (from its scaled level band).
+- The rule shape. One choice: a boss needs N members plus visions (N by tier), at least one of them hits a weakness, and one can heal. Another: count "power" items (members, visions, weapons over some tier) in place of exact skills.
+- Whether a cave master should stop being a priority location until this logic exists.
+
+**First-pass design:** see [boss_logic.md](boss_logic.md) for the capability matrix, 8-element mitigation table, progression proxies, per-boss rules for all 41 bosses, and unshuffled Vision / side-quest location requirements.
+
+## 32. Radar treasures as locations
+
+**Status:** Implemented (`77170cb`, mod 0.57.0 / world 0.24.0; `862f260`, `d4ab143`, mod 0.59.0 / world 0.28.0; Magi-tenna NPC in `c725c2f`, mod 0.61.0 / world 0.30.0).
+
+**Round 72, from the user's question.** The airship radar does not reveal any of the world-map shinies we have: those have no visibility condition and stand there from the start. It finds 13 treasures of its own instead (`docs/logic.md`, "Treasure radar").
+- **In the game:** a side quest on the airship (`{progress:49}`) installs the radar (flag 702) and then the Magi-tenna (27006), Resonance Stone (27007) and High-Power Generator (27008, sold by a merchant ship). Each part opens the next tier of pinger points: 5, then 4, then 3, then the 13th.
+- **The rewards:** `SubEv_C05_TreasureRadar_01_01` to `_13` give Adamantite (20016), Magicite (25001), two Magicite Crysts (25002) and nine pieces of equipment (11098, 12016, 11022, 10497, 10819, 12038, 12073, 12075, 12059).
+- **At story 8000 on our start,** flag 702 is off, so no pinger works. The three parts are key items in our pool that do nothing yet.
+- **Built (mod 0.57.0, world 0.24.0):** the 13 treasures are locations (found flags 704 to 716 as checks). Three Progressive Radars (item 27006, counted by the mod from the session's items) take the place of the three parts: one turns flag 702 on, two and three set `{progress:49}` to 40 and 50. They need the Airship. Their rewards go to the pool, and each dig row gives the pop-up's stand-in Potion. The pingers also chain: each needs the one before it found (`{progress:51}`, set by each dig row).
+- **Round 75 (mod 0.59.0, world 0.28.0):** the radar works (round 74), and each Progressive Radar now opens its whole tier at once. The mod holds the found count `{progress:51}` at the top of the radar's band (13, 22, 31), the threshold of the tier's last point. Mt. Reizan's Chest 3, which holds the Resonance Stone, is a location with the treasures on (`docs/playtesting.md`, round 75).
+
+## 33. The Mechabo upgrade quests cannot start
+
+**Status:** Implemented (`6bf4953`, `8b979d5`, `04dba04`, `98a0a1c`, verified in `c35c301`, mod 0.61.0). Turning the three Mechabo quests into locations remains a future item in [side_quests.md](side_quests.md).
+
+**Known issue in v0.28.0 (found off-line, 2026-11-16).** The three Mechabo quests from Verun cannot be reached on our start. Verun never appears at the Dwarven Forge or on the airship. This goes with the other side-quest work ([side_quests.md](side_quests.md), idea 36).
+
+**Why:** the whole chain runs on one counter, `{progress:16}`. The story event `C02_219_02` ("Mechabo repair request") sets it to 10, and the skip never runs that event, so it stays at 0. Each Verun NPC is visible only while the counter is in its range (`m_VisiblFlagCondition`):
+
+| Map | NPC | Visible when | Quest and event rows |
+|---|---|---|---|
+| 2050 Dwarven Forge | 7 | 16 is 10 to 19 | Arise, Mechabo! (`C02_MechaboLvUp_00`, `_01`) |
+| 2050 Dwarven Forge | 0 | 16 is 20 to 70 | Mechabo Evolved (`_02` to `_06`), then `_07` |
+| 20001 Airship | 28 | 16 is 75 to 99 | Mechabo Unleashed (`_08` to `_10`) |
+
+**How the chain runs:**
+- Each material step is a delivery quest on quest board 1000 (`DT_Request_QuestData`, quests 1001 to 1007), shown when the counter is 10, 30, 40, 50, 60, 80 or 90.
+- The player brings 2 or 3 drops from normal enemies: Ipooh, Dhorme Chimera, Medusa, Destroyer, Sandworm, Mahadeva and Malbodoom. Delivering runs `_NN_ItemGet`, which sets flag 219.
+- Talking to Verun with flag 219 on runs the next row. That row clears 219 and moves the counter on by 10.
+- No other story test blocks it. "Arise, Mechabo!" needs story 2120 or later, and "Mechabo Unleashed" needs 5020 or later. Our start is 8000.
+- `C02_219_02` also sets flag 13, which `OPEN_WORLD_FEATURES` already sets.
+
+**Rewards:**
+- Lid (unit 1004) learns six abilities from the rows' `AbilitySettings`: Mechabo Tackle (404110), Overclock (404130), Mecha Fat Chocobo (404070), Mecha Behemoth (404060), Overclock Zero (404140) and Mecha Mog Scan (404120).
+- `_01` gives a Magicite Shard (25000), `_06` a Magicite (25001) and `_10` a Magicite Cryst (25002).
+
+**The likely fix:** set `{progress:16}` to 10 on the open start. Also set it on load when it reads 0, so existing saves get it. `G.SetProgressValue` already does this kind of write for the radar.
+
+**Built (round 78, mod 0.61.0):** on an open world seed's save, the mod sets `{progress:16}` to 10 whenever it reads 0. The three quests are not locations yet.
+
+**Round 84 result:** Verun is at the forge and asks for the Ipooh drops (`C02_MechaboLvUp_00_yet`), but "Arise, Mechabo!" was not in the quest log. The quest log is fed by each event row's `RequestStateSettings` (Accept, Proceed, Complete), and the Accept of request 17 is in `C02_219_02`, which the skip never plays. **Built (build a87aac00):** `G.MechaboPatch` puts that Accept first in `_00_yet` and `_00_ItemGet`. Quests 26 and 27 are accepted by the chain's own rows (`_02`, `_07`).
+
+**Round 85 result:** still no quest, and Ipooh kills did not count. Request 17's own row (`DT_RequestData` `C02_MechaboLvUp`) is accepted only while `AcceptCondition` holds, `{progress:16}==0&{progress:0}>=2120`, and the start has the counter at 10 already. Its first step lists quest 1001 on quest board 1000: "Ipooh" x2 (`ClearConditionList` ID 55), most likely a hunt that counts only while the quest is accepted. **Built (build b93912a5):** `G.MechaboPatch` also sets request 17's `AcceptCondition` and `Occurrence.Condition` to `{progress:16}==10`.
+
+**Round 92 (a new seed's save, counter 10):** Verun showed only "..." and no quest. Since round 93 the `mechabo:` line gives the quest log's state of quests 17, 26 and 27 from the save (`request.DataMap`).
+
+**Round 93 result:** quest 17 open, but Ipooh kills did not count. Its first step is board quest 1001, a hunt of unit 55, whose state and kills are in the save's `questBoardList` (EQuest_State: None, AfterOrder, ConditionAchievement, QuestSuccessful, QuestFailure). Since round 94 the `mechabo:` line gives them.
+
+**Round 94 result:** `board quest 1001 none`: never ordered, so kills did not count. **Built (round 95):** for each of Verun's open quests the mod orders the current step's board quests that read none.
+
+**Round 95 result:** the whole chain to Mechabo Tackle works. Only the first hunt (1001) needed the order; the game ordered 1002 itself. "Arise, Mechabo!" gives no skill (the user): it repairs Mechabo and starts the gather quests, and "Mechabo Evolved" gives Mechabo Tackle at counter 40.
+
+**To find out:**
+- Whether the steps should be locations: the six abilities and three Magicite rewards, with logic for each material's enemy area. The steps also need Lid in logic if the abilities stay vanilla.
+
+## 34. Location names a player can find
+
+**Status:** Implemented (`55082fb`, world 0.29.0; hand-written overrides for chests, shinies, Tablet Shards, and radar treasures in `b8838ae`; NPC gift renames in `168240c`, `4f38161`, `98f3604`, world 0.31.0).
+
+**From the user, 2026-11-17.** "World Map Shiny 167" says nothing about where to look. Players asked during the pre-release.
+
+**What the data gives without a person (a prototype, 2026-11-17):**
+- **World-map shinies (94) and radar treasures (13):** each has x and y. The world map has 99 doors with a named destination (`transitions.tsv` to `maps.tsv`) and the continent boxes (`data/continents.tsv`). Nearest door plus a compass point gives, for example, Shiny 167 "Gronoa, NW of Rugged Mountain Path", which matches the user's screenshot. The axes are +X north, +Y east. Weak spots: five or more doors are all "Sanctum of Light", and a few shinies are 3000 or more units from any door.
+- **Chests (206):** the place name is there already, and a dungeon is mostly one map, so there are no floor names. The chest's vanilla item makes a name: "Wind Shrine - Armor of Gales Chest". Only 4 of 206 share an item with another chest in the same place.
+- **Tablet Shards (99):** a town's map name, with the uid as the number. A position inside the town (north, plaza) needs a person or landmarks we do not have.
+- **Bosses and crystals:** already readable.
+
+**What a person should do:** read through a generated list, fix the weak ones and name the tablet shards. A TSV of `key`, current name and suggested name, with an empty column for the user's name, does it. Names come from the generator (`tools/gen_apworld_data.py`) with the user's column as an override. The first draft is `data/location_names.tsv` (469 rows; 17 duplicates and 10 shinies far from any door are marked in `note`). Nothing reads it yet.
+
+**Built (round 77, world 0.29.0):** `tools/gen_apworld_data.py` names every chest, shiny, Tablet Shard and radar treasure this way and rewrites `data/location_names.tsv` each run, keeping the `name` column. A filled `name` wins. Repeats are numbered ("Mysidia - Shiny near Salome Cave 1" to 3). Sanctum doors name their sanctum ("near Sanctum of Onion Knight"). The `old` column keeps round 76's names, for players with old yaml lists. Tablet Shards are numbered within their place, so they still want a person.
+
+**What it changes:** location ids stay the same, so the client, the mod and old seeds keep working. Players' yaml lists (`exclude_locations` and the like) that use the old names stop matching. Do it once, before the full release.
+
+**Follow-up (`b8838ae`, `168240c`, `4f38161`, `98f3604`):** hand-written names were filled across `data/location_names.tsv` (including Tablet Shards), and NPC gift locations were renamed by where each NPC stands.
+
+## 35. Keep the received-items count in the save
+
+**Status:** Implemented (`55082fb`, mod 0.60.0).
+
+**From the pre-release, 2026-11-16.** After a mod update, and on a second PC, players had to `/bind` again and got every item a second time.
+
+**Why:** the applied count (`state.applied`, `slotItems`) and the seed key live only in `ap_state.txt`, beside the mod. The install steps say to delete it on an update. A save bound by `/bind` with no count starts at 0 and gets everything.
+
+**The likely fix:** write the count, and a short tag of the seed, into the save. Unused event flags as bits are one way: 20 flags count to a million items, and 16 more hold a hash of the seed key. The game saves them with everything else, so Steam Cloud carries them to the other PC. On load, a save whose tag matches the session is the session's, with the count it holds. `ap_state.txt` stays as a fallback for saves from before.
+
+**Built (round 77, mod 0.60.0):** 12 count flags (1414 to 1419, 1430, 1432 to 1436) and 11 tag flags (1437 to 1439, 1442 to 1449). The tag is FNV-1a of the session key folded to 1 to 2047. On load, a save whose tag is the session's is linked with its count, before `ap_state.txt` is asked; a save stamped by another seed is not linked even when `ap_state.txt` lists its slot. The mod writes the stamp whenever the applied count changes, in the same tick as the grant, so a save the game makes holds both together. A save from before 0.60.0 has no stamp and is judged by `ap_state.txt` as before, then stamped.
+
+## 36. Side quests as locations
+
+**Status:** Implemented (`6bf4953`, `d1437b9`, `0662c63`, mod 0.61.0 / world 0.30.0; `19a087b`, mod 0.62.0 / world 0.31.0, adding `hide_quest_rewards` and removing unused key items). See [side_quests.md](side_quests.md) for future additions (Mechabo quests, Aileen's weapons, non-quest-log rewards); character-quest stat bonuses remain in idea 45.
+
+**From the user, 2026-11-17.** Side-quest rewards in the pool. The plan is [side_quests.md](side_quests.md).
+
+**Off-line pass (2026-11-17, before round 78):**
+- The game's quest log (`DT_RequestData`) has 33 quests with English names, accept tests, completion tests and prizes. 31 become locations in the first pass; Battle at the Big Bridge and Iron Splitter go with the bosses.
+- Each quest runs on its own counter. Quest-item gift rows move the counter, and the next step tests the counter, not the item. So 11 quest items in our key-item pool unlock nothing: Dew of Reprieve, Viscus Vitae, Rushroom, Pure Water, Convalescence Draught, Super Salubrious Salad Stem, Portrait of Dario, Dario's Letter, Ruby Fragment, Broken Sword Hilt and Blade (20020, 20023 to 20032). They leave the pool and stay vanilla (decided with the user).
+- Every quest's start holds at story 8000 except the Mechabo quests (idea 33).
+
+**Built (round 78, world 0.30.0, mod 0.61.0):** option `include_side_quests` (off by default for now): 28 quest locations, `quest:<id>`. The mod swaps each reward row's first item for the stand-in Potion, takes visions out, and reports a quest when its counter reaches the reward row's value. The 11 quest items left the pool. `data/quests.tsv` lists the quests by hand; `data/game/quests.tsv` and `quest_steps.tsv` come from the dump.
+
+**Round 88 results and fixes (build c9dab8b2):**
+- Mog Tag's pop-up comes before its counter moves, and each tier runs at two counter values, so it had no early pop-up. The generator now allows several values, gated by the flags every step needs (545, the chase).
+- The Call from Beyond's reward runs on map 2100, after a row moves the player there. `quest_steps.tsv`'s new `at` column follows those moves.
+- The user asked for the scouted item in the Quests screen. Its Rewards list is `DT_RequestData`'s `Prize`, where an entry with ID 0 shows its own text; the location's entry becomes that.
+
+**Round 98 (`0662c63`) and round 103 (`19a087b`):** steps on maps past Liquid Thunder use the chests' rule in logic, quest second rewards are locations (`quest2:<id>`), `hide_quest_rewards` shows `???` on the Quests screen when enabled, and White Jade Stone, Black Jade Stone, Magic Tome, and Tunnel Key left the key-item pool.
+
+## 37. Open the Oblivion Palace safes with no turn-in
+
+**Status:** Implemented (`acfbd9f`, `a121d5e`, `5b4f492`, mod 0.61.0). The live-refresh edge case when shards arrive while standing inside the palace is parked.
+
+**From the user, 2026-11-18 (during round 79).** The turn-in is slow: every visit to the Enigmatic Princess plays her talk, then the same scene once for each chest earned. The user wants to walk in and open the safes the shards already pay for. Her last talk at 99 shards stays.
+
+**Off-line pass (2026-11-18):**
+- Each safe tests only story counter 43. Safe *n* (chest `2031:n`) has `m_OpenCondition` `{progress:43}>=11+n` in `Town_02Lan_22_01_GD`, and the Blueprint's `HaveSafeDepositBoxKey` asks `IsMeetCondition` on it. The safes never test the shards.
+- The princess's chain (`DT_TalkEventData_SubEv_Chapter01`): her first talk, `SubEv_C01_Collection_01`, sets counter 43 to 10, which also lifts the palace's blocking base (`{progress:43}==0`). On each talk she takes every shard held (`TransferItemList` 25004, `Num -1`) into `{transferItem:0,25004}`. `SubEv_C01_Collection_04` then runs one step per chest earned: step *k* needs `{progress:43}==10+k-1` and enough shards turned in, plays the same scene and sets the counter to `10+k`. That loop is the repeated talk.
+- `SubEv_C01_Collection_05` then gives the milestone talks, by shards turned in and flags: `_06` at 28 (flag 151), `_07` at 60 (flag 152, Steam achievement 17), `_08` at 99 (flag 153). They give no items.
+
+**The likely fix (mod only):** hold counter 43 at `10 + chests earned`, counting shards held plus shards turned in, as the radar holds its counters (idea 32). The safes then open with no talk. The mod leaves the shards in the bag, so a talk to her still takes them and plays the milestone talks, the last one included. Her step loop finds every step already done and plays nothing. Turned in: `{transferItem:0,25004}` lives in `SaveData_TransferTargetInventory` (a map), so the mod can ask the game's `CPP_BFL_Condition:IsMeetCondition` instead of reading the map. To test in game: the call from Lua, and whether a safe in view changes when the counter changes, or only on the next visit.
+
+**Built (for round 80, mod 0.61.0):** `G.PalaceSync` (`game.lua`), run each tick on a seed's save. It holds counter 43 at 10 plus the steps paid by the shards held and turned in, asking `IsMeetCondition("{transferItem:0,25004}>=N")` for the turned-in part. It never lowers the counter, and leaves it alone when the condition test is not found. The log line: `palace: 5 shards held, 1 steps paid, progress 43 at 11`. A save that has never met the princess goes to 10 at once, so the palace's barrier is gone from the start.
+
+**First try (round 80, 2026-11-18):** the safe for 9 shards stayed shut. The save had 6 turned in the old way (counter 12) and 4 held. The log said `palace: 4 shards held, 1 steps paid, progress 43 at 12`, read on the world map before the player went in. So `{transferItem:0,25004}` read 0 there, and the mod did not ask again in the palace, because the held count had not changed. The save keeps turn-ins in `SaveData_TransferTargetInventoryByMap`, a map keyed by map, so the test most likely reads the current map's turn-ins only. **Fix (mod build cac73e78):** the turned-in count is read only in the palace (map 2031), as a whole number in 7 tests, and kept for the save. It is read again there when the held count changes. Elsewhere the last reading counts, or none.
+
+**Works (round 80, build cac73e78):** with 6 turned in and 4 held, the 9-shard safe opened with no talk. Three more shards sent from Archipelago while in the palace raised the counter, but the next safe opened only after leaving and coming back.
+
+**Why, and the likely fix (not built; the user: rare in a real run, leave it unless it is cheap):** the safe's `OnUpdateHaveItem(in_Value)` tests `m_OpenCondition` again and sets up its event (`SetupEvent`). By its name it runs when the bag changes, so the princess taking the shards refreshes the safes. An Archipelago shard changes the bag before the mod raises the counter, a tick later, so the refresh comes too early. Calling `OnUpdateHaveItem` on each live safe after the counter goes up would likely fix it. `in_Value` is an object, and whether the function reads it is not known, so it needs a probe behind a test command first.
+
+## 38. An Archipelago page in the main menu
+
+**Status:** Implemented (`a4fd9e1`, `60fba4c`, `8b979d5`, mod 0.61.0; evolved into the two-tab Settings/Seed page hosted on the Options screen in idea 39).
+
+**From the user, 2026-11-18 (during round 82).** Our settings sit at the bottom of the game's Options screen. The user wants an entry of our own in the main menu, as FFR Bestiary has, with the settings and more: Tablet Shards and Crystal Fragments found, the seed's settings (goal and so on), and which continents are open.
+
+**How FFR Bestiary does it (0.1.7, read 2026-11-18):**
+- **The entry is a pak** (`~mods/zzz_FFRBestiary_P`). It replaces two whole tables. `DT_MainMenuScene` gets a row tagged `UI.MainMenu.Scene.Bestiary` that opens `WBP_HelpLayout`. The debug menu's tag table `DM_DT_GameplayTag_Option` gets a row that registers the tag. The tables are the game's, so its installer builds the pak on the player's PC (retoc, uasset-json, an Oodle download, one game start in between).
+- **Lua puts the entry in the menu.** It adds the tag to `CPP_DA_MainMenuRoot.DisplaySceneList` before System, and names the entry per language in `CPP_MainMenuSubsystem.SceneDataMap`.
+- **Lua builds the page in a borrowed screen.** When the activated `WBP_HelpLayout_C` under `WBP_MainMenuLayout` opens, it resizes the window, hides the title and puts its own boxes in the screen's `NamedSlot`. The pieces are the game's: `WBP_SystemSubhead` (headings), `WBP_Cmn_Window` (framed panels), `WBP_LeftLineButton` (framed rows), `BP_SystemTextStyle` (body text). A pre-hook on `PushLayoutWidget` stops confirm from opening a tutorial.
+- It calls `SetColorAndOpacity` with a Slate colour table and does not crash. Our round 20 lesson says a Slate colour struct crashes a setter. Test it behind a probe before we use it.
+
+**What we cannot copy:**
+- **The pak.** A second pak that replaces `DT_MainMenuScene` drops the row of whichever loaded first. Bestiary logs this case.
+- **The Help screen.** Bestiary takes over any activated `WBP_HelpLayout_C` under the main menu, so it would draw on our page. The menu pools one screen per class, so the System page's class is out too.
+
+**Our way (no pak), from the off-line dump:**
+- `DT_MainMenuScene` has 8 rows (Root, Item, ActionEquip, Heal, Map, Party, Journal, System). Their struct is `MainMenuSceneData`: `SceneTag`, `EntryName`, `SceneTitle`, `IconTag`, `LayoutData.LayoutWidget` (a soft class), `EnableFlagIdData` and more.
+- `DA_MainMenuRoot.DisplaySceneList` lists Map, Journal, Item, Heal, ActionEquip, Party, System.
+- `DefaultGameplayTags.ini` registers three scene tags that no row uses: `UI.MainMenu.Scene.Vision`, `.Equipment` and `.Action`. A registered tag needs no tag table. Our Options rows also work with tags never registered.
+- So: `AddRow` a copy of System's row into `DT_MainMenuScene` from Lua, as the Options rows are added, then add the tag to the scene list. `CPP_MainMenuSubsystem` (a world subsystem) keeps its own `SceneDataMap` and `SceneEnableMap`, so it may need the row too, when it was built before the row was there.
+
+**What the page can show:** the tower lock's counts (characters, Visions, Crystal Fragments, from `cfg finalboss`), each continent's lock (`game.ContinentOpen`), the start and vehicle settings from the `cfg` lines, and Tablet Shards from the bag. The goal and checks found of total need new `cfg` lines from the client.
+
+**Probe built (round 82, mod build 26b6adfa):** `ffrap_apmenu`, each writing step logged before it runs:
+- `info`: the table's rows, the scene list, the subsystem's maps and the view model's scenes, to `ffrap_apmenu.txt`.
+- `on [own|vision|equipment|action]`: adds the entry, named Archipelago, every tick from then on. `own` is `UI.MainMenu.Scene.FFRAP`, never registered.
+- `layout <system|help|tutorial|option|journal>`: the screen it opens (default: System's). It writes the soft class with `Conv_SoftClassPathToSoftClassRef`, then as a string, and reads each back.
+- `screens`: every instance of those screens, activated and visible.
+- `tree`: the open entry's screen, widget by widget, to `ffrap_apmenu.txt`.
+- `text`: one line of text on the open entry's screen.
+- `off`: stops adding it. A game restart takes it out.
+
+**Round 82 result (build 26b6adfa):** the entry works with no pak and sits beside FFR Bestiary's. Our own unregistered tag is enough. The screen it opens can be set from Lua. Tutorial, Options and Journal all opened empty. The Tutorial screen is the host: one framed window, and no other main menu page or mod uses it. Options shares its panel with Help (FFR Bestiary's), and Journal is the Quests page's own class.
+
+**Built (round 83, build 0c2a8b95):** `ffrap_apmenu page` fills the Tutorial screen: the title "Archipelago", the seed's state in the description, and the image box, arrows and page count hidden. The client sends `cfg goal` and `cfg checks` for it. Still to do once the page is seen: turn the entry on by default for a seed, lay the page out with the game's heading and framed-row widgets (as FFR Bestiary does), and decide what the arrows could page through (for example, the received items).
+
+**Round 83 result (build 6a38c39e):** the page works and opens and closes again and again. Three fixes on the way:
+- The page finds its widgets by walking the screen (`GetWidgetFromName` found nothing).
+- The menu turns the screen off as soon as Back asks it to close, so the screen's own `FinishedClose` never ran. The page turns on the base class's default finish for a close (`CloseStateProperty.IsEnableDefaultFinisheCall`). A fallback calls `FinishedClose` on a screen off but still closing.
+- `ffrap_apmenu close` is a way out: `OnRequestClose`, or the view model's `PopScene()`.
+
+**Round 84 result (build dc66cdd9):** the page works as a normal feature. **From the user, round 84:**
+- The page leaves the menu on a save not linked to the seed, and the settings go back to the game's own there (built, a87aac00; idea 39 for the rest).
+- Tablet Shards held and turned in, and the safes ready to open, so a player can count without the princess's talk (built, a87aac00).
+- Nicer layout: sections or framed boxes. Not built. FFR Bestiary's way is the guide: `WBP_SystemSubhead` for headings, `WBP_Cmn_Window` for framed panels, `WBP_LeftLineButton` for framed rows, all made and put in the screen from Lua. It needs a probe behind a test command first (round 20 lesson: no font or Slate colour structs to setters).
+
+## 39. Our settings in the Archipelago page
+
+**Status:** Implemented (`8b979d5`, `a18f8b0`, `4366822`, `aaef171`, `d1437b9`, mod 0.61.0; `7108c46`, `19a087b`, mod 0.62.0).
+
+**From the user, 2026-11-18 (round 84).** Move the settings from the bottom of Options > Gameplay into the Archipelago page. On a save not linked to the seed, the page is gone and the settings are the game's own; `/bind` brings them back. This reverses round 57, which applied the settings to every save.
+
+**Built (round 84, build a87aac00):** the second half. `save.vanilla()` in `main.lua` is true with a seed known, a save loaded and the save not the session's. Then `settingsTick` writes `SETTING_DEFAULTS` (the game's own rates and encounters), and the page's entry leaves `DisplaySceneList` (`A.Unlist`). Scaling was already off on such a save. A mod run with no seed at all still applies the settings.
+
+**Not built: the settings in the page.** The page is the Tutorial screen with one text box. Settings need rows the player can move between and change, as the Options screen's rows are. Two ways, both to probe first:
+1. Build rows of the game's own widgets in the page (as FFR Bestiary does), with our own focus and input handling. The most work, and the most to go wrong.
+2. Keep the Options rows, and have the page say what they are set to and where to change them. Cheap. The rows could also be hidden on a save not linked to the seed.
+
+Until then the Options rows stay, and on a save not linked to the seed they change nothing.
+
+**The user chose way 1 (2026-11-18).** A third way came out of the dump, and it may be the cheapest that still puts the settings in our entry: let the entry open the game's own Options screen, which already does rows, focus, a gamepad, saving and the description box.
+- The game opens Options from `DT_GameLayoutWidget_System`'s `UI.Layout.Option` row. Its `LayoutData` gives the screen two view models, `CPP_VM_Option` and `CPP_VM_OptionKeyBind` (context name `CPP_VM_KeyBind`), and two more input contexts, `UI_Info` and `OptionMenu`.
+- Main menu rows hold the same `LayoutData`. Round 82 opened Options from our entry with the screen class only, and it came up empty. Journal did too: its row has `VM_Journal`. So the missing view models are the likely cause.
+- The tabs are rows of `DT_Option_Root`, one per category (`FOP_Parent_CommandCategory`: Gameplay, Graphic, KeyboardMouse, Gamepad, Sound). Each has a `Condition` string and `Object`, the row table it lists. The categories are a fixed enum, so a sixth tab of our own is not simple.
+- Option rows (`DT_OP_GameSetting`) have types including `Subheader` and `Command`, and an `ItemDescription`. Section headings and read-only lines for the seed's state could be rows of those types.
+
+**Probe (round 85, build 05f33eda):** `ffrap_apmenu options` writes the Options screen and the layout row's view models and input contexts into our row and the menu subsystem's copy (`A.WriteScreen`). `text` puts the page back. `tabs` lists `DT_Option_Root`; `tabs only` leaves out every tab but Gameplay with a condition never met (`{progress:0}<0`), and `all` puts them back.
+
+**To find out (round 85):**
+- Whether the Options screen works from our entry: rows, Back, saving.
+- Whether the tab list is read again at each open, so tabs can differ between our entry and System > Options.
+- Then: which rows show in our entry (only ours, with the seed's state as headings and lines), and how to keep System > Options as it is.
+
+**Round 85 result (build 05f33eda):** the Options screen works from our entry, settings save from it and from System > Options, and Back returns to the menu. `tabs only` and `tabs all` changed the tabs at the next open, so the tab list is read at each open.
+
+**The plan from here:**
+- Our entry opens the Options screen. When the player picks it, the tables switch to "our page": the Gameplay tab alone, named Archipelago; the game's rows hidden; heading rows with the seed's state. When the menu leaves our scene, they switch back, so System > Options is the game's own again. The title screen's Options would show the game's own too.
+- The moment to switch: the root entry's click calls `CPP_MainMenuSubsystem:SetScene(tag, option)` from Blueprint (`WBP_MainMenuRootEntry.BP_OnClicked`), so a pre-hook sees our tag before our screen opens.
+- Hiding a row: each option row (`OP_BaseMenu_EntryInfo`) has `ShowCommandData.ShowType` (ALL 0, TitleOnly 1, GamePlayOnly 2). TitleOnly should hide it in game.
+- Headings: `DT_OP_KeyboardMouseSetting` has `SubHeader` rows of the same struct to copy, with our text in `DisplayText`. The rows also have `ItemDescription`, the line shown for the focused row, which could hold more of the seed's state.
+
+**Probe (round 86, build b93912a5):** `ffrap_apmenu mode ap` makes the switch by hand (`A.Mode`) and logs each `SetScene` from a pre-hook; `mode game` puts the tables back. To find out: whether the page looks right, whether the hook fires before the screen opens, and whether `RemoveRow` takes the heading rows out again.
+
+**Round 86 result:** it looks right: one tab named Archipelago, our settings, the page's lines as headings, and none of the game's rows. The hook logged `SetScene UI.MainMenu.Scene.FFRAP` on the click. `mode game` put System > Options back.
+
+**Built (round 87):** the entry opens the Options screen by default (`APMENU.screen = "options"`).
+- The `SetScene` pre-hook is registered when the page starts. Our tag makes the tables our page (`A.Mode "ap"`, with the page's lines as headings, blank ones left out); any other tag puts them back.
+- Each tick, once the menu's scene stack has shown our scene and then left it, the tables go back (`state.apMenuBack`). They also go back if our scene never shows within 3 s.
+- Our rows are TitleOnly when made, so in game System > Options no longer has them and the title screen's Options still does. On our page they are GamePlayOnly.
+- The text page stays behind `ffrap_apmenu text`.
+
+**Two tabs (the user, 2026-11-19, built for round 87):** one tab for the settings and one for the seed's state. A sixth tab is not simple (the categories are a fixed enum), but each tab shows the row table named in its `DT_Option_Root` row's `Object`. So the page keeps the Sound tab too, names Gameplay's "Settings" and Sound's "Seed", hides the six rows of `DT_OP_SoundSetting` (the volume sliders and its Reset button), and puts the heading rows there. `ffrap_apmenu split off` gives the one tab again. To find out: whether a tab holding only headings works (nothing on it can take the cursor), and whether the game's reset key on the Seed tab touches the hidden volume rows.
+
+**Round 87 result:** both tabs work with a keyboard and a gamepad. Three findings:
+- The first open showed the game's rows on Settings, likely because the game loaded `DT_OP_GameSetting` again after the hook wrote it. Since round 88, while the page is open each tick checks the tables (`A.Written`) and writes the page again if needed.
+- A gamepad cannot scroll the Seed tab: no heading takes the cursor. The round 88 probe `ffrap_apmenu seedrows command` makes the lines Command rows (`WBP_OP_Command`, whose click is empty in its Blueprint).
+- The user: the settings belong only in the Archipelago entry, not at the title screen. Since round 88 our rows are in the table only while the page is open.
+
+**Rounds 89 to 103 (`d1437b9`, `7108c46`, `19a087b`):** Seed tab Command rows became default, saves not linked to the seed receive none of the seed's writes, and in v0.31.0 the Seed tab moved to the Graphics tab for its monitor icon while rows are removed in reverse order so they keep their order on reopen.
+
+## 42. Item names in Archipelago's colours
+
+**Status:** Implemented (`973554f`, `2f76f9b`, `c35c301`, `c725c2f`, `168240c`, mod 0.61.0 / world 0.30.0; `4f38161`, `19a087b`, mod 0.62.0 / world 0.31.0).
+
+**From the user, 2026-11-19 (round 89).** Show item names in the colours Archipelago's clients use: light blue (cyan) for filler, dark blue (slateblue) for useful, purple (plum) for progression, red (salmon) for traps. In the item feed, the chest and reward pop-ups, and the Quests screen's Rewards. The name only, not the rest of the text.
+
+**Found off-line (round 89):**
+- The client now sends each item's flags (1 progression, 2 useful, 4 trap) and its name with its item line, and with each "Sent" message. A location's scout already had its flags.
+- **The feed** is our own VerticalBox of TextBlocks. A line can be a HorizontalBox of three TextBlocks, the middle one coloured by writing `ColorAndOpacity.SpecifiedColor` before it is on screen. No colour struct goes to a setter (round 20).
+- **The chest pop-up's message** (`Text_Message` in `WBP_DialogBox`) is a CommonRichTextBlock. The game's text decorator, `CPP_RTBD_Text` (`RTBD_TextStyle`), handles `<text style="italic">` and `"bold"` in the game's strings, and has a `ColorSet` and a `SizeSet`: DataTables of `RTB_Text_Color` (`FontColor`) and `RTB_Text_Size` rows. The game ships neither table, and the decorator's default has none. Its attribute names are not readable in the executable. So colour there needs a probe: make the table, give it to the decorator, and try `<text color="progression">`.
+- **The Quests screen's Rewards** line (`WBP_Quest_Reward_Text`) is one CommonTextBlock with the game's text style (`BP_SystemTextStyle`). It cannot colour part of its text, and a line already on screen takes a colour only through a setter that needs a colour struct. Not built. Ways to look at later: a style class the game does not use, given by `SetStyle` (it takes a class); or making the line a rich text block.
+
+**Probes (round 90, build 87f4d742):** `ffrap_feed colors on` (four test lines, then real ones); `ffrap_popup probe` (the message's decorators and their tables); `ffrap_popup colors on [attr]` (the table, then markup in the next pop-ups). All are off at each start.
+
+**Round 90 result:** the feed colours work; the user asked for the name in bold too. The pop-up's message has no decorators, so the markup drew the name black, and `AddRow` with a Lua table made no rows. Markup is out for the pop-up.
+
+**Built (round 91, build ec671324):** feed colours on by default, with the name bold. The pop-up and the Quests screen use the feed's way: a row of our own TextBlocks, styled before it is on screen. The pop-up's row goes under the message, the Rewards line's beside its hidden text block. Both are probes (`ffrap_popup colors on`, `ffrap_quest colors on`).
+
+**Round 91 result:** the feed and the pop-up work, and the pop-up's colours are on by default since round 92. The Quests screen showed no colour and logged nothing. Since round 92 the probe logs what it sees (`seen:` lines) and takes a line's block by its name or by its text.
+
+**Round 92 result:** the lines were found, but no text block under them: it sits in the entry panel's named slot. Since round 93 the probe finds the reward texts as CommonTextBlocks whose path is in a reward line, and in a one-child slot puts our row in the block's place (`SetContent`).
+
+**Round 93 result:** no such CommonTextBlock was found. The line's `SetText` writes `CommonTextBlock_194`, a variable of the line, held in the entry panel's `Slot_33_Content`. Since round 94 the probe takes the block from the line's property, or from `GetContentForSlot`.
+
+**Round 94 result:** the blocks were found, but the name went blank: the NamedSlot's `AddChild` failed and gave back a null object, which Lua takes as true. Since round 95 a slot counts only when `IsValid()`, and in a NamedSlot our row takes the block's place.
+
+**Round 95 result:** the Quests screen works. The user: the colour comes a second late. Since round 96 the screen's colours are on by default; `ffrap_quest instant on` (a probe) hooks the reward line's `SetText` to colour each line as it is written.
+
+**Rounds 97 to 103 (`c725c2f`, `168240c`, `4f38161`, `19a087b`):** instant quest colouring is on by default, server-sent items are coloured by their own category, pop-up coloured rows clear when the dialog's message changes, and `hide_quest_rewards` shows `???` uncoloured.
+
+## 43. NPC gifts as locations
+
+**Status:** Implemented (`c725c2f`, `168240c`, mod 0.61.0 / world 0.30.0; `4f38161`, `98f3604`, mod 0.62.0 / world 0.31.0). Seven reachable one-time gifts are active locations; three unreachable or missing at story 8000 (`1403`, `1407`, `1409`) are left out.
+
+**From the user, 2026-11-19 (round 96).** The NPCs who give one-time rewards (the old man with the Lunar Sword and the Brigandine) are locations, always on.
+
+**Found off-line:** each one-time gift row sets its own flag in 1400 to 1413 and gives items; `tools/gen_from_dump.py` writes them to `data/game/gifts.tsv` with the map actor leading to each. There are 10, all reachable on the open start; the Pharm cat's (1413) needs flag 1412, from the Mysidia cat. The Cabin Key's row sets no flag and is left out.
+
+**Built (round 97, build 26e942ac):** each gift is a location, `gift:<flag>`, checked by its flag. The row gives the stand-in Potion. One location per NPC: the first item is the location's, a second goes into the pool in place of a filler. The Magi-tenna's NPC goes with the radar treasures.
+
+**Round 98 (the user):** every gift showed the Potion. The check came only after the scene had ended (gift 1400: 30 s with no pop-up on screen), or wrote the next chest's pop-up (1411, 1405). Now the pop-up is written early, as for Token Legacy: in an event on a gift's map, with its check not sent yet, a pop-up is the gift of the nearest gift NPC within 500 units (`gifts.tsv` has where each stands). Two gifts were not found at story 8000 and are left out: the Ether NPC in the Commercial District (1407, standing far from the rest of the map) and the Mist Potion NPC in Grandshelt Castle (1409, map 3020). **To find out:** whether either shows at an earlier story value.
+
+**v0.31.0 (`4f38161`, `98f3604`):** the Zoldaad Dungeon gift (`1403`) was also removed because it cannot be reached from the open world start, and the remaining 7 gifts were renamed for where each NPC stands.
+
+## 44. The Research Center Ruins' key card spots
+
+**Status:** Implemented (`9edc8ae`, mod 0.61.0 / world 0.30.0).
+
+**From the user, 2026-11-19 (round 96).** The three lab key card spots are locations.
+
+**Built (round 97, build 26e942ac):** shinies 3220:32, 33 and 37 are locations (`SHUFFLED_KEY_ITEMS` in the generator). Each card is in the pool once (a progression item a chosen location holds is not added again); the level 2 spot is behind the level 1 door, the level 3 spot behind the level 2 door (`data/gates.tsv`); without key item shuffle each spot keeps its card.
+
