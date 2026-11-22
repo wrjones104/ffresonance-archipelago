@@ -1,0 +1,139 @@
+# Roadmap
+
+What to build next, in order, and what goes together. The ideas themselves, with what is known, are in [IDEAS.md](../IDEAS.md); numbers below are its idea numbers. This file says only the order and the reasons. Written 2026-11-22, after v0.31.0.
+
+## Where we are
+
+A tester (2026-11-22, v0.31.0, Normal scaling, progression balancing 65) finished a full seed. Their `UE4SS.log`:
+
+| | |
+|---|---|
+| Time | about 7.5 hours, start to `Goal complete!` |
+| Party level at the last battle | 30 |
+| Battles won | 107; median 36 s off the field, 90% under 3 minutes |
+| Checks sent | 286: 121 chests, 120 shinies, 14 bosses with their 14 fragments, 12 crystals, 3 gifts, 2 radar |
+| Side quests | off (the default) |
+| Errors or crashes | none |
+
+What they said: fun and well-rounded; early and mid game fast, late game fine; status effects hard with no Ribbon and few cures; magicite tight but fair; they thought level scaling was a gate at first; their partner's items felt back-loaded (likely the seed). They asked for a separate save location per seed, and a PopTracker pack.
+
+So the core loop works. The next work is less about making a seed finishable and more about making it a good seed: a fair item pool, logic that knows what a boss needs, and a game that tells the player what is going on.
+
+## The order
+
+Each milestone is about one release. The first three are in the order I would do them. After that the order is looser.
+
+### 1. Item pool pass (next release)
+
+Straight from the feedback, and mostly apworld work.
+
+- Add items the pool has never had because they are drops or steals, not chest or quest rewards: Ribbon first, then the status-resist accessories. Each one takes a filler slot.
+- More Magicite in the pool, in place of low filler (Potions, small gil).
+- An option to put one support vision (healing or status cure) early: `early_support_vision`. Archipelago's `local_early_items` does the placing. Until then, a player can put the vision in `early_items` in their yaml.
+- Check the filler-to-useful ratio after the changes, so the pool does not tip into all useful items.
+- Lid's "We already found Mysidia..." line on the airship (scratchpad). Small, and it can ride along.
+
+Why first: it is the cheapest change with the most effect on how a seed plays, and it needs no new in-game probes.
+
+### 2. Tell the player what is going on (UX)
+
+Ideas 11, 22 and 38. They are the same problem: the player cannot see the seed's state in the game.
+
+- **Save-slot cards (11).** Mark an Archipelago save on its card: seed and slot name. This answers the "which save is which" problem. A separate save folder per seed is a much bigger change (the engine picks the path) and the cards may be enough. Look at the folder only if testers still mix saves up after the cards.
+- **Explain scaling.** One line on the Seed tab ("Enemies scale to your party level, so no area is out of reach") and a short paragraph in the README and the playtester guide. Cheap. The tester thought they were gated.
+- **Welcome window (22).** On a new Archipelago game: the scaling line, how continents open, where the page is. Bigger, as it needs one of the game's windows; do it after the cards.
+- **Page layout (38).** Headings and framed rows. Nice, not needed. Leave it last in this group.
+
+### 3. Boss logic (29), with the abilities it reads (40)
+
+The largest step in seed quality. The design is in [boss_logic.md](boss_logic.md).
+
+- Today a boss needs only its region. With scaling, a boss is a real gate, and round 63 showed seeds where a boss was in logic but not winnable.
+- Idea 40 (abilities the open start skips) comes first in this group, because the capability matrix needs to know what each member can do on our start.
+- Sephiroth's logic (scratchpad) is part of this.
+- When this is in, turn `include_side_quests` on by default. Its logic (side_quests.md, section 5) is done, and quest fights can use the same boss rules.
+
+Why third, not first: it is a big design and test job. The pool pass and the UX work are short and help every player now. But do it before more locations: every new boss location added without this logic makes seeds worse.
+
+### 4. More locations
+
+With boss logic in, add the locations that wait on it. Most valuable first:
+
+1. The rest of the bosses: tier 3 story bosses still missing, then tier 2 (espers, Chamber of Arms, Arena). This also closes the "not done yet" known issue. ([bosses.md](bosses.md), section 5.)
+2. Mechabo quests as locations (33), and Aileen's weapons with a Progressive Adamantite (side_quests.md, section 7). Both are quest chains the mod already runs.
+3. Stat bonuses as items (45), once it is known what writes them.
+4. Shopsanity (31), with the merchant ships and hints for gil (idea 25, item 5). Gil has little use now, and this gives it one.
+5. Librasanity and enemysanity (30), and abilities as checks (28). Hundreds of locations, so they need lots of filler. Do them after the pool pass has settled what good filler is.
+
+### 5. Multiworld features: DeathLink and traps
+
+Ideas 41 and 20, together. Both need the same piece: something to bank until the next battle starts, then act on the party. Build the battle-start hook and the bank once, then DeathLink and each trap are small on top of it. DeathLink is the one the Archipelago community expects; traps follow.
+
+### 6. PopTracker pack (47, below)
+
+After milestones 3 and 4, not before. A pack copies the logic and the location list, so each logic change or location rename means a pack update. Universal Tracker already works from the apworld and covers players until then. Do the Tablet Shard names (34) before this, so the pack's names are the final ones.
+
+### 7. Randomizer extras
+
+Ideas 7 (enemy randomization), 8 (stats, weaknesses), 9 (music) and 46 (custom visions), and boss order (25, item 3). Fun, but none of them make a seed fairer.
+
+- 8 and 29 touch the same thing: boss logic reads weaknesses. Build boss logic to read weaknesses from the tables the mod writes, not from fixed lists, so weakness randomization can feed it later.
+- 7 and 8 clash with FFR Randomizer (10). Settle the compatibility story first.
+
+### Long shot
+
+The in-game client (12). Option B (start the client from the game) is a quality-of-life change with some risk; option A (a C++ client) is a project of its own. Only if players keep tripping on the separate client.
+
+## Polish, any time
+
+Small items to pick up when a round has room:
+
+- Two checks at once: the second pop-up shows the game's item (15, known issue).
+- The palace safes after a shard comes in (37): leave unless cheap (the user).
+- The Seed tab cannot scroll with a gamepad (39).
+- The two missing gifts, 1407 and 1409 (43).
+- A compatibility list in the README (10).
+- Artifacts: parked (scratchpad).
+
+## What goes together
+
+| Group | Ideas | Shared piece |
+|---|---|---|
+| Item pool | pool pass, 45, Aileen's weapons | the pool's filler budget |
+| In-game state | 11, 22, 38, scaling line | showing seed state in the game's UI |
+| Logic | 29, 40, side quests default on, Sephiroth | the capability matrix |
+| Battle start | 20, 41 | the banked-effect hook |
+| Gil | 31, hints (25.5) | a reason to spend gil |
+| Big location counts | 28, 30 | lots of filler |
+| Enemy data | 7, 8, 29 | boss logic reads the live tables |
+| Names | 34, 47 | final location names before a pack |
+
+## New ideas to add to IDEAS.md
+
+IDEAS.md is being cleaned up on another machine, so these are written here to paste in.
+
+### 47. A PopTracker pack
+
+**From the user and a tester, 2026-11-22.** [PopTracker](http://poptracker.github.io/) is a map-based tracker with Archipelago auto-tracking. Players like it for the overview a map gives.
+
+**Known so far (PopTracker's PACKS.md and AUTOTRACKING.md):**
+- A pack is a folder or zip: `manifest.json`, `scripts/init.lua`, JSON for items, locations, maps and layouts, and the images.
+- Logic is rule strings in the locations' JSON: comma-separated codes are AND, array entries are OR, `item:3` is a count, `$func|arg` calls our Lua, `@location/section` reuses another location's rule.
+- Map pins are `map_locations` with x and y in the map image's pixels.
+- Auto-tracking: the variant's `ap` flag, then `Archipelago:AddClearHandler` (gets slot data), `AddItemHandler` and `AddLocationHandler`. The pack maps Archipelago's ids to its own codes itself.
+- Universal Tracker already rebuilds our logic from slot data (round 72), so players have a logic tracker today, without a map.
+
+**To find out:**
+- Map images: the world map, and one picture per town or dungeon, or one pin per place with its checks as sections.
+- Pin positions: `data/game` has x and y for chests, shinies and radar treasures; a script can turn them into image pixels, as the location names (34) use them.
+- Generating the pack's locations and rules from `data.py` and the apworld's rules, so the pack does not drift from the logic.
+- The options that change the location list (`include_side_quests` and the like) as slot data the pack reads in its clear handler.
+
+**Order:** after boss logic (29) and the location names (34), so the pack is not rebuilt each round.
+
+### From a tester's feedback (2026-11-22), for the item pool
+
+- Drop and steal items (Ribbon, status-resist accessories) are not in the pool, because only chest, shiny and quest rewards were shuffled. Status effects are hard without them.
+- More Magicite in the pool. Magicite was tight but fair; the tester liked choosing.
+- An option to place a support vision early.
+- A save folder per seed, or at least saves marked with their seed (idea 11).

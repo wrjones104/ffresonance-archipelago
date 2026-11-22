@@ -16,6 +16,7 @@ An Archipelago implementation for Final Fantasy Resonance (UE 5.6, game module `
   - `docs/playtesting.md`: open in-game checks that still need testing, in `- [ ]` tick-box format.
   - `docs/playtesting_archive.md`: completed round results and past test plans.
   - `IDEAS.md`: numbered ideas and findings, with what is known and what to find out.
+  - `docs/roadmap.md`: the order to build the ideas in, and which go together.
   - `docs/progression.md`: the game's chapters and gates.
   - `docs/logic.md`: the progression logic design (in progress).
   - `docs/open_world.md`: the open world design (the main direction since round 30): the cleared state, gates, enemy scaling.
@@ -42,6 +43,7 @@ An Archipelago implementation for Final Fantasy Resonance (UE 5.6, game module `
   - **Last release:** v0.30.0 (apworld 0.30.0 build fbcc579c, mod 0.61.0 build 0e1022be), the third public playtest build, 2026-11-19, from commit 81bd70a. The next cycle is world 0.31.0 and mod 0.62.0 (bumped in round 100).
 - **Commits:**
   - Commit each finished round on `main` without asking, and say so in the reply.
+  - **Before each commit, sweep `IDEAS.md`** (decided 2026-11-22). Update each idea the commit touches: what was built, in which round and build. Add new ideas from the user or testers. Move an idea that is fully done to `docs/ideas_archive.md`. If the change moves the plan, update `docs/roadmap.md` too.
   - Never push; the user pushes. The user also commits from other machines, so when they mention a commit, `git fetch` and fast-forward first.
 - **Tests:** `python tests/run_all.py` runs everything. Add or update a test with every change. See `tests/README.md` for the setup (a `.venv-tests` with `lupa`, and a scratch Archipelago copy from `tests/make_aptest.py`). Never add the world to the user's own Archipelago checkout.
 - **Writing style:** plain, simple English in short sentences, for the README, IDEAS, the docs and code comments alike. Every finding goes in the docs with the round it came from.
