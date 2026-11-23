@@ -247,6 +247,8 @@ Along the same lines, I would also want an option for players to start with all 
 
 **Built (round 98, build 22b9afbc, v0.30.0 `0662c63`):** 17 quests give a second reward (8 gil, 2 an item, 7 a vision), and each is a location of its own, `quest2:<id>` (docs/side_quests.md, section 6).
 
+**Round 106 (mod build 5f911663):** the pop-up's two names touched (the user). The second has 10 px of space above it.
+
 **To find out (stat bonuses only; second rewards shipped):** what writes a character quest's stat bonus ("Attribute Bonus: Fina" in the Rewards list, an ID 0 entry). If it is a field of the reward row, a stat bonus could be an item the mod applies when it comes in. Not looked at yet.
 
 ## 46. Supporting custom vision mods

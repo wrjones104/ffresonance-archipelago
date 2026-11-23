@@ -199,6 +199,14 @@ class TestDefault(FFResonanceTestBase):
         self.collect_by_name(["Dungeon Key"])
         self.assertTrue(chest.can_reach(self.multiworld.state))
 
+    def test_abandoned_cabin_needs_its_key(self) -> None:
+        # Round 106 (the user): the cabin's door says it is locked without the Cabin Key.
+        chest = self.multiworld.get_location("Pharm - Abandoned Cabin - NW Corner Chest", self.player)
+        self.collect_by_name(["Pharm Unlock"])
+        self.assertFalse(chest.can_reach(self.multiworld.state))
+        self.collect_by_name(["Cabin Key"])
+        self.assertTrue(chest.can_reach(self.multiworld.state))
+
     def test_slot_data(self) -> None:
         slot_data = self.world.fill_slot_data()
         self.assertEqual(slot_data["goal"], "final_boss")

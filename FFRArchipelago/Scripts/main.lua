@@ -1223,7 +1223,12 @@ local function judgeSave()
         -- has other saves already. It holds none of the session's items yet. It may have
         -- autosaved before the client connected, so its slot is linked too.
         setOk(true)
-        if not same then setApplied(0, "an Archipelago new game") end
+        -- Round 106: a load of the slot it was skipped into (the skip's own reload, a game over,
+        -- the player's load) holds the items given before that save, as its stamp says. Taking 0
+        -- there gave every item twice. Only the unsaved new game holds none.
+        local held = 0
+        if ours then held = stampCount elseif save.slot ~= nil then held = state.slotItems[save.slot] or 0 end
+        if not same then setApplied(held, "an Archipelago new game") end
         if save.slot ~= nil then linkSlot(save.slot, state.applied) end
         saveState()
         -- Log only (no on-screen notice), since the player explicitly chose the Archipelago entry.

@@ -1903,6 +1903,7 @@ function G.ChestPopup(text, span)
                 break
             end
             pcall(function() slot:SetHorizontalAlignment(P.CENTER) end)
+            if #added > 0 then pcall(function() slot:SetPadding(P.GAP) end) end
             added[#added + 1] = row
         end
         if failed then
@@ -1933,7 +1934,9 @@ end
 -- Round 91's probe worked: on since round 92 (ffrap_popup colors off). `trace` logs each step of the
 -- next coloured pop-up (ffrap_popup colors on).
 G.POPUP_COLORS = { on = true, trace = nil, CENTER = 2,
-                   LOOK = { size = 18, spacing = 4, shadow = 0.5, offset = { X = 2, Y = 1 }, justify = 1 } }
+                   LOOK = { size = 18, spacing = 4, shadow = 0.5, offset = { X = 2, Y = 1 }, justify = 1 },
+                   -- Round 106 (the user): a quest's two names touched. Space above the second.
+                   GAP = { Left = 0, Top = 10, Right = 0, Bottom = 0 } }
 -- The message without the lines that hold the spans, and those lines ({ line, span }, in order);
 -- or nil with colours off or no span found. `span` is one span or a list (a quest's two rewards).
 function G.PopupSplit(text, span)

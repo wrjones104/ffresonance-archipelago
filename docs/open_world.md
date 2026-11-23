@@ -44,7 +44,7 @@ The story counter is `Progress[0]`. Every story gate is a condition such as `{pr
 
 **Flags.** The main story's 633 talk events turn on 91 flags (80 stay on) and turn off 22. Side events turn on 109 more. Map gimmicks set others as you play (doors, switches). A cleared save holds all of the main story's flags.
 
-**Item checks on maps are few.** Only the Throne Room Key door in Zoldaad Castle, the Cabin Key exit on the world map, and the Chamber of Arms weapons test `{item:N}` on a map. Most item checks are inside talk events.
+**Item checks on maps are few.** Only the Throne Room Key door in Zoldaad Castle, the Cabin Key exit on the world map (locked without the key, round 106), and the Chamber of Arms weapons test `{item:N}` on a map. Most item checks are inside talk events.
 
 ## 3. The starting state
 

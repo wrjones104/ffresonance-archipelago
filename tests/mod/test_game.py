@@ -752,6 +752,7 @@ function box:AddChildToVerticalBox(w)
   self.kids[#self.kids + 1] = w; w.parent = self
   local slot = {}
   function slot:SetHorizontalAlignment(a) self.h = a end
+  function slot:SetPadding(m) self.pad = m end
   w.slot = slot
   return slot
 end
@@ -778,6 +779,10 @@ assert ok is True and detail == "text set, item line hidden, the names in their 
 assert L.eval("rich.text") == "You found:" and L.eval("#rich:GetParent().kids") == 4
 assert L.eval("rich:GetParent().kids[3].kids[1].ColorAndOpacity.SpecifiedColor.R") == CYAN_R
 assert L.eval("rich:GetParent().kids[4].kids[2].ColorAndOpacity.SpecifiedColor.R") == PLUM_R
+# Round 106 (the user): the two names touched. The second row has space above it.
+POPUP_NAME_GAP = 10
+assert L.eval("rich:GetParent().kids[3].slot.pad") is None, "no space above the first name"
+assert L.eval("rich:GetParent().kids[4].slot.pad.Top") == POPUP_NAME_GAP
 L.execute("rich.shown = false; G.ChestPopupRestore()")
 assert L.eval("#rich:GetParent().kids") == 2, "both rows gone with the pop-up"
 # Round 99: a quest's stat bonus and "You can now summon..." came next in the same open dialog,

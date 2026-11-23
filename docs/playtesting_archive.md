@@ -1545,3 +1545,15 @@ The user tested (2026-11-23). Every check passed:
 - **Aileen's forge** (`include_aileens_forge`, off by default; docs/side_quests.md section 7). Eight locations, the nth weapon forged, each needing Forger of Wills' continents, the airship deck and n Adamantite. The pool has eight Adamantite. The forge still gives the chosen weapon: the weapons in the bag are how the mod counts forges, so the count is in the save. The forge's flag (1236) comes on before each forge's pop-up, and the mod turns it off again. The row after a forge ends the forge only with all eight weapons held, not as soon as Rain's is. While the Adamantite received outnumber the weapons forged, an empty bag gets one back, in case the game keeps only one.
 - **Lid's airship line:** a seed's save sets the radar's step (progress 49) from 0 to 10, which is what the line itself does. Every other test of the step reads 0 and 10 alike.
 
+### Round 105 (mod 0.63.0 build 395095c2, apworld 0.32.0 build e38986f1)
+
+The user played (2026-11-23). Passed: the builds, the spoiler's eight forge locations and eight Adamantite, and the forge patch's log line (2 rows). The forge itself and Lid's line were not reached yet; they stay open.
+- **Every early item came twice.** At 14:10 a load of slot 0 (in Malboro Menace Cave) logged `items: an Archipelago new game: 0 applied (was 13)`, and all 13 items were given again (the Tablet Shards went 3 to 6). Not the forge. Since mod 0.8.0, a load of the slot the Archipelago new game was skipped into counted as that new game, which holds nothing. The skip's own reload did the same at 14:02 (`0 applied (was 1)`), so Pharm Unlock came twice in the feed: the user's "two identical pop-ups" at the start.
+- **The two names in a two-reward pop-up touched** (the user).
+- **Abandoned Cabin - NW Corner Chest was in logic from a Pharm start, but needs the Cabin Key** (the user). The world-map door runs `C07_Wld_09Pha_Cabin_01` ("the cabin is locked") without the key. Round 74's note that the chest opened without the key was wrong.
+
+**Round 106 build (mod 0.63.0 build 5f911663, apworld 0.32.0 build 4649c0ed):**
+- A load of the Archipelago new game's slot takes its count from the save's stamp (or the slot's count), not 0. Only the unsaved new game starts at 0. This fixes both the doubled items and the doubled feed line at the start.
+- The second name in a pop-up has 10 px of space above it (`G.POPUP_COLORS.GAP`).
+- `data/gates.tsv`: the cabin's chest needs the Cabin Key.
+
