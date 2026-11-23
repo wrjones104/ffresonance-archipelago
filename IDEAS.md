@@ -313,3 +313,38 @@ Awakening a vision fully costs one of each tier, so 26 visions need 78. A defaul
 **The pool now (10 full fills, real defaults):** equipment 131 to 146, Magicite 37 to 46, consumables 151 to 133, gil 7 to 1 (the small gil amounts are the cheapest filler). The healer was in sphere 0 in all 10.
 
 **To find out (round 104):** that a Ribbon and an imbue charm received from Archipelago land in the bag and can be equipped; whether the tester's status problem is gone.
+
+## 49. Standard or custom scaling on the Settings page
+
+**From the user, 2026-11-22.** Bring back the custom scaling sliders of round 102, but on the Settings page next to the strength, not on a tab of their own. A toggle picks Standard or Custom. Standard shows the three strengths we have now (Casual, Normal, Expert) and hides the sliders. Custom shows the sliders and hides the strengths. Standard is the default. Roadmap milestone 2.
+
+**Known so far:**
+- Round 102 (`891e70d`) had a preset slider (A, B, C, Custom) and five Custom sliders on a third tab: enemy level, enemy HP, enemy Attack, boss level, boss power. `ffrap_set elevel|ehp|eatk|blevel|bpower <percent>` set the same. The sliders worked. Round 103 (`19a087b`) took the tab out, as a curve of each tester's own would make reports hard to compare. The `battle: won` line names the preset, so a report shows when Custom was on.
+- An on/off row works on the page (the encounters and scaling switches). Every radio button table in the game is in use (round 52), so the toggle is a switch row ("Custom scaling"), not a two-choice row.
+- Our rows are taken off the page when it closes and added again when it opens, in reverse order so they keep their order (round 103). The page also checks the tables at each tick while it is open (round 88).
+- A Custom curve is flat: one percent per slider. Standard ramps each value from party level 5 to 25 (`SEED_SCALES` in `main.lua`). The sliders could set the level-25 end, with the ramp kept.
+
+**To find out:**
+- Whether rows can be added or taken off while the page is open, so the page changes the moment the toggle flips. If not, hide the rows (`ESlateVisibility` Collapsed) or show the change at the next open, with a help line that says so.
+- Whether the game's row list keeps a hidden row's focus slot, so a gamepad does not stop on a row it cannot see (idea 39 has the gamepad scroll problem).
+- Where the sliders start when Custom is first turned on: the current strength's numbers.
+
+## 50. The field character follows the party leader
+
+**From the user and a tester, 2026-11-22. The user had this idea before, but it was not written down.** On the field the player is always Rain. With `shuffle_party_members` the starting party can be anyone, so the field character could be the party's leader.
+
+**Known so far (from [Change field Leader](https://www.nexusmods.com/finalfantasyresonance/mods/124) on Nexus, version 1.1, read 2026-11-22):**
+- It is a UE4SS Lua mod (`ChangeLeader`), with a pak (`000_FFRS_AnimTiming_P`) that fixes diagonal walk animations. F6 or holding L3 changes the field character. It is based on YeOldeTreeStump's FinaLeader script.
+- It changes the field look only. Rain comes back for cutscenes and story events it detects, and the chosen character returns after them and after map changes. It has a 2-second cooldown between changes.
+- A "Party Members Only (Experimental)" version cycles only the current party and follows party changes. The page says this version may still crash now and then.
+- Known gaps: some characters have no ladder climb animation, and some have diagonal movement glitches.
+- **Its permissions:** use of its files, changes to them, forks, and changes made with generative AI all need the author's permission first. So we may not take its code. We can find the method ourselves with our own probes, or ask the author.
+
+**Ways to do it:**
+1. Compatibility only: test our mod with its Party Members Only version and list it in the README (idea 10). In an Archipelago seed that version already follows our party. Cheap.
+2. Our own: the field character is the party's leader, and the swap happens on its own (no key). This needs our own probes: what the field pawn is made from, and how the game plays as Fina in her own story parts.
+
+**To find out:**
+- Whether their mod and ours conflict. Our mod checks the pawn's class (`BP_MapUnit_Player_Field_C` on the world map) before it trusts a world-map position (round 69). If the swap changes that class, the airship position and the gate crossings could break.
+- Off-line, before a probe: the player pawn Blueprints and any data table that ties a unit to a field mesh and animation set (`dump_game structs` and `assets`).
+- How cutscenes find Rain. A scene that looks for Rain's actor may break if the field pawn is someone else. Their mod puts Rain back for scenes, so this risk is real.

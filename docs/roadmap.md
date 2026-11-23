@@ -39,10 +39,11 @@ Why first: it is the cheapest change with the most effect on how a seed plays, a
 
 ### 2. Tell the player what is going on (UX)
 
-Ideas 11, 22 and 38. They are the same problem: the player cannot see the seed's state in the game.
+Ideas 11, 22, 49 and 38. Most are the same problem: the player cannot see the seed's state in the game. 49 is on the same page and uses the same row code.
 
 - **Save-slot cards (11).** Mark an Archipelago save on its card: seed and slot name. This answers the "which save is which" problem. A separate save folder per seed is a much bigger change (the engine picks the path) and the cards may be enough. Look at the folder only if testers still mix saves up after the cards.
 - **Explain scaling.** One line on the Seed tab ("Enemies scale to your party level, so no area is out of reach") and a short paragraph in the README and the playtester guide. Cheap. The tester thought they were gated.
+- **Standard or custom scaling (49).** A switch on the Settings page: Standard shows the three strengths, Custom shows the round 102 sliders. The sliders are in git (`891e70d`), so most of the work is showing and hiding rows. Do it after the scaling line, so the line can say how to change it.
 - **Welcome window (22).** On a new Archipelago game: the scaling line, how continents open, where the page is. Bigger, as it needs one of the game's windows; do it after the cards.
 - **Page layout (38).** Headings and framed rows. Nice, not needed. Leave it last in this group.
 
@@ -75,7 +76,9 @@ After milestones 3 and 4, not before. A pack copies the logic and the location l
 
 ### 7. Randomizer extras
 
-Ideas 7 (enemy randomization), 8 (stats, weaknesses), 9 (music) and 46 (custom visions), and boss order (25, item 3). Fun, but none of them make a seed fairer.
+Ideas 7 (enemy randomization), 8 (stats, weaknesses), 9 (music), 46 (custom visions) and 50 (the field character follows the party leader), and boss order (25, item 3). Fun, but none of them make a seed fairer.
+
+- 50 is cosmetic but touches the field pawn, which the airship position and gate crossings read (round 69). Cutscenes may look for Rain. Its first step is cheap and goes under Polish: test the Nexus "Change field Leader" mod (Party Members Only) with ours.
 
 - 8 and boss logic touch the same thing: boss logic reads each boss's weaknesses from fixed tables. Weakness randomization must hand its rolls to the logic too, or the logic asks for the wrong elements.
 - 7 and 8 clash with FFR Randomizer (10). Settle the compatibility story first.
@@ -93,6 +96,7 @@ Small items to pick up when a round has room:
 - The Seed tab cannot scroll with a gamepad (39).
 - The two missing gifts, 1407 and 1409 (43).
 - A compatibility list in the README (10).
+- Test the Nexus "Change field Leader" mod, Party Members Only version, with ours, and list it if it works (50, way 1). Its permissions do not let us take its code.
 - Artifacts: parked (scratchpad).
 
 ## What goes together
@@ -100,10 +104,11 @@ Small items to pick up when a round has room:
 | Group | Ideas | Shared piece |
 |---|---|---|
 | Item pool | pool pass, 45, Aileen's weapons | the pool's filler budget |
-| In-game state | 11, 22, 38, scaling line | showing seed state in the game's UI |
+| In-game state | 11, 22, 38, 49, scaling line | showing seed state in the game's UI; the page's rows |
 | Logic | 40, side quests on by default, Sephiroth | the capability matrix |
 | Battle start | 20, 41 | the banked-effect hook |
 | Gil | 31, hints (25.5) | a reason to spend gil |
 | Big location counts | 28, 30 | lots of filler |
 | Enemy data | 7, 8, boss logic | the logic must read the rolled weaknesses |
 | Names | 34, 47 | final location names before a pack |
+| Other mods | 10, 50 | the compatibility list |
