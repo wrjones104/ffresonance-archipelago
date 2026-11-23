@@ -170,6 +170,33 @@ From the game data dump. Each still needs a test in game: does the gate open wit
 | Research Center Ruins (map 3220, Gronoa) | Doors 41, 42 and 43 run `Gim_EV_HaveKeyItemLV1` to `LV3`, so the door tests the card. The cards are shinies on the same map (32: level 1, 33: level 2, 37: level 3), with 3 Tablet Shards (34 to 36) | World 0.12.0 (`data/gates.tsv`): chests 0, 1 and 3 and shards 34 and 36 need the level 1 card; chests 2, 4 and 5 and shard 35 need levels 1 and 2. With `shuffle_key_items` off: filler only | Rooms confirmed (round 56): the user found the level 2 card behind the level 1 door, the level 3 card behind the level 2 door, and the level 3 door leads to the White Jade Stone area (a boss in vanilla). Next: the cards' shinies as locations (the user's list) |
 | Zoldaad Castle throne room (map 3160) | The door's events test `{item:20021}` (Throne Room Key) with flags 407 and 422 | Round 107 (`data/gates.tsv`): the throne room's chest (3160:2) and the upper tower's (3160:0) need the key. The squad leader's scene, which gave the key, is turned off while the key items are in the pool | The user found both chests past the door (round 105 play) |
 
+## 8b. Key items: the game's own copies at the open start (round 107 audit, off-line)
+
+The user asked (2026-11-23), after the Throne Room Key: which key items does the game still give at the open start (story 8000), and which does it never give? With `shuffle_key_items` on, a copy the game gives is out of logic. With it off, a key the game never gives leaves its locations closed for good (they are filler only, so logic is safe, but nobody can check them).
+
+How the game tests a key item: `{item:N}` in conditions (talk rows, actors, map exits, shops), and, on doors, `m_KeyItemList` with `m_CheckUseKeyItem` and an `m_NotHaveItemEvent` (the "it is locked" line). Only two maps use the door fields: Zoldaad Dungeon (3150, 13 doors, the Dungeon Key) and the Research Center Ruins (3220, the Lab Key Cards). `tools/key_audit.py` found all of this from `dump/` (the talk rows that give, take or test each item, traced up to the actor that starts them; door keys were read by hand).
+
+| Key item | The game's own copy | At story 8000 | Shuffled on | Shuffled off |
+|---|---|---|---|---|
+| Lab Key Cards 1-3 (20009-20011) | shinies 3220:32, 33, 37 | yes | locations | each shiny keeps its own card: fine |
+| Adamantite (20016) | chests 2031:20, 2031:22, 3230:2; radar treasure 1; the merchant ship's first sale (`GimEv_MerchantShip_Buy_01`, story 6010 or more, once) | yes | free extra forges, out of logic: harmless | the forge puts 8 in the pool anyway |
+| Dungeon Key (20019) | only a drop (`DropNormalItem`, rate 1) from unit 2035, the low-rank Zoldaadian Soldier, in battle group 9096 ("chapter 4, the soldier with the dungeon key"). Its trigger (`SubEv_Dng_06Zol_43_GimEv_01`, map 3150 uid 1) needs story exactly 4180 | **no** | fine: the pool's copy is the only one | **never given**: Zoldaad Dungeon Chests 1 to 4 and Shards 2 and 3 (`data/gates.tsv`) can never be opened |
+| Throne Room Key (20021) | the squad leader's scene (`SubEv_Dng_06Zol_44_GimEv_03`), any story | yes | turned off in round 107 | the scene gives it: works, but its two chests are filler only |
+| Cabin Key (20033) | the man in front of Sian's inn (`FEV_Town_09Pha_01_1044_02`, NPC 22 on map 2170), once the cabin door has been tried (flag 1410, set by `C07_Wld_09Pha_Cabin_01`), any story | yes | **out of logic**: he gives it free, so the cabin chest opens early. This is how round 74's tester opened it "without the key" | works, but the chest is filler only |
+| Magi-tenna (27006) | the Gaberada NPC gift (flag 1405), a location since round 97 | yes | location | location |
+| Resonance Stone (27007) | chest 3260:3 (Mt. Reizan), a location with the radar on (the mod empties it) | yes | location | location |
+| High-Power Generator (27008) | the merchant ship's fifth sale (`GimEv_MerchantShip_Buy_05`, story 8000 or more and 23 radar treasures found) | yes | **may be out of logic** with radar treasures on: buying it and boarding the airship could run the game's third radar upgrade (`SubEv_C05_TreasureRadar_09`). To check against `game.RADAR_BANDS` | the radar treasures are not locations |
+| Proofs of Victory (29000-29003) | the Colosseum's rank clears (`Arena_RankClear_01` to `_04`), any story | yes | duplicates. A proof only changes the Colosseum's lines and opens shop stock (`DT_ShopList`, shop 28: Magicite, Phoenix Downs and more). No location needs one, so they are progression items that gate nothing | none in the pool |
+
+Not in the pool, and no location needs them: the quest items (20020, 20023 to 20032; their quests are counted by their counters, docs/side_quests.md), White Jade Stone (given only at story 6030), Black Jade Stone, Magic Tome and Tunnel Key (given by no row in the data), and the three tutorial items (29500, 29510, 29520).
+
+**What could be done (not built yet):**
+- Dungeon Key, shuffled off: make the game give it again. Either the mod lets the soldier's trigger run at any story while the key is not held (the vanilla fight, an actor rewrite like round 107's), or it gives the key when the player first enters Zoldaad Dungeon. Then its six locations go in logic behind Zoldaad, not filler only.
+- Throne Room Key and Cabin Key, shuffled off: the game's copies work, so their chests could be in logic behind the place that gives the key, not filler only.
+- Cabin Key, shuffled on: stop the man giving it, as round 107 did for the squad leader. A row that gives the stand-in in its place would give a Potion at every talk (his condition is only "flag 1410 and no key"), so his row or his NPC's condition needs the change, not just the item.
+- High-Power Generator: test whether buying it opens tier 3 early; if so, take it out of the merchant's stock with the radar treasures on.
+- Proofs: take them out of `PROGRESSION["key"]` (filler or useful), unless the Colosseum becomes locations.
+
 ## 9. How this becomes code (for reference)
 
 Once requirements are finalized:

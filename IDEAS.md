@@ -309,3 +309,16 @@ Along the same lines, I would also want an option for players to start with all 
 - Whether their mod and ours conflict. Our mod checks the pawn's class (`BP_MapUnit_Player_Field_C` on the world map) before it trusts a world-map position (round 69). If the swap changes that class, the airship position and the gate crossings could break.
 - Off-line, before a probe: the player pawn Blueprints and any data table that ties a unit to a field mesh and animation set (`dump_game structs` and `assets`).
 - How cutscenes find Rain. A scene that looks for Rain's actor may break if the field pawn is someone else. Their mod puts Rain back for scenes, so this risk is real.
+
+## 51. Key items the game still gives, or never gives, at the open start
+
+**From the user, 2026-11-23 (after round 107's Throne Room Key fix).** With `shuffle_key_items` off there is the opposite problem: no way to get the Dungeon Key, so Zoldaad Dungeon's cells never open. Look at every key item and the story triggers that give it.
+
+**Found off-line (round 107 audit, `tools/key_audit.py`; the table is in docs/logic.md, section 8b):**
+- The Dungeon Key is only a drop from the soldier in battle group 9096, whose trigger needs story 4180. With key items off, its six locations can never be checked.
+- The Cabin Key is given free by the man in front of Sian's inn once the cabin door is tried. With key items on, the cabin chest opens out of logic.
+- The merchant ship sells the High-Power Generator once 23 radar treasures are found. With radar treasures on, this may open tier 3 early (to check).
+- The Proofs of Victory gate no location: they only open Colosseum shop stock.
+- With key items off, the Throne Room Key and Cabin Key chests could be in logic behind the game's own givers, not filler only.
+
+**To decide:** which of the fixes in docs/logic.md section 8b to build, and in which round.
