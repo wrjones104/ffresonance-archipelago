@@ -25,7 +25,7 @@ Each milestone is about one release. The first three are in the order I would do
 
 ### 1. Item pool pass (next release)
 
-**Built in round 104** (world 0.32.0 build 94562703): the gear, `extra_magicite` and `early_healing_vision`. IDEAS.md, idea 48. Still to do in this milestone: Lid's airship line.
+**Built in round 104** (world 0.32.0 build 94562703): the gear, `extra_magicite` and `early_healing_vision` (archived idea 48), passed in game. **Round 105** (world build e38986f1, mod build 395095c2): Lid's airship line, and Aileen's weapons moved up from milestone 4, as they shape the pool too (`include_aileens_forge`, docs/side_quests.md section 7). Both wait for round 105's test.
 
 Straight from the feedback, and mostly apworld work.
 
@@ -35,7 +35,7 @@ Straight from the feedback, and mostly apworld work.
 - Check the filler-to-useful ratio after the changes, so the pool does not tip into all useful items.
 - Lid's "We already found Mysidia..." line on the airship (scratchpad). Small, and it can ride along.
 
-Why first: it is the cheapest change with the most effect on how a seed plays, and it needs no new in-game probes. The numbers and the design are in IDEAS.md, idea 48.
+Why first: it is the cheapest change with the most effect on how a seed plays, and it needs no new in-game probes. The numbers and the design are in idea 48, now in ideas_archive.md.
 
 ### 2. Tell the player what is going on (UX)
 
@@ -61,7 +61,7 @@ Boss logic itself is built (world 0.25.0 and 0.28.0: `boss_logic.py`, archived i
 Add the locations that wait on the logic. Most valuable first:
 
 1. The rest of the bosses: tier 3 story bosses still missing, then tier 2 (espers, Chamber of Arms, Arena). This also closes the "not done yet" known issue. ([bosses.md](bosses.md), section 5.)
-2. Mechabo quests as locations (33), and Aileen's weapons with a Progressive Adamantite (side_quests.md, section 7). Both are quest chains the mod already runs.
+2. Mechabo quests as locations (33). A quest chain the mod already runs. (Aileen's weapons were built in round 105, with milestone 1.)
 3. Stat bonuses as items (45), once it is known what writes them.
 4. Shopsanity (31), with the merchant ships and hints for gil (idea 25, item 5). Gil has little use now, and this gives it one.
 5. Librasanity and enemysanity (30), and abilities as checks (28). Hundreds of locations, so they need lots of filler. Do them after the pool pass has settled what good filler is.
@@ -103,7 +103,7 @@ Small items to pick up when a round has room:
 
 | Group | Ideas | Shared piece |
 |---|---|---|
-| Item pool | pool pass, 45, Aileen's weapons | the pool's filler budget |
+| Item pool | pool pass (built), 45, Aileen's weapons (built) | the pool's filler budget |
 | In-game state | 11, 22, 38, 49, scaling line | showing seed state in the game's UI; the page's rows |
 | Logic | 40, side quests on by default, Sephiroth | the capability matrix |
 | Battle start | 20, 41 | the banked-effect hook |

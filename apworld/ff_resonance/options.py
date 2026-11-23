@@ -2,7 +2,7 @@ from dataclasses import dataclass
 
 from Options import Choice, DefaultOnToggle, OptionGroup, OptionSet, PerGameCommonOptions, Range, Toggle, Visibility
 
-from .data import BOSSES, CHESTS, CRYSTALS, RADAR, SHINIES, SIDE_QUESTS, TABLET_SHINIES
+from .data import BOSSES, CHESTS, CRYSTALS, FORGE, RADAR, SHINIES, SIDE_QUESTS, TABLET_SHINIES
 
 
 class Goal(Choice):
@@ -180,6 +180,15 @@ class IncludeSideQuests(Toggle):
     display_name = "Include Side Quests"
 
 
+class IncludeAileensForge(Toggle):
+    """
+    Aileen's forge on the airship deck is eight locations: the first weapon you forge, the
+    second, and so on. It opens after the quest Forger of Wills, and each weapon costs one
+    Adamantite. Eight Adamantite go into the pool. You still get the weapon you choose.
+    """
+    display_name = "Include Aileen's Forge"
+
+
 class HideQuestRewards(Toggle):
     """
     The Quests screen's Rewards show ??? for each quest location, in place of the item it holds.
@@ -213,7 +222,7 @@ class ExcludedRegions(OptionSet):
     """
     display_name = "Excluded Regions"
     valid_keys = sorted({loc["region"] for loc in CHESTS + SHINIES + CRYSTALS + TABLET_SHINIES + BOSSES + RADAR
-                          + SIDE_QUESTS})
+                          + SIDE_QUESTS + FORGE})
 
 
 class ShufflePartyMembers(DefaultOnToggle):
@@ -299,6 +308,7 @@ class FFResonanceOptions(PerGameCommonOptions):
     include_radar_treasures: IncludeRadarTreasures
     include_side_quests: IncludeSideQuests
     hide_quest_rewards: HideQuestRewards
+    include_aileens_forge: IncludeAileensForge
     priority_bosses: PriorityBosses
     priority_story_bosses: PriorityStoryBosses
     excluded_regions: ExcludedRegions
@@ -314,7 +324,7 @@ option_groups = [
     OptionGroup("Start", [StartingContinent, StartingRoster, StartingCharacter1, StartingCharacter2,
                           StartingCharacter3, StartingCharacter4, StartWithChocobo,
                           StartWithAirship]),
-    OptionGroup("Locations", [IncludeRadarTreasures, IncludeSideQuests, HideQuestRewards, PriorityBosses,
+    OptionGroup("Locations", [IncludeRadarTreasures, IncludeSideQuests, HideQuestRewards, IncludeAileensForge, PriorityBosses,
                               ExcludedRegions]),
     OptionGroup("Items", [ShufflePartyMembers, ShuffleVisions, ShuffleKeyItems, ExtraMagicite, EarlyHealingVision]),
 ]

@@ -4,7 +4,8 @@ from typing import TYPE_CHECKING
 
 from BaseClasses import ItemClassification, Location, LocationProgressType, Region
 
-from .data import (AIRSHIP_AREA, AIRSHIP_ITEM, BOSSES, CHESTS, CONTINENT_UNLOCKS, FRAGMENTS, GIFTS, RADAR, RADAR_ITEM,
+from .data import (ADAMANTITE_ITEM, AIRSHIP_AREA, AIRSHIP_ITEM, BOSSES, CHESTS, CONTINENT_UNLOCKS, FORGE, FRAGMENTS,
+                   GIFTS, RADAR, RADAR_ITEM,
                    RADAR_PART_CHESTS, CRYSTALS, FINAL_AREA, ITEMS, OPEN_AREA, SHINIES, SIDE_QUESTS, TABLET_SHINIES)
 from .boss_logic import boss_rule
 from .items import FRAGMENT_NAME, GAME, FFResonanceItem, create_item, progression_ids
@@ -13,7 +14,7 @@ if TYPE_CHECKING:
     from .world import FFResonanceWorld
 
 ALL_LOCATIONS = (CHESTS + SHINIES + CRYSTALS + TABLET_SHINIES + BOSSES + FRAGMENTS + GIFTS + RADAR
-                 + RADAR_PART_CHESTS + SIDE_QUESTS)
+                 + RADAR_PART_CHESTS + SIDE_QUESTS + FORGE)
 # The quests whose reward gives a vision: with visions not shuffled, the quest holds its own.
 QUEST_VISIONS = [loc for loc in SIDE_QUESTS if "vision" in loc]
 LOCATION_NAME_TO_ID: dict[str, int] = {loc["name"]: loc["id"] for loc in ALL_LOCATIONS}
@@ -44,6 +45,7 @@ VICTORY = "Victory"
 UNLOCK_NAMES = {continent: ITEMS[ap_id]["name"] for continent, ap_id in CONTINENT_UNLOCKS.items()}
 AIRSHIP = ITEMS[AIRSHIP_ITEM]["name"]
 RADAR_NAME = ITEMS[RADAR_ITEM]["name"]
+ADAMANTITE = ITEMS[ADAMANTITE_ITEM]["name"]
 
 # Walking routes between continents without the airship (open_world.md, section 4). No door
 # or cave joins two continents; each crossing opens with the far continent's unlock, matching the mod's gates.
@@ -102,6 +104,8 @@ def create_regions_and_locations(world: FFResonanceWorld) -> None:
         chosen += RADAR + RADAR_PART_CHESTS
     if world.options.include_side_quests:
         chosen += SIDE_QUESTS
+    if world.options.include_aileens_forge:
+        chosen += FORGE
     excluded = world.options.excluded_regions.value
     in_pool = set(progression_ids(world))
 
@@ -147,6 +151,9 @@ def create_regions_and_locations(world: FFResonanceWorld) -> None:
             rules.append(lambda state, area=loc["needs_area"]: state.can_reach_region(area, player))
         if "radar_tier" in loc:
             rules.append(lambda state, n=loc["radar_tier"]: state.has(RADAR_NAME, player, n))
+        # The nth weapon forged costs n Adamantite in all.
+        if "adamantite" in loc:
+            rules.append(lambda state, n=loc["adamantite"]: state.has(ADAMANTITE, player, n))
         # A side quest's steps: one place of each group (side_quests.md, section 5). The airship's
         # own rooms need the Airship when the player starts on foot.
         for group in loc.get("steps", []):

@@ -1063,3 +1063,43 @@ Until then the Options rows stay, and on a save not linked to the seed they chan
 
 **Built (round 97, build 26e942ac):** shinies 3220:32, 33 and 37 are locations (`SHUFFLED_KEY_ITEMS` in the generator). Each card is in the pool once (a progression item a chosen location holds is not added again); the level 2 spot is behind the level 1 door, the level 3 spot behind the level 2 door (`data/gates.tsv`); without key item shuffle each spot keeps its card.
 
+## 48. Item pool pass: drop-only gear, more Magicite, an early healer
+
+**From a tester, 2026-11-22 (v0.31.0, a full seed to the goal at party level 30).** Status effects were hard: no Ribbon, few cures. Magicite was tight but fair; they liked choosing. They hinted for a Ribbon and it was not in the pool. The user wants more status gear and Magicite in the pool, and an option to put a support vision early.
+
+**Why Ribbon is missing:** the pool is each location's own vanilla item, with progression items in place of random filler (`items.create_all_items`). Ribbon (12065) is in no chest, shiny, quest or gift. It drops from Archwitch Fina's story fight (gone on our start) and is a rare steal from Messalina (level 52). `DT_UnitParameter` has `DropNormalItem`, `DropRareItem`, `StealNormalItem` and `StealRareItem` per unit.
+
+**Accessories with no location, from the dump (2026-11-22):**
+
+| Source | Accessories |
+|---|---|
+| Enemies only (drop or steal) | Ribbon, Angel Ring (Regen), Aeolian Misanga, Iron Sandals, Gale Hairpin, Poison Charm, Ring of Rage, Arcane Pendant, Vampire Charm, Adamantine Beads, and the four imbue charms (Solar Pendant, Azure Amulet, Golem Core, Halo Ring; three of them drop from story bosses) |
+| Shops only | Star Pendant (Poison), Silver-Rimmed Glasses (Blind), Safety Bit (Death), Alarm Earrings, Precognizant Beads, Tiara of Frost, Scintillating Ring, Heart Anklet, Life Charm, Hairband. The Arena shop: Reflect, Protect and Barrier Rings, Warding Bell, Foe Attractor, Circlet of Enlightenment |
+| Not-yet locations (Arena ranks, Twelve Arms, rope jumping, chapter 9 quests, DLC) | Super Ribbon, Dragon Seal, Omega Badge, Gold Hairpin(+), Genji Gloves, Ultima Reactor, Swift Badge, Hairpin of Grace, Mastery Ring. These come with those locations (roadmap milestone 4), not now |
+
+The single-status accessories are mostly in shops already, and Headband, Jeweled Ring and Calm Armlet are in chests too. So the gap is Ribbon, and early access before a shop's continent is open.
+
+**The pool today (5 seeds each, world 0.31.0):**
+
+| | Locations | Consumables | Gil | Equipment | Magicite (Shard / Magicite / Cryst) |
+|---|---|---|---|---|---|
+| Defaults | 519 | 151 | 7 | 131 | 37 (12 / 12 / 13) |
+| Side quests on | 564 | 162 | 12 | 143 | 54 (18 / 19 / 17) |
+
+Awakening a vision fully costs one of each tier, so 26 visions need 78. A default seed has enough for about 12. The Arena shop sells all three tiers, behind the Arena's medals.
+
+**Healing visions** (`capabilities.tsv`, Cure or Esuna at awakening 0): Leah, Ayaka (both), Warrior of Light, Cecil, Tidus, Y'shtola, Lightning (Esuna). Fina is the only party member with Cure (level 3), and the start is Rain and Lasswell.
+
+**The user's choices (2026-11-22):** two Ribbons and one of each enemy-only accessory; 9 extra Magicite by default, as a yaml option; the early healer on by default.
+
+**Built (round 104, world 0.32.0 build 94562703):**
+- `data/pool_additions.tsv` lists the gear: 2 Ribbons and 13 enemy-only accessories, 15 items. `tools/gen_apworld_data.py` writes them to `POOL_ADDITIONS`, with `MAGICITE_ITEMS` and `FILLER_VALUE` (a filler item's shop price times its count; gil by its amount).
+- `extra_magicite` (0 to 30, default 9) adds Magicite split over the three tiers, the lower tiers first when it does not split evenly.
+- Progression items still take filler at random. Then each addition takes the cheapest filler left, so a Megalixir is never lost to a Ribbon. Gear comes before the extra Magicite.
+- The pool keeps one filler item for each excluded location (the Oblivion Palace's chests, `excluded_regions`, the yaml's `exclude_locations`), as those take filler only. The first test run found this: chests-only test pools failed to fill. If there is not room, additions are left out from the end, with a warning.
+- `early_healing_vision` (on by default, with `shuffle_visions`): one of the seven healing visions goes in `multiworld.local_early_items`.
+- No mod change: the mod's item path gives any item id.
+
+**The pool now (10 full fills, real defaults):** equipment 131 to 146, Magicite 37 to 46, consumables 151 to 133, gil 7 to 1 (the small gil amounts are the cheapest filler). The healer was in sphere 0 in all 10.
+
+**Round 104 result (the user, 2026-11-23): passed.** The spoiler had the gear and the extra Magicite, a healer was in sphere 1, a received Ribbon and an imbue charm went into the bag and could be equipped, and `extra_magicite: 0` with `early_healing_vision: false` gave the old pool. Whether the tester's status problem is gone needs their next seed.

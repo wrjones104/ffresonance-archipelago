@@ -2827,6 +2827,31 @@ G.GIFTS = require("gifts")
 -- while `{progress:16}==0&{progress:0}>=2120`, and the start has set the counter to 10, so the
 -- Accept was refused. Its accept and occurrence tests become the counter at Verun's step. The
 -- quest board's Ipooh hunt (quest 1001) most likely counts only while the quest is accepted.
+-- Round 105: Aileen's forge on the airship deck (C06_AileenWeapon_*, docs/side_quests.md section 7).
+-- Each forge row gives one of the eight weapons, takes one Adamantite and sets `flag`, before its
+-- pop-up. The game lists a weapon only while none is held (equipped gear counts), and the row after
+-- each forge (`after`) ends the forge (progress 38 to 70) as soon as Rain's weapon is held. As
+-- locations, it ends only with all eight held. Weapons in the choice dialog's order.
+G.FORGE = { flag = 1236, adamantite = 20016, after = "C06_AileenWeapon_06", done = "C06_AileenWeapon_06_complete",
+            weapons = { 10190, 10290, 10390, 10490, 10590, 10790, 10890, 10690 } }
+function G.ForgePatch()
+    local all = {}
+    for i, id in ipairs(G.FORGE.weapons) do all[i] = "{item:" .. id .. "}>=1" end
+    local cond = table.concat(all, "&")
+    local written = 0
+    EachTalkRow(function(key, row)
+        if key ~= G.FORGE.after then return end
+        local list = row.ContinuousEventList
+        for i = 1, #list do
+            if ObjText(list[i].EventId) == G.FORGE.done and ObjText(list[i].Condition) ~= cond then
+                list[i].Condition = cond
+                written = written + 1
+            end
+        end
+    end)
+    return written
+end
+
 G.MECHABO = { counter = 16, start = 10, request = 17,
               rows = { "C02_MechaboLvUp_00_yet", "C02_MechaboLvUp_00_ItemGet" },
               requestTable = "/Game/Datatable/Request/DT_RequestData.DT_RequestData",
@@ -4307,6 +4332,11 @@ end
 -- `upTo` is also the threshold of its last point, so the mod holds the count there: each
 -- Progressive Radar opens its whole tier at once (round 75). Band N is Progressive Radar N.
 G.RADAR_ON_FLAG, G.RADAR_TIER_PROGRESS, G.RADAR_FOUND_PROGRESS = 702, 49, 51
+-- Round 105: on the first boarding after story 5040 with the radar's step at 0, Lid says "We
+-- already found Mysidia..." (SubEv_C05_TreasureRadar_02, from DT_MapAirShip), which sets the step
+-- to 10. Our start skips that story, so the line made no sense. Every other test of the step reads
+-- 0 and 10 alike, so a seed's save starts at 10.
+G.RADAR_LID_HEARD = 10
 G.RADAR_BANDS = {
     { upTo = 13, steps = { 20, 30 } },
     { upTo = 22, steps = { 40 } },

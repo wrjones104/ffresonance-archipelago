@@ -5,11 +5,11 @@ from worlds import AutoWorld
 from worlds.AutoWorld import call_all
 from test.general import gen_steps
 
-from ..data import AIRSHIP_ITEM, BOSSES, CHESTS, FILLER_VALUE, FRAGMENTS, GIFTS, CHOCOBO_ITEM, MAGICITE_ITEMS, NO_ROUTE, POOL_ADDITIONS, RADAR, RADAR_ITEM, RADAR_PARTS, RADAR_PART_CHESTS, CONTINENT_UNLOCKS, CRYSTALS, FRAGMENT_ITEM, ITEMS, NO_BOX, SIDE_QUESTS, TABLET_SHINIES, PROGRESSION, SHINIES, SHUFFLE_ID_LIMIT, UNIT_ITEM_BASE
+from ..data import ADAMANTITE_ITEM, AIRSHIP_ITEM, FORGE, BOSSES, CHESTS, FILLER_VALUE, FRAGMENTS, GIFTS, CHOCOBO_ITEM, MAGICITE_ITEMS, NO_ROUTE, POOL_ADDITIONS, RADAR, RADAR_ITEM, RADAR_PARTS, RADAR_PART_CHESTS, CONTINENT_UNLOCKS, CRYSTALS, FRAGMENT_ITEM, ITEMS, NO_BOX, SIDE_QUESTS, TABLET_SHINIES, PROGRESSION, SHINIES, SHUFFLE_ID_LIMIT, UNIT_ITEM_BASE
 from ..boss_logic import awakening, has_capability
 from ..items import CLASSIFICATIONS, FILLER_CATEGORIES, FRAGMENT_NAME, HEALING_VISIONS, additions, item_name_groups
 from ..locations import GOAL_EVENT, LOCATION_KEY_TO_ID, SEPHIROTH, VICTORY
-from ..options import ExtraMagicite, FinalBossFragments, Goal, TabletShardsRequired
+from ..options import ExcludedRegions, ExtraMagicite, FinalBossFragments, Goal, TabletShardsRequired
 from . import FFResonanceTestBase
 
 # Round 77: location names are readable now; tests that pick a place by its number use the key.
@@ -32,6 +32,7 @@ GIFT_EXTRAS = [i for g in GIFTS_ON for i in g.get("extra", [])]
 BASE = CHESTS + GIFTS_ON
 EARLY_LEVEL, FINA_GROUP_HEAL_LEVEL, MAX_LEVEL = 3, 25, 99   # boss levels: Fina has Cure at 3
 RIBBON = 12065001
+FORGE_WEAPONS = 8   # round 105: Aileen's forge, one Adamantite a weapon
 RIBBONS = 2     # round 104: Ribbon is a rare steal and a story boss's drop, so no location holds one
 HEALERS = {"Leah (Vision)", "Ayaka (Vision)", "Warrior of Light (Vision)", "Cecil (Vision)", "Tidus (Vision)",
            "Y'shtola (Vision)", "Lightning (Vision)"}
@@ -1161,8 +1162,9 @@ class TestData(FFResonanceTestBase):
         self.assertEqual(LOCATION_KEY_TO_ID[f"fragment:{MARAUDER}"], 7_000_000_000 + MARAUDER)
         self.assertEqual(len(LOCATION_KEY_TO_ID), len(CHESTS) + len(SHINIES) + len(CRYSTALS) + len(TABLET_SHINIES)
                          + len(BOSSES) + len(FRAGMENTS) + len(GIFTS) + len(RADAR) + len(RADAR_PART_CHESTS)
-                         + len(SIDE_QUESTS))
+                         + len(SIDE_QUESTS) + len(FORGE))
         self.assertEqual(LOCATION_KEY_TO_ID["gift:1400"], 8_000_000_000 + 1400)
+        self.assertEqual(LOCATION_KEY_TO_ID["forge:8"], 6_200_000_000 + 8)
         self.assertEqual(LOCATION_KEY_TO_ID["quest:13"], 6_000_000_000 + 13)
 
 
@@ -1273,3 +1275,59 @@ class TestNames(FFResonanceTestBase):
             self.assertNotIn(left_out, keys)
         self.assertFalse([n for n in keys if n.startswith("[TEMP]") or not n.isascii()])
         self.assertEqual(set(CLASSIFICATIONS), {i["category"] for i in ITEMS.values()})
+
+
+class TestAileensForge(FFResonanceTestBase):
+    """Round 105: Aileen's forge is eight locations, the nth weapon forged. Each needs Forger of
+    Wills' three continents, the airship's deck and n Adamantite, and the pool has eight."""
+    options = {"include_aileens_forge": True, "start_with_airship": False, "starting_continent": "grandshelt"}
+
+    def forge(self, n):
+        return self.multiworld.get_location(f"Aileen's Forge: Weapon {n}", self.player)
+
+    def test_the_forge_is_eight_locations(self) -> None:
+        names = {loc.name for loc in self.multiworld.get_locations(self.player)}
+        forge = {loc["name"] for loc in FORGE}
+        self.assertEqual(len(forge), FORGE_WEAPONS)
+        self.assertTrue(forge <= names)
+        self.assertIn("Aileen's Forge", ExcludedRegions.valid_keys)
+
+    def test_the_pool_has_an_adamantite_per_weapon(self) -> None:
+        pool = [item.code for item in self.multiworld.itempool if item.player == self.player]
+        self.assertEqual(pool.count(ADAMANTITE_ITEM), FORGE_WEAPONS)
+        self.assertEqual(ITEMS[ADAMANTITE_ITEM]["name"], "Adamantite")
+
+    def test_the_nth_weapon_needs_n_adamantite(self) -> None:
+        state = self.multiworld.state
+        self.collect_by_name(["Airship", "Dirnado Unlock", "Lanzelt Unlock", "Zoldaad Unlock"])
+        self.assertFalse(self.forge(1).can_reach(state))
+        for n, item in enumerate(self.get_items_by_name("Adamantite"), 1):
+            self.collect(item)
+            self.assertTrue(self.forge(n).can_reach(state), n)
+            if n < FORGE_WEAPONS:
+                self.assertFalse(self.forge(n + 1).can_reach(state), n + 1)
+
+    def test_the_forge_is_on_the_deck(self) -> None:
+        # Bridges and ferries reach the three continents on foot; the deck needs the Airship.
+        state = self.multiworld.state
+        self.collect_by_name(["Dirnado Unlock", "Lanzelt Unlock", "Zoldaad Unlock"])
+        self.collect(self.get_items_by_name("Adamantite"))
+        self.assertFalse(self.forge(1).can_reach(state))
+        self.collect_by_name(["Airship"])
+        self.assertTrue(self.forge(FORGE_WEAPONS).can_reach(state))
+
+
+class TestAileensForgeKeyItemsKept(FFResonanceTestBase):
+    """With the key items not shuffled, the forge still puts all eight Adamantite in the pool."""
+    options = {"include_aileens_forge": True, "shuffle_key_items": False}
+
+    def test_the_pool_has_an_adamantite_per_weapon(self) -> None:
+        pool = [item.code for item in self.multiworld.itempool if item.player == self.player]
+        self.assertEqual(pool.count(ADAMANTITE_ITEM), FORGE_WEAPONS)
+
+
+class TestNoForge(FFResonanceTestBase, real_defaults=True):
+    def test_the_forge_is_off_by_default(self) -> None:
+        names = {loc.name for loc in self.multiworld.get_locations(self.player)}
+        self.assertFalse({loc["name"] for loc in FORGE} & names)
+

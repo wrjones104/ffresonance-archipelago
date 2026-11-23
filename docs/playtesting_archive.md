@@ -1531,3 +1531,17 @@ The first full seed by a tester to the goal (Normal scaling, progression balanci
 What they said: fun and well-rounded; early and mid game fast, late game fine; status effects hard with no Ribbon and few cures; Magicite tight but fair; they took level scaling for a gate at first; their partner's items felt late. They asked for a save folder per seed and a PopTracker pack (IDEAS.md, ideas 11 and 47). The pool findings are idea 48.
 
 **Round 104 build (mod 0.63.0 build c02e6de5, apworld 0.32.0 build 94562703):** the first change after v0.31.0, so both versions move. The pool gains 2 Ribbons and 13 enemy-only accessories (`data/pool_additions.tsv`), 9 extra Magicite (`extra_magicite`), and an early healing vision (`early_healing_vision`). The additions take the cheapest filler, and the pool keeps one filler item per excluded location (IDEAS.md, idea 48). The mod changes only its version.
+
+### Round 104 (mod 0.63.0 build c02e6de5, apworld 0.32.0 build 94562703)
+
+The user tested (2026-11-23). Every check passed:
+- Builds.
+- The spoiler log had the 2 Ribbons, the enemy-only accessories and 3 more of each Magicite tier.
+- A healing vision was in sphere 1 of the player's own world.
+- A Ribbon and an imbue charm received from Archipelago went into the bag under accessories and could be equipped.
+- `extra_magicite: 0` with `early_healing_vision: false` gave the old Magicite count and no early vision.
+
+**Round 105 build (mod 0.63.0 build 395095c2, apworld 0.32.0 build e38986f1):** no version bump, as v0.32.0 is not out yet.
+- **Aileen's forge** (`include_aileens_forge`, off by default; docs/side_quests.md section 7). Eight locations, the nth weapon forged, each needing Forger of Wills' continents, the airship deck and n Adamantite. The pool has eight Adamantite. The forge still gives the chosen weapon: the weapons in the bag are how the mod counts forges, so the count is in the save. The forge's flag (1236) comes on before each forge's pop-up, and the mod turns it off again. The row after a forge ends the forge only with all eight weapons held, not as soon as Rain's is. While the Adamantite received outnumber the weapons forged, an empty bag gets one back, in case the game keeps only one.
+- **Lid's airship line:** a seed's save sets the radar's step (progress 49) from 0 to 10, which is what the line itself does. Every other test of the step reads 0 and 10 alike.
+

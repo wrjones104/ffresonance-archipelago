@@ -240,6 +240,13 @@ Final Fantasy Resonance:
     'false': 50
     'true': 0
 
+  include_aileens_forge:
+    # Aileen's forge on the airship deck is eight locations: the first weapon you forge, the
+    # second, and so on. It opens after the quest Forger of Wills, and each weapon costs one
+    # Adamantite. Eight Adamantite go into the pool. You still get the weapon you choose.
+    'false': 50
+    'true': 0
+
   priority_bosses:
     # The cave masters and the optional bosses (the two Dragon's Maw bosses and the Antlion) are
     # priority locations: the generator puts items that someone needs on them first, so they are

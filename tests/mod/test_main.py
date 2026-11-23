@@ -259,6 +259,7 @@ function G.CrossingNear(list, range) return nil end
 function G.CrossingClear() G.crossingsCleared = true end
 G.AIRSHIP_FLAG, G.airshipSyncs, G.parks = 1431, {}, {}
 G.RADAR_ON_FLAG, G.RADAR_TIER_PROGRESS, G.RADAR_FOUND_PROGRESS = 702, 49, 51
+G.RADAR_LID_HEARD = 10
 G.RADAR_BANDS = { { upTo = 13, steps = { 20, 30 } }, { upTo = 22, steps = { 40 } }, { upTo = 31, steps = { 50 } } }
 G.RADAR = {}
 for n = 1, 13 do G.RADAR[n] = { n = n, flag = 703 + n } end
@@ -1998,6 +1999,7 @@ print("airship as an item: ok")
 # the top of the level's band, the threshold of its last treasure, so each radar opens its whole
 # tier at once. Each dig sets the count to its own number, and the next tick puts it back.
 TIER_ONE_OPEN, TIER_TWO_OPEN, TIER_THREE_OPEN = 13, 22, 31
+LID_HEARD = 10    # round 105: the radar's step after Lid's "We already found Mysidia..." line
 AFTER_FIRST_DIG, AFTER_FIFTH_DIG, AFTER_LAST_DIG = 10, 14, 32
 inbox("seed\tS72r:0:1\ncfg\topenworld\t1\ncfg\tradar\t1\n", "w")
 L, G = boot5("SD_RADAR", "0", {})
@@ -2011,7 +2013,8 @@ G.chests = L.table()
 G.story = 8000
 tick(12)
 assert G.radarPatches >= 1, "the dig rows give the pop-up's stand-in"
-assert L.eval("G.radarFlags[702]") is None and L.eval("G.progress[49]") is None, "no radar yet"
+assert L.eval("G.radarFlags[702]") is None, "no radar yet"
+assert L.eval("G.progress[49]") == LID_HEARD, "round 105: Lid's Mysidia line is skipped"
 inbox("item\t0\titem\t27006\t1\tProgressive Radar\n")
 tick(12)
 assert L.eval("G.radarFlags[702]") is True and L.eval("G.progress[49]") == 20, "level 1: installed"
@@ -2039,6 +2042,57 @@ L.execute("G.radarFlags[704] = true")
 tick(12)
 assert "check\tradar:1\n" in read("ap_out.txt") and "radar:2" not in read("ap_out.txt"), read("ap_out.txt")[-200:]
 print("radar: ok")
+
+# Round 105: Aileen's forge. Location n is the nth weapon forged, counted from the eight weapons
+# in the bag. The forge's flag comes on before a forge's pop-up: the pop-up names the next
+# location, and the flag goes off again. The game keeps one Adamantite at most here, so after a
+# forge an empty bag gets one back while the Adamantite received outnumber the weapons forged.
+FORGE_FLAG, ADAMANTITE = 1236, 20016
+RAIN_WEAPON, LASSWELL_WEAPON = 10190, 10290
+inbox("seed\tS105f:0:1\ncfg\topenworld\t1\ncfg\tforge\t1\n", "w")
+L, G = boot5("SD_FORGE", "0", {})
+L.globals().G = G
+L.execute(SCALE_STUB)
+L.execute(f"""G.held, G.forgeFlags, G.forgePatches = {{}}, {{}}, 0
+G.FORGE = {{ flag = {FORGE_FLAG}, adamantite = {ADAMANTITE},
+            weapons = {{ 10190, 10290, 10390, 10490, 10590, 10790, 10890, 10690 }} }}
+function G.ForgePatch() G.forgePatches = G.forgePatches + 1; return 1 end
+function G.HeldCount(id) return G.held[id] or 0 end
+function G.GetFlag(i) return G.forgeFlags[i] == true end
+function G.SetFlag(i, on) G.forgeFlags[i] = on; return "ok", "" end
+function G.GrantItem(id, n)
+  G.log[#G.log + 1] = "item" .. id .. "x" .. n
+  G.held[id] = math.min((G.held[id] or 0) + n, 1)
+  return "ok", ""
+end""")
+G.chests = L.table()
+G.story = 8000
+tick(12)
+assert G.forgePatches >= 1, "the forge ends only with all eight weapons"
+assert "forge:" not in read("ap_out.txt"), "no weapon yet"
+inbox("item\t0\titem\t20016\t1\tAdamantite\nitem\t1\titem\t20016\t1\tAdamantite\n")
+inbox(b64_scout("forge:1", "Hookshot", "Alice", 1, 0))
+tick(12)
+assert L.eval(f"G.held[{ADAMANTITE}]") == 1, "the second copy was lost"
+grants = len([g for g in G.log.values() if g == f"item{ADAMANTITE}x1"])
+G.popups, G.popupReady = L.table(), True
+L.execute(f"G.forgeFlags[{FORGE_FLAG}] = true; G.held[{ADAMANTITE}] = 0; G.held[{RAIN_WEAPON}] = 1")
+G.onField = False
+tick(4)
+assert "check\tforge:1\n" in read("ap_out.txt") and "forge:2" not in read("ap_out.txt"), read("ap_out.txt")[-200:]
+assert list(G.popups.values()) == ["You found Alice's:\nHookshot"], list(G.popups.values())
+assert L.eval(f"G.forgeFlags[{FORGE_FLAG}]") is False, "the flag goes off for the next forge"
+G.onField = True
+tick(4)
+assert len([g for g in G.log.values() if g == f"item{ADAMANTITE}x1"]) == grants + 1, "the lost copy comes back"
+assert L.eval(f"G.held[{ADAMANTITE}]") == 1
+L.execute(f"G.forgeFlags[{FORGE_FLAG}] = true; G.held[{ADAMANTITE}] = 0; G.held[{LASSWELL_WEAPON}] = 1")
+tick(4)
+assert "check\tforge:2\n" in read("ap_out.txt")
+before = len(G.log)
+tick(8)
+assert len(G.log) == before, "two received, two forged: nothing more to give"
+print("forge: ok")
 
 # Round 78: side quests. A quest's check is its counter at or past the value its reward row
 # writes (Rear Support, Ahoy!: progress 28 at 40). The Mechabo counter (16) starts at 10 on an

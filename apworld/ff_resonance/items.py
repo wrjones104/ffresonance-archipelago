@@ -6,8 +6,9 @@ from typing import TYPE_CHECKING
 from BaseClasses import Item, ItemClassification, LocationProgressType
 from Options import OptionError
 
-from .data import (AIRSHIP_ITEM, CAPABILITIES, CHOCOBO_ITEM, CONTINENT_UNLOCKS, FILLER_VALUE, FRAGMENT_ITEM, ITEMS,
-                   MAGICITE_ITEMS, POOL_ADDITIONS, PROGRESSION, RADAR_ITEM, RADAR_PARTS, UNIT_ITEM_BASE)
+from .data import (ADAMANTITE_ITEM, AIRSHIP_ITEM, CAPABILITIES, CHOCOBO_ITEM, CONTINENT_UNLOCKS, FILLER_VALUE, FORGE,
+                   FRAGMENT_ITEM, ITEMS, MAGICITE_ITEMS, POOL_ADDITIONS, PROGRESSION, RADAR_ITEM, RADAR_PARTS,
+                   UNIT_ITEM_BASE)
 
 if TYPE_CHECKING:
     from .world import FFResonanceWorld
@@ -132,7 +133,12 @@ def create_all_items(world: FFResonanceWorld) -> None:
         added = added[:room]
     taken.update(cheapest[:len(added)])
     pool_ids = [ap_id for i, ap_id in enumerate(pool_ids) if i not in taken]
-    pool = [create_item(world, ITEMS[ap_id]["name"]) for ap_id in pool_ids + extra + added]
+    # Round 105: the forge's locations hold the Adamantite its weapons cost, one each, less the copies
+    # in the pool already (the key item's). The rest of its locations get filler, below.
+    forged = []
+    if world.options.include_aileens_forge:
+        forged = [ADAMANTITE_ITEM] * max(0, len(FORGE) - (pool_ids + extra).count(ADAMANTITE_ITEM))
+    pool = [create_item(world, ITEMS[ap_id]["name"]) for ap_id in pool_ids + extra + added + forged]
     unfilled = len(world.multiworld.get_unfilled_locations(world.player))
     pool += [world.create_filler() for _ in range(unfilled - len(pool))]
     world.multiworld.itempool += pool

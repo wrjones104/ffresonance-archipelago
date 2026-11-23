@@ -427,6 +427,7 @@ local function newSession(key)
     state.scouts = {}
     seedCfg.party, seedCfg.finalboss, seedCfg.chocobo, seedCfg.airship, seedCfg.continent, seedCfg.radar = nil, nil, nil, nil, nil, nil
     seedCfg.quests, seedCfg.quest2, seedCfg.goal, seedCfg.checks, seedCfg.hidequests = nil, nil, nil, nil, nil
+    seedCfg.forge = nil
     game.blankRadarParts = false
     if save.apObj ~= nil and save.apObj == save.obj and save.autoDone then save.reskip = true end
     save.obj = nil     -- judge the loaded save again for this session
@@ -475,6 +476,8 @@ local function readInbox(initial)
             seedCfg.quest2 = f[3] == "1"
         elseif f[1] == "cfg" and f[2] == "hidequests" then
             seedCfg.hidequests = f[3] == "1"
+        elseif f[1] == "cfg" and f[2] == "forge" then
+            seedCfg.forge = f[3] == "1"
         elseif f[1] == "cfg" and f[2] == "continent" then
             seedCfg.continent = f[3] and f[3]:lower()
         elseif f[1] == "cfg" and f[2] == "finalboss" then
@@ -1789,6 +1792,10 @@ local function tick()
                     local okQuests, written = pcall(game.QuestsPatch, seedCfg.quest2)
                     log("quests: " .. tostring(written) .. " reward rows without the location's item" .. (okQuests and "" or " (failed: " .. tostring(written) .. ")"))
                 end
+                if newSave and seedCfg.forge then
+                    local okForge, written = pcall(game.ForgePatch)
+                    log("forge: " .. tostring(written) .. " rows end the forge only with all eight weapons" .. (okForge and "" or " (failed)"))
+                end
                 if newSave and seedCfg.gifts then
                     local okGifts, written = pcall(game.GiftsPatch, seedCfg.radar)
                     log("gifts: " .. tostring(written) .. " NPC gift rows give the stand-in" .. (okGifts and "" or " (failed)"))
@@ -2905,6 +2912,44 @@ function radar.tick()
     radar.logged = line
 end
 
+-- Round 105: Aileen's forge (game.FORGE). Location n is the nth weapon forged. A forged weapon
+-- stays in the bag, so the count comes from the save, on any computer. The forge's flag comes on
+-- before its pop-up, so the pop-up names location `last + 1`, and the flag goes off again for the
+-- next forge. The game may keep one Adamantite at most, as it does the radar's parts, so while the
+-- Adamantite received outnumber the weapons forged, an empty bag gets one back.
+state.forge = {}
+function state.forge.tick()
+    local F, me = game.FORGE, state.forge
+    if me.save ~= save.obj then me.save, me.last, me.logged = save.obj, nil, nil end
+    local forged = 0
+    for _, id in ipairs(F.weapons) do
+        if (game.HeldCount(id) or 0) >= 1 then forged = forged + 1 end
+    end
+    if game.GetFlag(F.flag) == true then
+        game.SetFlag(F.flag, false)
+        local key = me.last and me.last < #F.weapons and ("forge:" .. (me.last + 1))
+        local s = key and state.scouts[key]
+        if s then popup = { text = popupText(s), span = { text = s.item, flags = s.flags }, key = key, tries = BOSS_POPUP_TRIES } end
+    end
+    for n = 1, forged do
+        if report("check", "forge:" .. n) then log("check forge:" .. n) end
+    end
+    me.last = forged
+    local received = 0
+    for i = 0, state.applied - 1 do
+        local it = state.items[i]
+        if it and it.kind == "item" and it.id == F.adamantite then received = received + 1 end
+    end
+    local held = game.HeldCount(F.adamantite)
+    local line = string.format("forge: %d weapons forged, %d Adamantite received, %s held", forged, received, tostring(held))
+    if line ~= me.logged then log(line) end
+    me.logged = line
+    if held == 0 and received > forged and game.OnField() then
+        local code, detail = game.GrantItem(F.adamantite, 1)
+        log("forge: an Adamantite given back (" .. tostring(code) .. ", " .. tostring(detail) .. ")")
+    end
+end
+
 seedExtrasTick = function()
     local seedSave = seedCfg.openworld and sessionSave() and (game.StoryCounter() or 0) >= game.OPEN_START.story
     if seedSave and seedCfg.chocobo ~= false and saddleSave ~= save.obj and game.OnField() then
@@ -2923,6 +2968,11 @@ seedExtrasTick = function()
     local travel = game.DungeonFastTravel(seedSave and true or false)
     if travel then log("fast travel: " .. travel) end
     if seedSave and seedCfg.radar and sessionSave() then pcall(radar.tick) end
+    if seedSave and seedCfg.forge then pcall(state.forge.tick) end
+    if seedSave and game.ProgressValue(game.RADAR_TIER_PROGRESS) == 0 then
+        game.SetProgressValue(game.RADAR_TIER_PROGRESS, game.RADAR_LID_HEARD)
+        log("radar: step " .. game.RADAR_TIER_PROGRESS .. " set to " .. game.RADAR_LID_HEARD .. " (Lid's Mysidia line skipped)")
+    end
     if seedSave then
         local ok, line = pcall(game.PalaceSync)
         if ok and line then log(line) end

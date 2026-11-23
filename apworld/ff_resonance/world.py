@@ -19,7 +19,7 @@ ALL_PARTY_MEMBERS = [1001, 1002, 1003, 1004, 1005, 1006, 1007, 1008]
 SLOT_OPTIONS = ("tablet_shards_required", "include_shinies", "include_crystals", "include_tablet_shards",
                 "include_bosses", "start_with_chocobo", "start_with_airship", "shuffle_party_members",
                 "shuffle_visions", "shuffle_key_items", "include_radar_treasures", "include_side_quests",
-                "hide_quest_rewards")
+                "hide_quest_rewards", "include_aileens_forge")
 
 
 class FFResonanceSettings(settings.Group):

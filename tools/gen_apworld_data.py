@@ -457,6 +457,12 @@ def readable_names(chests: list[dict], radar_part_chests: list[dict], shinies: l
 QUEST_LOCATION_BASE = 6_000_000_000      # + the quest's id in the game's quest log
 QUEST_SECOND_BASE = 6_100_000_000        # + the quest's id: its second reward (round 98)
 QUESTS_LUA = os.path.join(ROOT, "FFRArchipelago", "Scripts", "quests.lua")
+# Round 105: Aileen's forge on the airship deck (side_quests.md, section 7). It opens after Forger
+# of Wills, and each of its eight weapons costs one Adamantite. Location n is the nth weapon forged.
+FORGE_LOCATION_BASE = 6_200_000_000      # + n
+FORGER_OF_WILLS = 23
+FORGE_WEAPONS = 8
+ADAMANTITE_ITEM = 20016 * 1000 + 1
 AIRSHIP_MAPS = {20001, 20002}            # the airship's cabin and deck
 # Quest items the game never tests: each gift row moves the quest's counter, and the next step
 # tests the counter (side_quests.md, section 2). They stay vanilla and out of the pool.
@@ -897,6 +903,12 @@ def main() -> None:
         if second:
             side_quests.append(second)
     side_quests.sort(key=lambda e: e["id"])
+    forger = next(e for e in side_quests if e["key"] == f"quest:{FORGER_OF_WILLS}")
+    forge = [{"key": f"forge:{n}", "name": f"Aileen's Forge: Weapon {n}", "region": "Aileen's Forge",
+              "area": OPEN_AREA, "open_world": True, "id": FORGE_LOCATION_BASE + n, "vanilla": None,
+              "adamantite": n, "steps": sorted(set(forger["steps"]) | {(AIRSHIP_AREA,)}),
+              **({"past_boss": forger["past_boss"]} if "past_boss" in forger else {})}
+             for n in range(1, FORGE_WEAPONS + 1)]
 
     # A continent's unlock turns on its event flag; Ardra has no locations, so it has no unlock.
     # One name can cover two maps (the Earth Shrine), so a repeat gets its map id.
@@ -1049,6 +1061,10 @@ def main() -> None:
         f.write("# Side quests (data/quests.tsv): the check is progress `counter` at or past `value`; steps are\n"
                 "# the places it needs, one continent of each group; vision is a vision the reward gives\n")
         f.write("SIDE_QUESTS = " + pprint.pformat(side_quests, width=110, sort_dicts=True) + "\n\n")
+        f.write("# Aileen's forge: the nth weapon forged, after Forger of Wills' steps and on the airship\n"
+                "# deck, with n Adamantite\n")
+        f.write("FORGE = " + pprint.pformat(forge, width=110, sort_dicts=True) + "\n\n")
+        f.write(f"ADAMANTITE_ITEM = {ADAMANTITE_ITEM}\n\n")
         f.write("# The one-time NPC gifts (data/game/gifts.tsv): flag is the check; extra are the items a\n"
                 "# second gift puts in the pool; needs_area a place the gift needs first\n")
         f.write("GIFTS = " + pprint.pformat(gifts, width=110, sort_dicts=True) + "\n\n")

@@ -1969,7 +1969,10 @@ local function talkTable(name, parents)
       SubEv_C05_TreasureRadar_01_13 = { ObtainItemList = { { ID = 12059, Num = 1 } } },
       C01_ArijigokuWin = { ContinuousEventList = {
         { Condition = "!{flag:10}", EventId = FName("C01_ArijigokuWin_01") },
-        { Condition = "{flag:10}", EventId = FName("C01_ArijigokuWin_02") } } } },
+        { Condition = "{flag:10}", EventId = FName("C01_ArijigokuWin_02") } } },
+      C06_AileenWeapon_06 = { ContinuousEventList = {
+        { Condition = "{item:10190}==1", EventId = FName("C06_AileenWeapon_06_complete") },
+        { Condition = "{item:20016}==0", EventId = FName("C06_AileenWeapon_06_Nohave") } } } },
     ParentTables = parents or {} }
   function t:IsValid() return true end
   function t:HasAnyInternalFlags() return false end
@@ -2025,6 +2028,17 @@ for table in ("cdtTalk", "gimTalk"):
         assert L.eval(f"{table}.rows.C01_ArijigokuWin.ContinuousEventList[{i}].EventId:ToString()") == "C01_ArijigokuWin_02"
 assert L.eval("G.AntlionPatch()") == 0, "nothing to write the second time"
 print("antlion: ok")
+
+# Round 105: Aileen's forge ends (progress 38 to 70) only with all eight weapons held, not as soon
+# as Rain's is. The row's other branches stay. One row in each of the two tables.
+ALL_EIGHT = ("{item:10190}>=1&{item:10290}>=1&{item:10390}>=1&{item:10490}>=1&{item:10590}>=1"
+             "&{item:10790}>=1&{item:10890}>=1&{item:10690}>=1")
+assert L.eval("G.ForgePatch()") == 2
+for table in ("cdtTalk", "gimTalk"):
+    assert L.eval(f"{table}.rows.C06_AileenWeapon_06.ContinuousEventList[1].Condition") == ALL_EIGHT
+    assert L.eval(f"{table}.rows.C06_AileenWeapon_06.ContinuousEventList[2].Condition") == "{item:20016}==0"
+assert L.eval("G.ForgePatch()") == 0, "nothing to write the second time"
+print("forge: ok")
 
 # Round 72: a radar treasure's reward is the location's now: its dig row gives the pop-up's
 # stand-in Potion (1), in both tables, once
