@@ -49,6 +49,7 @@ async def main():
     assert lines[0] == f"seed\t{SESSION_KEY}", lines[0]
     assert "cfg\topenworld\t1" in lines and "cfg\tparty\t1004,1005" in lines, lines
     assert "cfg\tforge\t0" in lines, "round 105: a seed without the option has no forge locations"
+    assert "cfg\tkeyitems\t1" in lines, "round 107: key items are shuffled by default, also in old seeds"
     items = [line.split("\t")[1] for line in lines if line.startswith("item\t")]
     assert items == ["0", "1"], "every item again, from index 0: " + str(items)
     print("ok  ap_in.txt written again after a delete")

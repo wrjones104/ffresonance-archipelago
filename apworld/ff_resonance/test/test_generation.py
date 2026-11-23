@@ -199,6 +199,17 @@ class TestDefault(FFResonanceTestBase):
         self.collect_by_name(["Dungeon Key"])
         self.assertTrue(chest.can_reach(self.multiworld.state))
 
+    def test_zoldaad_throne_room_needs_its_key(self) -> None:
+        # Round 107 (the user): both chests are past the Throne Room Key's door.
+        chests = [self.multiworld.get_location(name, self.player) for name in
+                  ("Zoldaad - Castle - Throne Room West Bushes Chest", "Zoldaad - Castle - Upper Tower SW Alcove Chest")]
+        self.collect_by_name(["Zoldaad Unlock"])
+        for chest in chests:
+            self.assertFalse(chest.can_reach(self.multiworld.state), chest.name)
+        self.collect_by_name(["Throne Room Key"])
+        for chest in chests:
+            self.assertTrue(chest.can_reach(self.multiworld.state), chest.name)
+
     def test_abandoned_cabin_needs_its_key(self) -> None:
         # Round 106 (the user): the cabin's door says it is locked without the Cabin Key.
         chest = self.multiworld.get_location("Pharm - Abandoned Cabin - NW Corner Chest", self.player)

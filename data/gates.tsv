@@ -17,3 +17,5 @@ shiny:3150:3	20019	71	Zoldaad Dungeon Shard 3: behind the Dungeon Key's door
 shiny:3220:33	20009	97	Research Center Ruins: the level 2 card, behind the level 1 door
 shiny:3220:37	20009,20010	97	Research Center Ruins: the level 3 card, behind the level 2 door
 chest:2190:0	20033	106	Abandoned Cabin: the world-map door runs "the cabin is locked" (C07_Wld_09Pha_Cabin_01) without the Cabin Key (the user, round 105 play; round 74's note that it opened without the key was wrong)
+chest:3160:2	20021	107	Zoldaad Castle: the throne room, past the Throne Room Key's door (the user, round 105 play)
+chest:3160:0	20021	107	Zoldaad Castle: the upper tower, past the Throne Room Key's door (the user, round 105 play)

@@ -260,6 +260,7 @@ function G.CrossingClear() G.crossingsCleared = true end
 G.AIRSHIP_FLAG, G.airshipSyncs, G.parks = 1431, {}, {}
 G.RADAR_ON_FLAG, G.RADAR_TIER_PROGRESS, G.RADAR_FOUND_PROGRESS = 702, 49, 51
 G.RADAR_LID_HEARD = 10
+G.VISION_MOOGLE_FLAG, G.THRONE_KEY = 144, { map = 3160 }
 G.RADAR_BANDS = { { upTo = 13, steps = { 20, 30 } }, { upTo = 22, steps = { 40 } }, { upTo = 31, steps = { 50 } } }
 G.RADAR = {}
 for n = 1, 13 do G.RADAR[n] = { n = n, flag = 703 + n } end
@@ -2104,6 +2105,37 @@ before = len(G.log)
 tick(8)
 assert len(G.log) == before, "two received, two forged: nothing more to give"
 print("forge: ok")
+
+# Round 107 (the user): Grandport's vision Moogle shows only with flag 144, from a chapter 1 scene
+# the open start skips: a seed's save gets the flag, once. With the key items in the pool, the
+# Zoldaad squad leader's rows give the stand-in, and his trigger is turned off on map 3160 only.
+VISION_MOOGLE_FLAG, ZOLDAAD_CASTLE = 144, 3160
+for keyitems in ("1", "0"):
+    inbox(f"seed\tS107{keyitems}:0:1\ncfg\topenworld\t1\ncfg\tkeyitems\t{keyitems}\n", "w")
+    L, G = boot5("SD_107_" + keyitems, "0", {})
+    L.globals().G = G
+    L.execute(SCALE_STUB)
+    L.execute("""G.flags107, G.flagSets, G.rowPatches, G.triggerCalls = {}, 0, 0, 0
+function G.GetFlag(i) return G.flags107[i] == true end
+function G.SetFlag(i, on) G.flags107[i] = on; G.flagSets = G.flagSets + 1; return "ok", "" end
+function G.ThroneKeyRowsPatch() G.rowPatches = G.rowPatches + 1; return 4 end
+function G.ThroneKeyTriggerOff() G.triggerCalls = G.triggerCalls + 1; return 0 end
+G.map = 2030""")
+    G.chests = L.table()
+    G.story = 8000
+    tick(12)
+    assert L.eval(f"G.flags107[{VISION_MOOGLE_FLAG}]") is True, "the Moogle shows"
+    sets = G.flagSets
+    tick(8)
+    assert G.flagSets == sets, "set once"
+    assert G.triggerCalls == 0, "not off Zoldaad Castle"
+    G.map = ZOLDAAD_CASTLE
+    tick(8)
+    if keyitems == "1":
+        assert G.rowPatches >= 1 and G.triggerCalls >= 1, (G.rowPatches, G.triggerCalls)
+    else:
+        assert G.rowPatches == 0 and G.triggerCalls == 0, "key items not in the pool: the game's own key stays"
+print("throne key and vision moogle: ok")
 
 # Round 78: side quests. A quest's check is its counter at or past the value its reward row
 # writes (Rear Support, Ahoy!: progress 28 at 40). The Mechabo counter (16) starts at 10 on an

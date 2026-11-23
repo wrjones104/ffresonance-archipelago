@@ -22,6 +22,7 @@
 --     cfg radar <0|1>                             the radar's 13 treasures are locations
 --     cfg quests <0|1>                            side quests are locations: blank their rewards
 --     cfg forge <0|1>                             Aileen's forge is locations: forge:1 to forge:8
+--     cfg keyitems <0|1>                          the key items are in the pool: the game's own copies are taken out
 --     cfg finalboss <have> <need> ...             the tower lock: characters, visions, Crystal Fragments
 --     cfg goal <kind> <shards> <shards needed>    the goal (final_boss | tablet_shards), for the Archipelago page
 --     cfg checks <done> <total>                   the slot's locations checked, for the Archipelago page

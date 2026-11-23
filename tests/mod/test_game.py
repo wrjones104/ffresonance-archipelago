@@ -1972,6 +1972,9 @@ local function talkTable(name, parents)
       Gim_EV_ShipMovement_04_01_Choice = menu({ 1, 2, 3 }, "Gim_EV_ShipMovement_Cancel"),
       SubEv_C05_TreasureRadar_01_01 = { ObtainItemList = { { ID = 20016, Num = 1 } } },
       SubEv_C05_TreasureRadar_01_13 = { ObtainItemList = { { ID = 12059, Num = 1 } } },
+      SubEv_Dng_06Zol_44_GimEv_03_A = { ObtainItemList = { { ID = 20021, Num = 1 } } },
+      SubEv_Dng_06Zol_44_GimEv_03_B = { ObtainItemList = { { ID = 20021, Num = 1 } } },
+      SubEv_Dng_06Zol_44_GimEv_04 = { ObtainItemList = { { ID = 20, Num = 1 } } },
       C01_ArijigokuWin = { ContinuousEventList = {
         { Condition = "!{flag:10}", EventId = FName("C01_ArijigokuWin_01") },
         { Condition = "{flag:10}", EventId = FName("C01_ArijigokuWin_02") } } },
@@ -2044,6 +2047,38 @@ for table in ("cdtTalk", "gimTalk"):
     assert L.eval(f"{table}.rows.C06_AileenWeapon_06.ContinuousEventList[2].Condition") == "{item:20016}==0"
 assert L.eval("G.ForgePatch()") == 0, "nothing to write the second time"
 print("forge: ok")
+
+# Round 107 (the user): Zoldaad Castle's squad leader gave the Throne Room Key out of logic. Both
+# of his answers give the stand-in, in both tables; the spy's row next to them is left alone. His
+# walk-in trigger is turned off on the map, once per trigger the game makes.
+THRONE_KEY, STAND_IN, SPY_GIFT = 20021, 1, 20
+SQUAD_LEADER_ROWS = 2 * 2
+assert L.eval("G.ThroneKeyRowsPatch()") == SQUAD_LEADER_ROWS
+for table in ("cdtTalk", "gimTalk"):
+    for row in ("SubEv_Dng_06Zol_44_GimEv_03_A", "SubEv_Dng_06Zol_44_GimEv_03_B"):
+        assert L.eval(f"{table}.rows.{row}.ObtainItemList[1].ID") == STAND_IN, (table, row)
+    assert L.eval(f"{table}.rows.SubEv_Dng_06Zol_44_GimEv_04.ObtainItemList[1].ID") == SPY_GIFT
+assert L.eval("G.ThroneKeyRowsPatch()") == 0, "nothing to write the second time"
+L.execute(r'''
+local function trigger(event)
+  local a = { m_EventList = { { Condition = "{item:20021}==0", EventId = FName(event) } }, m_GimmickCondition = 0, collision = true }
+  function a:IsValid() return true end
+  function a:HasAnyInternalFlags() return false end
+  function a:HasAnyFlags() return false end
+  function a:SetActorEnableCollision(on) self.collision = on end
+  function a:SetGimmickCondition(c) self.m_GimmickCondition = c end
+  return a
+end
+squadLeader, otherTrigger = trigger("SubEv_Dng_06Zol_44_GimEv_03"), trigger("SubEv_Dng_06Zol_44_GimEv_05_01")
+local prevFAOThrone = FindAllOf
+function FindAllOf(c) if c == "CPP_MapGimmick_EventTrigger" then return { squadLeader, otherTrigger } end return prevFAOThrone(c) end
+''')
+assert L.eval("G.ThroneKeyTriggerOff()") == 1
+assert L.eval("squadLeader.m_EventList[1].Condition") == "{progress:0}<0"
+assert L.eval("squadLeader.collision") is False and L.eval("squadLeader.m_GimmickCondition") == 1, "off"
+assert L.eval("otherTrigger.m_EventList[1].Condition") == "{item:20021}==0" and L.eval("otherTrigger.collision") is True
+assert L.eval("G.ThroneKeyTriggerOff()") == 0, "once per trigger"
+print("throne key: ok")
 
 # Round 72: a radar treasure's reward is the location's now: its dig row gives the pop-up's
 # stand-in Potion (1), in both tables, once

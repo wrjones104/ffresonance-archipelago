@@ -217,6 +217,8 @@ class FFResonanceContext(CommonContext):
         wanted.append(("cfg", "quest2", int(bool(slot_data.get("quest_second_rewards")))))
         wanted.append(("cfg", "hidequests", int(bool(slot_data.get("hide_quest_rewards")))))
         wanted.append(("cfg", "forge", int(bool(slot_data.get("include_aileens_forge")))))
+        # Legacy seeds without this option shuffled the key items (the option's default).
+        wanted.append(("cfg", "keyitems", int(bool(slot_data.get("shuffle_key_items", True)))))
         # Legacy seeds without this option started in the airship.
         wanted.append(("cfg", "airship", int(bool(slot_data.get("start_with_airship", True)))))
         if slot_data.get("starting_continent"):

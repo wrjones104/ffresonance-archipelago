@@ -1557,3 +1557,13 @@ The user played (2026-11-23). Passed: the builds, the spoiler's eight forge loca
 - The second name in a pop-up has 10 px of space above it (`G.POPUP_COLORS.GAP`).
 - `data/gates.tsv`: the cabin's chest needs the Cabin Key.
 
+**More round 105 notes (the user, 2026-11-23):**
+- **Zoldaad Castle still gave the Throne Room Key** in a story scene with Shera and Ignis, so it could be had out of logic.
+- **Grandport Harbor had no vision Moogle**, so a Lanzelt start could not upgrade with Magicite.
+- **Zoldaad - Castle - Throne Room West Bushes Chest and Upper Tower SW Alcove Chest need the Throne Room Key**, and were in logic without it.
+
+**Round 107 build (mod 0.63.0 build 52a08832, apworld 0.32.0 build 1a267523), on top of round 106:**
+- **The Throne Room Key (found off-line):** the scene is `SubEv_Dng_06Zol_44_GimEv_03` ("questions with the squad leader"), from a walk-in trigger on map 3160 (uid 6, `{item:20021}==0`). Its two answers both give the key: `_03_B` by talking and `_03_A` after battle group 9087. With the key items in the pool (`cfg keyitems`, from `shuffle_key_items`), the mod turns the trigger off each time the map makes it (collision off, `SetGimmickCondition 1`, its condition never true), and both rows give the stand-in Potion in place of the key. With the key items not shuffled, the game's own key stays.
+- **Grandport's vision Moogle (found off-line):** NPC 720 on map 2030 shows only with flag 144 (`m_VisiblFlagCondition`). Its chapter 1 scene (`SubEv_C01_Moogle_01`, story 1240) sets it, and the open start skips that scene. Every other town's Moogle has no flag condition. A seed's save gets flag 144, once, so saves already made get it too.
+- `data/gates.tsv`: chests 3160:0 and 3160:2 need the Throne Room Key.
+

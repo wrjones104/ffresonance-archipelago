@@ -427,7 +427,7 @@ local function newSession(key)
     state.scouts = {}
     seedCfg.party, seedCfg.finalboss, seedCfg.chocobo, seedCfg.airship, seedCfg.continent, seedCfg.radar = nil, nil, nil, nil, nil, nil
     seedCfg.quests, seedCfg.quest2, seedCfg.goal, seedCfg.checks, seedCfg.hidequests = nil, nil, nil, nil, nil
-    seedCfg.forge = nil
+    seedCfg.forge, seedCfg.keyitems = nil, nil
     game.blankRadarParts = false
     if save.apObj ~= nil and save.apObj == save.obj and save.autoDone then save.reskip = true end
     save.obj = nil     -- judge the loaded save again for this session
@@ -478,6 +478,8 @@ local function readInbox(initial)
             seedCfg.hidequests = f[3] == "1"
         elseif f[1] == "cfg" and f[2] == "forge" then
             seedCfg.forge = f[3] == "1"
+        elseif f[1] == "cfg" and f[2] == "keyitems" then
+            seedCfg.keyitems = f[3] == "1"
         elseif f[1] == "cfg" and f[2] == "continent" then
             seedCfg.continent = f[3] and f[3]:lower()
         elseif f[1] == "cfg" and f[2] == "finalboss" then
@@ -1797,6 +1799,10 @@ local function tick()
                     local okQuests, written = pcall(game.QuestsPatch, seedCfg.quest2)
                     log("quests: " .. tostring(written) .. " reward rows without the location's item" .. (okQuests and "" or " (failed: " .. tostring(written) .. ")"))
                 end
+                if newSave and seedCfg.keyitems then
+                    local okKey, written = pcall(game.ThroneKeyRowsPatch)
+                    log("throne key: " .. tostring(written) .. " squad leader rows give the stand-in" .. (okKey and "" or " (failed)"))
+                end
                 if newSave and seedCfg.forge then
                     local okForge, written = pcall(game.ForgePatch)
                     log("forge: " .. tostring(written) .. " rows end the forge only with all eight weapons" .. (okForge and "" or " (failed)"))
@@ -2974,6 +2980,15 @@ seedExtrasTick = function()
     if travel then log("fast travel: " .. travel) end
     if seedSave and seedCfg.radar and sessionSave() then pcall(radar.tick) end
     if seedSave and seedCfg.forge then pcall(state.forge.tick) end
+    if seedSave and seedCfg.keyitems and game.CurrentMap() == game.THRONE_KEY.map then
+        local ok, n = pcall(game.ThroneKeyTriggerOff)
+        if ok and n > 0 then log("throne key: the squad leader's trigger turned off (" .. n .. ")") end
+    end
+    if seedSave and state.moogleSave ~= save.obj and game.GetFlag(game.VISION_MOOGLE_FLAG) == false then
+        state.moogleSave = save.obj
+        local code, detail = game.SetFlag(game.VISION_MOOGLE_FLAG, true)
+        log("vision moogle: flag " .. game.VISION_MOOGLE_FLAG .. " set, for Grandport's Moogle (" .. tostring(code) .. ", " .. tostring(detail) .. ")")
+    end
     if seedSave and game.ProgressValue(game.RADAR_TIER_PROGRESS) == 0 then
         game.SetProgressValue(game.RADAR_TIER_PROGRESS, game.RADAR_LID_HEARD)
         log("radar: step " .. game.RADAR_TIER_PROGRESS .. " set to " .. game.RADAR_LID_HEARD .. " (Lid's Mysidia line skipped)")

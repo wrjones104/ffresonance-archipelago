@@ -2855,6 +2855,57 @@ function G.ForgePatch()
     return written
 end
 
+-- Round 107 (the user): in Zoldaad Castle (map 3160) a walk-in scene with the squad leader, Shera
+-- and Ignis (SubEv_Dng_06Zol_44_GimEv_03) runs while the Throne Room Key is not held. Both its
+-- answers give the key: _03_A after the battle, _03_B by talking. With the key in the pool, that
+-- gave it out of logic. The trigger is turned off on the map (the game judges a zone at the map's
+-- load, so its condition alone is not enough: round 76), and the two rows give the stand-in, in
+-- case the scene starts before the mod sees the trigger.
+G.THRONE_KEY = { item = 20021, map = 3160, event = "SubEv_Dng_06Zol_44_GimEv_03", never = "{progress:0}<0",
+                 rows = { SubEv_Dng_06Zol_44_GimEv_03_A = true, SubEv_Dng_06Zol_44_GimEv_03_B = true } }
+function G.ThroneKeyRowsPatch()
+    local T, written = G.THRONE_KEY, 0
+    EachTalkRow(function(key, row)
+        if not T.rows[key] then return end
+        local list = row.ObtainItemList
+        for i = 1, #list do
+            if Int(list[i].ID) == T.item then
+                list[i].ID = BOSS_STAND_IN
+                written = written + 1
+            end
+        end
+    end)
+    return written
+end
+-- How many of the squad leader's triggers were turned off now. Call each tick on the map: a map
+-- load makes the trigger again as the game made it.
+function G.ThroneKeyTriggerOff()
+    local T, changed = G.THRONE_KEY, 0
+    local ok, all = pcall(FindAllOf, "CPP_MapGimmick_EventTrigger")
+    for _, a in ipairs(ok and all or {}) do
+        if Alive(a) then
+            pcall(function()
+                local list = a.m_EventList
+                for i = 1, #list do
+                    if ObjText(list[i].EventId) == T.event and ObjText(list[i].Condition) ~= T.never then
+                        step("throne key: trigger collision off, SetGimmickCondition 1, condition never")
+                        a:SetActorEnableCollision(false)
+                        if a.m_GimmickCondition ~= 1 then a:SetGimmickCondition(1, false) end
+                        list[i].Condition = T.never
+                        changed = changed + 1
+                    end
+                end
+            end)
+        end
+    end
+    return changed
+end
+
+-- Round 107 (the user): Grandport Harbor's vision Moogle (NPC 720, map 2030) shows only with flag
+-- 144, which its chapter 1 scene sets (SubEv_C01_Moogle_01, story 1240). The open start skips it,
+-- so a Lanzelt start had no Magicite upgrades. Every other town's Moogle has no flag condition.
+G.VISION_MOOGLE_FLAG = 144
+
 G.MECHABO = { counter = 16, start = 10, request = 17,
               rows = { "C02_MechaboLvUp_00_yet", "C02_MechaboLvUp_00_ItemGet" },
               requestTable = "/Game/Datatable/Request/DT_RequestData.DT_RequestData",
