@@ -190,7 +190,9 @@ How the game tests a key item: `{item:N}` in conditions (talk rows, actors, map 
 
 Not in the pool, and no location needs them: the quest items (20020, 20023 to 20032; their quests are counted by their counters, docs/side_quests.md), White Jade Stone (given only at story 6030), Black Jade Stone, Magic Tome and Tunnel Key (given by no row in the data), and the three tutorial items (29500, 29510, 29520).
 
-**What could be done (not built yet):**
+**Built in round 108:** the Cabin Key man rewritten with the key items shuffled; the Dungeon Key given by the mod in the dungeon with them not shuffled; every key door in logic with its place when they are not shuffled (`GIVEN_IN_PLACE`); the proofs out of the pool. The Generator needs nothing: the merchant shows it only at a found count of 23, which the mod reaches only with the third Progressive Radar.
+
+**What could be done (the round 107 list):**
 - Dungeon Key, shuffled off: make the game give it again. Either the mod lets the soldier's trigger run at any story while the key is not held (the vanilla fight, an actor rewrite like round 107's), or it gives the key when the player first enters Zoldaad Dungeon. Then its six locations go in logic behind Zoldaad, not filler only.
 - Throne Room Key and Cabin Key, shuffled off: the game's copies work, so their chests could be in logic behind the place that gives the key, not filler only.
 - Cabin Key, shuffled on: stop the man giving it, as round 107 did for the squad leader. A row that gives the stand-in in its place would give a Potion at every talk (his condition is only "flag 1410 and no key"), so his row or his NPC's condition needs the change, not just the item.

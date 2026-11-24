@@ -261,6 +261,9 @@ G.AIRSHIP_FLAG, G.airshipSyncs, G.parks = 1431, {}, {}
 G.RADAR_ON_FLAG, G.RADAR_TIER_PROGRESS, G.RADAR_FOUND_PROGRESS = 702, 49, 51
 G.RADAR_LID_HEARD = 10
 G.VISION_MOOGLE_FLAG, G.THRONE_KEY = 144, { map = 3160 }
+G.CABIN_KEY, G.DUNGEON_KEY = { map = 2170 }, { item = 20019, map = 3150 }
+function G.CabinKeyManOff() return 0 end
+function G.UnvisitLocked() return {} end
 G.RADAR_BANDS = { { upTo = 13, steps = { 20, 30 } }, { upTo = 22, steps = { 40 } }, { upTo = 31, steps = { 50 } } }
 G.RADAR = {}
 for n = 1, 13 do G.RADAR[n] = { n = n, flag = 703 + n } end
@@ -2136,6 +2139,44 @@ G.map = 2030""")
     else:
         assert G.rowPatches == 0 and G.triggerCalls == 0, "key items not in the pool: the game's own key stays"
 print("throne key and vision moogle: ok")
+
+# Round 108 (the key item audit): with the key items in the pool, the man by Sian's inn is rewritten
+# on map 2170 only. With them not shuffled, the Dungeon Key is given in Zoldaad Dungeon while not
+# held. Maps of locked continents are marked not visited on every pass.
+SIAN, ZOLDAAD_DUNGEON, DUNGEON_KEY = 2170, 3150, 20019
+for keyitems in ("1", "0"):
+    inbox(f"seed\tS108{keyitems}:0:1\ncfg\topenworld\t1\ncfg\tkeyitems\t{keyitems}\n", "w")
+    L, G = boot5("SD_108_" + keyitems, "0", {})
+    L.globals().G = G
+    L.execute(SCALE_STUB)
+    L.execute(CAPTURE)
+    L.execute("""G.manCalls, G.unvisits, G.held108, G.grants108 = 0, 0, {}, 0
+function G.CabinKeyManOff() G.manCalls = G.manCalls + 1; return 1 end
+function G.UnvisitLocked() G.unvisits = G.unvisits + 1; return G.unvisits == 1 and { 2030 } or {} end
+function G.HeldCount(id) return G.held108[id] or 0 end
+local grant = G.GrantItem
+function G.GrantItem(id, n)
+  if id ~= 20019 then return grant(id, n) end
+  G.grants108 = G.grants108 + 1; G.held108[id] = (G.held108[id] or 0) + n; return "ok", ""
+end
+G.map = 2030""")
+    G.chests = L.table()
+    G.story = 8000
+    tick(8)
+    assert G.unvisits >= 1, "every pass"
+    assert sum("2030 are on locked continents" in l for l in logs()) == 1, "logged once"
+    assert G.manCalls == 0 and G.grants108 == 0, "not on their maps"
+    G.map = SIAN
+    tick(4)
+    G.map = ZOLDAAD_DUNGEON
+    tick(8)
+    if keyitems == "1":
+        assert G.manCalls >= 1, "the man stops giving the key"
+        assert G.grants108 == 0, "the pool's key is the only one"
+    else:
+        assert G.manCalls == 0, "key items not in the pool: the man gives his key"
+        assert G.grants108 == 1 and L.eval(f"G.held108[{DUNGEON_KEY}]") == 1, "given once, then held"
+print("cabin key, dungeon key and locked maps: ok")
 
 # Round 78: side quests. A quest's check is its counter at or past the value its reward row
 # writes (Rear Support, Ahoy!: progress 28 at 40). The Mechabo counter (16) starts at 10 on an

@@ -467,6 +467,9 @@ AIRSHIP_MAPS = {20001, 20002}            # the airship's cabin and deck
 # Quest items the game never tests: each gift row moves the quest's counter, and the next step
 # tests the counter (side_quests.md, section 2). They stay vanilla and out of the pool.
 QUEST_ONLY_ITEMS = {20020, 20023, 20024, 20025, 20026, 20027, 20028, 20029, 20030, 20031, 20032}
+# Round 108 (the key item audit): the Colosseum gives each Proof of Victory at its rank clear, at any
+# story. A proof only opens stock in the Colosseum's shop, and no location needs one.
+COLOSSEUM_PROOFS = {29000, 29001, 29002, 29003}
 
 
 def quest_name(name: str) -> str:
@@ -937,7 +940,7 @@ def main() -> None:
             continue
         ap_id = item_id * 1000 + 1
         items[ap_id] = {"name": name, "kind": kind, "game_id": item_id, "count": 1, "category": category}
-        if item_id not in QUEST_ONLY_ITEMS:
+        if item_id not in QUEST_ONLY_ITEMS | COLOSSEUM_PROOFS:
             progression[category].append(ap_id)
 
     # Round 104: gear no location holds (enemy drops and steals) goes into the pool in place of filler.

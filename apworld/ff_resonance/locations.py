@@ -51,6 +51,10 @@ ADAMANTITE = ITEMS[ADAMANTITE_ITEM]["name"]
 # or cave joins two continents; each crossing opens with the far continent's unlock, matching the mod's gates.
 BRIDGES = [("Grandshelt", "Lanzelt"), ("Lanzelt", "Kolobos")]
 FERRY_PORTS = ["Lanzelt", "Dirnado", "Olderion", "Zoldaad"]
+# Round 108: with the key items not shuffled, each key of data/gates.tsv comes in the place its doors
+# are: the Research Center's cards from its shinies, the Throne Room Key from Zoldaad Castle's squad
+# leader, the Cabin Key from the man by Sian's inn, and the Dungeon Key from the mod in the dungeon.
+GIVEN_IN_PLACE = {game_id * 1000 + 1 for game_id in (20009, 20010, 20011, 20019, 20021, 20033)}
 
 class FFResonanceLocation(Location):
     game = GAME
@@ -123,13 +127,13 @@ def create_regions_and_locations(world: FFResonanceWorld) -> None:
                 rules.append(lambda state, n=loc["shards"]: state.has("Tablet Shard", player, n))
             else:
                 location.progress_type = LocationProgressType.EXCLUDED
-        # Doors that test a key item (data/gates.tsv). With the item not in the pool, logic
-        # cannot count the copy the game hands out: filler only.
+        # Doors that test a key item (data/gates.tsv). With the item not in the pool, the game's
+        # own copy opens them, in the same place (GIVEN_IN_PLACE); any other key: filler only.
         if "needs" in loc:
             if in_pool.issuperset(loc["needs"]):
                 names = [ITEMS[ap_id]["name"] for ap_id in loc["needs"]]
                 rules.append(lambda state, names=names: state.has_all(names, player))
-            else:
+            elif not GIVEN_IN_PLACE.issuperset(loc["needs"]):
                 location.progress_type = LocationProgressType.EXCLUDED
         # Bosses and post-boss regions (Fina's Psyche, Sanctissimus Shrine) require those bosses'
         # combat needs (boss_logic.py). Places only the airship reaches (data/airship_only.tsv) require it.

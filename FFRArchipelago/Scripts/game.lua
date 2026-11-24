@@ -2901,6 +2901,80 @@ function G.ThroneKeyTriggerOff()
     return changed
 end
 
+-- Round 108 (the key item audit): the man in front of Sian's inn (NPC 22, map 2170) gives the Cabin
+-- Key once the cabin's door has been tried (flag 1410), at any story. With the key in the pool, that
+-- copy was out of logic. His entry that gives it says his line from before the cabin instead. A row
+-- with the stand-in would hand out a Potion at every talk, as his entry holds until the key is held.
+-- Call each tick on the map: a map load makes him again as the game made him.
+G.CABIN_KEY = { map = 2170, give = "FEV_Town_09Pha_01_1044_02", say = "FEV_Town_09Pha_01_1044_01" }
+function G.CabinKeyManOff()
+    local C, changed = G.CABIN_KEY, 0
+    local ok, all = pcall(FindAllOf, "BP_MapUnit_NPC_C")
+    for _, a in ipairs(ok and all or {}) do
+        if Alive(a) then
+            pcall(function()
+                local entries = a.m_EventSettings.EventList
+                for i = 1, #entries do
+                    local events = entries[i].EventList
+                    for j = 1, #events do
+                        if ObjText(events[j].EventId) == C.give then
+                            step("cabin key: npc entry " .. i .. " -> " .. C.say)
+                            events[j].EventId = FName(C.say)
+                            changed = changed + 1
+                        end
+                    end
+                end
+            end)
+        end
+    end
+    return changed
+end
+
+-- Round 108 (the user): with the key items not shuffled, the Dungeon Key never came. Its only
+-- source is a drop from the soldier of battle group 9096, whose trigger in Zoldaad Dungeon
+-- (SubEv_Dng_06Zol_43_GimEv_01) needs story 4180 exactly. main.lua gives it in the dungeon.
+G.DUNGEON_KEY = { item = 20019, map = 3150 }
+
+-- Round 108 (a tester): "The Tide from the Sky" (Olderion) takes the player through Grandport Harbor
+-- in a scene (SubEv_C03_Mercedes_02_02, then back to Olderion). The visit made Grandport a fast
+-- travel place with Lanzelt still locked. Each map of a locked continent (maps.tsv's island) is
+-- marked not visited again (Map.perMapSaveDataMap), so fast travel refuses it. It stays known.
+G.CONTINENT_MAPS = {
+    grandshelt = { 2000, 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 3000, 3001, 3020, 5198, 10001, 10020, 10216, 10218, 10236, 10237 },
+    lanzelt = { 2020, 2030, 2031, 3030, 3031, 10051, 10203, 10208, 10223, 10228 },
+    kolobos = { 2040, 3040, 10201, 10221 },
+    dirnado = { 2050, 2060, 2061, 3050, 3060, 3061, 3062, 3070, 3290, 5030, 5040, 5041, 5156, 10052, 10202, 10206, 10207, 10222, 10226, 10227 },
+    olderion = { 2070, 2080, 2081, 2090, 3080, 3090, 3091, 3100, 3110, 3111, 5031, 5130, 10053, 10054, 10059, 10200, 10205, 10209, 10220, 10225, 10229, 11000 },
+    zoldaad = { 2100, 2101, 2102, 2110, 2111, 2112, 2113, 2114, 2120, 3120, 3121, 3130, 3131, 3140, 3150, 3160, 5050, 5090, 5100, 5140, 10030, 10031, 10055, 10056, 10210, 10211, 10212, 10230, 10231, 10232 },
+    mysidia = { 2130, 2140, 3170, 3180, 3190, 3200, 3210, 3211, 3212, 3213, 5195, 5197, 10057, 10058, 10213, 10214, 10215, 10233, 10234, 10235 },
+    gronoa = { 2150, 2160, 3220, 3230, 3240, 3250, 10060, 10062, 10063, 10064 },
+    pharm = { 2170, 2180, 2190, 3010, 3260, 3270, 3271, 3272, 5180, 5181, 10061, 10065, 10066 },
+}
+-- Returns the maps marked not visited now. The map the player is on is left alone.
+function G.UnvisitLocked()
+    local sd = G.SaveData()
+    if not sd then return {} end
+    local locked, here, cleared = {}, G.CurrentMap(), {}
+    for _, c in ipairs(G.CONTINENTS) do
+        if G.GetFlag(c.flag) == false then
+            for _, m in ipairs(G.CONTINENT_MAPS[c.name] or {}) do locked[m] = true end
+        end
+    end
+    pcall(function()
+        sd.Map.perMapSaveDataMap:ForEach(function(key, value)
+            local m = Int(key:get())
+            if locked[m] and m ~= here then
+                local row = value:get()
+                if row.bIsVisited == true then
+                    row.bIsVisited = false
+                    cleared[#cleared + 1] = m
+                end
+            end
+        end)
+    end)
+    return cleared
+end
+
 -- Round 107 (the user): Grandport Harbor's vision Moogle (NPC 720, map 2030) shows only with flag
 -- 144, which its chapter 1 scene sets (SubEv_C01_Moogle_01, story 1240). The open start skips it,
 -- so a Lanzelt start had no Magicite upgrades. Every other town's Moogle has no flag condition.

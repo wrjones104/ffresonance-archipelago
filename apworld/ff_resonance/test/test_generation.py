@@ -34,6 +34,7 @@ EARLY_LEVEL, FINA_GROUP_HEAL_LEVEL, MAX_LEVEL = 3, 25, 99   # boss levels: Fina 
 RIBBON = 12065001
 FORGE_WEAPONS = 8   # round 105: Aileen's forge, one Adamantite a weapon
 RIBBONS = 2     # round 104: Ribbon is a rare steal and a story boss's drop, so no location holds one
+COLOSSEUM_PROOFS = (29000, 29001, 29002, 29003)   # Fledgling, Brawler, Gladiator, Champion
 HEALERS = {"Leah (Vision)", "Ayaka (Vision)", "Warrior of Light (Vision)", "Cecil (Vision)", "Tidus (Vision)",
            "Y'shtola (Vision)", "Lightning (Vision)"}
 
@@ -232,6 +233,11 @@ class TestDefault(FFResonanceTestBase):
     def test_the_chocobo_is_not_in_the_pool(self) -> None:
         self.assertNotIn(CHOCOBO_ITEM, [i.code for i in self.multiworld.itempool if i.player == self.player])
 
+    def test_no_proof_of_victory_is_in_the_pool(self) -> None:
+        # Round 108: the Colosseum gives each proof at its rank clear, and no location needs one.
+        pool = {item.code for item in self.multiworld.itempool if item.player == self.player}
+        self.assertFalse(pool & {game_id * 1000 + 1 for game_id in COLOSSEUM_PROOFS})
+
 
 class TestChocoboItem(FFResonanceTestBase):
     options = {"start_with_chocobo": False}
@@ -308,6 +314,15 @@ class TestAirshipOnlyShinies(FFResonanceTestBase):
         self.collect_by_name(["Lanzelt Unlock", "Olderion Unlock"])
         self.assertTrue(self.multiworld.state.can_reach_region("Olderion", self.player), "by the bridge and the ferry")
         shinies = [self.multiworld.get_location(NAME_OF_KEY[f"shiny:1000:{n}"], self.player) for n in (36, 39, 68, 145)]
+        self.assertFalse(any(shiny.can_reach(self.multiworld.state) for shiny in shinies))
+        self.collect_by_name(["Airship"])
+        self.assertTrue(all(shiny.can_reach(self.multiworld.state) for shiny in shinies))
+
+    def test_zoldaad_sw_peninsula_needs_the_airship(self) -> None:
+        """Round 108 (a tester): two shinies on Zoldaad's south-west peninsula are reached only from the air."""
+        self.collect_by_name(["Lanzelt Unlock", "Zoldaad Unlock"])
+        self.assertTrue(self.multiworld.state.can_reach_region("Zoldaad", self.player), "by the ferry")
+        shinies = [self.multiworld.get_location(NAME_OF_KEY[f"shiny:1000:{n}"], self.player) for n in (57, 58)]
         self.assertFalse(any(shiny.can_reach(self.multiworld.state) for shiny in shinies))
         self.collect_by_name(["Airship"])
         self.assertTrue(all(shiny.can_reach(self.multiworld.state) for shiny in shinies))
@@ -1034,11 +1049,27 @@ class TestLocationOptionsOnByDefault(FFResonanceTestBase, real_defaults=True):
                          (1, 1, 1))
 
 
-class TestKeyCardDoorsWithoutKeyItems(FFResonanceTestBase):
+class TestKeyDoorsWithoutKeyItems(FFResonanceTestBase):
+    """Round 108: with the key items not shuffled, each door's key comes in the same place (the
+    game's own copy, or the mod's Dungeon Key), so the rooms past it are in logic with the place."""
     options = {"shuffle_key_items": False}
+    PAST_KEY_DOORS = {"Gronoa Unlock": ("chest:3220:2", "chest:3220:5"),
+                      "Zoldaad Unlock": ("chest:3150:0", "chest:3160:2", "chest:3160:0"),
+                      "Pharm Unlock": ("chest:2190:0",)}
 
-    def test_the_lab_rooms_hold_filler_only(self) -> None:
-        self.assertEqual(chest_location(self, "chest:3220:2").progress_type, LocationProgressType.EXCLUDED)
+    def test_the_rooms_past_key_doors_need_only_their_place(self) -> None:
+        for unlock, keys in self.PAST_KEY_DOORS.items():
+            chests = [chest_location(self, key) for key in keys]
+            for chest in chests:
+                self.assertEqual(chest.progress_type, LocationProgressType.DEFAULT, chest.name)
+                self.assertFalse(chest.can_reach(self.multiworld.state), chest.name)
+            self.collect_by_name([unlock])
+            for chest in chests:
+                self.assertTrue(chest.can_reach(self.multiworld.state), chest.name)
+
+    def test_no_key_item_is_in_the_pool(self) -> None:
+        pool = {item.code for item in self.multiworld.itempool if item.player == self.player}
+        self.assertFalse(pool & set(PROGRESSION["key"]))
 
 
 class TestNoArtifacts(FFResonanceTestBase):

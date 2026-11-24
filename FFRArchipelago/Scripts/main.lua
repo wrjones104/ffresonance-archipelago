@@ -2984,6 +2984,23 @@ seedExtrasTick = function()
         local ok, n = pcall(game.ThroneKeyTriggerOff)
         if ok and n > 0 then log("throne key: the squad leader's trigger turned off (" .. n .. ")") end
     end
+    if seedSave and seedCfg.keyitems and game.CurrentMap() == game.CABIN_KEY.map then
+        local ok, n = pcall(game.CabinKeyManOff)
+        if ok and n > 0 then log("cabin key: the man by Sian's inn no longer gives it (" .. n .. ")") end
+    end
+    -- Round 108: with the key items not shuffled, the game's own Dungeon Key never comes (game.DUNGEON_KEY).
+    local K = game.DUNGEON_KEY
+    if seedSave and seedCfg.keyitems == false and game.CurrentMap() == K.map and game.OnField()
+        and game.HeldCount(K.item) == 0 then
+        local code, detail = game.GrantItem(K.item, 1)
+        log("dungeon key: given in Zoldaad Dungeon, as its soldier never comes (" .. tostring(code) .. ", " .. tostring(detail) .. ")")
+    end
+    if seedSave then
+        local ok, cleared = pcall(game.UnvisitLocked)
+        if ok and #cleared > 0 then
+            log("fast travel: maps " .. table.concat(cleared, ", ") .. " are on locked continents, marked not visited")
+        end
+    end
     if seedSave and state.moogleSave ~= save.obj and game.GetFlag(game.VISION_MOOGLE_FLAG) == false then
         state.moogleSave = save.obj
         local code, detail = game.SetFlag(game.VISION_MOOGLE_FLAG, true)

@@ -2080,6 +2080,79 @@ assert L.eval("otherTrigger.m_EventList[1].Condition") == "{item:20021}==0" and 
 assert L.eval("G.ThroneKeyTriggerOff()") == 0, "once per trigger"
 print("throne key: ok")
 
+# Round 108: the man by Sian's inn says his line from before the cabin in place of the one that
+# gives the Cabin Key. His other entries, and other NPCs, are left alone.
+L.execute(r'''
+local function npc(events)
+  local entries = {}
+  for i, e in ipairs(events) do entries[i] = { Condition = "", EventList = { { EventId = FName(e) } } } end
+  local a = { m_EventSettings = { EventList = entries } }
+  function a:IsValid() return true end
+  function a:HasAnyInternalFlags() return false end
+  function a:HasAnyFlags() return false end
+  return a
+end
+cabinMan = npc({ "FEV_Town_09Pha_01_1044_01", "FEV_Town_09Pha_01_1044_02", "FEV_Town_09Pha_01_1044_03" })
+otherNpc = npc({ "FEV_Town_09Pha_01_1050_01" })
+local prevFAOCabin = FindAllOf
+function FindAllOf(c) if c == "BP_MapUnit_NPC_C" then return { otherNpc, cabinMan } end return prevFAOCabin(c) end
+''')
+assert L.eval("G.CabinKeyManOff()") == 1
+before_cabin = "FEV_Town_09Pha_01_1044_01"
+assert L.eval("cabinMan.m_EventSettings.EventList[2].EventList[1].EventId:ToString()") == before_cabin
+assert L.eval("cabinMan.m_EventSettings.EventList[3].EventList[1].EventId:ToString()") == "FEV_Town_09Pha_01_1044_03"
+assert L.eval("otherNpc.m_EventSettings.EventList[1].EventList[1].EventId:ToString()") == "FEV_Town_09Pha_01_1050_01"
+assert L.eval("G.CabinKeyManOff()") == 0, "once per NPC"
+print("cabin key: ok")
+
+# Round 108 (a tester): a quest scene visited Grandport with Lanzelt locked, and fast travel took
+# the player there. Maps of a locked continent are marked not visited, but the map the player is
+# on. An open continent's maps, and maps of no continent (the battlefield), stay.
+GRANDPORT, OBLIVION_PALACE, KOL, OLDERION_TOWN, BATTLEFIELD = 2030, 2031, 2040, 2070, 5010
+LANZELT_FLAG, KOLOBOS_FLAG = 1421, 1422
+L.execute(f"""
+local sd = makeSave({{false}}, {{ {{SaveId=1, JoinStatus=0}} }}, 8000, 1, true)
+local function seen() return {{ bIsKnown = true, bIsVisited = true, bIsCleared = false }} end
+sd.Map = {{ perMapSaveDataMap = map({{
+  {{ {GRANDPORT}, seen() }}, {{ {OBLIVION_PALACE}, seen() }}, {{ {KOL}, seen() }},
+  {{ {OLDERION_TOWN}, seen() }}, {{ {BATTLEFIELD}, seen() }},
+}}) }}
+mgr.m_pGameSaveData = sd
+saveMaps = sd.Map.perMapSaveDataMap
+prevGetFlag108, prevCurrentMap108 = G.GetFlag, G.CurrentMap
+function G.GetFlag(i) return i ~= {LANZELT_FLAG} and i ~= {KOLOBOS_FLAG} end
+here108 = {OBLIVION_PALACE}
+function G.CurrentMap() return here108 end
+""")
+L.execute("""
+function visited108(m)
+  local out
+  saveMaps:ForEach(function(k, v) if k:get() == m then out = v:get().bIsVisited end end)
+  return out
+end
+""")
+assert sorted(L.eval("G.UnvisitLocked()").values()) == [GRANDPORT, KOL]
+assert L.eval(f"visited108({GRANDPORT})") is False and L.eval(f"visited108({KOL})") is False
+assert L.eval(f"visited108({OBLIVION_PALACE})") is True, "the player is there"
+assert L.eval(f"visited108({OLDERION_TOWN})") is True and L.eval(f"visited108({BATTLEFIELD})") is True
+assert len(L.eval("G.UnvisitLocked()")) == 0, "nothing more to clear"
+L.execute("G.GetFlag, G.CurrentMap = prevGetFlag108, prevCurrentMap108; mgr.m_pGameSaveData = nil")
+assert len(L.eval("G.UnvisitLocked()")) == 0, "no save: nothing"
+
+# The table matches maps.tsv: each continent's maps, by island.
+import csv
+islands = {"MagiNationMysidia": "mysidia"}
+want = {}
+with open(paths.REPO / "data/game/maps.tsv", encoding="utf-8") as f:
+    for r in csv.DictReader(f, delimiter="\t"):
+        if r["island"] not in ("None", "LandOfTheCrystals"):
+            want.setdefault(islands.get(r["island"], r["island"].lower()), set()).add(int(r["id"]))
+have = {name: set(maps.values()) for name, maps in L.eval("G.CONTINENT_MAPS").items()}
+assert have == want, set(have) ^ set(want)
+continents = {c["name"] for c in L.eval("G.CONTINENTS").values()}
+assert set(have) <= continents, set(have) - continents
+print("locked maps: ok")
+
 # Round 72: a radar treasure's reward is the location's now: its dig row gives the pop-up's
 # stand-in Potion (1), in both tables, once
 RADAR_ROWS_TO_CHANGE = 2 * 2
