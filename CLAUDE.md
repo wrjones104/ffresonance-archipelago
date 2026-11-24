@@ -75,6 +75,7 @@ An Archipelago implementation for Final Fantasy Resonance (UE 5.6, game module `
 
 **Hooks and probes:**
 - **Native functions called from Blueprints can be hooked** with `RegisterHook`, and a pre-hook can change their arguments (the title menu's `ExecuteEntry`). A post hook's return value replaces the function's (round 48).
+- **`CPP_MapManager:MapTestStartByLoadSaveData()` is not a reload from memory: it loads the save in slot 0** (round 109). It put the new start into another game twice. The map manager stays up through that load, so the mod never sees the game leave and keeps writing to the loaded data under the old verdict.
 - **Probes:**
   - `ffrap_snapshot` plus `tools/snapdiff.py`: what changed in the save.
   - `ffrap_inspect <class|path>`: an object's fields and functions.
@@ -112,6 +113,7 @@ An Archipelago implementation for Final Fantasy Resonance (UE 5.6, game module `
 - **`IsOpenTreasureBox(map, uid)` answers from another map's row when the map has no row for that uid yet.** Four Earth Shrine chests were sent on arrival because shinies with the same uids were open elsewhere. Read the map's own rows, `Map.mapGimmick{map}.treasureBox.treasureBoxList` (`game.SaveOpenRows`), and judge a loaded chest by the chest (rounds 64 and 65).
 - **The world map's id can come in before the town's pawn is gone.** A position read as the map changed was Grandport's own, and put the airship in Olderion. Check the pawn's class (`BP_MapUnit_Player_Field_C` on the world map) before trusting a world-map position (round 69).
 - **On foot, the pawn's rotation reads 0 whichever way the player faces.** Every `ffrap_gate mark` cart went north. Take a direction from the player's movement (round 67).
+- **A new game's first map is `CPP_GameSettings`'s `GameStartSettings.TransitionMapId`, and its save is built from `DT_InitGameSaveData`'s `NewGame` row** (party, units with level, gear and join status, flags, story). Both are read at New Game, so the title's pre-hook can change them (round 109). A new game on the world map stands at (17214, 20957), south of the Earth Shrine. The game puts a joined unit's gear in the bag, but Rain did not wear his shared pieces.
 - **A door's real destinations are in `mTransitionDataList`**, one per flag condition. Its `m_MapId` can be a leftover: every sanctum door on the world map says 10200 (round 63). `transitions.tsv` has them in `destinations`.
 
 **Tooling:**

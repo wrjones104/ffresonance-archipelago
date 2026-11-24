@@ -3742,9 +3742,10 @@ G.NEW_START = {
     settings = "/Script/mucha.Default__CPP_GameSettings",
     table = "/Game/Datatable/SaveData/DT_InitGameSaveData.DT_InitGameSaveData",
     row = "NewGame",
-    -- The executable names this beside the slot reload the prologue skip uses. If it starts the
-    -- map from the save in memory, the player lands exactly at the arrival, in the airship too.
-    reload = "/Script/mucha.CPP_MapManager:MapTestStartByLoadSaveData",
+    -- Round 109: the new game stands where the world map puts a new game (south of the Earth
+    -- Shrine), so the player and the airship are moved to the arrival. These are the airship's
+    -- classes; the first is the actor seen as the pawn while riding (round 37).
+    airships = { "BP_MapUnitAirShip_C", "CPP_MapUnit_AirShip" },
     -- Map 10040 at story 5270 or later plays C05_536_02 until flag 553 is on. If the game kept
     -- its own start map, this keeps that scene from playing.
     flags = { 553 },
@@ -3959,53 +3960,89 @@ local function NewStartBag(party)
     return ok, "inventory (held before->after): " .. table.concat(parts, ", ")
 end
 
+-- Round 109: Rain started with his armor and accessory in the bag, not on. Each starter wears
+-- what the NewGame row (put back by then) gives them. Archwitch Fina's is SkipPrologue's.
+local function NewStartEquip(sd, party)
+    local row
+    for _, dt in ipairs(TableFamily(Find(NS.table))) do
+        EachNewGameRow(dt, function(r) row = row or ReadInitRow(r) end)
+    end
+    if not row then return false, "gear: no NewGame row" end
+    local wear, parts, ok = {}, {}, true
+    for _, u in ipairs(row.units) do wear[u.id] = u end
+    for _, id in ipairs(party) do
+        local u, entry = wear[id], UnitEntry(sd, id)
+        if id ~= ARCHWITCH_FINA and u and entry then
+            local changed = {}
+            for _, f in ipairs({ { "EquipWeaponId", u.weapon }, { "EquipArmorId", u.armor } }) do
+                local was = Int(entry[f[1]])
+                if was ~= f[2] then
+                    ok = Put(entry, f[1], f[2]) and ok
+                    changed[#changed + 1] = f[1] .. " " .. tostring(was) .. "->" .. f[2]
+                end
+            end
+            local was = table.concat(Ints(entry.EquipAccessoryIdList), ",")
+            if was ~= table.concat(u.accessories, ",") then
+                ok = SetInts(entry.EquipAccessoryIdList, u.accessories) and ok
+                changed[#changed + 1] = "accessories [" .. was .. "]->[" .. table.concat(u.accessories, ",") .. "]"
+            end
+            parts[#parts + 1] = (UNIT_NAMES[id] or tostring(id)) .. " " .. (#changed > 0 and table.concat(changed, ", ") or "as the row")
+        end
+    end
+    return ok, "gear: " .. table.concat(parts, "; ")
+end
+
 -- The rest of the start, on the new game's save once it is in: what SkipPrologue writes (it is
--- all absolute apart from the bag), then the bag. Saves nothing. Returns ok and report lines.
+-- all absolute apart from the bag), the starters' gear, then the bag. Saves nothing. Returns ok
+-- and report lines.
 function G.NewStartFinish(opts)
     local party = opts.party or SKIP_PARTY
     local ok, report = G.SkipPrologue({ inventory = false, openStart = true, party = party, arrival = opts.arrival })
+    local okGear, gear = NewStartEquip(G.SaveData(), party)
+    report[#report + 1] = (okGear and "ok   " or "FAIL ") .. gear
     local okBag, bag = NewStartBag(party)
     report[#report + 1] = (okBag and "ok   " or "FAIL ") .. bag
-    return ok and okBag, report
+    return ok and okGear and okBag, report
 end
 
--- How far the player stands from the arrival (nil off its map), and a line for the log.
+-- How far the player stands from the arrival (nil off its map), a line for the log, and the
+-- pawn's height.
 function G.NewStartWhere(a)
     local map = G.CurrentMap()
     local pose, why = G.PlayerPose()
     if not pose then return nil, "map " .. tostring(map) .. ", " .. tostring(why) end
     local d = math.sqrt((pose.x - a.x) ^ 2 + (pose.y - a.y) ^ 2)
-    local riding
-    pcall(function() riding = G.SaveData().Map.IsRidingAirShip end)
-    return map == a.map and d or nil, string.format("map %s (arrival %d), pawn %s at %.0f, %.0f, %.0f, %.0f from the arrival, riding %s",
-        tostring(map), a.map, pose.class, pose.x, pose.y, pose.z, d, tostring(riding))
+    return map == a.map and d or nil, string.format("map %s (arrival %d), pawn %s at %.0f, %.0f, %.0f, %.0f from the arrival",
+        tostring(map), a.map, pose.class, pose.x, pose.y, pose.z, d), pose.z
 end
 
--- Calls MapTestStartByLoadSaveData, but only when it takes no parameters. step(what) runs
--- before the call. Returns true when it was called, and a line with its signature.
-function G.NewStartReload(step)
-    local fn = Find(NS.reload)
-    if not fn then return false, "MapTestStartByLoadSaveData not found" end
-    local params = {}
-    pcall(function()
-        fn:ForEachProperty(function(p) params[#params + 1] = p:GetFName():ToString() .. ": " .. PropKind(p) end)
-    end)
-    local sig = "MapTestStartByLoadSaveData(" .. table.concat(params, ", ") .. ")"
-    if #params > 0 then return false, sig .. " takes parameters: not called" end
-    local mgr = Live("CPP_MapManager")
-    if not mgr then return false, sig .. ": no map manager" end
-    step(sig)
-    if not pcall(function() mgr:MapTestStartByLoadSaveData() end) then return false, sig .. " raised" end
-    return true, sig .. " called"
-end
-
--- Moves the player on foot to the arrival. step(what) runs before the move. Returns ok and a line.
+-- Moves the airship (when it is on the map) and then the player on foot to the arrival.
+-- step(what) runs before each move. Returns ok and a line.
 function G.NewStartMove(a, step)
     local pose, why = G.PlayerPose()
     if not pose then return false, tostring(why) end
+    local to = { X = a.x, Y = a.y, Z = a.z }
+    local parts, seen = {}, {}
+    for _, class in ipairs(NS.airships) do
+        local okAll, all = pcall(FindAllOf, class)
+        for _, ship in ipairs(okAll and all or {}) do
+            local key = Alive(ship) and ship:GetFullName()
+            if key and not seen[key] then
+                seen[key] = true
+                local at
+                pcall(function() at = ship:K2_GetActorLocation() end)
+                step("airship K2_SetActorLocation " .. key)
+                local okShip = pcall(function() ship:K2_SetActorLocation(to, false, {}, true) end)
+                parts[#parts + 1] = string.format("airship %s from %.0f, %.0f%s", class,
+                    at and at.X or 0, at and at.Y or 0, okShip and "" or " (raised)")
+            end
+        end
+    end
+    if #parts == 0 then parts[1] = "no airship on the map" end
     step(string.format("K2_SetActorLocation %.0f, %.0f, %.0f", a.x, a.y, a.z))
-    local ok = pcall(function() pose.pawn:K2_SetActorLocation({ X = a.x, Y = a.y, Z = a.z }, false, {}, true) end)
-    return ok, ok and "moved to the arrival" or "K2_SetActorLocation raised"
+    local ok = pcall(function() pose.pawn:K2_SetActorLocation(to, false, {}, true) end)
+    parts[#parts + 1] = ok and "moved to the arrival" or "K2_SetActorLocation raised"
+    return ok, table.concat(parts, "; ")
 end
 end
 

@@ -949,7 +949,8 @@ L, G = boot5("SD_TITLE", "0", {})
 L.execute(CAPTURE)
 tick = lambda k: [L.execute("tickFn()") for _ in range(k)]
 L.eval("""function(G)
-  G.prepares, G.nsRestores, G.finishes, G.memReloads, G.moves, G.armed = {}, 0, {}, 0, 0, false
+  G.prepares, G.nsRestores, G.finishes, G.moves, G.armed = {}, 0, {}, 0, false
+  G.whereDist, G.whereZ = 0, 65
   G.NEW_START = { near = 300 }
   function G.NewStartPrepare(opts)
     G.prepares[#G.prepares + 1] = opts.arrival.name .. " " .. table.concat(opts.party or {}, ",")
@@ -965,13 +966,17 @@ L.eval("""function(G)
     G.finishes[#G.finishes + 1] = opts.arrival.name
     return true, { "ok   story counter -> 8000" }
   end
-  function G.NewStartWhere(a) return 0, "map 3280 (arrival 3280)" end
-  function G.NewStartReload() G.memReloads = G.memReloads + 1; return G.canReload, G.canReload and "called" or "takes parameters" end
-  function G.NewStartMove() G.moves = G.moves + 1; return true, "moved" end
+  function G.NewStartWhere(a) return G.whereDist, "map 1000 (arrival 1000)", G.whereZ end
+  -- the move lands; with G.sink the player is found below the arrival afterwards
+  function G.NewStartMove(a)
+    G.moves = G.moves + 1
+    G.whereDist, G.whereZ = 0, G.sink and a.z - 2000 or a.z
+    return true, "moved to the arrival"
+  end
 end""")(G)
 logged = lambda: list(L.eval("logged").values())
 G.titleOk, G.slotOf = True, L.table_from({})
-inbox("seed\tS109:0:1\ncfg\topenworld\t1\ncfg\tparty\t1004,1005\n", "w")
+inbox("seed\tS109:0:1\ncfg\topenworld\t1\ncfg\tparty\t1004,1005\ncfg\tcontinent\tlanzelt\n", "w")
 tick(7)
 entry = lambda: L.eval('hooks["/Script/mucha.CPP_VM_Title:ExecuteEntry"]')(None, L.eval(
     "(function() local p = { v = 5 }; function p:get() return self.v end; function p:set(x) self.v = x end; return p end)()"))
@@ -980,31 +985,30 @@ assert list(G.prepares.values()) == [], "off by default: the prologue skip as be
 L.execute('commands["ffrap_newstart"]("ffrap_newstart", {"on"})')
 assert "newstart\t1" in read("ap_state.txt")
 entry()
-assert list(G.prepares.values()) == ["dock 1004,1005"], list(G.prepares.values())
+# Round 109 (the user): on foot by the starting continent's town, for an airship seed too
+assert list(G.prepares.values()) == ["foot lanzelt 1004,1005"], list(G.prepares.values())
 # The new game is at the arrival's story, and its timestamp is the autosave slot's it would
 # overwrite: still the Archipelago new game, linked, and finished at once.
 G.story, G.saveTicks, G.slotOf = ARRIVAL_STORY, "7000", L.table_from({"7000": INHERITED_SLOT})
 runs = G.skipRuns
 inbox("item\t0\titem\t200\t1\tE\n")
 load(G, "SD_NS", "7000")
-assert G.nsRestores == 1 and list(G.finishes.values()) == ["dock"], (G.nsRestores, list(G.finishes.values()))
+assert G.nsRestores == 1 and list(G.finishes.values()) == ["foot lanzelt"], (G.nsRestores, list(G.finishes.values()))
 assert any("a new game, although its timestamp matches slot 2" in m for m in logged())
 assert [g for g in grants() if g == "item200x1"] == ["item200x1"], grants()
 tick(20)
 assert G.skipRuns == runs, "the prologue skip stays out of it"
-assert G.memReloads == 1 and G.moves == 0, "near the arrival: not moved"
-# the map again from the save in memory: the reloaded save carries the seed's stamp
-G.canReload = True
+assert G.moves == 0, "near the arrival: not moved"
+# Round 109: far from the arrival (where the world map puts a new game): moved. Found below the
+# arrival after it (its island not loaded yet): moved again, but only once more.
+G.whereDist, G.sink = 28023, True
 entry()
 load(G, "SD_NS2", "7000")
-tick(6)
-assert G.memReloads == 2, G.memReloads
-G.stamps["SD_NS2B"] = G.stamps["SD_NS2"]
-load(G, "SD_NS2B", "0")
-tick(12)
-assert any(m.rstrip().endswith("newstart: the reloaded save is the new game") for m in logged()), logged()[-20:]
-assert any("newstart: after the reload:" in m for m in logged())
+tick(20)
+assert G.moves == 2, G.moves
+assert sum(1 for m in logged() if "newstart: after the move:" in m) == 2, logged()[-20:]
 assert [g for g in grants() if g == "item200x1"] == ["item200x1", "item200x1"], "once per new game"
+G.sink = False
 # Backing out: a set-up that is never used is put back when the title menu is used again
 nsRestores = G.nsRestores
 entry()

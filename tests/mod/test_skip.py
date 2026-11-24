@@ -838,30 +838,25 @@ L.execute('libs["/Script/mucha.Default__CPP_GameSettings"] = gameSettings')
 
 # The rest goes into the new game's save in place. The bag is set outright: each starter's gear
 # up to what the party wears, Archwitch Fina's prologue gear out.
+# Round 109: Rain started with his armor and accessory in the bag, not on. The starters wear
+# what the NewGame row gives them; a starter already in it is left alone.
 L.execute("""bag = {}
+unitAt(1001).EquipWeaponId, unitAt(1001).EquipArmorId, unitAt(1001).EquipAccessoryIdList = 10100, -1, arr({})
+unitAt(1002).EquipWeaponId, unitAt(1002).EquipArmorId, unitAt(1002).EquipAccessoryIdList = 10200, 11000, arr({ 12000 })
 libs["/Script/mucha.Default__CPP_BFL_SaveDataInventory"] = newObj({
   SetInventoryItem = function(_, id, n) bag[id] = n end, FindInventory = function(_, id) return bag[id] or 0 end })
 mapMgr.IsValid = function() return true end""")
 ok, report = L.execute("return G.NewStartFinish({ arrival = G.OPEN_STARTS.air, party = { 1001, 1002 } })")
 lines = list(report.values())
 assert "ok   story counter -> 8000" in lines, lines
+assert lines[-2] == "ok   gear: Rain EquipArmorId -1->11000, accessories []->[12000]; Lasswell as the row", lines[-2]
+assert lua("unitAt(1001).EquipArmorId") == 11000 and lua("unitAt(1001).EquipAccessoryIdList[1]") == 12000
 assert lines[-1] == ("ok   inventory (held before->after): 10100 0->1, 10200 0->1, 10699 0, 11000 0->2, "
                      "11301 0, 12000 0->2, 12029 0"), lines[-1]
 L.execute("bag = { [10100] = 1, [10200] = 1, [11000] = 2, [12000] = 2, [10699] = 1 }")
 ok, report = L.execute("return G.NewStartFinish({ arrival = G.OPEN_STARTS.air, party = { 1001, 1002 } })")
 assert list(report.values())[-1] == ("ok   inventory (held before->after): 10100 1, 10200 1, 10699 1->0, 11000 2, "
                                      "11301 0, 12000 2, 12029 0"), "the game's own gear is not doubled"
-# The reload from the save in memory is called only when it takes no parameters.
-L.execute("""memReloads = 0
-mapMgr.MapTestStartByLoadSaveData = function() memReloads = memReloads + 1 end
-reloadFn = newObj({ params = {}, ForEachProperty = function(self, fn) for _, p in ipairs(self.params) do fn(p) end end })
-libs["/Script/mucha.CPP_MapManager:MapTestStartByLoadSaveData"] = reloadFn""")
-called, line = L.execute("return G.NewStartReload(step)")
-assert called is True and line == "MapTestStartByLoadSaveData() called" and lua("memReloads") == 1, line
-L.execute("""reloadFn.params = { { GetFName = function() return FName("Slot") end,
-  GetClass = function() return { GetFName = function() return FName("IntProperty") end } end } }""")
-called, line = L.execute("return G.NewStartReload(step)")
-assert called is False and line == "MapTestStartByLoadSaveData(Slot: IntProperty) takes parameters: not called", line
-assert lua("memReloads") == 1
+assert list(report.values())[-2] == "ok   gear: Rain as the row; Lasswell as the row", "nothing twice"
 print("new start: ok")
 print("skip: ok")

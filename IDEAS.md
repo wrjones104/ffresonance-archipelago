@@ -335,4 +335,8 @@ Along the same lines, I would also want an option for players to start with all 
 
 **Built in round 109 (mod build 6a25a245), behind `ffrap_newstart on`:** the title entry points both at the arrival before the new game begins, and puts them back once the new game is in. The rest of the skip goes into the save in place. Then the mod tries `MapTestStartByLoadSaveData` to load the map again from the save in memory, or moves the player to the arrival on foot.
 
-**To find out (round 109's test):** whether the game reads the start map when New Game starts or keeps a copy from start-up; where the player stands on the arrival map; what `MapTestStartByLoadSaveData` takes and does; whether the flags and party take effect with no reload. Once it works, turn it on by default and take out the wait for the autosave. Until then, the prologue skip needs autosave on.
+**Round 109's test (the user):** the game reads both at New Game. No opening, the party and menus work, and a plain New Game after it is vanilla. The new game stands where the world map puts one (south of the Earth Shrine). `MapTestStartByLoadSaveData` loads slot 0, another game, so it is gone. Rain's armor and accessory were in the bag, not on him. The user wants the start on foot by the starting continent's town for every seed, with the airship parked there.
+
+**Built in round 110 (mod build d0634fd8):** the player and the airship are moved to the arrival in place, and moved again once if the player is found below it. The starters wear the `NewGame` row's gear.
+
+**To find out (round 110's test):** whether the move holds (island loading, the airship beside the player), and a save made by hand links. Once it works, turn it on by default and take out the wait for the autosave. Until then, the prologue skip needs autosave on.

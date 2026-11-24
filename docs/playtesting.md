@@ -2,24 +2,22 @@
 
 Only open items that still need to be tested in game live here. Once tested, record the results in [docs/playtesting_archive.md](playtesting_archive.md) and remove completed items from this file. Automated suite tests are documented in [tests/README.md](../tests/README.md).
 
-Current builds: mod `0.63.0` (`6a25a245`), world `0.32.0` (`937b4b93`). Released before them: v0.31.0 (mod `7b90595e`, world `66073f7e`, 2026-11-21).
+Current builds: mod `0.63.0` (`d0634fd8`), world `0.32.0` (`937b4b93`). Released before them: v0.31.0 (mod `7b90595e`, world `66073f7e`, 2026-11-21).
 
 Install: copy `FFRArchipelago/Scripts`, and copy `dist/ff_resonance.apworld` into `custom_worlds`. Close the Launcher and every client window first. Generate a new seed with `include_aileens_forge: true` (side quests on or off): the round 105 save holds two of each early item. Send the `[FFRAP]` lines of `UE4SS.log`. If the game crashes, send `Mods/FFRArchipelago/ap_trace.txt`, the crash folder, and the log before starting the game again.
 
-## Round 109: the new start, a new game with no prologue
+## Round 110: the new start, moved by the starting continent's town
 
-Install: copy `FFRArchipelago/Scripts` only (the apworld is round 108's). This is a probe: send every `newstart:` line of the log, whatever happens, and a screenshot of where you land.
+Install: copy `FFRArchipelago/Scripts` only (the apworld is round 108's). Generate new seeds: round 109's new starts linked the wrong save to the seed. This is still a probe: send every `newstart:` line of the log, and a screenshot of where you land.
 
-- [ ] Builds: the log says `version 0.63.0 (build 6a25a245)`.
-- [ ] With the new start off (the default), New Game (Archipelago) plays the opening and skips the prologue after the first autosave, as before.
-- [ ] In the console, `ffrap_newstart on`. With the client connected to an airship-start seed, choose New Game (Archipelago). The log has `newstart: ok   start map 10040 -> 1000`, a `NewGame row` line with `story 8000`, and `newstart: the new game starts at air`. No opening movie, no Archwitch Fina. Where do you land?
-- [ ] The log has `an Archipelago new game`, then `newstart: put back start map 10040; ...`, then the skip's own lines, then `newstart: arrived: ...`.
-- [ ] About two seconds later, a `newstart: MapTestStartByLoadSaveData(...)` line. If it says `called`, the map loads again; tell me where you are then (`newstart: after the reload: ...`), and whether you are in the airship by the tower. If it says `takes parameters`, send the line.
-- [ ] The party is the seed's, at level 1. The main menu, Equipment, the Map screen and fast travel work. The bag holds each starter's gear once.
+- [ ] Builds: the log says `version 0.63.0 (build d0634fd8)`.
+- [ ] `ffrap_newstart on` (it is kept from round 109), then New Game (Archipelago) on an airship seed. No opening. You stand south of the Earth Shrine for a moment, then by the starting continent's town on foot, with the airship beside you. The log has `newstart: the new game starts at foot <continent>`, then `newstart: airship ... from ...; moved to the arrival`, then `newstart: after the move: ...` with a small distance. Tell me if you fall, land somewhere odd, or the airship is not there (then the log says `no airship on the map`).
+- [ ] Rain wears his Leather Armor and Earrings of Health. The log has `gear: Rain EquipArmorId -1->11000, accessories []->[12000]` (or `as the row` if the game put them on this time).
+- [ ] Board the airship and fly a little, then land. It works as usual.
 - [ ] Save in a slot by hand, go to the title screen and load it. The save is linked (no "paused" notice), and no item comes twice.
-- [ ] Then, in the same run, a plain New Game. The opening plays and Archwitch Fina is on the battlefield, as in the game (the mod put its changes back).
-- [ ] With an on-foot seed (`start_with_airship: false`): you land at the starting continent's town, or the log has `moved to the arrival`.
-- [ ] With autosave off in the game's Options: the same as above. This is what the new start is for.
+- [ ] A plain New Game, then New Game (Archipelago) again in the same run. The plain one plays the opening; the Archipelago one goes to the town as above, not the battlefield.
+- [ ] An on-foot seed (`start_with_airship: false`): the same place, with no airship until its item.
+- [ ] With autosave off in the game's Options: the same. This is what the new start is for.
 - [ ] If the game crashes, the last `newstart:` line in the log names the step.
 
 ## Round 108: key items, fast travel into a locked continent, two Zoldaad shinies

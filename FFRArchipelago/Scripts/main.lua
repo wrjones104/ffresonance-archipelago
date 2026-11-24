@@ -243,9 +243,8 @@ local save = {
     autoWait = 0,      -- ticks waited before the automatic prologue skip
     autoDone = false,  -- the automatic skip was tried (or given up) for this game
     ok = false,        -- true when this is the session's save
-    newStart = nil,    -- the new start the title entry set up: { arrival, party, placeAt, checkAt }
+    newStart = nil,    -- the new start the title entry set up: { arrival, party, placeAt, moves }
     newStartDue = false,    -- the new start's game is in: finish it once it is judged
-    newStartReload = false, -- the new start reloaded the map from the save in memory
 }
 
 -- Keeps the save stamp (game.WriteSaveStamp) equal to the applied count. Flags written now are in
@@ -1323,18 +1322,6 @@ local function followSave()
                     if not save.newStartDue then save.dropNewStart("the new game is at story " .. story) end
                 end
             end
-        elseif save.newStartReload then
-            -- The new start's reload from the save in memory: the same game when it carries the
-            -- seed's stamp. Anything else is judged as any other load.
-            save.newStartReload = false
-            local _, tag = game.ReadSaveStamp()
-            if state.seed and tag == game.SeedTag(state.seed) then
-                save.apObj = obj
-                log("newstart: the reloaded save is the new game")
-            else
-                save.apObj, save.apSlot, save.reskip = nil, nil, false
-                log("newstart: the reloaded save does not carry the seed's stamp")
-            end
         elseif save.apSlot ~= nil and save.slot == save.apSlot then
             save.apObj = obj
         elseif save.apObj ~= obj then
@@ -1379,9 +1366,11 @@ end
 -- default (ffrap_newstart on) until a round shows it works; then the prologue skip goes.
 function save.newStartStep(what) log("newstart: " .. what) end
 
--- In the title's pre-hook: the game's data starts the new game at the seed's arrival.
+-- In the title's pre-hook: the game's data starts the new game at the seed's arrival. Round 109
+-- (the user): on foot by the starting continent's town for every seed, with the airship parked
+-- there when the seed starts with it.
 function save.armNewStart()
-    local a = seedArrival()
+    local a = game.FOOT_STARTS[seedCfg.continent or ""] or seedArrival()
     local ok, report = game.NewStartPrepare({ arrival = a, party = seedCfg.party, step = save.newStartStep })
     for _, line in ipairs(report) do log("newstart: " .. line) end
     if not ok then
@@ -1410,41 +1399,31 @@ function save.finishNewStart()
     save.autoDone = true
     local _, where = game.NewStartWhere(ns.arrival)
     log("newstart: arrived: " .. where)
-    -- A moment for the stamp to be written, so a reload from memory is known as this game.
-    ns.placeAt = state.ticks + 4
+    ns.placeAt, ns.moves = state.ticks + 2, 0
 end
 
--- After the start: the map again from the save in memory if the game can (exact arrival, in the
--- airship too), else a move on foot when the player is far from the arrival.
+-- After the start: the airship and the player are moved to the arrival. Round 109's
+-- MapTestStartByLoadSaveData is not a reload from memory: it loaded slot 0, another game.
+-- The arrival's island may not be loaded at the move, so a player found below it is moved
+-- again, once.
 function save.newStartTick()
     local ns = save.newStart
-    if not ns then return end
-    if ns.checkAt and state.ticks >= ns.checkAt then
-        local _, where = game.NewStartWhere(ns.arrival)
-        log("newstart: after the reload: " .. where)
-        save.newStart = nil
-        return
-    end
-    if not (ns.placeAt and state.ticks >= ns.placeAt) then return end
+    if not (ns and ns.placeAt and state.ticks >= ns.placeAt) then return end
     ns.placeAt = nil
-    local dist, where = game.NewStartWhere(ns.arrival)
-    local reloaded, how = game.NewStartReload(save.newStartStep)
-    log("newstart: " .. how)
-    if reloaded then
-        save.newStartReload = true
-        ns.checkAt = state.ticks + 10
+    local a = ns.arrival
+    local dist, where, z = game.NewStartWhere(a)
+    if ns.moves > 0 then log("newstart: after the move: " .. where) end
+    local sunk = z and z < a.z - game.NEW_START.near
+    if not dist then
+        log("newstart: not on the arrival's map, left there: " .. where)
+    elseif ns.moves < 2 and (dist > game.NEW_START.near or sunk) then
+        ns.moves = ns.moves + 1
+        local _, line = game.NewStartMove(a, save.newStartStep)
+        log("newstart: " .. line)
+        ns.placeAt = state.ticks + 4
         return
     end
     save.newStart = nil
-    if not dist then
-        log("newstart: not on the arrival's map, left there: " .. where)
-    elseif ns.arrival.airship then
-        log("newstart: the arrival is in the airship, which a move cannot give: " .. where)
-    elseif dist > game.NEW_START.near then
-        local _, line = game.NewStartMove(ns.arrival, save.newStartStep)
-        local _, after = game.NewStartWhere(ns.arrival)
-        log("newstart: " .. line .. ": " .. after)
-    end
 end
 
 -- Title menu entries use ETitleFunctionType; the Archipelago entry uses type 5 as a copy of New Game
