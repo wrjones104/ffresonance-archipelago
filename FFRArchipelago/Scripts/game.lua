@@ -3742,6 +3742,11 @@ G.NEW_START = {
     settings = "/Script/mucha.Default__CPP_GameSettings",
     table = "/Game/Datatable/SaveData/DT_InitGameSaveData.DT_InitGameSaveData",
     row = "NewGame",
+    -- Round 110: a new game's save holds ATC11 ("Thoughtful Resolve") released and waiting, as a
+    -- vanilla one does. It plays once Lasswell, its RequiredUnitList, is in the party, which a new
+    -- start's party is from the first frame. Until NewStartFinish marks every chat played, each
+    -- chat waits for a unit who is not in the party.
+    chats = "/Game/Datatable/Chat/Event/CDT_ChatEventData.CDT_ChatEventData",
     -- Round 109: the new game stands where the world map puts a new game (south of the Earth
     -- Shrine), so the player and the airship are moved to the arrival. These are the airship's
     -- classes; the first is the actor seen as the pawn while riding (round 37).
@@ -3906,6 +3911,30 @@ function G.NewStartPrepare(opts)
         end)
     end
     line(rows > 0, "NewGame rows written: " .. rows)
+    local isChat, inParty, away = {}, {}, nil
+    for _, id in ipairs(G.CHAT_IDS) do isChat[id] = true end
+    for _, id in ipairs(party) do inParty[id] = true end
+    for _, id in ipairs(ALL_PARTY_MEMBERS) do
+        if not away and not inParty[id] then away = id end
+    end
+    saved.chats = {}
+    local held = 0
+    step("chats wait for unit " .. tostring(away))
+    for _, dt in ipairs(TableFamily(G.LoadObject(NS.chats))) do
+        local lists = {}
+        pcall(function()
+            dt:ForEachRow(function(name, row)
+                local key = RowName(name)
+                if isChat[key] then
+                    lists[key] = Ints(row.RequiredUnitList)
+                    if SetInts(row.RequiredUnitList, { away }) then held = held + 1 end
+                end
+            end)
+        end)
+        saved.chats[#saved.chats + 1] = { path = G.PathOf(dt), lists = lists }
+    end
+    -- Not a failure of the start: at worst a chat plays at the first map.
+    report[#report + 1] = (held > 0 and "ok   " or "FAIL ") .. "chats wait for unit " .. tostring(away) .. ": " .. held .. " rows"
     if not ok then G.NewStartRestore(step) end
     return ok, report
 end
@@ -3929,6 +3958,20 @@ function G.NewStartRestore(step)
         if dt then EachNewGameRow(dt, function(row) done = WriteInitRow(row, t.row, step) end) end
         parts[#parts + 1] = "NewGame row in " .. tostring(t.path) .. (done and "" or " (not found or failed)")
     end
+    local chatRows = 0
+    for _, t in ipairs(saved.chats or {}) do
+        local dt = t.path and Find(t.path)
+        if dt then
+            step("chat rows' units in " .. t.path)
+            pcall(function()
+                dt:ForEachRow(function(name, row)
+                    local list = t.lists[RowName(name)]
+                    if list and SetInts(row.RequiredUnitList, list) then chatRows = chatRows + 1 end
+                end)
+            end)
+        end
+    end
+    if saved.chats then parts[#parts + 1] = chatRows .. " chat rows" end
     return table.concat(parts, "; ")
 end
 

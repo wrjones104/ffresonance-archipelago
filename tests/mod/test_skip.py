@@ -794,6 +794,13 @@ initTable = obj({ ParentTables = arr({}),
   GetFullName = function() return "DataTable /Game/Datatable/SaveData/DT_InitGameSaveData.DT_InitGameSaveData" end,
   ForEachRow = function(_, fn) fn(FName("Setup"), setupRow); fn(FName("NewGame"), newGameRow) end })
 libs["/Game/Datatable/SaveData/DT_InitGameSaveData.DT_InitGameSaveData"] = initTable
+-- Round 110: ATC11 ("Thoughtful Resolve") waits for Lasswell; a Pinger row is not an Active Time Chat
+chatRows = { ATC11 = { RequiredUnitList = arr({ 1002 }) }, ATC12 = { RequiredUnitList = arr({}) },
+             Pinger01 = { RequiredUnitList = arr({ 1004 }) } }
+chatTable = obj({ ParentTables = arr({}),
+  GetFullName = function() return "DataTable /Game/Datatable/Chat/Event/CDT_ChatEventData.CDT_ChatEventData" end,
+  ForEachRow = function(_, fn) for k, r in pairs(chatRows) do fn(FName(k), r) end end })
+libs["/Game/Datatable/Chat/Event/CDT_ChatEventData.CDT_ChatEventData"] = chatTable
 steps = {}
 step = function(what) steps[#steps + 1] = what end
 function ints(a) local out = {} for i = 1, #a do out[i] = a[i] end return out end
@@ -815,6 +822,10 @@ flags = ints("newGameRow.OnFlagList")
 assert flags[:5] == [1160, 1161, 1162, 1163, 1182] and len(flags) == len(set(flags)), flags
 assert {14, 21, 102, 1229, 31, 553} <= set(flags), "the skip's flags, the open world's, the air start's 31 and 553"
 assert ints("setupRow.Party.partyList") == [1001, 1002, 1003, 1004], "only the NewGame row"
+FIRST_NOT_IN_PARTY = 1003
+assert ints("chatRows.ATC11.RequiredUnitList") == [FIRST_NOT_IN_PARTY] and ints("chatRows.ATC12.RequiredUnitList") == [FIRST_NOT_IN_PARTY]
+assert ints("chatRows.Pinger01.RequiredUnitList") == [1004], "only Active Time Chats"
+assert f"ok   chats wait for unit {FIRST_NOT_IN_PARTY}: 2 rows" in list(report.values()), list(report.values())
 steps = list(L.eval("steps").values())
 assert steps[0] == f"GameStartSettings.TransitionMapId {VANILLA_START_MAP} -> {WORLD_MAP}", steps
 assert "NewGame row: story 8000" in steps and "NewGame row: unit 1006" in steps, steps
@@ -828,6 +839,8 @@ assert lua("newGameRow.Progress.v[0]") == NEW_GAME_STORY and ints("newGameRow.Pa
 assert (lua("unit(1006).JoinStatus"), lua("unit(1006).Level"), lua("unit(1006).EquipWeaponId")) == (0, 55, 10699)
 assert ints("unit(1006).EquipAccessoryIdList") == [12029] and ints("unit(1006).SkillList") == [408010, 220070, 220030]
 assert ints("newGameRow.OnFlagList") == [1160, 1161, 1162, 1163, 1182]
+assert ints("chatRows.ATC11.RequiredUnitList") == [1002] and ints("chatRows.ATC12.RequiredUnitList") == []
+assert put.endswith("; 2 chat rows"), put
 assert lua("G.NewStartRestore(step)") is None, "nothing twice"
 # no start setting to write: nothing is changed
 L.execute('libs["/Script/mucha.Default__CPP_GameSettings"] = nil')

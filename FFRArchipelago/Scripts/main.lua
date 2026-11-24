@@ -20,7 +20,7 @@
 --   ffrap_skip [slot] [force]    skip the prologue on a new game; with a slot, save there and reload
 --   ffrap_input [fix]            inspect the player controller's input state; fix tries the engine's resets
 --   ffrap_openstart [on|off|dock|air|event|at x y z|now [slot]]  configure or run the open world start (story 8000)
---   ffrap_newstart [on|off]      the Archipelago new game starts at the open world start, with no prologue (round 109)
+--   ffrap_newstart [on|off]      on (the default): the Archipelago new game starts with no prologue (round 109)
 --   ffrap_chats [done]           the loaded save's Active Time Chats; done marks them all played
 --   ffrap_lock [on|off|open <continent|all>|close <continent|all>]  toggle or set continent locks
 --   ffrap_visions                the first vision's synchro keys, to the log
@@ -205,7 +205,7 @@ local state = {
     bindPending = false, -- the client asked to link the loaded save
     scouts = {},       -- location key -> { item, player, flags, own }: what it holds (client scouts)
     apNewGame = false, -- the Archipelago title entry was just chosen: the next new game is one
-    newStartOn = nil,  -- ffrap_newstart on|off (round 109); kept in ap_state.txt once the user sets it
+    newStartOn = nil,  -- ffrap_newstart on|off (round 109); on unless set off. Kept in ap_state.txt once set
 }
 
 -- Round 77: a crash about a second after a map change, in a game-thread Lua loop (FName::ToString
@@ -1362,8 +1362,9 @@ end
 -- -------------------------------------------------------------------------------------------
 
 -- Round 109: the new start (game.NewStartPrepare). The Archipelago new game begins at the open
--- world start, with no prologue, no save and no reload, so it works with autosave off. Off by
--- default (ffrap_newstart on) until a round shows it works; then the prologue skip goes.
+-- world start, with no prologue, no save and no reload, so it works with autosave off. On by
+-- default since round 110 passed. ffrap_newstart off, or no seed heard yet, falls back to the
+-- prologue skip, which waits for the first autosave.
 function save.newStartStep(what) log("newstart: " .. what) end
 
 -- In the title's pre-hook: the game's data starts the new game at the seed's arrival. Round 109
@@ -1446,9 +1447,9 @@ local function hookTitle()
                 -- Log when skipped because open-world mode is off.
                 log("title: open world start is " .. (openStartOn() and "on" or "off") .. " (ffrap_openstart or the seed)")
                 -- The arrival and the party come from the seed, so the client must have spoken.
-                if state.newStartOn and openStartOn() and (seedCfg.heard or openStart) then
+                if state.newStartOn ~= false and openStartOn() and (seedCfg.heard or openStart) then
                     save.armNewStart()
-                elseif state.newStartOn then
+                elseif state.newStartOn ~= false then
                     log("newstart: not used (" .. (openStartOn() and "no seed heard yet" or "no open world start") .. ")")
                 end
             end
@@ -2162,8 +2163,9 @@ command("ffrap_newstart", function(p)
         notify("Usage: ffrap_newstart [on|off]")
         return
     end
-    notify("New start is " .. (state.newStartOn and "on" or "off")
-        .. ": New Game (Archipelago) " .. (state.newStartOn and "begins at the open world start, with no prologue"
+    local on = state.newStartOn ~= false
+    notify("New start is " .. (on and "on" or "off")
+        .. ": New Game (Archipelago) " .. (on and "begins at the open world start, with no prologue"
         or "plays the opening and skips the prologue after the first autosave"))
 end)
 

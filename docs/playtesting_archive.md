@@ -1612,3 +1612,15 @@ The user played (2026-11-23). Passed: the builds, the spoiler's eight forge loca
 - **No more `MapTestStartByLoadSaveData`.** About two seconds after the new game is in, the mod moves the airship (if it is on the map) and the player to the arrival with `K2_SetActorLocation`. The arrival's island may not be loaded at the move, so four ticks later a player found more than 300 below the arrival, or still far from it, is moved again, once. Each move and the place after it are logged.
 - **The new start's arrival is the starting continent's town on foot for every seed** (`FOOT_STARTS`), with the airship parked there. On an airship seed the airship is there at once; on an on-foot seed it stays hidden until its item.
 - **The starters wear what the `NewGame` row gives them:** weapon, armor and accessories, written into the save when they differ, with a `gear:` line saying what changed.
+
+**Round 110 results (the user, 2026-11-24, mod 0.63.0 build d0634fd8): every check passed.**
+- The new start put the player on foot by the starting continent's town (Zoldaad), with the airship beside them on an airship seed and hidden on an on-foot seed. The first time, the user never saw the Earth Shrine: the move came before the screen faded in. After a plain New Game in the same run, Grandshelt showed for a moment, then Zoldaad.
+- Rain wore his Leather Armor and Earrings of Health. The airship flew and landed as usual.
+- A save made by hand linked when loaded from the title, with no item twice.
+- A plain New Game, then New Game (Archipelago): the opening for the first, the town for the second.
+- With autosave off in the game's Options: the same.
+- **One nit:** the Active Time Chat "Thoughtful Resolve" (ATC11) played when the map loaded. Found off-line: ATC11 is released by no story row or table. The game's own new save already holds it released and waiting (the new-game snapshot that `tests/mod/test_skip.py` copies has it in `NoticeQueue`), and it plays once Lasswell, its `RequiredUnitList`, is in the party: in chapter 1 in the game, at once in a new start. The prologue skip cleared it before its reload; the new start clears it two seconds after the map is up, too late.
+
+**Round 111 build (mod 0.63.0 build 2a01167a, apworld 0.32.0 build 937b4b93, unchanged):**
+- **The chats wait.** In the title's pre-hook, every Active Time Chat row of `CDT_ChatEventData` (and its parent tables) gets the first unit not in the starting party as its `RequiredUnitList`. `NewStartFinish` puts them back after it has marked every chat played and emptied the queue.
+- **The new start is on by default.** `ffrap_newstart off` goes back to the prologue skip, which also still runs when no seed has been heard this run (round 77).

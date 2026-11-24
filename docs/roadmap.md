@@ -19,7 +19,7 @@ What they said: fun and well-rounded; early and mid game fast, late game fine; s
 
 So the core loop works. The next work is less about making a seed finishable and more about making it a good seed: a fair item pool, logic that covers what the open start skips, and a game that tells the player what is going on.
 
-**Round 109:** the new start (idea 52) goes ahead of the order. With autosave off, the prologue skip never runs and the seed breaks at the start.
+**Rounds 109 to 111:** the new start (idea 52) went ahead of the order, because with autosave off the prologue skip never runs and the seed breaks at the start. It passed round 110 and is on by default; round 111 is a full run on it.
 
 ## The order
 

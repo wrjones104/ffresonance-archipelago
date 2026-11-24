@@ -339,4 +339,8 @@ Along the same lines, I would also want an option for players to start with all 
 
 **Built in round 110 (mod build d0634fd8):** the player and the airship are moved to the arrival in place, and moved again once if the player is found below it. The starters wear the `NewGame` row's gear.
 
-**To find out (round 110's test):** whether the move holds (island loading, the airship beside the player), and a save made by hand links. Once it works, turn it on by default and take out the wait for the autosave. Until then, the prologue skip needs autosave on.
+**Round 110's test (the user): every check passed**, with autosave off too. One nit: the Active Time Chat "Thoughtful Resolve" (ATC11) played at the start. The game's new save holds it waiting for Lasswell, who is in a new start's party from the first frame.
+
+**Built in round 111 (mod build 2a01167a):** the chats wait for a unit not in the party until the start has marked them all played. The new start is on by default.
+
+**Left:** a full run on it (round 111). Then take out the prologue skip's wait for the autosave, or the skip itself, which still runs with `ffrap_newstart off` or before a seed is heard.

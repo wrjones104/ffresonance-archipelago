@@ -981,19 +981,23 @@ tick(7)
 entry = lambda: L.eval('hooks["/Script/mucha.CPP_VM_Title:ExecuteEntry"]')(None, L.eval(
     "(function() local p = { v = 5 }; function p:get() return self.v end; function p:set(x) self.v = x end; return p end)()"))
 entry()
-assert list(G.prepares.values()) == [], "off by default: the prologue skip as before"
+assert len(list(G.prepares.values())) == 1, "on by default since round 110"
+assert "newstart\t" not in read("ap_state.txt"), "the default is not written"
+L.execute('commands["ffrap_newstart"]("ffrap_newstart", {"off"})')
+entry()
+assert len(list(G.prepares.values())) == 1 and not G.armed, "off: the prologue skip as before"
 L.execute('commands["ffrap_newstart"]("ffrap_newstart", {"on"})')
 assert "newstart\t1" in read("ap_state.txt")
 entry()
 # Round 109 (the user): on foot by the starting continent's town, for an airship seed too
-assert list(G.prepares.values()) == ["foot lanzelt 1004,1005"], list(G.prepares.values())
+assert list(G.prepares.values())[-1] == "foot lanzelt 1004,1005", list(G.prepares.values())
 # The new game is at the arrival's story, and its timestamp is the autosave slot's it would
 # overwrite: still the Archipelago new game, linked, and finished at once.
 G.story, G.saveTicks, G.slotOf = ARRIVAL_STORY, "7000", L.table_from({"7000": INHERITED_SLOT})
 runs = G.skipRuns
 inbox("item\t0\titem\t200\t1\tE\n")
 load(G, "SD_NS", "7000")
-assert G.nsRestores == 1 and list(G.finishes.values()) == ["foot lanzelt"], (G.nsRestores, list(G.finishes.values()))
+assert G.nsRestores == 2 and list(G.finishes.values()) == ["foot lanzelt"], (G.nsRestores, list(G.finishes.values()))
 assert any("a new game, although its timestamp matches slot 2" in m for m in logged())
 assert [g for g in grants() if g == "item200x1"] == ["item200x1"], grants()
 tick(20)
@@ -1018,7 +1022,7 @@ assert G.nsRestores == nsRestores + 1 and not G.armed, "a plain New Game after i
 # Not used with no seed heard this run, or with no open world start
 L.execute('commands["ffrap_newstart"]("ffrap_newstart", {"off"})')
 entry()
-assert len(list(G.prepares.values())) == 3, list(G.prepares.values())
+assert len(list(G.prepares.values())) == 4, list(G.prepares.values())
 assert "newstart\t0" in read("ap_state.txt")
 # Rain matches the party's level only past the open start's story: in the prologue (a skip that
 # never ran) the party is Archwitch Fina at 55

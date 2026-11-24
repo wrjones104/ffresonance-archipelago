@@ -161,7 +161,7 @@ These commands run in UE4SS's `ConsoleEnablerMod` console for development and de
 | `ffrap_inspect <class or path> [label]` | Dump an object's fields and functions to `inspect_<name>[_<label>].tsv` |
 | `ffrap_find <text>` | Search native/Blueprint classes, functions, and fields matching `<text>` to `find_<text>.txt` (run in-game; crashed once at title screen) |
 | `ffrap_skip [slot] [force]` | Skip the prologue on a new game after story 1005 (`force` skips earlier, leaving opening input lock) |
-| `ffrap_newstart [on\|off]` | New Game (Archipelago) starts at the open world start with no prologue, save or reload (round 109; off by default) |
+| `ffrap_newstart [on\|off]` | New Game (Archipelago) starts at the open world start with no prologue, save or reload (round 109; on by default since round 111) |
 | `ffrap_input [fix]` | Inspect or attempt to reset the player controller's input lock state |
 | `ffrap_openstart [on\|off\|dock\|air\|event\|at x y z\|now [slot]]` | Configure or trigger the open-world start probe |
 | `ffrap_chats [done]` | List Active Time Chats on the loaded save, or mark all played |

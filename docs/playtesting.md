@@ -2,23 +2,18 @@
 
 Only open items that still need to be tested in game live here. Once tested, record the results in [docs/playtesting_archive.md](playtesting_archive.md) and remove completed items from this file. Automated suite tests are documented in [tests/README.md](../tests/README.md).
 
-Current builds: mod `0.63.0` (`d0634fd8`), world `0.32.0` (`937b4b93`). Released before them: v0.31.0 (mod `7b90595e`, world `66073f7e`, 2026-11-21).
+Current builds: mod `0.63.0` (`2a01167a`), world `0.32.0` (`937b4b93`). Released before them: v0.31.0 (mod `7b90595e`, world `66073f7e`, 2026-11-21).
 
 Install: copy `FFRArchipelago/Scripts`, and copy `dist/ff_resonance.apworld` into `custom_worlds`. Close the Launcher and every client window first. Generate a new seed with `include_aileens_forge: true` (side quests on or off): the round 105 save holds two of each early item. Send the `[FFRAP]` lines of `UE4SS.log`. If the game crashes, send `Mods/FFRArchipelago/ap_trace.txt`, the crash folder, and the log before starting the game again.
 
-## Round 110: the new start, moved by the starting continent's town
+## Round 111: a full run on the new start
 
-Install: copy `FFRArchipelago/Scripts` only (the apworld is round 108's). Generate new seeds: round 109's new starts linked the wrong save to the seed. This is still a probe: send every `newstart:` line of the log, and a screenshot of where you land.
+Install: copy `FFRArchipelago/Scripts` only (the apworld is round 108's). The new start is on by default now; `ffrap_newstart off` goes back to the prologue skip. Play as far as you can, and tick the older checks below as you pass them. Send the whole `[FFRAP]` part of `UE4SS.log` at the end, or after anything odd.
 
-- [ ] Builds: the log says `version 0.63.0 (build d0634fd8)`.
-- [ ] `ffrap_newstart on` (it is kept from round 109), then New Game (Archipelago) on an airship seed. No opening. You stand south of the Earth Shrine for a moment, then by the starting continent's town on foot, with the airship beside you. The log has `newstart: the new game starts at foot <continent>`, then `newstart: airship ... from ...; moved to the arrival`, then `newstart: after the move: ...` with a small distance. Tell me if you fall, land somewhere odd, or the airship is not there (then the log says `no airship on the map`).
-- [ ] Rain wears his Leather Armor and Earrings of Health. The log has `gear: Rain EquipArmorId -1->11000, accessories []->[12000]` (or `as the row` if the game put them on this time).
-- [ ] Board the airship and fly a little, then land. It works as usual.
-- [ ] Save in a slot by hand, go to the title screen and load it. The save is linked (no "paused" notice), and no item comes twice.
-- [ ] A plain New Game, then New Game (Archipelago) again in the same run. The plain one plays the opening; the Archipelago one goes to the town as above, not the battlefield.
-- [ ] An on-foot seed (`start_with_airship: false`): the same place, with no airship until its item.
-- [ ] With autosave off in the game's Options: the same. This is what the new start is for.
-- [ ] If the game crashes, the last `newstart:` line in the log names the step.
+- [ ] Builds: the log says `version 0.63.0 (build 2a01167a)`.
+- [ ] New Game (Archipelago): no Active Time Chat plays at the start. The log has `newstart: ok   chats wait for unit <id>: <n> rows`, and later a `put back` line ending in `<n> chat rows`.
+- [ ] Active Time Chats stay quiet for the rest of the run, as they do after the prologue skip. Tell me if one plays, and its title.
+- [ ] The run itself: tell me where it went wrong, felt off, or got stuck, with the map and what you were doing.
 
 ## Round 108: key items, fast travel into a locked continent, two Zoldaad shinies
 
