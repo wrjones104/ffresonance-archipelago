@@ -4474,8 +4474,16 @@ G.RADAR_BANDS = {
 -- treasures on, the Progressive Radars take their place, and Mt. Reizan's chest with the Resonance
 -- Stone is a location like any other chest: main.lua sets blankRadarParts (round 75).
 G.RADAR_PARTS, G.blankRadarParts = { [27006] = true, [27007] = true, [27008] = true }, false
+-- Round 108 (a player): in the game the radar goes quiet once every treasure it can find is dug, until
+-- the next part. The mod held the count in the band, so it kept pinging. With every treasure of the
+-- level's tiers found, the count goes RADAR_QUIET past the band's top: out of every band, and off
+-- the exact counts (14 and 23) the game's own part upgrades test.
+G.RADAR_QUIET = 2
 G.RADAR = {}
-for n = 1, 13 do G.RADAR[n] = { n = n, flag = 703 + n, row = string.format("SubEv_C05_TreasureRadar_01_%02d", n) } end
+for n = 1, 13 do
+    G.RADAR[n] = { n = n, flag = 703 + n, row = string.format("SubEv_C05_TreasureRadar_01_%02d", n),
+                   tier = n <= 5 and 1 or n <= 9 and 2 or 3 }
+end
 
 -- Track latest external values as "originals" (e.g. if FFRRandomizer overwrites enemy rows every 3s)
 -- so turning scaling off restores current table values rather than stale pre-mod values.

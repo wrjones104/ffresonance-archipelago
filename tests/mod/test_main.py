@@ -260,13 +260,14 @@ function G.CrossingClear() G.crossingsCleared = true end
 G.AIRSHIP_FLAG, G.airshipSyncs, G.parks = 1431, {}, {}
 G.RADAR_ON_FLAG, G.RADAR_TIER_PROGRESS, G.RADAR_FOUND_PROGRESS = 702, 49, 51
 G.RADAR_LID_HEARD = 10
+G.RADAR_QUIET = 2
 G.VISION_MOOGLE_FLAG, G.THRONE_KEY = 144, { map = 3160 }
 G.CABIN_KEY, G.DUNGEON_KEY = { map = 2170 }, { item = 20019, map = 3150 }
 function G.CabinKeyManOff() return 0 end
 function G.UnvisitLocked() return {} end
 G.RADAR_BANDS = { { upTo = 13, steps = { 20, 30 } }, { upTo = 22, steps = { 40 } }, { upTo = 31, steps = { 50 } } }
 G.RADAR = {}
-for n = 1, 13 do G.RADAR[n] = { n = n, flag = 703 + n } end
+for n = 1, 13 do G.RADAR[n] = { n = n, flag = 703 + n, tier = n <= 5 and 1 or n <= 9 and 2 or 3 } end
 G.progress, G.radarPatches = {}, 0
 function G.ProgressValue(i) return G.progress[i] or 0 end
 function G.SetProgressValue(i, n) G.progress[i] = n; return n end
@@ -2056,6 +2057,43 @@ assert L.eval("G.progress[51]") == TIER_THREE_OPEN, "treasure 13 first: the rest
 L.execute("G.radarFlags[704] = true")
 tick(12)
 assert "check\tradar:1\n" in read("ap_out.txt") and "radar:2" not in read("ap_out.txt"), read("ap_out.txt")[-200:]
+
+# Round 108 (a player): once every treasure of the level's tiers is dug, the count goes two past the
+# band's top, out of every band and off the counts the game's own upgrades test (14 and 23), so the
+# radar is quiet. The next radar opens its tier again.
+TIER_ONE_QUIET, TIER_TWO_QUIET, TIER_THREE_QUIET = 15, 24, 33
+UPGRADE_COUNTS = (14, 23)
+inbox("seed\tS108r:0:1\ncfg\topenworld\t1\ncfg\tradar\t1\n", "w")
+L, G = boot5("SD_RADAR_QUIET", "0", {})
+L.globals().G = G
+L.execute(SCALE_STUB)
+L.execute("function G.HeldCount(id) return 1 end")
+L.execute("""G.radarFlags = {}
+function G.GetFlag(i) return G.radarFlags[i] == true end
+function G.SetFlag(i, on) G.radarFlags[i] = on; return "ok", "" end""")
+G.chests = L.table()
+G.story = 8000
+inbox("item\t0\titem\t27006\t1\tProgressive Radar\n")
+tick(12)
+L.execute("for f = 704, 707 do G.radarFlags[f] = true end")    # four of tier 1's five
+tick(12)
+assert L.eval("G.progress[51]") == TIER_ONE_OPEN, "one left: the radar still pings"
+L.execute("G.radarFlags[708] = true")
+tick(12)
+assert L.eval("G.progress[51]") == TIER_ONE_QUIET, "tier 1 all dug: quiet"
+inbox("item\t1\titem\t27006\t1\tProgressive Radar\n")
+tick(12)
+assert L.eval("G.progress[51]") == TIER_TWO_OPEN and L.eval("G.progress[49]") == 40, "the next radar opens tier 2"
+L.execute("for f = 709, 712 do G.radarFlags[f] = true end")
+tick(12)
+assert L.eval("G.progress[51]") == TIER_TWO_QUIET
+inbox("item\t2\titem\t27006\t1\tProgressive Radar\n")
+tick(12)
+assert L.eval("G.progress[51]") == TIER_THREE_OPEN and L.eval("G.progress[49]") == 50
+L.execute("for f = 713, 716 do G.radarFlags[f] = true end")
+tick(12)
+assert L.eval("G.progress[51]") == TIER_THREE_QUIET
+assert not set(UPGRADE_COUNTS) & {TIER_ONE_QUIET, TIER_TWO_QUIET, TIER_THREE_QUIET}
 print("radar: ok")
 
 # Round 105: Aileen's forge. Location n is the nth weapon forged, counted from the eight weapons

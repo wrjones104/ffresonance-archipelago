@@ -1572,7 +1572,7 @@ The user played (2026-11-23). Passed: the builds, the spoiler's eight forge loca
 - **A tester fast travelled to Grandport and walked around Lanzelt before it was unlocked.** Found off-line: "The Tide from the Sky" (Olderion, request 21) runs its fight scene, then `SubEv_C03_Mercedes_02_02` loads Grandport Harbor (map 2030) and `SubEv_C03_Mercedes_03` takes the player back to Olderion (world map point 5012). That visit made Grandport a fast travel place.
 - The user asked to build every fix from the round 107 key item audit (docs/logic.md, section 8b).
 
-**Round 108 build (mod 0.63.0 build 66664fd2, apworld 0.32.0 build 937b4b93):**
+**Round 108 build (mod 0.63.0 build 4e6c553b, apworld 0.32.0 build 937b4b93):**
 - **The Cabin Key, key items shuffled:** the man in front of Sian's inn (NPC 22, map 2170) has three entries: before the cabin, "flag 1410 and no key" (gives the key), and "flag 1410 and the key". On map 2170 the mod points the middle entry at his first line (`FEV_Town_09Pha_01_1044_01`). A stand-in item would have given a Potion at every talk.
 - **The Dungeon Key, key items not shuffled:** the mod gives it on map 3150 while it is not held (its soldier's trigger needs story 4180).
 - **Logic, key items not shuffled:** every key in `data/gates.tsv` comes in the place of its doors (the cards from the Research Center's shinies, the squad leader's Throne Room Key, the Cabin Key man, the mod's Dungeon Key). Those locations need only their place now, and are no longer filler only (`GIVEN_IN_PLACE` in `locations.py`).
@@ -1580,4 +1580,5 @@ The user played (2026-11-23). Passed: the builds, the spoiler's eight forge loca
 - **The High-Power Generator: no change.** The merchant ship shows it only with the found count at 23 or more. With the radar treasures on, the mod holds that count at 13 or 22 until the third Progressive Radar, which opens tier 3 anyway. The upgrade's own test needs step 40 or 41 with the count at exactly 23.
 - **Fast travel into a locked continent:** on a seed's save, every map of a locked continent (by `maps.tsv`'s island, `G.CONTINENT_MAPS`) is marked not visited (`Map.perMapSaveDataMap`, `bIsVisited`), but the map the player is on. Fast travel refuses a place not visited. It stays known.
 - `data/airship_only.tsv`: shinies 1000:57 and 1000:58.
+- **The radar goes quiet when there is nothing left to find** (a player: in the game it stops until the next part). The mod held the found count at the top of the band, so it kept pinging. Once every treasure of the level's tiers is found, the count goes 2 past the band's top (15, 24, 33): out of every band of `DT_MapPingerData`'s condition, and off 14 and 23, the counts the game's own part upgrades test. The next Progressive Radar puts it back at its band's top. At 24 and 33 the merchant ship offers the Generator, as the game does at 23; without a count of exactly 23 it upgrades nothing.
 

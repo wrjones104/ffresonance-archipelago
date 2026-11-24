@@ -2894,7 +2894,9 @@ end
 -- game only stores one copy of a key item. Level 1 sets flag 702. The found count ({progress:51})
 -- is held at the top of the level's band, which opens all of that tier's treasures at once; each
 -- dig sets it lower again, and the next tick puts it back. The radar's step ({progress:49}) is
--- then set to the band's (game.RADAR_BANDS). Keep state in one table for the 200-local limit.
+-- then set to the band's (game.RADAR_BANDS). Once every treasure of the level's tiers is found, the
+-- count goes past the band (game.RADAR_QUIET) and the radar is quiet, as in the game, until the next
+-- Progressive Radar. Keep state in one table for the 200-local limit.
 local radar = { ITEM = 27006, logged = nil }
 function radar.level()
     local n = 0
@@ -2910,15 +2912,21 @@ function radar.tick()
     local band = game.RADAR_BANDS[math.min(level, #game.RADAR_BANDS)]
     local now = game.ProgressValue(game.RADAR_TIER_PROGRESS)
     local found = game.ProgressValue(game.RADAR_FOUND_PROGRESS)
+    local quiet = band ~= nil
+    for _, point in ipairs(game.RADAR) do
+        if point.tier <= level and game.GetFlag(point.flag) ~= true then quiet = false end
+    end
     if band then
         if game.GetFlag(game.RADAR_ON_FLAG) == false then game.SetFlag(game.RADAR_ON_FLAG, true) end
-        if found ~= band.upTo then found = game.SetProgressValue(game.RADAR_FOUND_PROGRESS, band.upTo) end
+        local want = quiet and band.upTo + game.RADAR_QUIET or band.upTo
+        if found ~= want then found = game.SetProgressValue(game.RADAR_FOUND_PROGRESS, want) end
         local inBand = false
         for _, step in ipairs(band.steps) do inBand = inBand or now == step end
         if not inBand then now = game.SetProgressValue(game.RADAR_TIER_PROGRESS, band.steps[1]) end
     end
-    local line = string.format("radar: level %d (flag %d %s, step %s, found %s)", level, game.RADAR_ON_FLAG,
-        tostring(game.GetFlag(game.RADAR_ON_FLAG)), tostring(now), tostring(found))
+    local line = string.format("radar: level %d (flag %d %s, step %s, found %s)%s", level, game.RADAR_ON_FLAG,
+        tostring(game.GetFlag(game.RADAR_ON_FLAG)), tostring(now), tostring(found),
+        quiet and ", every treasure it can find is dug: quiet" or "")
     if line ~= radar.logged then log(line) end
     radar.logged = line
 end

@@ -321,6 +321,8 @@ Along the same lines, I would also want an option for players to start with all 
 - The Proofs of Victory gate no location: they only open Colosseum shop stock.
 - With key items off, the Throne Room Key and Cabin Key chests could be in logic behind the game's own givers, not filler only.
 
-**Built in round 108 (mod build 66664fd2, apworld build 937b4b93):** all of them (docs/logic.md, section 8b). The Generator needed no change. To test in game: the Cabin Key man, the Dungeon Key given in the dungeon, and the spoiler log with key items off.
+**Built in round 108 (mod build 4e6c553b, apworld build 937b4b93):** all of them (docs/logic.md, section 8b). The Generator needed no change. To test in game: the Cabin Key man, the Dungeon Key given in the dungeon, and the spoiler log with key items off.
 
 **Found with it (a tester, round 108):** a quest scene ("The Tide from the Sky") visits Grandport, which made it a fast travel place with Lanzelt locked. The mod now marks every map of a locked continent not visited. Other scenes that move the player to another continent would be caught the same way.
+
+**Also round 108 (a player):** in the game the radar goes quiet once every treasure it can find is dug, until the next part. The mod kept it pinging, as it held the found count in the band. Now the count goes 2 past the band once the level's tiers are all found (docs/playtesting_archive.md, round 108).
