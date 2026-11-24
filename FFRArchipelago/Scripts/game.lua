@@ -3727,6 +3727,288 @@ function G.SaveAndReload(slot, map)
     return true, "saved to slot " .. slot .. " (" .. kept .. "), reloading"
 end
 
+-- -------------------------------------------------------------------------------------------
+-- The new start: an Archipelago new game that begins at the open world start
+-- -------------------------------------------------------------------------------------------
+-- Round 109 (a tester's log): with autosave off in the game's Options the new game never saved,
+-- so the prologue skip, which waits for the first autosave, never ran, and the seed's save
+-- played the prologue and chapter 1. The new start needs no save and no reload. Before the new
+-- game begins, the title's pre-hook points the game's start map (CPP_GameSettings's
+-- GameStartSettings, 10040 in DefaultProject.ini) at the arrival, and writes the arrival's story,
+-- party and flags into DT_InitGameSaveData's NewGame row, which the game builds a new save from.
+-- The opening is map 10040's startup event ({progress:0}==1000 -> C01_001_01), so it never
+-- plays. Both are put back once the new game is in, so a plain New Game stays vanilla.
+G.NEW_START = {
+    settings = "/Script/mucha.Default__CPP_GameSettings",
+    table = "/Game/Datatable/SaveData/DT_InitGameSaveData.DT_InitGameSaveData",
+    row = "NewGame",
+    -- The executable names this beside the slot reload the prologue skip uses. If it starts the
+    -- map from the save in memory, the player lands exactly at the arrival, in the airship too.
+    reload = "/Script/mucha.CPP_MapManager:MapTestStartByLoadSaveData",
+    -- Map 10040 at story 5270 or later plays C05_536_02 until flag 553 is on. If the game kept
+    -- its own start map, this keeps that scene from playing.
+    flags = { 553 },
+    near = 300,    -- a player this close to the arrival is not moved
+    saved = nil,   -- what NewStartPrepare changed, for NewStartRestore
+}
+do
+local NS = G.NEW_START
+
+local function Ints(list)
+    local out = {}
+    pcall(function() for i = 1, #list do out[i] = Int(list[i]) end end)
+    return out
+end
+
+local function SetInts(list, values)
+    return pcall(function()
+        list:Empty()
+        for i, v in ipairs(values) do
+            if #list < i then local _ = list[i] end
+            list[i] = v
+        end
+    end)
+end
+
+-- The row's Progress is a map of progress index to value; the story counter is index 0.
+local function StoryOf(progress)
+    local found
+    pcall(function()
+        progress:ForEach(function(k, v) if Int(k:get()) == 0 then found = Int(v:get()) end end)
+    end)
+    return found
+end
+
+local function SetStory(progress, n)
+    local done = false
+    pcall(function()
+        progress:ForEach(function(k, v) if Int(k:get()) == 0 then v:set(n); done = true end end)
+    end)
+    if not done then pcall(function() progress:Add(0, n) end) end
+    return StoryOf(progress) == n
+end
+
+local function ReadInitRow(row)
+    local r = { party = {}, flags = {}, units = {} }
+    r.story = StoryOf(row.Progress)
+    pcall(function() r.party = Ints(row.Party.partyList) end)
+    pcall(function() r.flags = Ints(row.OnFlagList) end)
+    pcall(function()
+        local list = row.unitDataList
+        for i = 1, #list do
+            local u = list[i]
+            r.units[i] = { id = Int(u.UnitId), level = Int(u.Level), join = Int(u.JoinStatus),
+                           weapon = Int(u.EquipWeaponId), armor = Int(u.EquipArmorId),
+                           accessories = Ints(u.EquipAccessoryIdList), skills = Ints(u.SkillList) }
+        end
+    end)
+    return r
+end
+
+local function WriteInitRow(row, r, step)
+    local ok = true
+    if r.story then
+        step("NewGame row: story " .. r.story)
+        ok = SetStory(row.Progress, r.story) and ok
+    end
+    step("NewGame row: party " .. table.concat(r.party, ","))
+    ok = SetInts(row.Party.partyList, r.party) and ok
+    step("NewGame row: " .. #r.flags .. " flags")
+    ok = SetInts(row.OnFlagList, r.flags) and ok
+    for i, u in ipairs(r.units) do
+        step("NewGame row: unit " .. tostring(u.id))
+        ok = pcall(function()
+            local e = row.unitDataList[i]
+            e.Level, e.JoinStatus, e.EquipWeaponId, e.EquipArmorId = u.level, u.join, u.weapon, u.armor
+            if not SetInts(e.EquipAccessoryIdList, u.accessories) then error("accessories") end
+            if not SetInts(e.SkillList, u.skills) then error("skills") end
+        end) and ok
+    end
+    return ok
+end
+
+local function DescribeRow(r)
+    local units = {}
+    for _, u in ipairs(r.units) do
+        units[#units + 1] = string.format("%s:%s:%s", tostring(u.id), tostring(u.level), tostring(u.join))
+    end
+    return string.format("story %s, party [%s], %d flags, units (id:level:join) %s", tostring(r.story),
+        table.concat(r.party, ","), #r.flags, table.concat(units, " "))
+end
+
+-- The NewGame row the arrival needs: its story, the party joined at level 1 and everyone else not
+-- joined, and the flags the prologue skip writes. Archwitch Fina gets what SkipPrologue leaves her.
+local function NewStartRow(r, a, party)
+    local isStarter, flags, have = {}, {}, {}
+    for _, id in ipairs(party) do isStarter[id] = true end
+    for _, list in ipairs({ r.flags, SKIP_FLAGS_ON, OPEN_WORLD_FEATURES, OPEN_WORLD_TUTORIALS, a.flags or {}, NS.flags }) do
+        for _, f in ipairs(list) do
+            if not have[f] then have[f], flags[#flags + 1] = true, f end
+        end
+    end
+    local units = {}
+    for i, u in ipairs(r.units) do
+        units[i] = { id = u.id, level = 1, join = isStarter[u.id] and 0 or 1, weapon = u.weapon, armor = u.armor,
+                     accessories = u.accessories, skills = u.skills }
+        if u.id == ARCHWITCH_FINA then
+            units[i].weapon, units[i].armor, units[i].accessories, units[i].skills = 10600, -1, {}, { ARCHWITCH_FIRST_SKILL }
+        end
+    end
+    return { story = a.story, party = party, flags = flags, units = units }
+end
+
+local function EachNewGameRow(dt, fn)
+    pcall(function()
+        dt:ForEachRow(function(name, row) if RowName(name) == NS.row then fn(row) end end)
+    end)
+end
+
+-- Points the next new game at opts.arrival with opts.party (default Rain and Lasswell).
+-- opts.step(what) runs before each write. Returns ok and report lines. A failure leaves the
+-- game's data as it was found.
+function G.NewStartPrepare(opts)
+    local a, step = opts.arrival, opts.step or function() end
+    local party = opts.party or SKIP_PARTY
+    G.NewStartRestore(step)
+    local report, ok = {}, true
+    local function line(good, what)
+        report[#report + 1] = (good and "ok   " or "FAIL ") .. what
+        ok = ok and good
+    end
+    local saved = { tables = {} }
+    NS.saved = saved
+    local cdo = Find(NS.settings)
+    local was
+    if cdo then pcall(function() was = Int(cdo.GameStartSettings.TransitionMapId) end) end
+    if not was then
+        line(false, "start map: " .. NS.settings .. " not readable")
+        G.NewStartRestore(step)
+        return false, report
+    end
+    step("GameStartSettings.TransitionMapId " .. was .. " -> " .. a.map)
+    saved.map = was
+    pcall(function() cdo.GameStartSettings.TransitionMapId = a.map end)
+    local now
+    pcall(function() now = Int(cdo.GameStartSettings.TransitionMapId) end)
+    line(now == a.map, "start map " .. was .. " -> " .. tostring(now))
+    step("load " .. NS.table)
+    local rows = 0
+    for _, dt in ipairs(TableFamily(G.LoadObject(NS.table))) do
+        EachNewGameRow(dt, function(row)
+            rows = rows + 1
+            local before = ReadInitRow(row)
+            local want = NewStartRow(before, a, party)
+            saved.tables[#saved.tables + 1] = { path = G.PathOf(dt), row = before }
+            local wrote = WriteInitRow(row, want, step)
+            local after = DescribeRow(ReadInitRow(row))
+            line(wrote and after == DescribeRow(want), "NewGame row in " .. tostring(G.PathOf(dt)) .. ": " .. after)
+        end)
+    end
+    line(rows > 0, "NewGame rows written: " .. rows)
+    if not ok then G.NewStartRestore(step) end
+    return ok, report
+end
+
+-- Puts back what NewStartPrepare changed. Returns a line, or nil when nothing was changed.
+function G.NewStartRestore(step)
+    local saved = NS.saved
+    if not saved then return nil end
+    step = step or function() end
+    NS.saved = nil
+    local parts = {}
+    if saved.map then
+        step("GameStartSettings.TransitionMapId -> " .. saved.map)
+        local cdo = Find(NS.settings)
+        local okMap = cdo ~= nil and pcall(function() cdo.GameStartSettings.TransitionMapId = saved.map end)
+        parts[#parts + 1] = "start map " .. saved.map .. (okMap and "" or " (failed)")
+    end
+    for _, t in ipairs(saved.tables) do
+        local dt = t.path and Find(t.path)
+        local done = false
+        if dt then EachNewGameRow(dt, function(row) done = WriteInitRow(row, t.row, step) end) end
+        parts[#parts + 1] = "NewGame row in " .. tostring(t.path) .. (done and "" or " (not found or failed)")
+    end
+    return table.concat(parts, "; ")
+end
+
+-- The bag of a new start's save. A vanilla new game holds Archwitch Fina's gear because she is
+-- joined in the NewGame row, so the game seems to put a joined unit's gear in the bag. Each
+-- starter's piece is topped up to what the party wears, and her prologue gear goes. Nothing has
+-- been given to this save yet, so the counts can be set outright.
+local function NewStartBag(party)
+    local inv = Lib("CPP_BFL_SaveDataInventory")
+    if not inv then return false, "inventory: no inventory library" end
+    local need, ids = {}, {}
+    for _, id in ipairs(party) do
+        for _, gear in ipairs(STARTER_GEAR[id] or {}) do need[gear] = (need[gear] or 0) + 1 end
+    end
+    for gear in pairs(need) do ids[#ids + 1] = gear end
+    for _, gear in ipairs(SKIP_GEAR_OUT) do
+        if not need[gear] then need[gear], ids[#ids + 1] = 0, gear end
+    end
+    table.sort(ids)
+    local parts, ok = {}, true
+    for _, gear in ipairs(ids) do
+        local before = Held(inv, gear)
+        local want = need[gear] == 0 and 0 or math.max(before or 0, need[gear])
+        if before ~= want then pcall(function() inv:SetInventoryItem(gear, want) end) end
+        local after = Held(inv, gear)
+        ok = ok and after == want
+        parts[#parts + 1] = gear .. " " .. tostring(before) .. (before ~= after and ("->" .. tostring(after)) or "")
+    end
+    return ok, "inventory (held before->after): " .. table.concat(parts, ", ")
+end
+
+-- The rest of the start, on the new game's save once it is in: what SkipPrologue writes (it is
+-- all absolute apart from the bag), then the bag. Saves nothing. Returns ok and report lines.
+function G.NewStartFinish(opts)
+    local party = opts.party or SKIP_PARTY
+    local ok, report = G.SkipPrologue({ inventory = false, openStart = true, party = party, arrival = opts.arrival })
+    local okBag, bag = NewStartBag(party)
+    report[#report + 1] = (okBag and "ok   " or "FAIL ") .. bag
+    return ok and okBag, report
+end
+
+-- How far the player stands from the arrival (nil off its map), and a line for the log.
+function G.NewStartWhere(a)
+    local map = G.CurrentMap()
+    local pose, why = G.PlayerPose()
+    if not pose then return nil, "map " .. tostring(map) .. ", " .. tostring(why) end
+    local d = math.sqrt((pose.x - a.x) ^ 2 + (pose.y - a.y) ^ 2)
+    local riding
+    pcall(function() riding = G.SaveData().Map.IsRidingAirShip end)
+    return map == a.map and d or nil, string.format("map %s (arrival %d), pawn %s at %.0f, %.0f, %.0f, %.0f from the arrival, riding %s",
+        tostring(map), a.map, pose.class, pose.x, pose.y, pose.z, d, tostring(riding))
+end
+
+-- Calls MapTestStartByLoadSaveData, but only when it takes no parameters. step(what) runs
+-- before the call. Returns true when it was called, and a line with its signature.
+function G.NewStartReload(step)
+    local fn = Find(NS.reload)
+    if not fn then return false, "MapTestStartByLoadSaveData not found" end
+    local params = {}
+    pcall(function()
+        fn:ForEachProperty(function(p) params[#params + 1] = p:GetFName():ToString() .. ": " .. PropKind(p) end)
+    end)
+    local sig = "MapTestStartByLoadSaveData(" .. table.concat(params, ", ") .. ")"
+    if #params > 0 then return false, sig .. " takes parameters: not called" end
+    local mgr = Live("CPP_MapManager")
+    if not mgr then return false, sig .. ": no map manager" end
+    step(sig)
+    if not pcall(function() mgr:MapTestStartByLoadSaveData() end) then return false, sig .. " raised" end
+    return true, sig .. " called"
+end
+
+-- Moves the player on foot to the arrival. step(what) runs before the move. Returns ok and a line.
+function G.NewStartMove(a, step)
+    local pose, why = G.PlayerPose()
+    if not pose then return false, tostring(why) end
+    step(string.format("K2_SetActorLocation %.0f, %.0f, %.0f", a.x, a.y, a.z))
+    local ok = pcall(function() pose.pawn:K2_SetActorLocation({ X = a.x, Y = a.y, Z = a.z }, false, {}, true) end)
+    return ok, ok and "moved to the arrival" or "K2_SetActorLocation raised"
+end
+end
+
 -- The property of an object's class (or a parent class) named `field`, or nil.
 local function FindProperty(obj, field)
     local found

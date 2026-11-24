@@ -940,6 +940,93 @@ tick(10)
 assert G.skipRuns == runs + 1, "the client connected: the skip runs"
 print("skip waits for the client: ok")
 
+# Round 109: the new start. With autosave off the game never saved, so the skip above never ran
+# and the seed's save played the prologue. With ffrap_newstart on, the title entry sets up the
+# game's data so the new game begins at the arrival (story 8000), with no save and no reload.
+ARRIVAL_STORY, INHERITED_SLOT = 8000, 2
+os.remove(path("ap_in.txt"))
+L, G = boot5("SD_TITLE", "0", {})
+L.execute(CAPTURE)
+tick = lambda k: [L.execute("tickFn()") for _ in range(k)]
+L.eval("""function(G)
+  G.prepares, G.nsRestores, G.finishes, G.memReloads, G.moves, G.armed = {}, 0, {}, 0, 0, false
+  G.NEW_START = { near = 300 }
+  function G.NewStartPrepare(opts)
+    G.prepares[#G.prepares + 1] = opts.arrival.name .. " " .. table.concat(opts.party or {}, ",")
+    G.armed = true
+    return true, { "ok   start map 10040 -> " .. opts.arrival.map }
+  end
+  function G.NewStartRestore()
+    if not G.armed then return nil end
+    G.armed, G.nsRestores = false, G.nsRestores + 1
+    return "start map 10040"
+  end
+  function G.NewStartFinish(opts)
+    G.finishes[#G.finishes + 1] = opts.arrival.name
+    return true, { "ok   story counter -> 8000" }
+  end
+  function G.NewStartWhere(a) return 0, "map 3280 (arrival 3280)" end
+  function G.NewStartReload() G.memReloads = G.memReloads + 1; return G.canReload, G.canReload and "called" or "takes parameters" end
+  function G.NewStartMove() G.moves = G.moves + 1; return true, "moved" end
+end""")(G)
+logged = lambda: list(L.eval("logged").values())
+G.titleOk, G.slotOf = True, L.table_from({})
+inbox("seed\tS109:0:1\ncfg\topenworld\t1\ncfg\tparty\t1004,1005\n", "w")
+tick(7)
+entry = lambda: L.eval('hooks["/Script/mucha.CPP_VM_Title:ExecuteEntry"]')(None, L.eval(
+    "(function() local p = { v = 5 }; function p:get() return self.v end; function p:set(x) self.v = x end; return p end)()"))
+entry()
+assert list(G.prepares.values()) == [], "off by default: the prologue skip as before"
+L.execute('commands["ffrap_newstart"]("ffrap_newstart", {"on"})')
+assert "newstart\t1" in read("ap_state.txt")
+entry()
+assert list(G.prepares.values()) == ["dock 1004,1005"], list(G.prepares.values())
+# The new game is at the arrival's story, and its timestamp is the autosave slot's it would
+# overwrite: still the Archipelago new game, linked, and finished at once.
+G.story, G.saveTicks, G.slotOf = ARRIVAL_STORY, "7000", L.table_from({"7000": INHERITED_SLOT})
+runs = G.skipRuns
+inbox("item\t0\titem\t200\t1\tE\n")
+load(G, "SD_NS", "7000")
+assert G.nsRestores == 1 and list(G.finishes.values()) == ["dock"], (G.nsRestores, list(G.finishes.values()))
+assert any("a new game, although its timestamp matches slot 2" in m for m in logged())
+assert [g for g in grants() if g == "item200x1"] == ["item200x1"], grants()
+tick(20)
+assert G.skipRuns == runs, "the prologue skip stays out of it"
+assert G.memReloads == 1 and G.moves == 0, "near the arrival: not moved"
+# the map again from the save in memory: the reloaded save carries the seed's stamp
+G.canReload = True
+entry()
+load(G, "SD_NS2", "7000")
+tick(6)
+assert G.memReloads == 2, G.memReloads
+G.stamps["SD_NS2B"] = G.stamps["SD_NS2"]
+load(G, "SD_NS2B", "0")
+tick(12)
+assert any(m.rstrip().endswith("newstart: the reloaded save is the new game") for m in logged()), logged()[-20:]
+assert any("newstart: after the reload:" in m for m in logged())
+assert [g for g in grants() if g == "item200x1"] == ["item200x1", "item200x1"], "once per new game"
+# Backing out: a set-up that is never used is put back when the title menu is used again
+nsRestores = G.nsRestores
+entry()
+L.eval('hooks["/Script/mucha.CPP_VM_Title:ExecuteEntry"]')(None, L.eval(
+    "(function() local p = { v = 2 }; function p:get() return self.v end; function p:set(x) self.v = x end; return p end)()"))
+assert G.nsRestores == nsRestores + 1 and not G.armed, "a plain New Game after it is vanilla"
+# Not used with no seed heard this run, or with no open world start
+L.execute('commands["ffrap_newstart"]("ffrap_newstart", {"off"})')
+entry()
+assert len(list(G.prepares.values())) == 3, list(G.prepares.values())
+assert "newstart\t0" in read("ap_state.txt")
+# Rain matches the party's level only past the open start's story: in the prologue (a skip that
+# never ran) the party is Archwitch Fina at 55
+syncs = G.slotSyncs or 0
+G.story = 1010
+tick(30)
+assert (G.slotSyncs or 0) == syncs, "no level sync in the vanilla story"
+G.story = ARRIVAL_STORY
+tick(30)
+assert G.slotSyncs > syncs
+print("new start: ok")
+
 # 10. the item feed (0.11.2): one line per item in game; queued while the HUD is away; a long
 # queue shows its last lines and how many more; off sends messages to the Toast again
 def feed():

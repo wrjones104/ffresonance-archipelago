@@ -20,6 +20,7 @@
 --   ffrap_skip [slot] [force]    skip the prologue on a new game; with a slot, save there and reload
 --   ffrap_input [fix]            inspect the player controller's input state; fix tries the engine's resets
 --   ffrap_openstart [on|off|dock|air|event|at x y z|now [slot]]  configure or run the open world start (story 8000)
+--   ffrap_newstart [on|off]      the Archipelago new game starts at the open world start, with no prologue (round 109)
 --   ffrap_chats [done]           the loaded save's Active Time Chats; done marks them all played
 --   ffrap_lock [on|off|open <continent|all>|close <continent|all>]  toggle or set continent locks
 --   ffrap_visions                the first vision's synchro keys, to the log
@@ -204,6 +205,7 @@ local state = {
     bindPending = false, -- the client asked to link the loaded save
     scouts = {},       -- location key -> { item, player, flags, own }: what it holds (client scouts)
     apNewGame = false, -- the Archipelago title entry was just chosen: the next new game is one
+    newStartOn = nil,  -- ffrap_newstart on|off (round 109); kept in ap_state.txt once the user sets it
 }
 
 -- Round 77: a crash about a second after a map change, in a game-thread Lua loop (FName::ToString
@@ -241,6 +243,9 @@ local save = {
     autoWait = 0,      -- ticks waited before the automatic prologue skip
     autoDone = false,  -- the automatic skip was tried (or given up) for this game
     ok = false,        -- true when this is the session's save
+    newStart = nil,    -- the new start the title entry set up: { arrival, party, placeAt, checkAt }
+    newStartDue = false,    -- the new start's game is in: finish it once it is judged
+    newStartReload = false, -- the new start reloaded the map from the save in memory
 }
 
 -- Keeps the save stamp (game.WriteSaveStamp) equal to the applied count. Flags written now are in
@@ -340,6 +345,7 @@ local function loadState()
         -- Legacy "feed" key is ignored; only explicit "itemfeed" entries written by ffrap_feed are loaded.
         if key == "itemfeed" then feedOn = value == "1" end
         if key == "openstart" then openStart = value == "1" end
+        if key == "newstart" then state.newStartOn = value == "1" end
         if key == "continentlocks" then continentLocks = value == "1" end
         if key == "openarrival" and game.OPEN_STARTS[value] then
             openArrival = value
@@ -365,6 +371,7 @@ local function saveState()
     f:write("blank\t", state.blank and "1" or "0", "\n")
     f:write("itemfeed\t", feedOn and "1" or "0", "\n")
     f:write("openstart\t", openStart and "1" or "0", "\n")
+    if state.newStartOn ~= nil then f:write("newstart\t", state.newStartOn and "1" or "0", "\n") end
     if openArrival then f:write("openarrival\t", openArrival, "\n") end
     if continentLocks ~= nil then f:write("continentlocks\t", continentLocks and "1" or "0", "\n") end
     f:write("seed\t", state.seed or "", "\n")
@@ -1297,17 +1304,36 @@ local function followSave()
         -- A brand-new game inherits the autosave slot timestamp it will overwrite; story values
         -- at the very start always represent an unlinked new game.
         local story = game.StoryCounter()
-        if save.slot ~= nil and story and story <= NEW_GAME_STORY then
+        -- Round 109: the new start's game begins at its arrival's story, not 1000.
+        local startStory = state.apNewGame and save.newStart and save.newStart.arrival.story
+        local fresh = story and (story <= NEW_GAME_STORY or story == startStory)
+        if save.slot ~= nil and fresh then
             log("story " .. story .. ": a new game, although its timestamp matches slot " .. save.slot)
             save.slot = nil
         end
         -- The new game the Archipelago title entry started (any other load uses up the mark).
         if state.apNewGame then
             state.apNewGame = false
-            if save.slot == nil and story and story <= NEW_GAME_STORY then
+            if save.slot == nil and fresh then
                 save.apObj, save.apSlot, save.reskip, save.autoWait, save.autoDone = obj, nil, false, 0, false
                 save.waitNoted = false
                 log("an Archipelago new game")
+                if startStory then
+                    save.newStartDue = story == startStory
+                    if not save.newStartDue then save.dropNewStart("the new game is at story " .. story) end
+                end
+            end
+        elseif save.newStartReload then
+            -- The new start's reload from the save in memory: the same game when it carries the
+            -- seed's stamp. Anything else is judged as any other load.
+            save.newStartReload = false
+            local _, tag = game.ReadSaveStamp()
+            if state.seed and tag == game.SeedTag(state.seed) then
+                save.apObj = obj
+                log("newstart: the reloaded save is the new game")
+            else
+                save.apObj, save.apSlot, save.reskip = nil, nil, false
+                log("newstart: the reloaded save does not carry the seed's stamp")
             end
         elseif save.apSlot ~= nil and save.slot == save.apSlot then
             save.apObj = obj
@@ -1317,6 +1343,10 @@ local function followSave()
         log("save loaded: slot " .. tostring(save.slot) .. ", session slots [" .. slotsText(true) .. "]")
         judgeSave()
         waitingDirty = true
+        if save.newStartDue then
+            save.newStartDue = false
+            save.finishNewStart()
+        end
     elseif ticks ~= save.ticks then
         -- The game saved. Grants happen after this check in the same tick, so the count now is
         -- what the save holds.
@@ -1344,6 +1374,79 @@ end
 -- The Archipelago new game: the title entry and the prologue skip
 -- -------------------------------------------------------------------------------------------
 
+-- Round 109: the new start (game.NewStartPrepare). The Archipelago new game begins at the open
+-- world start, with no prologue, no save and no reload, so it works with autosave off. Off by
+-- default (ffrap_newstart on) until a round shows it works; then the prologue skip goes.
+function save.newStartStep(what) log("newstart: " .. what) end
+
+-- In the title's pre-hook: the game's data starts the new game at the seed's arrival.
+function save.armNewStart()
+    local a = seedArrival()
+    local ok, report = game.NewStartPrepare({ arrival = a, party = seedCfg.party, step = save.newStartStep })
+    for _, line in ipairs(report) do log("newstart: " .. line) end
+    if not ok then
+        log("newstart: not set up; the prologue skip takes over")
+        return
+    end
+    save.newStart = { arrival = a, party = seedCfg.party }
+    log("newstart: the new game starts at " .. a.name .. " (map " .. a.map .. ", story " .. a.story .. ")")
+end
+
+-- Puts the game's data back and forgets the new start.
+function save.dropNewStart(why)
+    local put = game.NewStartRestore(save.newStartStep)
+    if put then log("newstart: put back (" .. why .. "): " .. put) end
+    save.newStart = nil
+end
+
+-- The new start's game is in and linked: the rest of the start goes into its save.
+function save.finishNewStart()
+    local ns = save.newStart
+    local put = game.NewStartRestore(save.newStartStep)
+    log("newstart: put back " .. tostring(put))
+    local ok, report = game.NewStartFinish({ arrival = ns.arrival, party = ns.party })
+    for _, line in ipairs(report) do log("newstart: " .. line) end
+    if not ok then notify("Archipelago: the new start had failures (see UE4SS.log)") end
+    save.autoDone = true
+    local _, where = game.NewStartWhere(ns.arrival)
+    log("newstart: arrived: " .. where)
+    -- A moment for the stamp to be written, so a reload from memory is known as this game.
+    ns.placeAt = state.ticks + 4
+end
+
+-- After the start: the map again from the save in memory if the game can (exact arrival, in the
+-- airship too), else a move on foot when the player is far from the arrival.
+function save.newStartTick()
+    local ns = save.newStart
+    if not ns then return end
+    if ns.checkAt and state.ticks >= ns.checkAt then
+        local _, where = game.NewStartWhere(ns.arrival)
+        log("newstart: after the reload: " .. where)
+        save.newStart = nil
+        return
+    end
+    if not (ns.placeAt and state.ticks >= ns.placeAt) then return end
+    ns.placeAt = nil
+    local dist, where = game.NewStartWhere(ns.arrival)
+    local reloaded, how = game.NewStartReload(save.newStartStep)
+    log("newstart: " .. how)
+    if reloaded then
+        save.newStartReload = true
+        ns.checkAt = state.ticks + 10
+        return
+    end
+    save.newStart = nil
+    if not dist then
+        log("newstart: not on the arrival's map, left there: " .. where)
+    elseif ns.arrival.airship then
+        log("newstart: the arrival is in the airship, which a move cannot give: " .. where)
+    elseif dist > game.NEW_START.near then
+        local _, line = game.NewStartMove(ns.arrival, save.newStartStep)
+        local _, after = game.NewStartWhere(ns.arrival)
+        log("newstart: " .. line .. ": " .. after)
+    end
+end
+
 -- Title menu entries use ETitleFunctionType; the Archipelago entry uses type 5 as a copy of New Game
 -- (game.AddTitleEntry). The ExecuteEntry pre-hook flags the next new game and rewrites type 5 to New Game.
 local titleHooked = false
@@ -1354,6 +1457,8 @@ local function hookTitle()
             local t
             pcall(function() t = inType:get() end)
             log("title: entry " .. tostring(t) .. " chosen")
+            -- A new start set up before and never used (the player backed out): put it back first.
+            if save.newStart then save.dropNewStart("the title menu was used again") end
             if t == game.TITLE_ARCHIPELAGO then
                 state.apNewGame = true
                 pcall(function() inType:set(game.TITLE_NEW_GAME) end)
@@ -1361,6 +1466,12 @@ local function hookTitle()
                     or "Archipelago: starting a new game. Connect the client now: the prologue skip waits for it")
                 -- Log when skipped because open-world mode is off.
                 log("title: open world start is " .. (openStartOn() and "on" or "off") .. " (ffrap_openstart or the seed)")
+                -- The arrival and the party come from the seed, so the client must have spoken.
+                if state.newStartOn and openStartOn() and (seedCfg.heard or openStart) then
+                    save.armNewStart()
+                elseif state.newStartOn then
+                    log("newstart: not used (" .. (openStartOn() and "no seed heard yet" or "no open world start") .. ")")
+                end
             end
         end)
     end)
@@ -1748,6 +1859,7 @@ local function tick()
             end
             state.mark("skip")
             autoSkip()
+            pcall(save.newStartTick)
             if save.reskip and save.ok and save.slot ~= nil then
                 save.reskip = false
                 skipped = save.obj
@@ -1765,7 +1877,10 @@ local function tick()
             if state.ticks % LOCKS_EVERY == 0 then pcall(seedExtrasTick) end
             if state.ticks % LOCKS_EVERY == 0 then pcall(locksTick) end
             -- Round 100: Rain went to level 55 in a new game of the game's own (Fina's prologue level).
-            if state.ticks % STATUS_EVERY == 0 and seedCfg.openworld and sessionSave() and game.OnField() then pcall(game.SyncSlotLevel) end
+            -- Round 109: and in the seed's own save, when the prologue skip never ran (autosave off):
+            -- only past the open world start's story is the party the seed's.
+            if state.ticks % STATUS_EVERY == 0 and seedCfg.openworld and sessionSave() and game.OnField()
+                and (game.StoryCounter() or 0) >= game.OPEN_START.story then pcall(game.SyncSlotLevel) end
             state.mark("patches")
             if seedCfg.openworld and state.ticks % LOCKS_EVERY == 0 then
                 -- Round 100: the seed's table patches are for the seed's save only. The tables stay
@@ -2058,6 +2173,21 @@ end)
 -- (game.OPEN_STARTS; `air` is default); `at` overrides coordinates for the current run only.
 -- `now` writes the open world start into the loaded save (one that has had the skip), saves it
 -- to its slot (or `slot`) and reloads, with no new game.
+-- ffrap_newstart [on|off]: the new start (round 109). With no argument, says whether it is on.
+command("ffrap_newstart", function(p)
+    local what = p and p[1]
+    if what == "on" or what == "off" then
+        state.newStartOn = what == "on"
+        saveState()
+    elseif what ~= nil then
+        notify("Usage: ffrap_newstart [on|off]")
+        return
+    end
+    notify("New start is " .. (state.newStartOn and "on" or "off")
+        .. ": New Game (Archipelago) " .. (state.newStartOn and "begins at the open world start, with no prologue"
+        or "plays the opening and skips the prologue after the first autosave"))
+end)
+
 command("ffrap_openstart", function(p)
     local what = p and p[1]
     if what == "now" then

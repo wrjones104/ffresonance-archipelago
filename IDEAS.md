@@ -326,3 +326,13 @@ Along the same lines, I would also want an option for players to start with all 
 **Found with it (a tester, round 108):** a quest scene ("The Tide from the Sky") visits Grandport, which made it a fast travel place with Lanzelt locked. The mod now marks every map of a locked continent not visited. Other scenes that move the player to another continent would be caught the same way.
 
 **Also round 108 (a player):** in the game the radar goes quiet once every treasure it can find is dug, until the next part. The mod kept it pinging, as it held the found count in the band. Now the count goes 2 past the band once the level's tiers are all found (docs/playtesting_archive.md, round 108).
+
+## 52. A new game with no prologue (the new start)
+
+**From a tester, round 109.** With autosave off in the game's Options, the prologue skip never ran: it waits for the first autosave, to have a slot to save into and reload from. The seed's save played the prologue and chapter 1, with Rain at level 55 and the Earth Shrine boss fight coming back over and over (docs/playtesting_archive.md, round 109). The user does not want to make players turn autosave on, and wants the Archwitch Fina part gone too.
+
+**Found off-line:** the new game's first map is `CPP_GameSettings`'s `GameStartSettings.TransitionMapId` (10040 in `DefaultProject.ini`), and the new save is built from `DT_InitGameSaveData`'s `NewGame` row (party, units, flags, story). The opening is map 10040's startup event at story 1000. This is the new lead that archived idea 2 (the opening's input lock) waited for: with no opening, there is no lock to keep.
+
+**Built in round 109 (mod build 6a25a245), behind `ffrap_newstart on`:** the title entry points both at the arrival before the new game begins, and puts them back once the new game is in. The rest of the skip goes into the save in place. Then the mod tries `MapTestStartByLoadSaveData` to load the map again from the save in memory, or moves the player to the arrival on foot.
+
+**To find out (round 109's test):** whether the game reads the start map when New Game starts or keeps a copy from start-up; where the player stands on the arrival map; what `MapTestStartByLoadSaveData` takes and does; whether the flags and party take effect with no reload. Once it works, turn it on by default and take out the wait for the autosave. Until then, the prologue skip needs autosave on.

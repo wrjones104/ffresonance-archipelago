@@ -214,6 +214,8 @@ Still to decide: whether to show a message first ("Skipping the prologue…"), a
 
 **The input lock, parked (round 38, 2026-11-08):** a skip during the opening movie still leaves no menus or movement. The controller's switches, the input manager's enabled state and its mapping contexts all read the same in a locked game and a normal one, and every reset we tried did nothing (rounds 36 to 38). The cost of leaving it is about 10 seconds per new game. Come back only with a new lead.
 
+**The new lead (round 109):** a new game can start past the opening, so there is no lock to keep. See IDEAS.md, idea 52.
+
 ## 3. Non-story ("open world") mode
 
 **Status:** Implemented (`3c455fb`, mod 0.13.0 / world 0.3.1; `1218481`, mod 0.14.0; `8edc30c`, mod 0.16.0; `3029a9b`, mod 0.22.0; `b3b6f17`, mod 0.25.0 / world 0.4.0; `aa63e49`, mod 0.44.0 / world 0.13.0; `0ab288d`, mod 0.45.0 / world 0.14.0; `7ad8fa2`, mod 0.48.0 / world 0.17.0). See [open_world.md](open_world.md) and [bosses.md](bosses.md).

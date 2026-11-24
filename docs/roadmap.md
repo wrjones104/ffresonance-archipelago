@@ -19,6 +19,8 @@ What they said: fun and well-rounded; early and mid game fast, late game fine; s
 
 So the core loop works. The next work is less about making a seed finishable and more about making it a good seed: a fair item pool, logic that covers what the open start skips, and a game that tells the player what is going on.
 
+**Round 109:** the new start (idea 52) goes ahead of the order. With autosave off, the prologue skip never runs and the seed breaks at the start.
+
 ## The order
 
 Each milestone is about one release. The first three are in the order I would do them. After that the order is looser.

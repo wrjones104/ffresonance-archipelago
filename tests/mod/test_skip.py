@@ -754,4 +754,114 @@ L.execute("FindAllOf, G.CurrentMap = prevFAO, prevMap")
 # Round 51: the menu dump lists the option save's entries, ours among them
 lines = list(L.execute("return G.OptionDump()").values())
 assert lines[0] == "CPP_MuchaOptionSaveData: 0 found", lines
+
+# Round 109 (a tester's log): with autosave off the game never saved, so the prologue skip never
+# ran. The new start writes the game's start map and its NewGame row before the new game begins.
+VANILLA_START_MAP, NEW_GAME_STORY = 10040, 1000
+L.execute("""
+local function obj(t) t.IsValid = function() return true end
+  t.HasAnyInternalFlags = function() return false end; t.HasAnyFlags = function() return false end; return t end
+newObj = obj
+gameSettings = obj({ GameStartSettings = { TransitionMapId = 10040 } })
+libs["/Script/mucha.Default__CPP_GameSettings"] = gameSettings
+-- an int -> int TMap, as the row's Progress
+function tmap(t)
+  local m = { v = t }
+  function m:ForEach(fn)
+    for k in pairs(self.v) do
+      local key = k
+      fn({ get = function() return key end },
+         { get = function() return self.v[key] end, set = function(_, x) self.v[key] = x end })
+    end
+  end
+  function m:Add(k, x) self.v[k] = x end
+  return m
+end
+function initUnit(id, level, join, weapon, armor, acc, skills)
+  return { UnitId = id, Level = level, JoinStatus = join, EquipWeaponId = weapon, EquipArmorId = armor,
+           EquipAccessoryIdList = arr(acc), SkillList = arr(skills) }
+end
+-- the dump's NewGame row, cut down: Archwitch Fina joined at 55, the others not joined
+newGameRow = { Progress = tmap({ [0] = 1000 }), Party = { partyList = arr({ 1006 }), guestUnitId = -1 },
+  OnFlagList = arr({ 1160, 1161, 1162, 1163, 1182 }),
+  unitDataList = arr({ initUnit(1001, 1, 1, 10100, 11000, { 12000 }, { 401010 }),
+                       initUnit(1002, 1, 1, 10200, 11000, { 12000 }, { 402010 }),
+                       initUnit(1006, 55, 0, 10699, 11301, { 12029 }, { 408010, 220070, 220030 }),
+                       initUnit(1007, 27, 1, 10700, 11010, { 12022 }, { 406010 }) }) }
+setupRow = { Progress = tmap({}), Party = { partyList = arr({ 1001, 1002, 1003, 1004 }) }, OnFlagList = arr({ 13 }),
+  unitDataList = arr({ initUnit(1001, 3, 0, 10100, 11000, { 12000 }, { 401010 }) }) }
+initTable = obj({ ParentTables = arr({}),
+  GetFullName = function() return "DataTable /Game/Datatable/SaveData/DT_InitGameSaveData.DT_InitGameSaveData" end,
+  ForEachRow = function(_, fn) fn(FName("Setup"), setupRow); fn(FName("NewGame"), newGameRow) end })
+libs["/Game/Datatable/SaveData/DT_InitGameSaveData.DT_InitGameSaveData"] = initTable
+steps = {}
+step = function(what) steps[#steps + 1] = what end
+function ints(a) local out = {} for i = 1, #a do out[i] = a[i] end return out end
+function unit(id) for i = 1, #newGameRow.unitDataList do local u = newGameRow.unitDataList[i] if u.UnitId == id then return u end end end
+""")
+ints = lambda expr: list(L.eval(f"ints({expr})").values())
+ok, report = L.execute("return G.NewStartPrepare({ arrival = G.OPEN_STARTS.air, party = { 1001, 1002 }, step = step })")
+print("\n".join(report.values()))
+assert ok is True, list(report.values())
+assert lua("gameSettings.GameStartSettings.TransitionMapId") == WORLD_MAP
+assert lua("newGameRow.Progress.v[0]") == DOCK_STORY
+assert ints("newGameRow.Party.partyList") == [1001, 1002]
+assert (lua("unit(1001).JoinStatus"), lua("unit(1001).Level")) == (0, 1)
+assert (lua("unit(1007).JoinStatus"), lua("unit(1007).Level")) == (1, 1), "a non-starter stays out, at level 1"
+assert (lua("unit(1006).JoinStatus"), lua("unit(1006).Level"), lua("unit(1006).EquipWeaponId"), lua("unit(1006).EquipArmorId")) == (1, 1, 10600, -1)
+assert ints("unit(1006).EquipAccessoryIdList") == [] and ints("unit(1006).SkillList") == [408010]
+assert ints("unit(1001).EquipAccessoryIdList") == [12000], "a starter keeps the row's gear"
+flags = ints("newGameRow.OnFlagList")
+assert flags[:5] == [1160, 1161, 1162, 1163, 1182] and len(flags) == len(set(flags)), flags
+assert {14, 21, 102, 1229, 31, 553} <= set(flags), "the skip's flags, the open world's, the air start's 31 and 553"
+assert ints("setupRow.Party.partyList") == [1001, 1002, 1003, 1004], "only the NewGame row"
+steps = list(L.eval("steps").values())
+assert steps[0] == f"GameStartSettings.TransitionMapId {VANILLA_START_MAP} -> {WORLD_MAP}", steps
+assert "NewGame row: story 8000" in steps and "NewGame row: unit 1006" in steps, steps
+# a second set-up (the player backed out and chose the entry again) starts from the game's own row
+ok, _ = L.execute("return G.NewStartPrepare({ arrival = G.FOOT_STARTS.lanzelt, party = { 1004 }, step = step })")
+assert ok is True and ints("newGameRow.Party.partyList") == [1004] and 31 not in ints("newGameRow.OnFlagList")
+put = lua("G.NewStartRestore(step)")
+assert put.startswith(f"start map {VANILLA_START_MAP}; NewGame row in ") and "failed" not in put, put
+assert lua("gameSettings.GameStartSettings.TransitionMapId") == VANILLA_START_MAP
+assert lua("newGameRow.Progress.v[0]") == NEW_GAME_STORY and ints("newGameRow.Party.partyList") == [1006]
+assert (lua("unit(1006).JoinStatus"), lua("unit(1006).Level"), lua("unit(1006).EquipWeaponId")) == (0, 55, 10699)
+assert ints("unit(1006).EquipAccessoryIdList") == [12029] and ints("unit(1006).SkillList") == [408010, 220070, 220030]
+assert ints("newGameRow.OnFlagList") == [1160, 1161, 1162, 1163, 1182]
+assert lua("G.NewStartRestore(step)") is None, "nothing twice"
+# no start setting to write: nothing is changed
+L.execute('libs["/Script/mucha.Default__CPP_GameSettings"] = nil')
+ok, report = L.execute("return G.NewStartPrepare({ arrival = G.OPEN_STARTS.air, step = step })")
+assert ok is False and list(report.values())[0].startswith("FAIL start map"), list(report.values())
+assert lua("newGameRow.Progress.v[0]") == NEW_GAME_STORY and lua("G.NewStartRestore(step)") is None
+L.execute('libs["/Script/mucha.Default__CPP_GameSettings"] = gameSettings')
+
+# The rest goes into the new game's save in place. The bag is set outright: each starter's gear
+# up to what the party wears, Archwitch Fina's prologue gear out.
+L.execute("""bag = {}
+libs["/Script/mucha.Default__CPP_BFL_SaveDataInventory"] = newObj({
+  SetInventoryItem = function(_, id, n) bag[id] = n end, FindInventory = function(_, id) return bag[id] or 0 end })
+mapMgr.IsValid = function() return true end""")
+ok, report = L.execute("return G.NewStartFinish({ arrival = G.OPEN_STARTS.air, party = { 1001, 1002 } })")
+lines = list(report.values())
+assert "ok   story counter -> 8000" in lines, lines
+assert lines[-1] == ("ok   inventory (held before->after): 10100 0->1, 10200 0->1, 10699 0, 11000 0->2, "
+                     "11301 0, 12000 0->2, 12029 0"), lines[-1]
+L.execute("bag = { [10100] = 1, [10200] = 1, [11000] = 2, [12000] = 2, [10699] = 1 }")
+ok, report = L.execute("return G.NewStartFinish({ arrival = G.OPEN_STARTS.air, party = { 1001, 1002 } })")
+assert list(report.values())[-1] == ("ok   inventory (held before->after): 10100 1, 10200 1, 10699 1->0, 11000 2, "
+                                     "11301 0, 12000 2, 12029 0"), "the game's own gear is not doubled"
+# The reload from the save in memory is called only when it takes no parameters.
+L.execute("""memReloads = 0
+mapMgr.MapTestStartByLoadSaveData = function() memReloads = memReloads + 1 end
+reloadFn = newObj({ params = {}, ForEachProperty = function(self, fn) for _, p in ipairs(self.params) do fn(p) end end })
+libs["/Script/mucha.CPP_MapManager:MapTestStartByLoadSaveData"] = reloadFn""")
+called, line = L.execute("return G.NewStartReload(step)")
+assert called is True and line == "MapTestStartByLoadSaveData() called" and lua("memReloads") == 1, line
+L.execute("""reloadFn.params = { { GetFName = function() return FName("Slot") end,
+  GetClass = function() return { GetFName = function() return FName("IntProperty") end } end } }""")
+called, line = L.execute("return G.NewStartReload(step)")
+assert called is False and line == "MapTestStartByLoadSaveData(Slot: IntProperty) takes parameters: not called", line
+assert lua("memReloads") == 1
+print("new start: ok")
 print("skip: ok")
