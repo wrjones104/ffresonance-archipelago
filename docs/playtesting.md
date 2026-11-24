@@ -2,7 +2,7 @@
 
 Only open items that still need to be tested in game live here. Once tested, record the results in [docs/playtesting_archive.md](playtesting_archive.md) and remove completed items from this file. Automated suite tests are documented in [tests/README.md](../tests/README.md).
 
-Current builds: mod `0.63.0` (`2a01167a`), world `0.32.0` (`937b4b93`). Released before them: v0.31.0 (mod `7b90595e`, world `66073f7e`, 2026-11-21).
+Current builds: mod `0.62.1` (`55040fae`), world `0.31.1` (`937b4b93`), the v0.31.1 tester build. Rounds 104 to 111 were built as mod 0.63.0 and world 0.32.0; those numbers now wait for the next public release. Released before them: v0.31.0 (mod `7b90595e`, world `66073f7e`, 2026-11-21).
 
 Install: copy `FFRArchipelago/Scripts`, and copy `dist/ff_resonance.apworld` into `custom_worlds`. Close the Launcher and every client window first. Generate a new seed with `include_aileens_forge: true` (side quests on or off): the round 105 save holds two of each early item. Send the `[FFRAP]` lines of `UE4SS.log`. If the game crashes, send `Mods/FFRArchipelago/ap_trace.txt`, the crash folder, and the log before starting the game again.
 
@@ -10,8 +10,8 @@ Install: copy `FFRArchipelago/Scripts`, and copy `dist/ff_resonance.apworld` int
 
 Install: copy `FFRArchipelago/Scripts` only (the apworld is round 108's). The new start is on by default now; `ffrap_newstart off` goes back to the prologue skip. Play as far as you can, and tick the older checks below as you pass them. Send the whole `[FFRAP]` part of `UE4SS.log` at the end, or after anything odd.
 
-- [ ] Builds: the log says `version 0.63.0 (build 2a01167a)`.
-- [ ] New Game (Archipelago): no Active Time Chat plays at the start. The log has `newstart: ok   chats wait for unit <id>: <n> rows`, and later a `put back` line ending in `<n> chat rows`.
+- [x] Builds: the log says `version 0.63.0 (build 2a01167a)`.
+- [x] New Game (Archipelago): no Active Time Chat plays at the start. The log has `newstart: ok   chats wait for unit <id>: <n> rows`, and later a `put back` line ending in `<n> chat rows`.
 - [ ] Active Time Chats stay quiet for the rest of the run, as they do after the prologue skip. Tell me if one plays, and its title.
 - [ ] The run itself: tell me where it went wrong, felt off, or got stuck, with the map and what you were doing.
 
