@@ -2978,7 +2978,11 @@ end
 -- Round 107 (the user): Grandport Harbor's vision Moogle (NPC 720, map 2030) shows only with flag
 -- 144, which its chapter 1 scene sets (SubEv_C01_Moogle_01, story 1240). The open start skips it,
 -- so a Lanzelt start had no Magicite upgrades. Every other town's Moogle has no flag condition.
-G.VISION_MOOGLE_FLAG = 144
+-- Round 112: every Moogle's shop row (VisionUpgrade, VisionUpgrade_Main) goes on to Grandport's
+-- explanation scene SubEv_C01_Moogle_02 while "!{flag:145}&{flag:144}", and that scene only sets
+-- 145. With 144 alone it played at the first Moogle anywhere, staged for Grandport, and left the
+-- player out of bounds on other maps. Both flags together skip it.
+G.VISION_MOOGLE_FLAGS = { 144, 145 }
 
 G.MECHABO = { counter = 16, start = 10, request = 17,
               rows = { "C02_MechaboLvUp_00_yet", "C02_MechaboLvUp_00_ItemGet" },
@@ -4059,29 +4063,40 @@ function G.NewStartWhere(a)
         tostring(map), a.map, pose.class, pose.x, pose.y, pose.z, d), pose.z
 end
 
+-- Moves each airship actor on the map that stands farther than `far` from `a` to it. step(what)
+-- runs before each move. Returns how many airship actors are on the map, and a part per move.
+function G.MoveAirships(a, far, step)
+    local to = { X = a.x, Y = a.y, Z = a.z }
+    local parts, seen, count = {}, {}, 0
+    for _, class in ipairs(NS.airships) do
+        local okAll, all = pcall(FindAllOf, class)
+        for _, ship in ipairs(okAll and all or {}) do
+            local key = Alive(ship) and ship:GetFullName()
+            if key and not seen[key] then
+                seen[key], count = true, count + 1
+                local at
+                pcall(function() at = ship:K2_GetActorLocation() end)
+                local d = at and math.sqrt((at.X - a.x) ^ 2 + (at.Y - a.y) ^ 2) or math.huge
+                if d > far then
+                    step("airship K2_SetActorLocation " .. key)
+                    local okShip = pcall(function() ship:K2_SetActorLocation(to, false, {}, true) end)
+                    parts[#parts + 1] = string.format("airship %s from %.0f, %.0f%s", class,
+                        at and at.X or 0, at and at.Y or 0, okShip and "" or " (raised)")
+                end
+            end
+        end
+    end
+    return count, parts
+end
+
 -- Moves the airship (when it is on the map) and then the player on foot to the arrival.
 -- step(what) runs before each move. Returns ok and a line.
 function G.NewStartMove(a, step)
     local pose, why = G.PlayerPose()
     if not pose then return false, tostring(why) end
     local to = { X = a.x, Y = a.y, Z = a.z }
-    local parts, seen = {}, {}
-    for _, class in ipairs(NS.airships) do
-        local okAll, all = pcall(FindAllOf, class)
-        for _, ship in ipairs(okAll and all or {}) do
-            local key = Alive(ship) and ship:GetFullName()
-            if key and not seen[key] then
-                seen[key] = true
-                local at
-                pcall(function() at = ship:K2_GetActorLocation() end)
-                step("airship K2_SetActorLocation " .. key)
-                local okShip = pcall(function() ship:K2_SetActorLocation(to, false, {}, true) end)
-                parts[#parts + 1] = string.format("airship %s from %.0f, %.0f%s", class,
-                    at and at.X or 0, at and at.Y or 0, okShip and "" or " (raised)")
-            end
-        end
-    end
-    if #parts == 0 then parts[1] = "no airship on the map" end
+    local count, parts = G.MoveAirships(a, -1, step)
+    if count == 0 then parts[1] = "no airship on the map" end
     step(string.format("K2_SetActorLocation %.0f, %.0f, %.0f", a.x, a.y, a.z))
     local ok = pcall(function() pose.pawn:K2_SetActorLocation(to, false, {}, true) end)
     parts[#parts + 1] = ok and "moved to the arrival" or "K2_SetActorLocation raised"

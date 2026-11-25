@@ -54,7 +54,7 @@
 -- follows the save slots the linked game is saved to. While any other save is loaded, the mod
 -- grants nothing, reports nothing and leaves the chests vanilla.
 
-local VERSION = "0.62.1"
+local VERSION = "0.62.2"
 local PROTOCOL = 2        -- the bridge protocol; the apworld's MOD_PROTOCOL
 
 local MOD_DIR = (debug.getinfo(1, "S").source:gsub("^@", ""):gsub("\\", "/"):match("^(.*/)Scripts/[^/]+$"))
@@ -2982,7 +2982,12 @@ local storyBossFieldTicks = 0
 local STORY_BOSS_READY_TICKS = 2   -- seedExtrasTick runs every LOCKS_EVERY ticks: about 2 s
 -- When the Airship is an item, keep its parked position at the seed's start so receiving it in
 -- towns or constrained maps (like Grandport or Gronoa) does not place it somewhere unflyable.
-local airshipCall = { save = nil, was = false }
+-- Round 112 (a tester): an airship received on a Dirnado start came up in Zoldaad. The park only
+-- writes the save; an airship the game shows before a map load stands where the game puts it. So
+-- the first time one is on the world map after it came, one farther than AIRSHIP_HOME_NEAR from
+-- the start is moved there (`watch`).
+local airshipCall = { save = nil, was = false, watch = false }
+local AIRSHIP_HOME_NEAR = 1000
 local function parkAirshipAtStart(why)
     local home = game.FOOT_STARTS[seedCfg.continent or ""]
     if not (home and game.ParkAirship(home.x, home.y, home.z)) then return false end
@@ -2992,13 +2997,20 @@ end
 
 airshipItemTick = function()
     local on = game.GetFlag(game.AIRSHIP_FLAG) == true
-    if airshipCall.save ~= save.obj then airshipCall.save, airshipCall.was = save.obj, on end
+    if airshipCall.save ~= save.obj then airshipCall.save, airshipCall.was, airshipCall.watch = save.obj, on, false end
     local came = on and not airshipCall.was
     airshipCall.was = on
-    if not came then return end
-    if parkAirshipAtStart("received") then
+    if came and parkAirshipAtStart("received") then
+        airshipCall.watch = true
         notify("The airship will spawn where you started this seed. You may need to change maps for it to appear.")
     end
+    local home = game.FOOT_STARTS[seedCfg.continent or ""]
+    if not (airshipCall.watch and home and game.CurrentMap() == home.map and game.OnField()) then return end
+    local count, moves = game.MoveAirships(home, AIRSHIP_HOME_NEAR, function(what) log("airship: " .. what) end)
+    if count == 0 then return end
+    airshipCall.watch = false
+    log("airship: on the world map " .. (#moves > 0 and ("away from the start, moved there: " .. table.concat(moves, "; "))
+        or "at the start"))
 end
 
 -- Progressive Radar level comes from counting Magi-tenna (27006) items received, because the
@@ -3120,10 +3132,15 @@ seedExtrasTick = function()
             log("fast travel: maps " .. table.concat(cleared, ", ") .. " are on locked continents, marked not visited")
         end
     end
-    if seedSave and state.moogleSave ~= save.obj and game.GetFlag(game.VISION_MOOGLE_FLAG) == false then
+    if seedSave and state.moogleSave ~= save.obj then
         state.moogleSave = save.obj
-        local code, detail = game.SetFlag(game.VISION_MOOGLE_FLAG, true)
-        log("vision moogle: flag " .. game.VISION_MOOGLE_FLAG .. " set, for Grandport's Moogle (" .. tostring(code) .. ", " .. tostring(detail) .. ")")
+        for _, flag in ipairs(game.VISION_MOOGLE_FLAGS) do
+            if game.GetFlag(flag) == false then
+                local code, detail = game.SetFlag(flag, true)
+                log("vision moogle: flag " .. flag .. " set, for Grandport's Moogle and no Grandport scene ("
+                    .. tostring(code) .. ", " .. tostring(detail) .. ")")
+            end
+        end
     end
     if seedSave and game.ProgressValue(game.RADAR_TIER_PROGRESS) == 0 then
         game.SetProgressValue(game.RADAR_TIER_PROGRESS, game.RADAR_LID_HEARD)

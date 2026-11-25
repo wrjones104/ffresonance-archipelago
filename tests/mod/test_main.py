@@ -261,7 +261,7 @@ G.AIRSHIP_FLAG, G.airshipSyncs, G.parks = 1431, {}, {}
 G.RADAR_ON_FLAG, G.RADAR_TIER_PROGRESS, G.RADAR_FOUND_PROGRESS = 702, 49, 51
 G.RADAR_LID_HEARD = 10
 G.RADAR_QUIET = 2
-G.VISION_MOOGLE_FLAG, G.THRONE_KEY = 144, { map = 3160 }
+G.VISION_MOOGLE_FLAGS, G.THRONE_KEY = { 144, 145 }, { map = 3160 }
 G.CABIN_KEY, G.DUNGEON_KEY = { map = 2170 }, { item = 20019, map = 3150 }
 function G.CabinKeyManOff() return 0 end
 function G.UnvisitLocked() return {} end
@@ -277,6 +277,11 @@ function G.BehemothPatch() G.behemothPatches = G.behemothPatches + 1; return 3 e
 G.FOOT_STARTS = { lanzelt = { name = "foot lanzelt", story = 8000, map = 1000, x = 12470, y = 14980, z = 65 } }
 function G.AirshipItemSync(asItem) G.airshipSyncs[#G.airshipSyncs + 1] = asItem; return nil end
 function G.ParkAirship(x, y, z) G.parks[#G.parks + 1] = x .. " " .. y .. " " .. z; return true end
+G.shipsOnMap, G.shipFar, G.shipMoves = 0, false, 0
+function G.MoveAirships(a, far, step)
+    if G.shipsOnMap > 0 and G.shipFar then G.shipMoves = G.shipMoves + 1; return G.shipsOnMap, { "airship from Zoldaad" } end
+    return G.shipsOnMap, {}
+end
 function G.AirshipState() return "placed true" end
 function G.AirshipCondition(c) G.airshipWrote = c; return c end
 function G.NoLandShadow() return 0, 1, { "box" } end
@@ -2096,6 +2101,19 @@ tick(12)
 assert list(G.parks.values())[-1] == "12470 14980 65", list(G.parks.values())
 L.execute('commands["ffrap_airship"]("ffrap_airship", {"home"})')
 assert len(G.parks) == 3 and list(G.parks.values())[-1] == "12470 14980 65", "home parks it at the start"
+# Round 112 (a tester): one that shows up away from the start, before a map load, is moved there,
+# the first time an airship is on the world map after it came. Not in town; once only.
+assert G.shipMoves == 0
+L.execute(CAPTURE)
+L.execute("G.shipsOnMap, G.shipFar, G.map = 1, true, 2030")
+tick(12)
+assert G.shipMoves == 0, "not while in town"
+L.execute("G.pawn, G.map = 'BP_MapUnit_Player_Field_C', 1000")
+tick(12)
+assert G.shipMoves == 1, G.shipMoves
+assert any("away from the start, moved there: airship from Zoldaad" in line for line in L.eval("logged").values())
+tick(12)
+assert G.shipMoves == 1, "once: the player may fly it anywhere after"
 # a seed that starts in the airship puts the game's condition back over ours
 inbox("seed\tS69c:0:1\ncfg\topenworld\t1\n", "w")
 L, G = boot()
@@ -2245,7 +2263,9 @@ print("forge: ok")
 # Round 107 (the user): Grandport's vision Moogle shows only with flag 144, from a chapter 1 scene
 # the open start skips: a seed's save gets the flag, once. With the key items in the pool, the
 # Zoldaad squad leader's rows give the stand-in, and his trigger is turned off on map 3160 only.
-VISION_MOOGLE_FLAG, ZOLDAAD_CASTLE = 144, 3160
+# Round 112: flag 145 too, or every Moogle's first talk plays Grandport's scene. A save from
+# v0.31.1 already holds 144 and gets 145 alone.
+VISION_MOOGLE_FLAG, MOOGLE_SCENE_SEEN, ZOLDAAD_CASTLE = 144, 145, 3160
 for keyitems in ("1", "0"):
     inbox(f"seed\tS107{keyitems}:0:1\ncfg\topenworld\t1\ncfg\tkeyitems\t{keyitems}\n", "w")
     L, G = boot5("SD_107_" + keyitems, "0", {})
@@ -2261,6 +2281,8 @@ G.map = 2030""")
     G.story = 8000
     tick(12)
     assert L.eval(f"G.flags107[{VISION_MOOGLE_FLAG}]") is True, "the Moogle shows"
+    assert L.eval(f"G.flags107[{MOOGLE_SCENE_SEEN}]") is True, "no Grandport scene at the first Moogle"
+    assert G.flagSets == 2, G.flagSets
     sets = G.flagSets
     tick(8)
     assert G.flagSets == sets, "set once"
@@ -2271,6 +2293,18 @@ G.map = 2030""")
         assert G.rowPatches >= 1 and G.triggerCalls >= 1, (G.rowPatches, G.triggerCalls)
     else:
         assert G.rowPatches == 0 and G.triggerCalls == 0, "key items not in the pool: the game's own key stays"
+inbox("seed\tS107v:0:1\ncfg\topenworld\t1\n", "w")
+L, G = boot5("SD_107_v0311", "0", {})
+L.globals().G = G
+L.execute(SCALE_STUB)
+L.execute(f"""G.flags107, G.flagSets = {{ [{VISION_MOOGLE_FLAG}] = true }}, 0
+function G.GetFlag(i) return G.flags107[i] == true end
+function G.SetFlag(i, on) G.flags107[i] = on; G.flagSets = G.flagSets + 1; return "ok", "" end
+G.map = 2030""")
+G.chests = L.table()
+G.story = 8000
+tick(12)
+assert L.eval(f"G.flags107[{MOOGLE_SCENE_SEEN}]") is True and G.flagSets == 1, "a v0.31.1 save gets 145 alone"
 print("throne key and vision moogle: ok")
 
 # Round 108 (the key item audit): with the key items in the pool, the man by Sian's inn is rewritten

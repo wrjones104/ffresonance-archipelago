@@ -325,6 +325,8 @@ Along the same lines, I would also want an option for players to start with all 
 
 **Found with it (a tester, round 108):** a quest scene ("The Tide from the Sky") visits Grandport, which made it a fast travel place with Lanzelt locked. The mod now marks every map of a locked continent not visited. Other scenes that move the player to another continent would be caught the same way.
 
+**Round 112 (testers, v0.31.1):** Token Legacy's last step is past the Throne Room Key's door, and Errand's End follows it. Both need the key now; a quest that starts after another takes its keys. Beyond the Blue needs a party of 4. Grandport's vision Moogle flag (144, round 107) made every Moogle play Grandport's scene: its flag 145 is set too (mod build 5d54d782).
+
 **Also round 108 (a player):** in the game the radar goes quiet once every treasure it can find is dug, until the next part. The mod kept it pinging, as it held the found count in the band. Now the count goes 2 past the band once the level's tiers are all found (docs/playtesting_archive.md, round 108).
 
 ## 52. A new game with no prologue (the new start)
@@ -343,4 +345,6 @@ Along the same lines, I would also want an option for players to start with all 
 
 **Built in round 111 (mod build 2a01167a):** the chats wait for a unit not in the party until the start has marked them all played. The new start is on by default.
 
-**Left:** a full run on it (round 111). Then take out the prologue skip's wait for the autosave, or the skip itself, which still runs with `ffrap_newstart off` or before a seed is heard.
+**Round 111's full run (the user, v0.31.1):** the start, the chats and the run to the Crystal Tower's top went through, with no crash. A tester's airship came up in Zoldaad on a Dirnado start; round 112 (mod build 5d54d782) moves it to the start the first time it is on the world map after it came.
+
+**Left:** take out the prologue skip's wait for the autosave, or the skip itself, which still runs with `ffrap_newstart off` or before a seed is heard.

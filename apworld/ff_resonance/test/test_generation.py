@@ -327,6 +327,14 @@ class TestAirshipOnlyShinies(FFResonanceTestBase):
         self.collect_by_name(["Airship"])
         self.assertTrue(all(shiny.can_reach(self.multiworld.state) for shiny in shinies))
 
+    def test_dirnado_far_sw_headland_needs_the_airship(self) -> None:
+        """Round 112 (a tester): the shiny west of the Sanctum of Onion Knight is reached only from the air."""
+        shiny = self.multiworld.get_location(NAME_OF_KEY["shiny:1000:4"], self.player)
+        self.collect_all_but(["Airship"])
+        self.assertFalse(shiny.can_reach(self.multiworld.state))
+        self.collect_by_name(["Airship"])
+        self.assertTrue(shiny.can_reach(self.multiworld.state))
+
 
 class TestAirshipItemFromMysidia(FFResonanceTestBase):
     """Round 69: a start with no port and no bridge still generates: the Airship is found there."""
@@ -581,6 +589,18 @@ class TestSideQuests(FFResonanceTestBase):
         self.assertEqual(errand["after"], ["quest:6"])
         self.assertTrue(set(token["steps"]) <= set(errand["steps"]))
 
+    def test_token_legacy_and_errands_end_need_the_throne_room_key(self) -> None:
+        """Round 112 (a tester): Token Legacy ends at an NPC past the Throne Room Key's door, and
+        Errand's End starts after it, with a step at the same NPC."""
+        quests = [self.multiworld.get_location(name, self.player) for name in
+                  ("Quest: Token Legacy", "Quest: Errand's End", "Quest: Errand's End - Second Reward")]
+        self.collect_all_but(["Throne Room Key"])
+        for quest in quests:
+            self.assertFalse(quest.can_reach(self.multiworld.state), quest.name)
+        self.collect_by_name(["Throne Room Key"])
+        for quest in quests:
+            self.assertTrue(quest.can_reach(self.multiworld.state), quest.name)
+
     def test_rewards_go_to_the_pool_and_quest_items_do_not(self) -> None:
         pool = [i.code for i in self.multiworld.itempool if i.player == self.player]
         mercy = next(q for q in SIDE_QUESTS if q["key"] == "quest:20")
@@ -596,6 +616,30 @@ class TestSideQuests(FFResonanceTestBase):
 
     def test_slot_data(self) -> None:
         self.assertEqual(self.world.fill_slot_data()["include_side_quests"], 1)
+
+
+class TestBeyondTheBlueParty(FFResonanceTestBase):
+    """Round 112 (a tester): Beyond the Blue needs a party of 4. Two start; two more must come."""
+    options = {"include_side_quests": True, "start_with_airship": True, "starting_continent": "dirnado",
+               "starting_roster": 2, "starting_character_1": "rain", "starting_character_2": "lasswell",
+               "shuffle_party_members": True}
+
+    def test_two_more_members(self) -> None:
+        quest = self.multiworld.get_location("Quest: Beyond the Blue", self.player)
+        self.assertFalse(quest.can_reach(self.multiworld.state))
+        self.collect_by_name(["Fina"])
+        self.assertFalse(quest.can_reach(self.multiworld.state))
+        self.collect_by_name(["Lid"])
+        self.assertTrue(quest.can_reach(self.multiworld.state))
+
+
+class TestBeyondTheBlueNoNewMembers(FFResonanceTestBase):
+    """Round 112: with party members not shuffled, nobody joins a party of 2: filler only."""
+    options = {"include_side_quests": True, "starting_roster": 2, "shuffle_party_members": False}
+
+    def test_filler_only(self) -> None:
+        quest = self.multiworld.get_location("Quest: Beyond the Blue", self.player)
+        self.assertEqual(quest.progress_type, LocationProgressType.EXCLUDED)
 
 
 class TestSideQuestsUnshuffledVisions(FFResonanceTestBase):

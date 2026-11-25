@@ -19,3 +19,4 @@ shiny:3220:37	20009,20010	97	Research Center Ruins: the level 3 card, behind the
 chest:2190:0	20033	106	Abandoned Cabin: the world-map door runs "the cabin is locked" (C07_Wld_09Pha_Cabin_01) without the Cabin Key (the user, round 105 play; round 74's note that it opened without the key was wrong)
 chest:3160:2	20021	107	Zoldaad Castle: the throne room, past the Throne Room Key's door (the user, round 105 play)
 chest:3160:0	20021	107	Zoldaad Castle: the upper tower, past the Throne Room Key's door (the user, round 105 play)
+quest:6	20021	112	Token Legacy: its last step is the NPC past the Throne Room Key's door (3160, uid 14). Errand's End, which starts after it, needs the key too, and has a step at the same NPC (a tester, v0.31.1)

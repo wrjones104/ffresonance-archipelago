@@ -155,6 +155,14 @@ def create_regions_and_locations(world: FFResonanceWorld) -> None:
             rules.append(lambda state, area=loc["needs_area"]: state.can_reach_region(area, player))
         if "radar_tier" in loc:
             rules.append(lambda state, n=loc["radar_tier"]: state.has(RADAR_NAME, player, n))
+        # A quest that needs a party of n (Beyond the Blue: 4, round 112). The starting party counts;
+        # with party members not shuffled, nobody else ever joins.
+        if "party" in loc:
+            members = loc["party"] - len(world.starting_party)
+            if members > 0 and world.options.shuffle_party_members:
+                rules.append(lambda state, n=members: state.has_group("Party Members", player, n))
+            elif members > 0:
+                location.progress_type = LocationProgressType.EXCLUDED
         # The nth weapon forged costs n Adamantite in all.
         if "adamantite" in loc:
             rules.append(lambda state, n=loc["adamantite"]: state.has(ADAMANTITE, player, n))

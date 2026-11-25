@@ -132,7 +132,8 @@ The quest rows that give quest items are not touched.
 - **Past a boss on foot** (round 97, the user): a step on a map past Liquid Thunder (Dirnado but Dilmagia) gives the quest the same rule as the chests there: Liquid Thunder's needs, or the Airship. Lyrical Riddles and Elven Maven end in the Dwarven Forge, and were in logic from the start. The fix also caught Beyond the Blue (a step in the Mobliz Shipyard), The Admirable Apprentice (a step on Mt. Thunderclap's upper ledge) and "Reunion" (it needs the first two).
 - **Fights:** the groups listed in section 3. First pass: no rule beyond the region. Look at their levels against the scaling once the list is in; boss logic may want some of them.
 - **Gil:** Token Legacy needs an inn fee, Rear Support needs 4 Turbo Ethers (sold in shops). No rule.
-- **Party members:** no quest step tests the party in the data. Character quests are named for a member but do not need them.
+- **Party members:** no quest step tests the party in the data. Character quests are named for a member but do not need them. But Beyond the Blue needs a party of 4 (a tester, round 112): `party` in `data/quests.tsv`. The starting party counts; with party members not shuffled and fewer than 4 at the start, it is filler only.
+- **Keys:** Token Legacy's last step is past the Throne Room Key's door (round 112, `data/gates.tsv`). A quest that starts after another takes its keys too.
 
 ## 6. The world
 

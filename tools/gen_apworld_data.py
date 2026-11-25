@@ -11,7 +11,8 @@ And from play:
 And by hand, from the dump (docs/bosses.md):
     data/bosses.tsv                boss fights that are locations: battle group, win flag, map, kind
     data/quests.tsv                side quests that are locations (docs/side_quests.md): counter,
-                                   the reward row's value, reward rows; with data/game/quests.tsv
+                                   the reward row's value, reward rows, quests before it, the party
+                                   size it needs; with data/game/quests.tsv
                                    and data/game/quest_steps.tsv from the dump
     data/pool_additions.tsv        items no location holds, added to the pool in place of filler
                                    (IDEAS.md, idea 48)
@@ -876,6 +877,9 @@ def main() -> None:
                  "area": OPEN_AREA, "open_world": True, "id": QUEST_LOCATION_BASE + quest, "vanilla": None,
                  "counter": counter, "value": value, "rows": rows, "steps": sorted(groups),
                  "after": [f"quest:{n}" for n in needs]}
+        # Round 112: a quest that needs a party of this size (Beyond the Blue: 4, a tester).
+        if r["party"]:
+            entry["party"] = int(r["party"])
         if past:
             entry["past_boss"] = past.pop()
         # Round 98 (the user): a reward's second part (an item, a vision or gil) is a location of
@@ -972,10 +976,16 @@ def main() -> None:
     chests.sort(key=lambda e: e["id"])
     shinies.sort(key=lambda e: e["id"])
     # Round 57: data/gates.tsv, by hand from play: the items a location needs (game item ids).
-    by_key = {e["key"]: e for e in chests + radar_part_chests + shinies + tablet_shinies}
+    by_key = {e["key"]: e for e in chests + radar_part_chests + shinies + tablet_shinies + side_quests}
     for r in read_tsv("gates.tsv"):
         assert r["location"] in by_key, f"gates.tsv: no location {r['location']}"
         by_key[r["location"]]["needs"] = [int(i) * 1000 + 1 for i in r["needs"].split(",")]
+    # Round 112: a quest that starts after another needs that one's keys too (Errand's End after
+    # Token Legacy, with the Throne Room Key).
+    for entry in side_quests:
+        keys = set(entry.get("needs", [])).union(*(by_key[k].get("needs", []) for k in entry["after"]))
+        if keys:
+            entry["needs"] = sorted(keys)
     # Round 71: data/airship_only.tsv, by hand from play: places only the airship can reach.
     by_key.update({e["key"]: e for e in crystals + bosses + gifts})
     for r in read_tsv("airship_only.tsv"):

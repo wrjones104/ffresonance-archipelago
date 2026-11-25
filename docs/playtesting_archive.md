@@ -1624,3 +1624,27 @@ The user played (2026-11-23). Passed: the builds, the spoiler's eight forge loca
 **Round 111 build (mod 0.63.0 build 2a01167a, apworld 0.32.0 build 937b4b93, unchanged):**
 - **The chats wait.** In the title's pre-hook, every Active Time Chat row of `CDT_ChatEventData` (and its parent tables) gets the first unit not in the starting party as its `RequiredUnitList`. `NewStartFinish` puts them back after it has marked every chat played and emptied the queue.
 - **The new start is on by default.** `ffrap_newstart off` goes back to the prologue skip, which also still runs when no seed has been heard this run (round 77).
+
+**v0.31.1 sent to a few testers** (apworld 0.31.1 build 937b4b93, mod 0.62.1 build 55040fae, 2026-11-24): a tester build between public releases, a patch release (CLAUDE.md, "Tester builds and public releases").
+
+### Round 112 (v0.31.1: mod 0.62.1 build 55040fae, apworld 0.31.1 build 937b4b93)
+
+**The user's run (2026-11-24, `UE4SS.log`):** a Dirnado seed on foot, 2 hours 25 minutes from New Game (Archipelago) to the Crystal Tower's top. The new start went as in round 110: `chats wait for unit 1002: 112 rows`, the put-back with `112 chat rows`, the move to Dilmagia, and no chat logged. The Airship came at 21:18 near Dilmagia and was parked at the start, then flown. 8 bosses with their fragments, 11 visions, 5 of 6 party members. At story 8040 the final boss lock sealed the last climb (`characters 5/6, visions 11/12, Crystal Fragments 8/20`) and said so. No crash.
+
+**From testers (the user, 2026-11-24):**
+- "Dirnado - World Map - Shiny on Far-SW Headland West of Sanctum of Onion Knight" (shiny 1000:4) needs the airship.
+- "My airship spawned in Zoldaad when I received it, but I started in Dirnado." No log. The user's own run parked it at the start.
+- After the first talk with any vision Moogle, a scene plays: Grandport's, with the player left out of bounds on any other map.
+- "Impossible to get to the top of Mysidia Tower", with a screenshot: chapter 8, "Go to the top of the tower". That is the Crystal Tower, and the user's own log shows the final boss lock sealing it at story 8040 with its message. Not changed: to ask the testers whether they had the lock's characters, visions and fragments.
+- Token Legacy needs the Throne Room Key.
+- Beyond the Blue needs a party of 4.
+
+**Found off-line:**
+- **The Moogle scene:** every Moogle's shop row (`VisionUpgrade`, `VisionUpgrade_Main` in `CDT_TalkEventData_Prod`) goes on to `SubEv_C01_Moogle_02` (or its `_fade`) while `!{flag:145}&{flag:144}`. That scene, staged in Grandport, only sets flag 145. Round 107 set 144 alone, so the first Moogle anywhere played it.
+- **Token Legacy:** its last step (`ChrEv_0070_006_01`, value 60) is NPC 14 on map 3160, past the Throne Room Key's door. Errand's End starts after it and has a step at the same NPC.
+- **The airship:** the park writes only the save (round 72: one received inside Gronoa stood where the player was). An airship the game shows before a map load stands where the game puts it.
+
+**Round 112 build (mod 0.62.2 build 5d54d782, apworld 0.31.2 build 177b8160):** the first change after v0.31.1, so both patch numbers move.
+- **The Moogle:** a seed's save gets flags 144 and 145, so no Moogle plays Grandport's scene. A v0.31.1 save that has 144 gets 145.
+- **The airship:** after it comes, the first time an airship is on the world map, one more than 1000 from the start is moved there (`game.MoveAirships`, which the new start uses too), with an `airship: on the world map ...` line.
+- **Logic:** shiny 1000:4 needs the Airship (`data/airship_only.tsv`). Token Legacy needs the Throne Room Key (`data/gates.tsv`), and a quest that starts after another takes its keys too (Errand's End and its second reward). Beyond the Blue needs a party of 4 (`party` in `data/quests.tsv`): the starting party counts, and with party members not shuffled and fewer than 4 at the start it is filler only.
