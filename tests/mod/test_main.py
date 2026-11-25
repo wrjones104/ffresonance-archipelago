@@ -157,6 +157,14 @@ end
 function G.AddOptionRows(say, current) return true, "rows", 6 end
 G.SHIPYARD_MAP = 3060
 function G.WakeShipyardElevators() G.shipyardCalls = (G.shipyardCalls or 0) + 1; return 0 end
+G.LIFT_RESETS = { [3200] = { [13] = 0 } }
+G.liftResets = {}
+function G.ResetLifts(here)
+    G.liftResets[#G.liftResets + 1] = here
+    if here ~= 3200 and G.liftPending then G.liftPending = false; return { "3200:13 1 -> 0" } end
+    return {}
+end
+function G.LiftStops(m) return G.liftStops end
 G.TOWER_TOP = { map = 3280, x = 15890, y = -55300, reach = 500 }
 function G.SealTowerTop(sealed) G.sealed = sealed; return 0 end
 function G.UnlockVision() return "ok", "" end
@@ -1981,6 +1989,29 @@ G.held = 0
 tick(12)
 assert list(G.log.values()).count("item30002x1") == 1, "once per save loaded"
 
+# Round 113 (the user): the Tower of Mysidia's lift up waited at its top after a fast travel out.
+# Lifts go back to their first-visit stops once per map the player is on; on a lift map, each
+# lift's live stop is logged when it changes.
+TOWER_OF_MYSIDIA = 3200
+L.execute(CAPTURE)
+resets_before = len(G.liftResets)
+tick(12)
+assert len(G.liftResets) == resets_before, "once per map, not each tick"
+G.map = TOWER_OF_MYSIDIA
+L.execute("G.liftStops = '13 at 0, 32 at 0'")
+tick(12)
+assert list(G.liftResets.values())[-1] == TOWER_OF_MYSIDIA
+lines = list(L.eval("logged").values())
+assert sum("lifts on map 3200: 13 at 0, 32 at 0" in line for line in lines) == 1, lines
+L.execute("G.liftStops = '13 at 1, 32 at 0'")
+tick(12)
+assert any("lifts on map 3200: 13 at 1, 32 at 0" in line for line in L.eval("logged").values())
+G.map = 1000
+L.execute("G.liftPending = true")
+tick(12)
+assert list(G.liftResets.values())[-1] == 1000
+assert any("lifts: back at their first-visit stops: 3200:13 1 -> 0" in line for line in L.eval("logged").values())
+
 inbox("seed\tS57b:0:1\ncfg\topenworld\t1\n", "w")
 L, G = boot5("SD_CHOCOBO2", "0", {})
 L.globals().G = G
@@ -2101,7 +2132,7 @@ tick(12)
 assert list(G.parks.values())[-1] == "12470 14980 65", list(G.parks.values())
 L.execute('commands["ffrap_airship"]("ffrap_airship", {"home"})')
 assert len(G.parks) == 3 and list(G.parks.values())[-1] == "12470 14980 65", "home parks it at the start"
-# Round 112 (a tester): one that shows up away from the start, before a map load, is moved there,
+# Round 112 (the user's v0.31.1 run): one that shows up away from the start is moved there,
 # the first time an airship is on the world map after it came. Not in town; once only.
 assert G.shipMoves == 0
 L.execute(CAPTURE)
@@ -2111,6 +2142,7 @@ assert G.shipMoves == 0, "not while in town"
 L.execute("G.pawn, G.map = 'BP_MapUnit_Player_Field_C', 1000")
 tick(12)
 assert G.shipMoves == 1, G.shipMoves
+assert len(G.parks) == 4 and list(G.parks.values())[-1] == "12470 14980 65", "the save is parked at the start again"
 assert any("away from the start, moved there: airship from Zoldaad" in line for line in L.eval("logged").values())
 tick(12)
 assert G.shipMoves == 1, "once: the player may fly it anywhere after"

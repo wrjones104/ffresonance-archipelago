@@ -68,6 +68,7 @@ Requirements and notes:
 | `field_items.tsv` | Placed field items, events, level, and position |
 | `transitions.tsv` | Map exits: source map, destination map/point, and condition |
 | `gimmicks.tsv` | Blockers, no-entry zones, doors, event triggers, save points, and airship landing points |
+| `lifts.tsv` | Lifts: whether the save keeps their stop, the first-visit stop, the stops' heights, and the arrival rules (`point:stop`). Written by `tools/lift_audit.py` from full level dumps |
 | `shops.tsv` | Shop stock, one row per item |
 | `capabilities.tsv` | What each party member's skills (by level), Vision's (by awakening) and gear's passives do in a boss fight, for `boss_logic.py` |
 

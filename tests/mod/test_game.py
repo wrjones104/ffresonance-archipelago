@@ -2139,6 +2139,76 @@ assert len(L.eval("G.UnvisitLocked()")) == 0, "nothing more to clear"
 L.execute("G.GetFlag, G.CurrentMap = prevGetFlag108, prevCurrentMap108; mgr.m_pGameSaveData = nil")
 assert len(L.eval("G.UnvisitLocked()")) == 0, "no save: nothing"
 
+# Round 113 (the user): lifts keep their stop in the save (Map.mapGimmick{map}.gimmickState{uid}).
+# Off their map, the lifts in G.LIFT_RESETS go back to their first-visit stop. Other gimmicks' rows
+# and the map the player is on stay.
+WIND_SHRINE, TOWER_OF_MYSIDIA = 3070, 3200
+TOWER_LIFT_UP, TOWER_LIFT_DOWN, TOWER_SWITCH, WIND_LIFT = 13, 32, 50, 71
+L.execute(f"""
+local sd = makeSave({{false}}, {{ {{SaveId=1, JoinStatus=0}} }}, 8000, 1, true)
+local function stop(v) return {{ Value = v, value2 = 0, State = 0 }} end
+sd.Map = {{ mapGimmick = map({{
+  {{ {TOWER_OF_MYSIDIA}, {{ gimmickState = map({{ {{ {TOWER_LIFT_UP}, stop(1) }}, {{ {TOWER_LIFT_DOWN}, stop(0) }},
+                                             {{ {TOWER_SWITCH}, stop(1) }} }}) }} }},
+  {{ {WIND_SHRINE}, {{ gimmickState = map({{ {{ {WIND_LIFT}, stop(0) }} }}) }} }},
+}}) }}
+mgr.m_pGameSaveData = sd
+towerRows = sd.Map.mapGimmick
+""")
+L.execute("""
+function liftStop(m, uid)
+  local out
+  towerRows:ForEach(function(k, v)
+    if k:get() == m then v:get().gimmickState:ForEach(function(u, s) if u:get() == uid then out = s:get().Value end end) end
+  end)
+  return out
+end
+""")
+assert list(L.eval(f"G.ResetLifts({WIND_SHRINE})").values()) == ["3200:13 1 -> 0"], "the player's own map stays"
+assert L.eval(f"liftStop({TOWER_OF_MYSIDIA}, {TOWER_LIFT_UP})") == 0
+assert L.eval(f"liftStop({TOWER_OF_MYSIDIA}, {TOWER_SWITCH})") == 1, "not a lift of the table"
+assert L.eval(f"liftStop({WIND_SHRINE}, {WIND_LIFT})") == 0
+assert list(L.eval("G.ResetLifts(1000)").values()) == ["3070:71 0 -> 1"], "its first-visit stop is 1"
+assert len(L.eval("G.ResetLifts(1000)")) == 0, "nothing more to put back"
+L.execute("mgr.m_pGameSaveData = nil")
+assert len(L.eval("G.ResetLifts(1000)")) == 0, "no save: nothing"
+
+# The live stops, for the log.
+L.execute(f"""
+local function lift(uid, stop) return {{ m_UniqueId = uid, m_CurrentSplineKeyIndex = stop,
+    IsValid = function() return true end, HasAnyInternalFlags = function() return false end,
+    HasAnyFlags = function() return false end }} end
+prevFindAllOf113 = FindAllOf
+function FindAllOf(c)
+  if c == "BP_MapGimmick_Floor_Elevator_Interact2_004_C" then return {{ lift({TOWER_LIFT_DOWN}, 0), lift({TOWER_LIFT_UP}, 1) }} end
+  return prevFindAllOf113(c)
+end
+""")
+assert L.eval(f"G.LiftStops({TOWER_OF_MYSIDIA})") == "13 at 1, 32 at 0"
+assert L.eval(f"G.LiftStops({WIND_SHRINE})") is None, "none loaded"
+assert L.eval("G.LiftStops(1000)") is None, "no lifts here"
+L.execute("FindAllOf = prevFindAllOf113")
+
+# G.LIFT_RESETS is data/game/lifts.tsv's saved Interact2 lifts, in maps whose only way in from
+# another map is the first visit's door (point 0 in transitions.tsv), with their first-visit stop.
+import csv
+with open(paths.REPO / "data/game/transitions.tsv", encoding="utf-8") as f:
+    transitions = list(csv.DictReader(f, delimiter="\t"))
+ways_in = {}
+for r in transitions:
+    into = [r["toMap"]] + [d.split("[")[0].strip() for d in r["destinations"].split(";")]
+    for m in into:
+        if m and m != r["map"]:
+            ways_in.setdefault(m, set()).add(r["toPoint"])
+want = {}
+with open(paths.REPO / "data/game/lifts.tsv", encoding="utf-8") as f:
+    for r in csv.DictReader(f, delimiter="\t"):
+        if "Interact2" in r["class"] and r["saved"] == "true" and ways_in.get(r["map"]) == {"0"}:
+            want.setdefault(int(r["map"]), {})[int(r["uid"])] = int(r["init"])
+have = {m: dict(lifts.items()) for m, lifts in L.eval("G.LIFT_RESETS").items()}
+assert have == want, (have, want)
+print("lifts: ok")
+
 # The table matches maps.tsv: each continent's maps, by island.
 import csv
 islands = {"MagiNationMysidia": "mysidia"}

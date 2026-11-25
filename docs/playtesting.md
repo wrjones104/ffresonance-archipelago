@@ -2,20 +2,21 @@
 
 Only open items that still need to be tested in game live here. Once tested, record the results in [docs/playtesting_archive.md](playtesting_archive.md) and remove completed items from this file. Automated suite tests are documented in [tests/README.md](../tests/README.md).
 
-Current builds: mod `0.62.2` (`5d54d782`), world `0.31.2` (`177b8160`). Released before them: v0.31.1 to a few testers (mod `55040fae`, world `937b4b93`, 2026-11-24); v0.31.0 public (mod `7b90595e`, world `66073f7e`, 2026-11-21). Rounds 104 to 111 were built as mod 0.63.0 and world 0.32.0.
+Current builds: mod `0.62.2` (`3b66f1dc`), world `0.31.2` (`177b8160`). Released before them: v0.31.1 to a few testers (mod `55040fae`, world `937b4b93`, 2026-11-24); v0.31.0 public (mod `7b90595e`, world `66073f7e`, 2026-11-21). Rounds 104 to 111 were built as mod 0.63.0 and world 0.32.0.
 
 Install: copy `FFRArchipelago/Scripts`, and copy `dist/ff_resonance.apworld` into `custom_worlds`. Close the Launcher and every client window first. Generate a new seed with `include_aileens_forge: true` (side quests on or off): the round 105 save holds two of each early item. Send the `[FFRAP]` lines of `UE4SS.log`. If the game crashes, send `Mods/FFRArchipelago/ap_trace.txt`, the crash folder, and the log before starting the game again.
 
-## Round 112: the vision Moogle's scene, the airship's place, quest logic
+## Rounds 112 and 113: the vision Moogle's scene, the airship's place, quest logic, lifts
 
 Install: copy `FFRArchipelago/Scripts`, and the new `dist/ff_resonance.apworld`. Generate a new seed with side quests on and `start_with_airship: false`.
 
-- [ ] Builds: the log says `version 0.62.2 (build 5d54d782)`, and the client prints `world version 0.31.2 (build 177b8160)`.
+- [ ] Builds: the log says `version 0.62.2 (build 3b66f1dc)`, and the client prints `world version 0.31.2 (build 177b8160)`.
 - [ ] Talk to a vision Moogle outside Grandport for the first time. No scene plays; the upgrade screen opens. The log has `vision moogle: flag 145 set` once.
 - [ ] Load a save from v0.31.1 and talk to a Moogle: the same, and the log has `flag 145 set` alone.
-- [ ] Receive the Airship while on the world map away from your start. Change maps if needed. It stands at your start, and the log has `airship: on the world map at the start`, or `away from the start, moved there: ...`.
+- [ ] Receive the Airship on the world map, away from your start. It stands at your start, and stays there after you go into a town and come out. The log has `airship: on the world map at the start`, or `away from the start, moved there: ...` with what the save had.
 - [ ] The spoiler log, or the tracker, puts "Dirnado - World Map - Shiny on Far-SW Headland West of Sanctum of Onion Knight" after the Airship, Token Legacy and Errand's End after the Throne Room Key, and Beyond the Blue after 4 party members.
-- [ ] The Crystal Tower: if a tester still finds the top closed with the lock's counts met (the Seed tab of the Archipelago page shows them), send the log. The log has `final boss lock: sealed (...)` or `open (...)`.
+- [ ] The Tower of Mysidia: ride the lift up, then fast travel out from the top. Come back in by the door. The lift is at the bottom again and takes you up. The log has `lifts: back at their first-visit stops: 3200:13 1 -> 0` when you leave, and `lifts on map 3200: 13 at 0, ...` when you come back. If the lift is still at the top, send the log: the `lifts on map` lines show what the game read.
+- [ ] The Wind Shrine, the same way: ride a lift, fast travel out, come back in by the door. Each lift is where it was on your first visit.
 
 ## Round 111: a full run on the new start
 

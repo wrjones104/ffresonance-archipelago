@@ -6347,6 +6347,70 @@ function G.WakeShipyardElevators()
     return woke
 end
 
+-- Round 113 (the user): a lift with m_IsSave keeps its stop (spline point index) in the save, in
+-- Map.mapGimmick{map}.gimmickState{uid}, and moves only when ridden. The game puts some lifts at a
+-- stop when the player arrives at a given point, not all and not at every point. In the Tower of
+-- Mysidia, lift 13 goes up; a fast travel out from the top and back in by the door (point 0) left
+-- it at its top, as the game resets it only at the bottom save point and from the way down. In
+-- each map here the only way in from another map is the door a first visit uses (point 0). So
+-- while the player is on another map, each lift is put back at its first-visit stop
+-- (m_InitStepIndex), and the game's own arrival rules then run as on a first visit.
+-- data/game/lifts.tsv (tools/lift_audit.py): map -> { lift uid = first-visit stop }.
+G.LIFT_RESETS = {
+    [3070] = { [41] = 0, [68] = 0, [69] = 0, [70] = 0, [71] = 1, [72] = 0, [73] = 0, [74] = 1 },  -- Wind Shrine
+    [3110] = { [72] = 0 },                                                                          -- Water Shrine
+    [3200] = { [13] = 0, [32] = 0 },                                                                -- Tower of Mysidia
+    [3240] = { [14] = 0, [24] = 0 },                                                                -- Gronoa Shrine
+    [3250] = { [96] = 0, [116] = 0, [117] = 0, [118] = 0, [119] = 0, [120] = 0 },                   -- Sanctissimus Shrine
+}
+G.LIFT_CLASSES = {
+    "BP_MapGimmick_Floor_Elevator_Interact2_001_C", "BP_MapGimmick_Floor_Elevator_Interact2_002_C",
+    "BP_MapGimmick_Floor_Elevator_Interact2_003_C", "BP_MapGimmick_Floor_Elevator_Interact2_004_C",
+}
+
+-- Puts the saved stop of each lift in G.LIFT_RESETS back at its first-visit stop, on every map
+-- but `here`. Returns a part per lift moved ("3200:13 1 -> 0"). A lift never used has no row.
+function G.ResetLifts(here)
+    local moved, sd = {}, G.SaveData()
+    if not sd then return moved end
+    pcall(function()
+        sd.Map.mapGimmick:ForEach(function(key, value)
+            local m = Int(key:get())
+            local lifts = G.LIFT_RESETS[m]
+            if not lifts or m == here then return end
+            value:get().gimmickState:ForEach(function(uidKey, saved)
+                local uid, row = Int(uidKey:get()), saved:get()
+                local stop = lifts[uid]
+                if stop and Int(row.Value) ~= stop then
+                    moved[#moved + 1] = string.format("%d:%d %s -> %d", m, uid, tostring(Int(row.Value)), stop)
+                    row.Value = stop
+                end
+            end)
+        end)
+    end)
+    table.sort(moved)
+    return moved
+end
+
+-- The live stop of each G.LIFT_RESETS lift loaded on this map ("13 at 0, 32 at 0"), or nil.
+function G.LiftStops(mapId)
+    local lifts, parts = G.LIFT_RESETS[mapId], {}
+    if not lifts then return nil end
+    for _, class in ipairs(G.LIFT_CLASSES) do
+        local ok, all = pcall(FindAllOf, class)
+        for _, a in ipairs(ok and all or {}) do
+            if Alive(a) then
+                local uid, stop
+                pcall(function() uid, stop = Int(a.m_UniqueId), Int(a.m_CurrentSplineKeyIndex) end)
+                if uid and lifts[uid] then parts[#parts + 1] = uid .. " at " .. tostring(stop) end
+            end
+        end
+    end
+    if #parts == 0 then return nil end
+    table.sort(parts)
+    return table.concat(parts, ", ")
+end
+
 -- -------------------------------------------------------------------------------------------
 -- The Archipelago page: an entry in the main menu (IDEAS.md idea 38, rounds 82 and 83)
 -- -------------------------------------------------------------------------------------------

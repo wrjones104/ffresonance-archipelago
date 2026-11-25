@@ -1,0 +1,41 @@
+map	level	uid	class	saved	init	stops	rules
+2050	Town_04Dir_20_01	7	BP_MapGimmick_Floor_Elevator_Interact_002_C	true	0	-415,-2017	
+3030	Dng_02Lan_40_01	13	BP_MapGimmick_Floor_Elevator_009_C	false	0	6784,5374	
+3030	Dng_02Lan_40_01	14	BP_MapGimmick_Floor_Elevator_009_C	true	0	4423,3224	
+3060	Dng_04Dir_41_01	80	BP_MapGimmick_Floor_Elevator_Interact_002_C	true	0		
+3060	Dng_04Dir_41_01	81	BP_MapGimmick_Floor_Elevator_Interact_002_C	true	0	30,1638	
+3060	Dng_04Dir_41_01	82	BP_MapGimmick_Floor_Elevator_Interact_002_C	true	0	1638,40	
+3060	Dng_04Dir_41_01	83	BP_MapGimmick_Floor_Elevator_Interact_002_C	false	0	830,2510	
+3060	Dng_04Dir_41_02	72	BP_MapGimmick_Floor_Elevator_Interact_002_C	true	0	30,1638	
+3060	Dng_04Dir_41_02	73	BP_MapGimmick_Floor_Elevator_Interact_002_C	true	0	1630,38	
+3060	Dng_04Dir_41_02	74	BP_MapGimmick_Floor_Elevator_Interact_002_C	false	0	830,2510	
+3060	Dng_04Dir_41_02	75	BP_MapGimmick_Floor_Elevator_Interact_002_C	true	0		
+3060	Dng_04Dir_41_03	61	BP_MapGimmick_Floor_Elevator_Interact_002_C	true	0	1630,38	
+3061	Dng_04Dir_43_01	0	BP_MapGimmick_Floor_Elevator_Interact_002_C	false	0	-10,-2010	
+3070	Dng_04Dir_42_01	41	BP_MapGimmick_Floor_Elevator_Interact2_001_C	true	0	5602,8302	0:0,2:0
+3070	Dng_04Dir_42_01	67	BP_MapGimmick_Floor_Elevator_Interact2_001_C	false	1	-1198,2	3:1
+3070	Dng_04Dir_42_01	68	BP_MapGimmick_Floor_Elevator_Interact2_001_C	true	0	1992,1196	0:0,10000:0,10001:1
+3070	Dng_04Dir_42_01	69	BP_MapGimmick_Floor_Elevator_Interact2_001_C	true	0	2800,3192	0:0,10000:0,10001:1
+3070	Dng_04Dir_42_01	70	BP_MapGimmick_Floor_Elevator_Interact2_001_C	true	0	1592,2392	0:0,10000:0,10001:1
+3070	Dng_04Dir_42_01	71	BP_MapGimmick_Floor_Elevator_Interact2_001_C	true	1	802,2802	
+3070	Dng_04Dir_42_01	72	BP_MapGimmick_Floor_Elevator_Interact2_001_C	true	0	1206,3194,5200	
+3070	Dng_04Dir_42_01	73	BP_MapGimmick_Floor_Elevator_Interact2_001_C	true	0	1203,5203	10001:1
+3070	Dng_04Dir_42_01	74	BP_MapGimmick_Floor_Elevator_Interact2_001_C	true	1	2804,4802	
+3110	Dng_05Old_44_01	72	BP_MapGimmick_Floor_Elevator_Interact2_004_C	true	0	-3507,-6508	0:0,10000:0,10001:1
+3190	Dng_07Mys_42_01	1	BP_MapGimmick_Floor_Elevator_Child_C	true	0	5853,2252	
+3190	Dng_07Mys_42_01	3	BP_MapGimmick_Floor_Elevator_Child_C	true	0	4056,5851	
+3190	Dng_07Mys_42_01	4	BP_MapGimmick_Floor_Elevator_Child_C	true	0	4056,5856	
+3190	Dng_07Mys_42_01	32	BP_MapGimmick_Floor_Elevator_Child_C	true	0	4052,2253	
+3190	Dng_07Mys_42_01	33	BP_MapGimmick_Floor_Elevator_Child_C	true	0	4051,5851	
+3190	Dng_07Mys_42_01	37	BP_MapGimmick_Floor_Elevator_Child_C	true	0	4052,5856	
+3200	Dng_07Mys_43_01	13	BP_MapGimmick_Floor_Elevator_Interact2_004_C	true	0	4586,6586	2:0,10000:0
+3200	Dng_07Mys_43_01	32	BP_MapGimmick_Floor_Elevator_Interact2_004_C	true	0	10765,8365	1:0,10001:0
+3220	Dng_08Gro_40_01	47	BP_MapGimmick_Floor_Elevator001_C	true	0	3180,180	
+3240	Dng_08Gro_42_01	14	BP_MapGimmick_Floor_Elevator_Interact2_002_C	true	0	-5590,-8090	0:0,10000:0,10001:1
+3240	Dng_08Gro_42_01	24	BP_MapGimmick_Floor_Elevator_Interact2_002_C	true	0	-8100,-500	
+3250	Dng_08Gro_43_01	96	BP_MapGimmick_Floor_Elevator_Interact2_003_C	true	0	1145,2145	15:0,18:1
+3250	Dng_08Gro_43_01	116	BP_MapGimmick_Floor_Elevator_Interact2_003_C	true	0	150,650	15:0,18:1
+3250	Dng_08Gro_43_01	117	BP_MapGimmick_Floor_Elevator_Interact2_003_C	true	0	650,2650	15:0,18:1
+3250	Dng_08Gro_43_01	118	BP_MapGimmick_Floor_Elevator_Interact2_003_C	true	0	1650,1150	15:0,18:1
+3250	Dng_08Gro_43_01	119	BP_MapGimmick_Floor_Elevator_Interact2_003_C	true	0	2650,1650	15:0,18:1
+3250	Dng_08Gro_43_01	120	BP_MapGimmick_Floor_Elevator_Interact2_003_C	true	0	2150,3150	15:0,18:1

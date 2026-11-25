@@ -2982,10 +2982,11 @@ local storyBossFieldTicks = 0
 local STORY_BOSS_READY_TICKS = 2   -- seedExtrasTick runs every LOCKS_EVERY ticks: about 2 s
 -- When the Airship is an item, keep its parked position at the seed's start so receiving it in
 -- towns or constrained maps (like Grandport or Gronoa) does not place it somewhere unflyable.
--- Round 112 (a tester): an airship received on a Dirnado start came up in Zoldaad. The park only
--- writes the save; an airship the game shows before a map load stands where the game puts it. So
--- the first time one is on the world map after it came, one farther than AIRSHIP_HOME_NEAR from
--- the start is moved there (`watch`).
+-- Round 112 (the user's v0.31.1 run): an airship received on a Dirnado start came up near Zoldaad.
+-- The save was parked at Dilmagia, so the actor the game spawned stood elsewhere, and leaving the
+-- world map wrote its place back into the save. So the first time one is on the world map after it
+-- came, one farther than AIRSHIP_HOME_NEAR from the start is moved there and the save parked again
+-- (`watch`).
 local airshipCall = { save = nil, was = false, watch = false }
 local AIRSHIP_HOME_NEAR = 1000
 local function parkAirshipAtStart(why)
@@ -3010,7 +3011,8 @@ airshipItemTick = function()
     if count == 0 then return end
     airshipCall.watch = false
     log("airship: on the world map " .. (#moves > 0 and ("away from the start, moved there: " .. table.concat(moves, "; "))
-        or "at the start"))
+        or "at the start") .. "; the save had " .. game.AirshipState())
+    if #moves > 0 then parkAirshipAtStart("moved") end
 end
 
 -- Progressive Radar level comes from counting Magi-tenna (27006) items received, because the
@@ -3174,6 +3176,19 @@ seedExtrasTick = function()
         shipyardLogged = shipyardLogged or woke > 0
     else
         shipyardLogged = false
+    end
+    -- Round 113: lifts back at their first-visit stops on the other maps, once per map; on a lift
+    -- map, each lift's live stop whenever it changes (to tell the save's field is the stop).
+    local here = game.CurrentMap()
+    if seedSave and here and (here ~= state.liftMap or save.obj ~= state.liftSave) then
+        state.liftMap, state.liftSave, state.liftLine = here, save.obj, nil
+        local moved = game.ResetLifts(here)
+        if #moved > 0 then log("lifts: back at their first-visit stops: " .. table.concat(moved, ", ")) end
+    end
+    if seedSave and here and game.LIFT_RESETS[here] and game.OnField() then
+        local line = game.LiftStops(here)
+        if line and line ~= state.liftLine then log("lifts on map " .. here .. ": " .. line) end
+        state.liftLine = line or state.liftLine
     end
     local onBossMap = false
     if seedSave and seedCfg.bosses and game.OnField() and game.SyncStoryBossTrigger then

@@ -345,6 +345,25 @@ Along the same lines, I would also want an option for players to start with all 
 
 **Built in round 111 (mod build 2a01167a):** the chats wait for a unit not in the party until the start has marked them all played. The new start is on by default.
 
-**Round 111's full run (the user, v0.31.1):** the start, the chats and the run to the Crystal Tower's top went through, with no crash. A tester's airship came up in Zoldaad on a Dirnado start; round 112 (mod build 5d54d782) moves it to the start the first time it is on the world map after it came.
+**Round 111's full run (the user, v0.31.1):** the start, the chats and the run to the Crystal Tower's top went through, with no crash. The user's airship came up near Zoldaad on a Dirnado start: the game spawned the actor elsewhere and wrote that place over the park when the player left the world map. Round 112 (mod build 5d54d782) moves it to the start the first time it is on the world map after it came, and round 113 parks the save there again.
 
 **Left:** take out the prologue skip's wait for the autosave, or the skip itself, which still runs with `ffrap_newstart off` or before a seed is heard.
+
+## 53. Lifts: fast travel, and Mobliz Shipyard's last lift
+
+**From the user, 2026-11-25 (round 113).** In the Tower of Mysidia, a ride up and a fast travel out left the lift at the top for good. Could it happen elsewhere? And Mobliz Shipyard's third lift still does not work.
+
+**Built in round 113 (mod build 3b66f1dc):** a lift that keeps its stop in the save is put back at its first-visit stop while the player is on another map, in the five dungeons where that is always safe: the Tower of Mysidia, the Wind Shrine, the Water Shrine, the Gronoa Shrine and the Sanctissimus Shrine (`G.LIFT_RESETS`). `tools/lift_audit.py` reads every lift's stops and arrival rules from the levels and writes `data/game/lifts.tsv`. To test in game: the tower and the Wind Shrine after a fast travel out (docs/playtesting.md).
+
+**Known so far about the Shipyard (rounds 58 and 59, docs/playtesting_archive.md):**
+- Map 3060 has keypad lifts (`BP_MapGimmick_Floor_Elevator_Interact_002_C`) 72 to 75. 73 and 75 start switched off (`m_GimmickCondition 1`). The mod turns them on (`G.WakeShipyardElevators`).
+- 73 then works with a keypad beside it. 75 is on too, but it stands at the bottom and nothing at the top calls it, so chests 1 and 3 and shards 71 and 79 stay out of reach.
+- The lift's Blueprint has `CallSwitch(InArg, Direction)` and `m_IsCallSwitch`. In the level, 75's stops are not in the dump (no spline points read by the audit).
+- In the story, a scene with Lid asks for switch 16 (5 + 8 + 3 = 16, docs/progression.md), and a lift goes from off to on. That scene still plays.
+
+**The user's lead:** see what the switch 16 scene does to its lift (which rows and calls switch it on, and whether it calls the lift too), and do the same for 75.
+
+**To find out:**
+- Off-line: the switch 16 scene's talk rows (`C02_Moburizu_Switch_*`) and the switch actors in `Dng_04Dir_41_0*_GD` that target lifts (`switchData` in the save, `gimmickStateByTarget`). Which target list holds 75, if any.
+- In game: `ffrap_inspect` on 75 at the top, and `ffrap_snapshot` before and after the switch 16 scene (`tools/snapdiff.py`), to see which save rows change.
+- Whether a `CallSwitch` on 75 from Lua, with the player at the top, brings it up.

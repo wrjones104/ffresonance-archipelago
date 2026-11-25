@@ -1631,11 +1631,11 @@ The user played (2026-11-23). Passed: the builds, the spoiler's eight forge loca
 
 **The user's run (2026-11-24, `UE4SS.log`):** a Dirnado seed on foot, 2 hours 25 minutes from New Game (Archipelago) to the Crystal Tower's top. The new start went as in round 110: `chats wait for unit 1002: 112 rows`, the put-back with `112 chat rows`, the move to Dilmagia, and no chat logged. The Airship came at 21:18 near Dilmagia and was parked at the start, then flown. 8 bosses with their fragments, 11 visions, 5 of 6 party members. At story 8040 the final boss lock sealed the last climb (`characters 5/6, visions 11/12, Crystal Fragments 8/20`) and said so. No crash.
 
-**From testers (the user, 2026-11-24):**
+**From the user and testers (2026-11-24; some are the user's own, some testers', as the user said in round 113):**
 - "Dirnado - World Map - Shiny on Far-SW Headland West of Sanctum of Onion Knight" (shiny 1000:4) needs the airship.
-- "My airship spawned in Zoldaad when I received it, but I started in Dirnado." No log. The user's own run parked it at the start.
+- "My airship spawned in Zoldaad when I received it, but I started in Dirnado." This was the user's own run, the log above (round 113).
 - After the first talk with any vision Moogle, a scene plays: Grandport's, with the player left out of bounds on any other map.
-- "Impossible to get to the top of Mysidia Tower", with a screenshot: chapter 8, "Go to the top of the tower". That is the Crystal Tower, and the user's own log shows the final boss lock sealing it at story 8040 with its message. Not changed: to ask the testers whether they had the lock's characters, visions and fragments.
+- "Impossible to get to the top of Mysidia Tower", with a screenshot: chapter 8, "Go to the top of the tower". Round 112 took it for the Crystal Tower's final boss lock. Wrong: it is the Tower of Mysidia's lift (round 113), and the chapter 8 objective is the story's own, shown all the time at story 8000.
 - Token Legacy needs the Throne Room Key.
 - Beyond the Blue needs a party of 4.
 
@@ -1648,3 +1648,23 @@ The user played (2026-11-23). Passed: the builds, the spoiler's eight forge loca
 - **The Moogle:** a seed's save gets flags 144 and 145, so no Moogle plays Grandport's scene. A v0.31.1 save that has 144 gets 145.
 - **The airship:** after it comes, the first time an airship is on the world map, one more than 1000 from the start is moved there (`game.MoveAirships`, which the new start uses too), with an `airship: on the world map ...` line.
 - **Logic:** shiny 1000:4 needs the Airship (`data/airship_only.tsv`). Token Legacy needs the Throne Room Key (`data/gates.tsv`), and a quest that starts after another takes its keys too (Errand's End and its second reward). Beyond the Blue needs a party of 4 (`party` in `data/quests.tsv`): the starting party counts, and with party members not shuffled and fewer than 4 at the start it is filler only.
+
+### Round 113 (the user, on round 112's reports; mod 0.62.2 build 3b66f1dc, apworld 0.31.2 build 177b8160)
+
+**From the user (2026-11-25):**
+- The round 112 reports were partly the user's and partly testers'. The airship one was the user's, with the log of round 112.
+- **The airship:** at the start it showed greyed out on the map in Dirnado, where it should be. When the item came, it stood near Zoldaad, where the user had not been. Fast travel to it worked. Not what the feed said.
+- **The Tower of Mysidia (map 3200), reproduced by the user:** a lift takes the player to the top, where Fina's Psyche and Tellus are. Take it up, fast travel out, and the lift stays at the top: the top can never be reached again. "Go to the top of the tower" is the story's objective at story 8000, always shown.
+- Could the same happen in Siren's Tower, Mobliz Shipyard, the Wind Shrine and other places? And the Shipyard's last lift is still to do (to IDEAS.md, idea 53).
+
+**Found in the log:** at 21:18 the Airship came on the world map and the save was parked at Dilmagia (`airship: parked at the start (received), (13190, 3210, -12)`). So the actor the game spawned stood elsewhere, and leaving the world map (21:20, into Dilmagia) wrote its place back into the save. Round 112's build already moves the actor to the start the first time it is on the world map after it came.
+
+**Found off-line (`tools/lift_audit.py`, `data/game/lifts.tsv`):**
+- A lift with `m_IsSave` keeps its stop (the spline point index, `SetGimmickState(m_CurrentSplineKeyIndex)`) in the save, and at a map load starts there, or at `m_InitStepIndex` on a first visit. A "ride" lift (`BP_MapGimmick_Floor_Elevator_Interact2`) moves only when ridden or called; nothing brings it back. Its `m_TransitionDataList` puts it at a stop when the player arrives at a given point; an arrival with no rule keeps the saved stop.
+- **The Tower of Mysidia:** lift 13 (z 4586 to 6586) is the way up; a warp at its top puts the player at point 1, by lift 32's top (z 10765). Lift 32 is the way down, and the warp at its bottom puts the player at point 2, by lift 13's bottom. Lift 13 goes to its bottom on arrival at point 2 or at the bottom save point (10000), but not at the door from the world map (point 0). In the game a player always leaves by the way down, which puts it back. Fast travel out from the top, then the door, left it at its top.
+- The same gap is in four more dungeons: the Wind Shrine (lifts 71, 72 and 74 have no rules at all, 41 none for the save points), the Water Shrine, the Gronoa Shrine (lift 24 has none) and the Sanctissimus Shrine (six lifts, rules only for two inner points). In all five the only way in from another map is the door a first visit uses (point 0).
+- Not changed: the step-on lifts (`BP_MapGimmick_Floor_Elevator`, in Siren's Tower, the Arcane Library and a Gronoa dungeon) have an entry box that calls them to the player. The keypad lifts (`..._Interact`, Mobliz Shipyard, Dilmagia) have call switches. Mobliz Shipyard also has a second door in (point 2).
+
+**Round 113 build (mod 0.62.2 build 3b66f1dc, apworld 0.31.2 build 177b8160, the apworld unchanged):**
+- **Lifts:** while the player is on another map, each ride lift of those five dungeons is put back at its first-visit stop in the save (`G.LIFT_RESETS`, from `data/game/lifts.tsv`), once per map change. The game's own arrival rules then run on top, as on a first visit. The log has `lifts: back at their first-visit stops: 3200:13 1 -> 0`, and on a lift map `lifts on map 3200: 13 at 0, 32 at 0` each time a lift's live stop changes. Not seen in game: that the save row's `Value` is the stop. The second line tells.
+- **The airship:** when the actor is moved to the start, the save is parked there again too, and the line says what the save had (`the save had placed true, riding false, ... at (x, y, z)`).
