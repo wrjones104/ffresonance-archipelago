@@ -6,15 +6,11 @@ Current builds: mod `0.62.2` (`901ca04e`), world `0.31.2` (`177b8160`). Released
 
 Install: copy `FFRArchipelago/Scripts`, and copy `dist/ff_resonance.apworld` into `custom_worlds`. Close the Launcher and every client window first. Generate a new seed with `include_aileens_forge: true` (side quests on or off): the round 105 save holds two of each early item. Send the `[FFRAP]` lines of `UE4SS.log`. If the game crashes, send `Mods/FFRArchipelago/ap_trace.txt`, the crash folder, and the log before starting the game again.
 
-## Rounds 112 to 114: the vision Moogle's scene, the airship's place, quest logic, lifts and rafts
+## Rounds 113 and 114: lifts and rafts after a fast travel out
 
-Install: copy `FFRArchipelago/Scripts`, and the new `dist/ff_resonance.apworld`. Generate a new seed with side quests on and `start_with_airship: false`.
+Install: copy `FFRArchipelago/Scripts` only (the apworld is round 112's). Your round 112 seed is fine.
 
 - [ ] Builds: the log says `version 0.62.2 (build 901ca04e)`, and the client prints `world version 0.31.2 (build 177b8160)`.
-- [ ] Talk to a vision Moogle outside Grandport for the first time. No scene plays; the upgrade screen opens. The log has `vision moogle: flag 145 set` once.
-- [ ] Load a save from v0.31.1 and talk to a Moogle: the same, and the log has `flag 145 set` alone.
-- [ ] Receive the Airship on the world map, away from your start. It stands at your start, and stays there after you go into a town and come out. The log has `airship: on the world map at the start`, or `away from the start, moved there: ...` with what the save had.
-- [ ] The spoiler log, or the tracker, puts "Dirnado - World Map - Shiny on Far-SW Headland West of Sanctum of Onion Knight" after the Airship, Token Legacy and Errand's End after the Throne Room Key, and Beyond the Blue after 4 party members.
 - [ ] The Wind Shrine, as in the Tower of Mysidia: ride a lift, fast travel out, come back in by the door. Each lift is where it was on your first visit. The log has `rides: back as on a first visit: 3070:...` when you leave, and `rides on map 3070: lifts ...` when you come back.
 - [ ] The Water Shrine, the Gronoa Shrine and the Sanctissimus Shrine: the same, if you pass them.
 - [ ] Cave of Waters: cross on a raft, fast travel out, come back in by the door. A raft waits at the first dock again. The log has `rides: back as on a first visit: 3080 raft <n> -> none` when you leave, and `rides on map 3080: last raft none` when you come back, then the new raft once you ride. If no raft is at any dock, send the log.
@@ -25,9 +21,6 @@ Install: copy `FFRArchipelago/Scripts`, and the new `dist/ff_resonance.apworld`.
 
 Install: copy `FFRArchipelago/Scripts` only (the apworld is round 108's). The new start is on by default now; `ffrap_newstart off` goes back to the prologue skip. Play as far as you can, and tick the older checks below as you pass them. Send the whole `[FFRAP]` part of `UE4SS.log` at the end, or after anything odd.
 
-- [x] Builds: the log says `version 0.63.0 (build 2a01167a)`.
-- [x] New Game (Archipelago): no Active Time Chat plays at the start. The log has `newstart: ok   chats wait for unit <id>: <n> rows`, and later a `put back` line ending in `<n> chat rows`.
-- [ ] Active Time Chats stay quiet for the rest of the run, as they do after the prologue skip. Tell me if one plays, and its title.
 - [ ] The run itself: tell me where it went wrong, felt off, or got stuck, with the map and what you were doing.
 
 ## Round 108: key items, fast travel into a locked continent, two Zoldaad shinies

@@ -1672,7 +1672,7 @@ The user played (2026-11-23). Passed: the builds, the spoiler's eight forge loca
 ### Round 114 (round 113's build tried: mod 0.62.2 build 3b66f1dc, apworld 0.31.2 build 177b8160)
 
 **From the user (2026-11-25):**
-- The builds were right (ticked on the checklist).
+- **Ticked on the checklist (round 112's and 113's checks):** the builds; no scene at a first vision Moogle outside Grandport, and a v0.31.1 save the same; the Airship received away from the start stood at the start and stayed there after a town; the spoiler log or tracker put the Far-SW Headland shiny after the Airship, Token Legacy and Errand's End after the Throne Room Key, and Beyond the Blue after 4 party members. From round 111: Active Time Chats stayed quiet for the whole run.
 - **The Tower of Mysidia's lift now resets** when the player leaves and comes back. So the save row's `Value` is the lift's stop, as round 113 guessed.
 - The other lift dungeons are for the user's next round.
 - **A player: the boats in Cave of Waters and the Water Shrine** do the same: they stay where they were left.
