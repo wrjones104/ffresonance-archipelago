@@ -158,13 +158,14 @@ function G.AddOptionRows(say, current) return true, "rows", 6 end
 G.SHIPYARD_MAP = 3060
 function G.WakeShipyardElevators() G.shipyardCalls = (G.shipyardCalls or 0) + 1; return 0 end
 G.LIFT_RESETS = { [3200] = { [13] = 0 } }
+G.RAFT_MAPS = { [3080] = true }
 G.liftResets = {}
-function G.ResetLifts(here)
+function G.ResetRides(here)
     G.liftResets[#G.liftResets + 1] = here
     if here ~= 3200 and G.liftPending then G.liftPending = false; return { "3200:13 1 -> 0" } end
     return {}
 end
-function G.LiftStops(m) return G.liftStops end
+function G.RideState(m) if m == 3200 then return G.liftStops end end
 G.TOWER_TOP = { map = 3280, x = 15890, y = -55300, reach = 500 }
 function G.SealTowerTop(sealed) G.sealed = sealed; return 0 end
 function G.UnlockVision() return "ok", "" end
@@ -1990,27 +1991,27 @@ tick(12)
 assert list(G.log.values()).count("item30002x1") == 1, "once per save loaded"
 
 # Round 113 (the user): the Tower of Mysidia's lift up waited at its top after a fast travel out.
-# Lifts go back to their first-visit stops once per map the player is on; on a lift map, each
-# lift's live stop is logged when it changes.
+# Lifts (and, round 114, rafts) go back as on a first visit once per map the player is on; on
+# their map, the live state is logged when it changes.
 TOWER_OF_MYSIDIA = 3200
 L.execute(CAPTURE)
 resets_before = len(G.liftResets)
 tick(12)
 assert len(G.liftResets) == resets_before, "once per map, not each tick"
 G.map = TOWER_OF_MYSIDIA
-L.execute("G.liftStops = '13 at 0, 32 at 0'")
+L.execute("G.liftStops = 'lifts 13 at 0, 32 at 0'")
 tick(12)
 assert list(G.liftResets.values())[-1] == TOWER_OF_MYSIDIA
 lines = list(L.eval("logged").values())
-assert sum("lifts on map 3200: 13 at 0, 32 at 0" in line for line in lines) == 1, lines
-L.execute("G.liftStops = '13 at 1, 32 at 0'")
+assert sum("rides on map 3200: lifts 13 at 0, 32 at 0" in line for line in lines) == 1, lines
+L.execute("G.liftStops = 'lifts 13 at 1, 32 at 0'")
 tick(12)
-assert any("lifts on map 3200: 13 at 1, 32 at 0" in line for line in L.eval("logged").values())
+assert any("rides on map 3200: lifts 13 at 1, 32 at 0" in line for line in L.eval("logged").values())
 G.map = 1000
 L.execute("G.liftPending = true")
 tick(12)
 assert list(G.liftResets.values())[-1] == 1000
-assert any("lifts: back at their first-visit stops: 3200:13 1 -> 0" in line for line in L.eval("logged").values())
+assert any("rides: back as on a first visit: 3200:13 1 -> 0" in line for line in L.eval("logged").values())
 
 inbox("seed\tS57b:0:1\ncfg\topenworld\t1\n", "w")
 L, G = boot5("SD_CHOCOBO2", "0", {})

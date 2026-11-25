@@ -62,6 +62,9 @@ function map(pairsList)
   local m = { list = pairsList }
   function m:ForEach(fn) for _, kv in ipairs(self.list) do
     fn({ get = function() return kv[1] end }, { get = function() return kv[2] end }) end end
+  function m:Remove(key)
+    for i, kv in ipairs(self.list) do if kv[1] == key then table.remove(self.list, i) return end end
+  end
   return m
 end
 local saveBase = struct("SaveGame", {}, objectClass)
@@ -2141,9 +2144,10 @@ assert len(L.eval("G.UnvisitLocked()")) == 0, "no save: nothing"
 
 # Round 113 (the user): lifts keep their stop in the save (Map.mapGimmick{map}.gimmickState{uid}).
 # Off their map, the lifts in G.LIFT_RESETS go back to their first-visit stop. Other gimmicks' rows
-# and the map the player is on stay.
-WIND_SHRINE, TOWER_OF_MYSIDIA = 3070, 3200
-TOWER_LIFT_UP, TOWER_LIFT_DOWN, TOWER_SWITCH, WIND_LIFT = 13, 32, 50, 71
+# and the map the player is on stay. Round 114: the last raft of Cave of Waters and the Water
+# Shrine is taken out too (a first visit has none); another map's row stays.
+WIND_SHRINE, TOWER_OF_MYSIDIA, CAVE_OF_WATERS, WATER_SHRINE, RAFT_TOWN = 3070, 3200, 3080, 3110, 2090
+TOWER_LIFT_UP, TOWER_LIFT_DOWN, TOWER_SWITCH, WIND_LIFT, CAVE_RAFT, SHRINE_RAFT = 13, 32, 50, 71, 47, 66
 L.execute(f"""
 local sd = makeSave({{false}}, {{ {{SaveId=1, JoinStatus=0}} }}, 8000, 1, true)
 local function stop(v) return {{ Value = v, value2 = 0, State = 0 }} end
@@ -2151,6 +2155,9 @@ sd.Map = {{ mapGimmick = map({{
   {{ {TOWER_OF_MYSIDIA}, {{ gimmickState = map({{ {{ {TOWER_LIFT_UP}, stop(1) }}, {{ {TOWER_LIFT_DOWN}, stop(0) }},
                                              {{ {TOWER_SWITCH}, stop(1) }} }}) }} }},
   {{ {WIND_SHRINE}, {{ gimmickState = map({{ {{ {WIND_LIFT}, stop(0) }} }}) }} }},
+}}), lastRideRaftMap = map({{
+  {{ {CAVE_OF_WATERS}, {{ UniqueID = {CAVE_RAFT} }} }}, {{ {WATER_SHRINE}, {{ UniqueID = {SHRINE_RAFT} }} }},
+  {{ {RAFT_TOWN}, {{ UniqueID = 15 }} }},
 }}) }}
 mgr.m_pGameSaveData = sd
 towerRows = sd.Map.mapGimmick
@@ -2164,14 +2171,21 @@ function liftStop(m, uid)
   return out
 end
 """)
-assert list(L.eval(f"G.ResetLifts({WIND_SHRINE})").values()) == ["3200:13 1 -> 0"], "the player's own map stays"
+assert L.eval(f"G.RideState({WATER_SHRINE})") == "last raft 66", "no lift loaded: the raft alone"
+assert L.eval("G.RideState(1000)") is None, "no lifts or rafts here"
+assert list(L.eval(f"G.ResetRides({WATER_SHRINE})").values()) == [
+    "3070:71 0 -> 1", "3080 raft 47 -> none", "3200:13 1 -> 0"], "the Wind Shrine lift's first-visit stop is 1"
+assert L.eval(f"G.LastRaft({CAVE_OF_WATERS})") is None
+assert L.eval(f"G.LastRaft({WATER_SHRINE})") == SHRINE_RAFT, "the player's own map stays"
+assert L.eval(f"G.LastRaft({RAFT_TOWN})") == 15, "not a raft map of the table"
 assert L.eval(f"liftStop({TOWER_OF_MYSIDIA}, {TOWER_LIFT_UP})") == 0
 assert L.eval(f"liftStop({TOWER_OF_MYSIDIA}, {TOWER_SWITCH})") == 1, "not a lift of the table"
-assert L.eval(f"liftStop({WIND_SHRINE}, {WIND_LIFT})") == 0
-assert list(L.eval("G.ResetLifts(1000)").values()) == ["3070:71 0 -> 1"], "its first-visit stop is 1"
-assert len(L.eval("G.ResetLifts(1000)")) == 0, "nothing more to put back"
+assert L.eval(f"liftStop({WIND_SHRINE}, {WIND_LIFT})") == 1
+assert list(L.eval("G.ResetRides(1000)").values()) == ["3110 raft 66 -> none"], "the player's own map waited"
+assert len(L.eval("G.ResetRides(1000)")) == 0, "nothing more to put back"
 L.execute("mgr.m_pGameSaveData = nil")
-assert len(L.eval("G.ResetLifts(1000)")) == 0, "no save: nothing"
+assert len(L.eval("G.ResetRides(1000)")) == 0, "no save: nothing"
+assert L.eval(f"G.RideState({WATER_SHRINE})") == "last raft none"
 
 # The live stops, for the log.
 L.execute(f"""
@@ -2184,9 +2198,9 @@ function FindAllOf(c)
   return prevFindAllOf113(c)
 end
 """)
-assert L.eval(f"G.LiftStops({TOWER_OF_MYSIDIA})") == "13 at 1, 32 at 0"
-assert L.eval(f"G.LiftStops({WIND_SHRINE})") is None, "none loaded"
-assert L.eval("G.LiftStops(1000)") is None, "no lifts here"
+assert L.eval(f"G.RideState({TOWER_OF_MYSIDIA})") == "lifts 13 at 1, 32 at 0"
+assert L.eval(f"G.RideState({WIND_SHRINE})") is None, "none loaded"
+assert L.eval("G.RideState(1000)") is None, "no lifts here"
 L.execute("FindAllOf = prevFindAllOf113")
 
 # G.LIFT_RESETS is data/game/lifts.tsv's saved Interact2 lifts, in maps whose only way in from

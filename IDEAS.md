@@ -349,11 +349,13 @@ Along the same lines, I would also want an option for players to start with all 
 
 **Left:** take out the prologue skip's wait for the autosave, or the skip itself, which still runs with `ffrap_newstart off` or before a seed is heard.
 
-## 53. Lifts: fast travel, and Mobliz Shipyard's last lift
+## 53. Lifts and rafts after fast travel, and Mobliz Shipyard's last lift
 
 **From the user, 2026-11-25 (round 113).** In the Tower of Mysidia, a ride up and a fast travel out left the lift at the top for good. Could it happen elsewhere? And Mobliz Shipyard's third lift still does not work.
 
-**Built in round 113 (mod build 3b66f1dc):** a lift that keeps its stop in the save is put back at its first-visit stop while the player is on another map, in the five dungeons where that is always safe: the Tower of Mysidia, the Wind Shrine, the Water Shrine, the Gronoa Shrine and the Sanctissimus Shrine (`G.LIFT_RESETS`). `tools/lift_audit.py` reads every lift's stops and arrival rules from the levels and writes `data/game/lifts.tsv`. To test in game: the tower and the Wind Shrine after a fast travel out (docs/playtesting.md).
+**Built in round 113 (mod build 3b66f1dc):** a lift that keeps its stop in the save is put back at its first-visit stop while the player is on another map, in the five dungeons where that is always safe: the Tower of Mysidia, the Wind Shrine, the Water Shrine, the Gronoa Shrine and the Sanctissimus Shrine (`G.LIFT_RESETS`). `tools/lift_audit.py` reads every lift's stops and arrival rules from the levels and writes `data/game/lifts.tsv`. The tower works (round 114). To test in game: the other four after a fast travel out (docs/playtesting.md).
+
+**Rafts (a player, round 114):** the boats in Cave of Waters and the Water Shrine stayed where they were left too. The save keeps the last raft ridden per map (`Map.lastRideRaftMap`); the mod takes that row out while the player is elsewhere (mod build 901ca04e). A survey of the rest of what keeps its place (round 114 in docs/playtesting_archive.md): switch floors and turning bridges (Cave of Waters, the Water Shrine, the Weapons Factory) and one falling floor (Kolobos Ruins) are left alone for now, as a reset would undo their puzzles. They are on the checklist.
 
 **Known so far about the Shipyard (rounds 58 and 59, docs/playtesting_archive.md):**
 - Map 3060 has keypad lifts (`BP_MapGimmick_Floor_Elevator_Interact_002_C`) 72 to 75. 73 and 75 start switched off (`m_GimmickCondition 1`). The mod turns them on (`G.WakeShipyardElevators`).

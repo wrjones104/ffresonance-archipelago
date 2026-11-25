@@ -3177,17 +3177,17 @@ seedExtrasTick = function()
     else
         shipyardLogged = false
     end
-    -- Round 113: lifts back at their first-visit stops on the other maps, once per map; on a lift
-    -- map, each lift's live stop whenever it changes (to tell the save's field is the stop).
+    -- Rounds 113 and 114: lifts and rafts back as on a first visit on the other maps, once per map;
+    -- on their map, the lifts' live stops and the last raft whenever they change.
     local here = game.CurrentMap()
     if seedSave and here and (here ~= state.liftMap or save.obj ~= state.liftSave) then
         state.liftMap, state.liftSave, state.liftLine = here, save.obj, nil
-        local moved = game.ResetLifts(here)
-        if #moved > 0 then log("lifts: back at their first-visit stops: " .. table.concat(moved, ", ")) end
+        local moved = game.ResetRides(here)
+        if #moved > 0 then log("rides: back as on a first visit: " .. table.concat(moved, ", ")) end
     end
-    if seedSave and here and game.LIFT_RESETS[here] and game.OnField() then
-        local line = game.LiftStops(here)
-        if line and line ~= state.liftLine then log("lifts on map " .. here .. ": " .. line) end
+    if seedSave and here and game.OnField() then
+        local line = game.RideState(here)
+        if line and line ~= state.liftLine then log("rides on map " .. here .. ": " .. line) end
         state.liftLine = line or state.liftLine
     end
     local onBossMap = false

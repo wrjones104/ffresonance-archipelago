@@ -1668,3 +1668,25 @@ The user played (2026-11-23). Passed: the builds, the spoiler's eight forge loca
 **Round 113 build (mod 0.62.2 build 3b66f1dc, apworld 0.31.2 build 177b8160, the apworld unchanged):**
 - **Lifts:** while the player is on another map, each ride lift of those five dungeons is put back at its first-visit stop in the save (`G.LIFT_RESETS`, from `data/game/lifts.tsv`), once per map change. The game's own arrival rules then run on top, as on a first visit. The log has `lifts: back at their first-visit stops: 3200:13 1 -> 0`, and on a lift map `lifts on map 3200: 13 at 0, 32 at 0` each time a lift's live stop changes. Not seen in game: that the save row's `Value` is the stop. The second line tells.
 - **The airship:** when the actor is moved to the start, the save is parked there again too, and the line says what the save had (`the save had placed true, riding false, ... at (x, y, z)`).
+
+### Round 114 (round 113's build tried: mod 0.62.2 build 3b66f1dc, apworld 0.31.2 build 177b8160)
+
+**From the user (2026-11-25):**
+- The builds were right (ticked on the checklist).
+- **The Tower of Mysidia's lift now resets** when the player leaves and comes back. So the save row's `Value` is the lift's stop, as round 113 guessed.
+- The other lift dungeons are for the user's next round.
+- **A player: the boats in Cave of Waters and the Water Shrine** do the same: they stay where they were left.
+
+**Found off-line:**
+- The rafts' logic is native (`CPP_MapGimmick_Object_Raft`, `CPP_MapGimmick_RaftVisibleChange`), so the Blueprints show nothing. The save keeps one row per map, `Map.lastRideRaftMap{map}.UniqueID`: the last raft ridden there. Each crossing has a raft at both ends, and the "visible change" boxes by the docks show one or the other by that row. A first visit has no row, so the row is what keeps a raft on the far side. Cave of Waters (3080) has 9 rafts and the Water Shrine (3110) 7. The only way in to both from another map is point 0.
+- **A survey of everything else that keeps its place in the save** (every gimmick Blueprint that calls `SetGimmickState`, `SaveState` or `SetSwitch`, counted over all 159 levels):
+  - Lifts: round 113.
+  - Rafts: Cave of Waters and the Water Shrine. Fixed in this round.
+  - Floors moved by a switch (`BP_MapGimmick_Floor_MoveBySwitch`): Cave of Waters 3, the Water Shrine 3, the Weapons Factory 6. Turning bridges (`..._SequentialRotationBridge`): the Weapons Factory 6. Their state is the switch's (`switchData`), so a reset would undo the puzzle. To check in game whether one can leave the way back closed.
+  - Push boxes (`BP_MapGimmick_PushObject_WoodenBox`, a fall box, and 2 blockers that a box clears): the Water Shrine. A pushed box stays; that only keeps a puzzle solved.
+  - A falling floor (`BP_MapGimmick_Floor_ShakeAndFalling`): Kolobos Ruins, 1. Once fallen it stays fallen. To check whether it is the way on.
+  - Doors, string ladders (Mt. Thunderclap 3, Cave of Waters, the Weapons Factory, the Underground Tunnel, the Research Center Ruins) and breakable objects stay open, down or broken: they only help.
+  - The Crystal Tower's 114 see-through floors do not save.
+
+**Round 114 build (mod 0.62.2 build 901ca04e, apworld 0.31.2 build 177b8160, the apworld unchanged):**
+- **Rafts:** while the player is on another map, the last raft row of Cave of Waters and the Water Shrine is taken out (`G.RAFT_MAPS`), so the rafts stand as on a first visit. `G.ResetLifts` is now `G.ResetRides`, for both. The log lines are `rides: back as on a first visit: 3080 raft 47 -> none, 3200:13 1 -> 0` and, on the map, `rides on map 3080: last raft 47` (with `lifts ...` on a lift map) each time it changes. Not seen in game: that a first visit has no row, and that the rafts then stand at the near docks.

@@ -2,21 +2,24 @@
 
 Only open items that still need to be tested in game live here. Once tested, record the results in [docs/playtesting_archive.md](playtesting_archive.md) and remove completed items from this file. Automated suite tests are documented in [tests/README.md](../tests/README.md).
 
-Current builds: mod `0.62.2` (`3b66f1dc`), world `0.31.2` (`177b8160`). Released before them: v0.31.1 to a few testers (mod `55040fae`, world `937b4b93`, 2026-11-24); v0.31.0 public (mod `7b90595e`, world `66073f7e`, 2026-11-21). Rounds 104 to 111 were built as mod 0.63.0 and world 0.32.0.
+Current builds: mod `0.62.2` (`901ca04e`), world `0.31.2` (`177b8160`). Released before them: v0.31.1 to a few testers (mod `55040fae`, world `937b4b93`, 2026-11-24); v0.31.0 public (mod `7b90595e`, world `66073f7e`, 2026-11-21). Rounds 104 to 111 were built as mod 0.63.0 and world 0.32.0.
 
 Install: copy `FFRArchipelago/Scripts`, and copy `dist/ff_resonance.apworld` into `custom_worlds`. Close the Launcher and every client window first. Generate a new seed with `include_aileens_forge: true` (side quests on or off): the round 105 save holds two of each early item. Send the `[FFRAP]` lines of `UE4SS.log`. If the game crashes, send `Mods/FFRArchipelago/ap_trace.txt`, the crash folder, and the log before starting the game again.
 
-## Rounds 112 and 113: the vision Moogle's scene, the airship's place, quest logic, lifts
+## Rounds 112 to 114: the vision Moogle's scene, the airship's place, quest logic, lifts and rafts
 
 Install: copy `FFRArchipelago/Scripts`, and the new `dist/ff_resonance.apworld`. Generate a new seed with side quests on and `start_with_airship: false`.
 
-- [ ] Builds: the log says `version 0.62.2 (build 3b66f1dc)`, and the client prints `world version 0.31.2 (build 177b8160)`.
+- [ ] Builds: the log says `version 0.62.2 (build 901ca04e)`, and the client prints `world version 0.31.2 (build 177b8160)`.
 - [ ] Talk to a vision Moogle outside Grandport for the first time. No scene plays; the upgrade screen opens. The log has `vision moogle: flag 145 set` once.
 - [ ] Load a save from v0.31.1 and talk to a Moogle: the same, and the log has `flag 145 set` alone.
 - [ ] Receive the Airship on the world map, away from your start. It stands at your start, and stays there after you go into a town and come out. The log has `airship: on the world map at the start`, or `away from the start, moved there: ...` with what the save had.
 - [ ] The spoiler log, or the tracker, puts "Dirnado - World Map - Shiny on Far-SW Headland West of Sanctum of Onion Knight" after the Airship, Token Legacy and Errand's End after the Throne Room Key, and Beyond the Blue after 4 party members.
-- [ ] The Tower of Mysidia: ride the lift up, then fast travel out from the top. Come back in by the door. The lift is at the bottom again and takes you up. The log has `lifts: back at their first-visit stops: 3200:13 1 -> 0` when you leave, and `lifts on map 3200: 13 at 0, ...` when you come back. If the lift is still at the top, send the log: the `lifts on map` lines show what the game read.
-- [ ] The Wind Shrine, the same way: ride a lift, fast travel out, come back in by the door. Each lift is where it was on your first visit.
+- [ ] The Wind Shrine, as in the Tower of Mysidia: ride a lift, fast travel out, come back in by the door. Each lift is where it was on your first visit. The log has `rides: back as on a first visit: 3070:...` when you leave, and `rides on map 3070: lifts ...` when you come back.
+- [ ] The Water Shrine, the Gronoa Shrine and the Sanctissimus Shrine: the same, if you pass them.
+- [ ] Cave of Waters: cross on a raft, fast travel out, come back in by the door. A raft waits at the first dock again. The log has `rides: back as on a first visit: 3080 raft <n> -> none` when you leave, and `rides on map 3080: last raft none` when you come back, then the new raft once you ride. If no raft is at any dock, send the log.
+- [ ] The Water Shrine's rafts, the same way.
+- [ ] If you pass them: the switch floors in Cave of Waters, the Water Shrine and the Weapons Factory, the Weapons Factory's turning bridges, and the falling floor in Kolobos Ruins. After a fast travel out and back in by the door, can you still get through? If not, say which one and where you left it.
 
 ## Round 111: a full run on the new start
 

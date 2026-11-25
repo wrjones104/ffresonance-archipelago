@@ -6367,10 +6367,16 @@ G.LIFT_CLASSES = {
     "BP_MapGimmick_Floor_Elevator_Interact2_001_C", "BP_MapGimmick_Floor_Elevator_Interact2_002_C",
     "BP_MapGimmick_Floor_Elevator_Interact2_003_C", "BP_MapGimmick_Floor_Elevator_Interact2_004_C",
 }
+-- Round 114 (a tester, via the user): the rafts in these two do the same. The save keeps the last
+-- raft ridden on each map (Map.lastRideRaftMap{map}.UniqueID), and the game shows the rafts by it.
+-- A first visit has no row. The only way in to both is the first visit's door (point 0), so the
+-- row is taken out while the player is on another map.
+G.RAFT_MAPS = { [3080] = true, [3110] = true }   -- Cave of Waters, Water Shrine
 
--- Puts the saved stop of each lift in G.LIFT_RESETS back at its first-visit stop, on every map
--- but `here`. Returns a part per lift moved ("3200:13 1 -> 0"). A lift never used has no row.
-function G.ResetLifts(here)
+-- Puts the lifts of G.LIFT_RESETS back at their first-visit stops, and takes out the last raft of
+-- G.RAFT_MAPS, on every map but `here`. Returns a part per change ("3200:13 1 -> 0", "3080 raft
+-- 47 -> none"). A lift never used has no row.
+function G.ResetRides(here)
     local moved, sd = {}, G.SaveData()
     if not sd then return moved end
     pcall(function()
@@ -6388,14 +6394,39 @@ function G.ResetLifts(here)
             end)
         end)
     end)
+    local rafts = {}
+    pcall(function()
+        sd.Map.lastRideRaftMap:ForEach(function(key, value)
+            local m = Int(key:get())
+            if G.RAFT_MAPS[m] and m ~= here then rafts[#rafts + 1] = { map = m, uid = Int(value:get().UniqueID) } end
+        end)
+    end)
+    for _, raft in ipairs(rafts) do
+        if pcall(function() sd.Map.lastRideRaftMap:Remove(raft.map) end) then
+            moved[#moved + 1] = string.format("%d raft %s -> none", raft.map, tostring(raft.uid))
+        end
+    end
     table.sort(moved)
     return moved
 end
 
--- The live stop of each G.LIFT_RESETS lift loaded on this map ("13 at 0, 32 at 0"), or nil.
-function G.LiftStops(mapId)
-    local lifts, parts = G.LIFT_RESETS[mapId], {}
-    if not lifts then return nil end
+-- The last raft ridden on this map in the save, or nil.
+function G.LastRaft(mapId)
+    local sd, uid = G.SaveData(), nil
+    if not sd then return nil end
+    pcall(function()
+        sd.Map.lastRideRaftMap:ForEach(function(key, value)
+            if Int(key:get()) == mapId then uid = Int(value:get().UniqueID) end
+        end)
+    end)
+    return uid
+end
+
+-- On a map of G.LIFT_RESETS or G.RAFT_MAPS, the live stop of each of its lifts that is loaded and
+-- the save's last raft ("lifts 13 at 0, 32 at 0; last raft 47"), or nil.
+function G.RideState(mapId)
+    local lifts, parts = G.LIFT_RESETS[mapId] or {}, {}
+    if not (G.LIFT_RESETS[mapId] or G.RAFT_MAPS[mapId]) then return nil end
     for _, class in ipairs(G.LIFT_CLASSES) do
         local ok, all = pcall(FindAllOf, class)
         for _, a in ipairs(ok and all or {}) do
@@ -6406,9 +6437,12 @@ function G.LiftStops(mapId)
             end
         end
     end
-    if #parts == 0 then return nil end
     table.sort(parts)
-    return table.concat(parts, ", ")
+    local line = #parts > 0 and ("lifts " .. table.concat(parts, ", ")) or nil
+    if G.RAFT_MAPS[mapId] then
+        line = (line and line .. "; " or "") .. "last raft " .. tostring(G.LastRaft(mapId) or "none")
+    end
+    return line
 end
 
 -- -------------------------------------------------------------------------------------------
