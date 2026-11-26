@@ -17,12 +17,6 @@ Install: copy `FFRArchipelago/Scripts` only (the apworld is round 112's). Your r
 - [ ] The Water Shrine's rafts, the same way.
 - [ ] If you pass them: the switch floors in Cave of Waters, the Water Shrine and the Weapons Factory, the Weapons Factory's turning bridges, and the falling floor in Kolobos Ruins. After a fast travel out and back in by the door, can you still get through? If not, say which one and where you left it.
 
-## Round 111: a full run on the new start
-
-Install: copy `FFRArchipelago/Scripts` only (the apworld is round 108's). The new start is on by default now; `ffrap_newstart off` goes back to the prologue skip. Play as far as you can, and tick the older checks below as you pass them. Send the whole `[FFRAP]` part of `UE4SS.log` at the end, or after anything odd.
-
-- [ ] The run itself: tell me where it went wrong, felt off, or got stuck, with the map and what you were doing.
-
 ## Round 108: key items, fast travel into a locked continent, two Zoldaad shinies
 
 - [ ] Builds: the log says `version 0.63.0 (build 4e6c553b)`, and the client prints `world version 0.32.0 (build 937b4b93)`.
@@ -35,9 +29,6 @@ Install: copy `FFRArchipelago/Scripts` only (the apworld is round 108's). The ne
 
 ## Rounds 106 and 107: items given twice, the pop-up's two names, the Cabin Key, the Throne Room Key, Grandport's Moogle
 
-- [ ] Before the prologue skip, get an item (the starting continent's unlock comes then). The feed shows it once. After the skip's reload, the log has no `items: an Archipelago new game: 0 applied`, and the feed does not show it again.
-- [ ] Pick up a few items, then reload the autosave (or lose a battle and continue). The bag holds one of each, not two. The log has no `0 applied (was N)` line.
-- [ ] A quest with two rewards (or a boss with two): the two names in the pop-up have space between them.
 - [ ] The spoiler log, or the tracker, puts "Pharm - Abandoned Cabin - NW Corner Chest" after the Cabin Key.
 - [ ] The spoiler log, or the tracker, puts "Zoldaad - Castle - Throne Room West Bushes Chest" and "Upper Tower SW Alcove Chest" after the Throne Room Key.
 - [ ] Once the save loads, the log has `throne key: 4 squad leader rows give the stand-in`.

@@ -145,8 +145,10 @@ The chapter-by-chapter progression (party, vehicles, gates, Visions, Espers) is 
 
 **Idea (round 37, 2026-11-08):** a dialogue window when an Archipelago new game starts: a short welcome to the mod and some tips. Not urgent.
 
+**Round 115:** the game's own dialog windows can likely show our text: rows of `DialogBoxInfo` in `CDT_DialogBox`, opened by tag through `CPP_BFL_Dialog` (idea 54). The user wants the window to cover the start's move.
+
 **To find out:**
-- Which of the game's own windows can show our text. The game's notices and tutorial windows are the first things to look at (idea 8's notes on `CPP_WBP_ChatNotice` and the quest notice).
+- Which of the game's own windows can show our text. The game's dialog rows are the first to try (idea 54), then the notices and tutorial windows (idea 8's notes on `CPP_WBP_ChatNotice` and the quest notice).
 - When to show it: after the reload on the world map, once per save, and not while the item feed is busy.
 - What to say: how to connect the client, what the airship and continents do, and where the checks are.
 
@@ -369,3 +371,21 @@ Along the same lines, I would also want an option for players to start with all 
 - Off-line: the switch 16 scene's talk rows (`C02_Moburizu_Switch_*`) and the switch actors in `Dng_04Dir_41_0*_GD` that target lifts (`switchData` in the save, `gimmickStateByTarget`). Which target list holds 75, if any.
 - In game: `ffrap_inspect` on 75 at the top, and `ffrap_snapshot` before and after the switch 16 scene (`tools/snapdiff.py`), to see which save rows change.
 - Whether a `CallSwitch` on 75 from Lua, with the player at the top, brings it up.
+
+## 54. A start that cannot go wrong
+
+**From the user, 2026-11-26 (round 115).** Rain froze at the start: the user walked while the new start moved him to the Town of Sian, and had to start again. Can the start load while a window is up (idea 22)? Can a new game be refused while the client is not connected? Make the opening hard to break.
+
+**Known so far (docs/playtesting_archive.md, round 115):**
+- The freeze came with the mod's second move, which moved a walking player back to the arrival. That check was for a player who fell through an island not loaded yet, but it also fires once the player walks 300 away.
+- A new game stands at point 0 of the map: on the world map that is the Earth Shrine. `GameStartSettings` has only the map id.
+- The game's dialogs are table rows opened by tag (`CDT_DialogBox`, `CPP_BFL_Dialog`). The mod's Lua runs on the game thread's tick, and that tick goes on while a window is open: the chest pop-up is written while the game's own pop-up is on screen. The world goes on loading too. A dialog takes the input, so the player cannot walk while it is open.
+- With no client running, the mod still holds the last session's seed from the old `ap_in.txt`. The Archipelago entry then starts the last seed's start.
+
+**Ways to do it, cheapest first:**
+1. **No second move for a walking player, and no walking during the move.** Move again only when the player is below the arrival (the case it was for). Hold move input (`SetIgnoreMoveInput`, the engine's own) from the save's arrival until the player stands at the arrival on the ground, and let it go after that, on a time limit, and on leaving the game. No probe needed. If a freeze still comes, `ffrap_input` and `ffrap_input fix` tell what holds it.
+2. **The client's heartbeat.** The client writes `ap_alive.txt` (one line: the time and the session) every few seconds while it is connected to the slot. The mod reads it at the title. With no live client, the entry reads "Archipelago (connect the client)", and choosing it starts no seed's start. This also ends the stale seed above. What the pre-hook turns the choice into needs a test: an unknown type, or the game's dialog (way 3) with a "connect the client" line.
+3. **The welcome window over the move.** One probe for the dialog calls' parameters (`ffrap_functions CPP_BFL_Dialog CPP_DialogManager`). Then reuse a row with an OK-only choice: write our text into its `Message` while it is open and put it back after, as the Options rows are kept. GameplayTags cannot be made up, so the tag is an existing one. The window opens when the save is in, the move runs under it, and the player closes it. Way 1 stays as the guard.
+4. **No move at all.** Move the world map's point 0 (`BP_MapTransitionPoint_C`, `m_PointID 0`, in `Wld_GD`) to the arrival before the game puts the player there, so the game loads the right island and places the player itself. To test: whether the game reads the point's place at that moment, and whether the mod can reach the point first (a map load hook or the first tick). Behind a test command, with the move as the fallback.
+
+**Order:** 1 and 2 first (no probe for 1, a small client change for 2). The probes for 3 and 4 in the same round.

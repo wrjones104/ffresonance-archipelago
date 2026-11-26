@@ -1690,3 +1690,24 @@ The user played (2026-11-23). Passed: the builds, the spoiler's eight forge loca
 
 **Round 114 build (mod 0.62.2 build 901ca04e, apworld 0.31.2 build 177b8160, the apworld unchanged):**
 - **Rafts:** while the player is on another map, the last raft row of Cave of Waters and the Water Shrine is taken out (`G.RAFT_MAPS`), so the rafts stand as on a first visit. `G.ResetLifts` is now `G.ResetRides`, for both. The log lines are `rides: back as on a first visit: 3080 raft 47 -> none, 3200:13 1 -> 0` and, on the map, `rides on map 3080: last raft 47` (with `lifts ...` on a lift map) each time it changes. Not seen in game: that a first visit has no row, and that the rafts then stand at the near docks.
+
+### Round 115 (mod 0.62.2 build 901ca04e, apworld 0.31.2 build 177b8160)
+
+**From the user (2026-11-26):**
+- **Round 111's full run finished with no issues.**
+- **Ticked from rounds 106 and 107:** an item that came before the start shows once in the feed and is not given again; a reload gives one of each item, not two; the two names of a two-reward pop-up have space between them. The log's `items: an Archipelago new game: 0 applied (was 1)` came from a second new game after a quit to the title, which is right: the first game had applied 1.
+- **The player stuck at the start.** The user walked on the world map while the new start moved Rain from the Earth Shrine to the Town of Sian (Pharm), and Rain could not move after. They quit to the title and started a new game, which went through.
+- The user asked: can the start load while something else is on screen, such as the welcome window of idea 22? Can a new game be refused when the client is not connected?
+
+**What the log shows (the first game):**
+- 24.26: the save is in, with Rain at point 0 (the Earth Shrine, 17214, 20957). 25.39: the first move, to the arrival (-3920, -17480, 90).
+- 27.49: Rain stood 359 from the arrival at z 73, so the user was walking. The check moves the player again when farther than 300 (`G.NEW_START.near`), so it moved a walking player back. That check was meant for a player who fell through an island that was not loaded yet.
+- 29.65: Rain stood at exactly -3920, -17480, 90, and the user quit 18 s later. The ground there is at about z 72 (both games read 72 to 73 after a walk), so Rain had not dropped to the ground: the pawn was not moving at all after the second move.
+- The second game: the user walked 147 after the first move, under 300, so there was no second move, and it played on.
+- So the freeze came with the second move of a walking pawn. Why the pawn stopped is not known. `ffrap_input` reads the controller's and the game's input locks; it was not run.
+
+**Found off-line:**
+- **Where a new game stands.** `GameStartSettings` holds only `TransitionMapId`, and the NewGame row (`SaveData_InitGameData`) has no place. The new game uses point 0 of the map, and point 0 of the world map is the Earth Shrine's arrival: a `BP_MapTransitionPoint_C` in `Wld_GD` with `m_PointID 0`. There are 113 points there.
+- **The game's dialog windows** are rows of `DialogBoxInfo` in `CDT_DialogBox` (`DT_DialogBox_System` and 12 more): a `DialogTag`, a `Message`, a `ChoiceTag` (such as `UI.Dialog.Choice.YesNo`), and sounds. The title's Quit Game uses `UI.Dialog.Box.QuitGame.Title`. The executable names the calls `OpenDialog`, `RequestOpenDialog`, `IsDialogActive`, `IsOpenDialog`, `CloseDialog`, `BindToDialogClosed` and `GetDialogManager`, on `CPP_BFL_Dialog` and `CPP_DialogManager`. Their parameters need `ffrap_functions` in game.
+- **The client is not known to be connected.** At start-up the mod reads the last `ap_in.txt`, which holds the last session's `seed` line, so `seedCfg.heard` is true with no client running. A new game from the Archipelago entry then starts on the last seed's continent and party.
+- **The title entry cannot be refused as it is.** `ExecuteEntry`'s pre-hook can change the entry type but not stop the call. The types are Continue 0 to QuitGame 4. What the game does with an unknown type is not known.
