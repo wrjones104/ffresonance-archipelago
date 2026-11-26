@@ -8,6 +8,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import paths  # noqa: E402
 
 import os
+import time
 import shutil
 import sys
 import re
@@ -294,7 +295,8 @@ end
 function G.AirshipState() return "placed true" end
 function G.AirshipCondition(c) G.airshipWrote = c; return c end
 function G.NoLandShadow() return 0, 1, { "box" } end
-G.TITLE_NEW_GAME, G.TITLE_ARCHIPELAGO, G.titleAdds = 2, 5, 0
+G.TITLE_LOAD_GAME, G.TITLE_NEW_GAME, G.TITLE_ARCHIPELAGO, G.titleAdds = 1, 2, 5, 0
+G.TITLE_LABEL_LIVE, G.TITLE_LABEL_NO_CLIENT = "New Game (Archipelago)", "New Game (Archipelago: connect the client)"
 G.titleOk = false   -- the title entry only once a section turns it on
 function G.AddTitleEntry()
   G.titleAdds = G.titleAdds + 1
@@ -436,6 +438,20 @@ open(path("seen.tsv"), "w", encoding="utf-8", newline="\n").write("xchest\t2002\
 # Round 100: with no session no save is the seed's, so these runs have one. Their unsaved new game
 # is linked to it.
 open(path("ap_in.txt"), "w", encoding="utf-8", newline="\n").write("seed\tS0:0:1\n")
+# Round 116: the client is connected for these runs. Its heartbeat is read with the game's clock,
+# which a later section sets, so this one is written far ahead.
+LIVE_FOREVER = 9_999_999_999
+
+
+def heartbeat(at=LIVE_FOREVER):
+    if at is None:
+        if os.path.exists(path("ap_alive.txt")):
+            os.remove(path("ap_alive.txt"))
+    else:
+        open(path("ap_alive.txt"), "w", encoding="utf-8", newline="\n").write(f"{at}\tS0:0:1\n")
+
+
+heartbeat()
 
 L, G = boot(CAPTURE)
 # Round 65: the first GetUniqueId answer of a session is logged even when the call fails
@@ -964,8 +980,10 @@ L.execute(CAPTURE)
 tick = lambda k: [L.execute("tickFn()") for _ in range(k)]
 L.eval("""function(G)
   G.prepares, G.nsRestores, G.finishes, G.moves, G.armed = {}, 0, {}, 0, false
-  G.whereDist, G.whereZ = 0, 65
-  G.NEW_START = { near = 300 }
+  G.whereDist, G.whereZ, G.holds = 0, 65, {}
+  G.NEW_START = { near = 300, holdTicks = 20 }
+  function G.HoldMove(on) G.holds[#G.holds + 1] = tostring(on); return on end
+  function G.InputState() return "controller PC_0" end
   function G.NewStartPrepare(opts)
     G.prepares[#G.prepares + 1] = opts.arrival.name .. " " .. table.concat(opts.party or {}, ",")
     G.armed = true
@@ -984,7 +1002,7 @@ L.eval("""function(G)
   -- the move lands; with G.sink the player is found below the arrival afterwards
   function G.NewStartMove(a)
     G.moves = G.moves + 1
-    G.whereDist, G.whereZ = 0, G.sink and a.z - 2000 or a.z
+    G.whereDist, G.whereZ = G.walk or 0, G.sink and a.z - 2000 or a.z
     return true, "moved to the arrival"
   end
 end""")(G)
@@ -1017,6 +1035,9 @@ assert [g for g in grants() if g == "item200x1"] == ["item200x1"], grants()
 tick(20)
 assert G.skipRuns == runs, "the prologue skip stays out of it"
 assert G.moves == 0, "near the arrival: not moved"
+# Round 115: move input is held from the arrival until the player stands there, then given back
+assert list(G.holds.values()) == ["true", "false"], list(G.holds.values())
+assert any("move input given back (at the arrival)" in m for m in logged())
 # Round 109: far from the arrival (where the world map puts a new game): moved. Found below the
 # arrival after it (its island not loaded yet): moved again, but only once more.
 G.whereDist, G.sink = 28023, True
@@ -1027,6 +1048,16 @@ assert G.moves == 2, G.moves
 assert sum(1 for m in logged() if "newstart: after the move:" in m) == 2, logged()[-20:]
 assert [g for g in grants() if g == "item200x1"] == ["item200x1", "item200x1"], "once per new game"
 G.sink = False
+# Round 115: the user walked 359 from the arrival after the move, and a second move froze the pawn.
+# A player above the arrival's ground is not moved again, however far they walked.
+WALKED = 359
+G.whereDist, G.walk, G.moves, G.holds = 28023, WALKED, 0, L.table_from({})
+entry()
+load(G, "SD_NS115", "7000")
+tick(20)
+assert G.moves == 1, G.moves
+assert list(G.holds.values()) == ["true", "false"], list(G.holds.values())
+G.walk = None
 # Backing out: a set-up that is never used is put back when the title menu is used again
 nsRestores = G.nsRestores
 entry()
@@ -1036,7 +1067,7 @@ assert G.nsRestores == nsRestores + 1 and not G.armed, "a plain New Game after i
 # Not used with no seed heard this run, or with no open world start
 L.execute('commands["ffrap_newstart"]("ffrap_newstart", {"off"})')
 entry()
-assert len(list(G.prepares.values())) == 4, list(G.prepares.values())
+assert len(list(G.prepares.values())) == 5, list(G.prepares.values())
 assert "newstart\t0" in read("ap_state.txt")
 # Rain matches the party's level only past the open start's story: in the prologue (a skip that
 # never ran) the party is Archwitch Fina at 55
@@ -1048,6 +1079,57 @@ G.story = ARRIVAL_STORY
 tick(30)
 assert G.slotSyncs > syncs
 print("new start: ok")
+
+# Round 116: the client closed, ap_in.txt still held the last seed, and the entry started that
+# seed's start. With no heartbeat, or one older than 10 s, the entry becomes Load Game and starts
+# nothing; the label says to connect the client the next time the menu is made.
+STALE_SECONDS = 60
+L.execute('commands["ffrap_newstart"]("ffrap_newstart", {"on"})')
+prepared = len(list(G.prepares.values()))
+choice = L.eval("(function() local p = { v = 5 }; function p:get() return self.v end; function p:set(x) self.v = x end; return p end)()")
+hook = L.eval('hooks["/Script/mucha.CPP_VM_Title:ExecuteEntry"]')
+for beat in (None, int(time.time()) - STALE_SECONDS):
+    heartbeat(beat)
+    choice.v = 5
+    hook(None, choice)
+    assert choice.v == 1, choice.v
+    assert len(list(G.prepares.values())) == prepared, "no start set up"
+assert any("no new game without the client (the client was last heard" in m for m in logged())
+G.ready = False
+tick(7)
+assert G.TITLE_LABEL == G.TITLE_LABEL_NO_CLIENT, G.TITLE_LABEL
+L.execute('commands["ffrap_title"]("ffrap_title", {"refuse", "off"})')
+choice.v = 5
+hook(None, choice)
+assert choice.v == 2 and len(list(G.prepares.values())) == prepared + 1, ("refusing off: a game with no client", logged()[-8:])
+L.execute('commands["ffrap_title"]("ffrap_title", {"refuse"})')
+heartbeat(int(time.time()))
+tick(7)
+assert G.TITLE_LABEL == G.TITLE_LABEL_LIVE, G.TITLE_LABEL
+choice.v = 5
+hook(None, choice)
+assert choice.v == 2 and len(list(G.prepares.values())) == prepared + 2
+# Round 116 probe: with ffrap_point0 on, the world map's point 0 goes to the arrival once found,
+# before the save is in, and back once it is (the Earth Shrine's door leads to it)
+EARTH_SHRINE_POINT = (17214, 20957, 0)
+L.eval("""function(G, x, y, z)
+  G.pointMoves = {}
+  function G.MoveStartPoint(to)
+    G.pointMoves[#G.pointMoves + 1] = to.x .. "," .. to.y
+    return { x = x, y = y, z = z }, "point 0 moved to " .. to.x .. ", " .. to.y
+  end
+end""")(G, *EARTH_SHRINE_POINT)
+L.execute('commands["ffrap_point0"]("ffrap_point0", {"on"})')
+G.ready = True
+tick(3)
+assert list(G.pointMoves.values()) == ["12470,14980"], list(G.pointMoves.values())  # Lanzelt, the seed's continent
+assert any(m.startswith("[FFRAP] point 0 (tick): point 0 moved to 12470, 14980") for m in logged())
+load(G, "SD_P0", "7000")
+assert list(G.pointMoves.values())[-1] == "17214,20957", "put back once the save is in"
+L.execute('commands["ffrap_point0"]("ffrap_point0", {"off"})')
+L.execute('commands["ffrap_newstart"]("ffrap_newstart", {"off"})')   # as the sections below expect
+heartbeat()
+print("no new game without the client: ok")
 
 # 10. the item feed (0.11.2): one line per item in game; queued while the HUD is away; a long
 # queue shows its last lines and how many more; off sends messages to the Toast again
@@ -3144,3 +3226,24 @@ B = runtime()
 B.execute("bridge = require('bridge')")
 assert B.eval(f"bridge.build('{crlf.replace(os.sep, '/')}/')") == build, "a CRLF copy"
 print("build:", build, "ok")
+
+# Round 116: a stutter like a heartbeat on slower PCs. A loop run over 25 ms is logged with its
+# slow steps (at most once per 10 s), and ffrap_perf logs each loop, step and object search.
+SLOW_CHEST_SCAN_MS = 40
+L, G = boot(CAPTURE + """
+fakeClock = 0
+os.clock = function() return fakeClock end
+function FindAllOf(c) fakeClock = fakeClock + 0.003; return {} end
+""")
+G.ready = True
+G.LiveChests = L.eval(f"function() fakeClock = fakeClock + {SLOW_CHEST_SCAN_MS / 1000}; return {{}} end")
+for _ in range(12):
+    L.execute("tickFn()")
+L.execute('FindAllOf("CPP_MapGimmick_FieldItem")')
+slow = [m for m in L.eval("logged").values() if m.startswith("[FFRAP] perf: a tick took")]
+assert len(slow) == 1 and f"loot {SLOW_CHEST_SCAN_MS}" in slow[0], slow
+L.execute('commands["ffrap_perf"]("ffrap_perf", {})')
+lines = [m for m in L.eval("logged").values() if m.startswith("[FFRAP] perf: ")]
+assert any(m.startswith("[FFRAP] perf: tick 12 runs") for m in lines), lines
+assert any("searches FindAllOf CPP_MapGimmick_FieldItem 1x 3 ms" in m for m in lines), lines
+print("timings: ok")

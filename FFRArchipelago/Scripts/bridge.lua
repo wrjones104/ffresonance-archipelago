@@ -28,6 +28,9 @@
 --     cfg checks <done> <total>                   the slot's locations checked, for the Archipelago page
 --     scout <base64>                              what a location holds: key, item, player, flags, own
 --
+--   ap_alive.txt  client -> game, rewritten every few seconds while the client is connected to its slot
+--     <unix time> <session>                       the time it was written, and the seed:team:slot
+--
 --   ap_out.txt  game -> client
 --     hello <mod version>                         the mod started
 --     check <location key>                        e.g. chest:2031:7, boss:9079 (a battle group)
@@ -68,7 +71,25 @@ end
 function B.init(dir)
     B.inPath = dir .. "ap_in.txt"
     B.outPath = dir .. "ap_out.txt"
+    B.alivePath = dir .. "ap_alive.txt"
     B.offset = 0
+end
+
+-- Round 115: ap_in.txt stays after the client closes, so the last seed looked connected and the
+-- title entry started its start. The client's heartbeat says it is connected now.
+B.ALIVE_SECONDS = 10
+
+-- The live client's session, or nil and why. `now` is os.time().
+function B.readAlive(now)
+    local f = io.open(B.alivePath, "r")
+    if not f then return nil, "no ap_alive.txt: the client is not connected" end
+    local line = f:read("l") or ""
+    f:close()
+    local t, session = line:match("^(%d+)\t(%S+)")
+    if not t then return nil, "ap_alive.txt is empty or old" end
+    local age = now - tonumber(t)
+    if age > B.ALIVE_SECONDS then return nil, "the client was last heard " .. age .. " s ago" end
+    return session
 end
 
 local function split(line)

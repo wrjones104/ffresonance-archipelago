@@ -223,10 +223,93 @@ function state.traceStart(first)
     state.mark(first)
 end
 function state.mark(step)
+    state.perfMark(step)
     if not state.traceFile then return end
     if state.traceLines >= state.TRACE_LINES then return state.traceStart(step) end
     state.traceLines = state.traceLines + 1
     state.traceFile:write(os.date("%H:%M:%S"), " tick ", state.ticks, " ", step, "\n")
+end
+
+-- Round 116: players felt a stutter like a heartbeat, on slower PCs. The loops time each step they
+-- mark and each object search (FindAllOf and FindFirstOf go through every object in the game).
+-- Every `every` seconds the log gets the slowest; a run over `slow` seconds is logged at once,
+-- at most once per `quiet` seconds. ffrap_perf logs the summary now.
+state.perf = { every = 120, slow = 0.025, quiet = 10, steps = {}, finds = {}, loops = {}, run = {},
+               since = os.clock(), loggedSlow = -math.huge }
+
+function state.perfAdd(stats, key, dt)
+    local s = stats[key]
+    if not s then
+        s = { n = 0, sum = 0, max = 0 }
+        stats[key] = s
+    end
+    s.n, s.sum = s.n + 1, s.sum + dt
+    if dt > s.max then s.max = dt end
+end
+
+function state.perfMark(step)
+    local P, now = state.perf, os.clock()
+    if P.step then
+        local dt = now - P.at
+        state.perfAdd(P.steps, P.step, dt)
+        P.run[P.step] = (P.run[P.step] or 0) + dt
+    end
+    P.step, P.at = not step:find(" done$") and step or nil, now
+end
+
+function state.perfTop(stats, n)
+    local keys = {}
+    for k in pairs(stats) do keys[#keys + 1] = k end
+    table.sort(keys, function(a, b) return stats[a].sum > stats[b].sum end)
+    local parts = {}
+    for i = 1, math.min(n, #keys) do
+        local s = stats[keys[i]]
+        parts[#parts + 1] = string.format("%s %dx %.0f ms (max %.0f)", keys[i], s.n, s.sum * 1000, s.max * 1000)
+    end
+    return #parts > 0 and table.concat(parts, ", ") or "none"
+end
+
+function state.perfLines()
+    local P = state.perf
+    local lines = { string.format("perf: the last %.0f s", os.clock() - P.since) }
+    for name, s in pairs(P.loops) do
+        lines[#lines + 1] = string.format("perf: %s %d runs, avg %.1f ms, max %.0f ms, %d over %.0f ms",
+            name, s.n, s.sum * 1000 / s.n, s.max * 1000, s.over or 0, P.slow * 1000)
+    end
+    lines[#lines + 1] = "perf: steps " .. state.perfTop(P.steps, 6)
+    lines[#lines + 1] = "perf: searches " .. state.perfTop(P.finds, 6)
+    P.steps, P.finds, P.loops, P.since = {}, {}, {}, os.clock()
+    return lines
+end
+
+-- A loop's run took dt: counted, and logged with its steps when slow.
+function state.perfLoop(name, dt)
+    local P = state.perf
+    state.perfAdd(P.loops, name, dt)
+    local run = P.run
+    P.run = {}
+    if dt <= P.slow then return end
+    P.loops[name].over = (P.loops[name].over or 0) + 1
+    local now = os.clock()
+    if now - P.loggedSlow < P.quiet then return end
+    P.loggedSlow = now
+    local parts = {}
+    for step, t in pairs(run) do
+        if t >= 0.002 then parts[#parts + 1] = string.format("%s %.0f", step, t * 1000) end
+    end
+    log(string.format("perf: a %s took %.0f ms (ms by step: %s)", name, dt * 1000, table.concat(parts, ", ")))
+end
+
+for _, name in ipairs({ "FindAllOf", "FindFirstOf" }) do
+    local raw = _G[name]
+    if raw then
+        _G[name] = function(class)
+            local t0 = os.clock()
+            local found = raw(class)
+            state.perfAdd(state.perf.finds, name .. " " .. tostring(class), os.clock() - t0)
+            return found
+        end
+    end
 end
 
 -- The loaded save, and whether it is the session's. Not kept across game restarts: save data
@@ -1382,6 +1465,21 @@ function save.armNewStart()
     log("newstart: the new game starts at " .. a.name .. " (map " .. a.map .. ", story " .. a.story .. ")")
 end
 
+-- Round 116 probe (idea 54, way 4): with `ffrap_point0 on`, the world map's point 0 is moved to
+-- the arrival as soon as it is found after the title's choice, so the game might place the player
+-- there itself, with no move after. Each try is logged with where the pawn stands, which tells
+-- whether the point is loaded before the player is placed. It is put back once the save is in:
+-- the Earth Shrine's door leads to it.
+function state.point0Tick(when)
+    local ns = save.newStart
+    if not (state.point0 and ns and not ns.placeAt and not ns.pointFrom) then return end
+    local from, line = game.MoveStartPoint(ns.arrival, save.newStartStep)
+    local _, where = game.NewStartWhere(ns.arrival)
+    line = line .. "; " .. where
+    if line ~= ns.pointLine then log("point 0 (" .. when .. "): " .. line) end
+    ns.pointLine, ns.pointFrom = line, from
+end
+
 -- Puts the game's data back and forgets the new start.
 function save.dropNewStart(why)
     local put = game.NewStartRestore(save.newStartStep)
@@ -1400,16 +1498,35 @@ function save.finishNewStart()
     save.autoDone = true
     local _, where = game.NewStartWhere(ns.arrival)
     log("newstart: arrived: " .. where)
+    if ns.pointFrom then
+        local _, line = game.MoveStartPoint(ns.pointFrom, save.newStartStep)
+        log("point 0: put back: " .. line)
+    end
     ns.placeAt, ns.moves = state.ticks + 2, 0
+    local ignored, why = game.HoldMove(true)
+    ns.held, ns.releaseBy = ignored ~= nil, state.ticks + game.NEW_START.holdTicks
+    log("newstart: move input held: ignored " .. tostring(ignored) .. (why and " (" .. why .. ")" or ""))
 end
 
--- After the start: the airship and the player are moved to the arrival. Round 109's
--- MapTestStartByLoadSaveData is not a reload from memory: it loaded slot 0, another game.
--- The arrival's island may not be loaded at the move, so a player found below it is moved
--- again, once.
+function save.releaseMove(why)
+    local ns = save.newStart
+    if not (ns and ns.held) then return end
+    ns.held = false
+    local ignored, err = game.HoldMove(false)
+    log("newstart: move input given back (" .. why .. "): ignored " .. tostring(ignored)
+        .. (err and " (" .. err .. ")" or "") .. "; " .. game.InputState())
+end
+
+-- After the start: the airship and the player are moved to the arrival, with move input held.
+-- Round 109's MapTestStartByLoadSaveData is not a reload from memory: it loaded slot 0, another
+-- game. The arrival's island may not be loaded at the move, so a player found below it is moved
+-- again, once. Round 115: only below it. A second move of a player who had walked 359 away froze
+-- the pawn.
 function save.newStartTick()
     local ns = save.newStart
-    if not (ns and ns.placeAt and state.ticks >= ns.placeAt) then return end
+    if not ns then return end
+    if ns.held and state.ticks >= ns.releaseBy then save.releaseMove("time limit") end
+    if not (ns.placeAt and state.ticks >= ns.placeAt) then return end
     ns.placeAt = nil
     local a = ns.arrival
     local dist, where, z = game.NewStartWhere(a)
@@ -1417,13 +1534,14 @@ function save.newStartTick()
     local sunk = z and z < a.z - game.NEW_START.near
     if not dist then
         log("newstart: not on the arrival's map, left there: " .. where)
-    elseif ns.moves < 2 and (dist > game.NEW_START.near or sunk) then
+    elseif (ns.moves == 0 and dist > game.NEW_START.near) or (ns.moves < 2 and sunk) then
         ns.moves = ns.moves + 1
         local _, line = game.NewStartMove(a, save.newStartStep)
         log("newstart: " .. line)
         ns.placeAt = state.ticks + 4
         return
     end
+    save.releaseMove(dist and "at the arrival" or "not on the arrival's map")
     save.newStart = nil
 end
 
@@ -1439,6 +1557,17 @@ local function hookTitle()
             log("title: entry " .. tostring(t) .. " chosen")
             -- A new start set up before and never used (the player backed out): put it back first.
             if save.newStart then save.dropNewStart("the title menu was used again") end
+            if t == game.TITLE_ARCHIPELAGO and state.refuseAs ~= false then
+                local session, why = bridge.readAlive(os.time())
+                if not session then
+                    local as = state.refuseAs or game.TITLE_LOAD_GAME
+                    pcall(function() inType:set(as) end)
+                    notify("Archipelago: connect the client to your slot first, then choose the entry again")
+                    log("title: no new game without the client (" .. why .. "): the choice became entry " .. as)
+                    return
+                end
+                log("title: the client is connected (" .. session .. ")")
+            end
             if t == game.TITLE_ARCHIPELAGO then
                 state.apNewGame = true
                 pcall(function() inType:set(game.TITLE_NEW_GAME) end)
@@ -1492,6 +1621,12 @@ local function titleTick()
     if state.ticks ~= 1 and state.ticks % TITLE_EVERY ~= 0 then return end
     hookVisionExit()
     local inGame = game.InGame()
+    if not inGame then
+        local live = bridge.readAlive(os.time()) ~= nil or state.refuseAs == false
+        game.TITLE_LABEL = live and game.TITLE_LABEL_LIVE or game.TITLE_LABEL_NO_CLIENT
+        if live ~= state.clientLive then log("title: client " .. (live and "connected" or "not connected")) end
+        state.clientLive = live
+    end
     local ok, detail = game.AddTitleEntry(not inGame)
     if ok and hookTitle() then
         if not titleReady then log("title: Archipelago entry ready (" .. tostring(detail) .. ")") end
@@ -1798,6 +1933,7 @@ end
 
 local function tick()
     state.ticks = state.ticks + 1
+    if state.point0 then pcall(state.point0Tick, "tick") end
     state.mark("inbox")
     readInbox(false)
     state.mark("title")
@@ -1969,6 +2105,9 @@ local function tick()
         end
     end
     if state.ticks % STATUS_EVERY == 0 then writeStatus() end
+    if os.clock() - state.perf.since >= state.perf.every then
+        for _, line in ipairs(state.perfLines()) do log(line) end
+    end
 end
 
 -- -------------------------------------------------------------------------------------------
@@ -2045,9 +2184,19 @@ local FUNCTION_CLASSES = {
     "CPP_BFL_Chat", "CPP_ChatSubsystem", "CPP_QuestSubsystem", "CPP_VM_QuestNotice",
 }
 
--- ffrap_title [list|add]: inspect title menu entries or manually add the Archipelago entry.
+-- ffrap_title [list|add|refuse <type|off>]: inspect title menu entries or manually add the
+-- Archipelago entry. `refuse` sets what the entry becomes with no live client (round 116: Load
+-- Game; another type is a test), or `off` lets it start with none. Not kept.
 command("ffrap_title", function(p)
     local what = (p and p[1]) or "list"
+    if what == "refuse" then
+        if p[2] == "off" then state.refuseAs = false else state.refuseAs = tonumber(p[2]) end
+        local text = state.refuseAs == false and "off: the entry starts a game with no client"
+            or "becomes entry " .. tostring(state.refuseAs or game.TITLE_LOAD_GAME) .. " with no client"
+        log("title: refuse " .. text)
+        notify("Title entry: " .. text)
+        return
+    end
     if what == "add" then
         local ok, detail = game.AddTitleEntry(not game.InGame())
         log("title: add: " .. tostring(detail))
@@ -3767,6 +3916,7 @@ if RegisterLoadMapPostHook then
     local okHook, errHook = pcall(RegisterLoadMapPostHook, function(_, world)
         state.traceStart("map load")
         pcall(game.ForgetObjects)
+        if state.point0 then pcall(state.point0Tick, "map load") end
         local okRun, placed, why = pcall(function() return game.ContinentMapLoaded(world:get(), locksOn()) end)
         if not okRun then
             log("locks: the map load hook failed: " .. tostring(placed))
@@ -3811,6 +3961,27 @@ command("ffrap_visions", function()
     local text = game.VisionKeys()
     log("visions: " .. text)
     notify("Visions: " .. text)
+end)
+
+-- ffrap_point0 [on|off]: the round 116 probe (state.point0Tick); not kept. With no word, where the
+-- world map's point 0 stands now.
+command("ffrap_point0", function(p)
+    if p[1] == "on" or p[1] == "off" then
+        state.point0 = p[1] == "on"
+        log("point 0: the probe is " .. p[1] .. " for this run")
+        notify("Point 0 probe " .. p[1] .. ": choose the Archipelago entry and send the log")
+        return
+    end
+    local pt, at = game.StartPoint()
+    local text = pt and string.format("at %.0f, %.0f, %.0f", at.x, at.y, at.z) or at
+    log("point 0: " .. text)
+    notify("Point 0: " .. text)
+end)
+
+-- ffrap_perf: the time each loop, step and object search took since the last summary.
+command("ffrap_perf", function()
+    for _, line in ipairs(state.perfLines()) do log(line) end
+    notify("Timings written to the log")
 end)
 
 command("ffrap_reset", function()
@@ -3858,10 +4029,12 @@ end
 -- the main tick runs on the game thread, causing race-condition crashes on shared Lua state.
 local function every(ms, name, fn)
     local function run()
+        local t0 = os.clock()
         state.mark(name)
         local ok, err = pcall(fn)
         if not ok then log(name .. " error: " .. tostring(err)) end
         state.mark(name .. " done")
+        state.perfLoop(name, os.clock() - t0)
     end
     if LoopInGameThreadWithDelay then
         LoopInGameThreadWithDelay(ms, run)

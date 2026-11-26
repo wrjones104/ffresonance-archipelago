@@ -42,6 +42,8 @@ The chapter-by-chapter progression (party, vehicles, gates, Visions, Espers) is 
 - The BGM ids or cue names in `MAP_DATA` and the battle tables, and whether changing one changes what plays.
 - Whether music can be swapped by table rows only, or needs a hook on the play call.
 
+**From a tester (2026-11-26):** with cosmetics or music in the seed, a menu in game to roll them again or change them. The Archipelago page in the main menu (archived ideas 38 and 39) could hold it.
+
 ## 10. Conflicts with other mods
 
 **Idea:** know where this mod can clash with others, say so to the player, and avoid the clashes we can.
@@ -389,3 +391,21 @@ Along the same lines, I would also want an option for players to start with all 
 4. **No move at all.** Move the world map's point 0 (`BP_MapTransitionPoint_C`, `m_PointID 0`, in `Wld_GD`) to the arrival before the game puts the player there, so the game loads the right island and places the player itself. To test: whether the game reads the point's place at that moment, and whether the mod can reach the point first (a map load hook or the first tick). Behind a test command, with the move as the fallback.
 
 **Order:** 1 and 2 first (no probe for 1, a small client change for 2). The probes for 3 and 4 in the same round.
+
+**Round 116 (mod build 517a874b, world build e0989726):** ways 1 and 2 are built. The second move is only for a player below the arrival, and move input is held until the player stands at the arrival (10 s at most). The client writes `ap_alive.txt` every 2 s while connected; without it the entry is labelled "New Game (Archipelago: connect the client)" and becomes Load Game. The probes are `ffrap_functions CPP_BFL_Dialog CPP_DialogManager` (way 3) and `ffrap_point0 on` (way 4). To test in game (docs/playtesting.md).
+
+## 55. A stutter like a heartbeat
+
+**From testers, 2026-11-26 (round 116).** One player had a constant stutter "like a heartbeat"; another had none. The user feels it on their laptop and not on their desktop. A player also had lag in Dragon's Maw.
+
+**Known so far (docs/playtesting_archive.md, round 116):**
+- The mod's loop runs every 0.5 s on the game thread, and the chest pop-up check every 0.1 s. A run's work all lands in one frame.
+- `FindAllOf` and `FindFirstOf` go through every object in the game. The shiny scan searched every map gimmick each second; since round 116 it searches only the field items.
+- Since round 116 the log has timings every 2 minutes (`perf:` lines) and each run over 25 ms; `ffrap_perf` logs them now.
+
+**To find out:**
+- Which steps and searches the timings name on a slower PC, and whether the stutter goes when they are fixed.
+- What else could do it: the trace file (`ap_trace.txt`, a line per step, unbuffered), a `FindFirstOf` for an object that is not there (it goes through everything each call), or other mods.
+- Whether Dragon's Maw is slow without the mod too.
+
+**Ways to fix, once the timings say where:** keep found objects by path (as `Live` does) so searches happen only after a map load; spread the per-second work over the ticks between; run the slow scans less often away from chests.

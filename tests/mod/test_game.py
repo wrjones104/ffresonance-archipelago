@@ -2108,6 +2108,36 @@ assert L.eval("otherNpc.m_EventSettings.EventList[1].EventList[1].EventId:ToStri
 assert L.eval("G.CabinKeyManOff()") == 0, "once per NPC"
 print("cabin key: ok")
 
+# Round 116: a stutter like a heartbeat on slower PCs. The shiny scan searched every map gimmick
+# each second and read each one's class. Every field item Blueprint comes from
+# CPP_MapGimmick_FieldItem, so it is the only search.
+L.execute(r'''
+local function shiny(uid, class)
+  local a = { m_UniqueId = uid, bHidden = false, interactType = 0, m_IsOpen = false, m_ItemId = 16, m_ItemNum = 1,
+              m_Money = -1, VisibleCondition = { ToString = function() return "" end } }
+  function a:IsValid() return true end
+  function a:HasAnyInternalFlags() return false end
+  function a:HasAnyFlags() return false end
+  function a:GetClass() return { GetFName = function() return { ToString = function() return class end } end } end
+  function a:K2_GetActorLocation() return { X = 1, Y = 2, Z = 3 } end
+  return a
+end
+fieldSearches = {}
+local medal, plain = shiny(8, "BP_MapGimmick_FieldItem_Medal_C"), shiny(9, "BP_MapGimmick_FieldItem_C")
+local prevFAOFields = FindAllOf
+function FindAllOf(c)
+  fieldSearches[#fieldSearches + 1] = c
+  if c == "CPP_MapGimmick_FieldItem" then return { medal, plain } end
+  return prevFAOFields(c)
+end
+fieldItems = G.LiveFieldItems()
+FindAllOf = prevFAOFields
+''')
+assert list(L.eval("fieldSearches").values()) == ["CPP_MapGimmick_FieldItem"], list(L.eval("fieldSearches").values())
+assert [L.eval(f"fieldItems[{i}].class") for i in (1, 2)] == ["BP_MapGimmick_FieldItem_Medal_C", "BP_MapGimmick_FieldItem_C"]
+assert L.eval("fieldItems[1].uid") == 8 and L.eval("fieldItems[2].itemId") == 16
+print("field items, one search: ok")
+
 # Round 108 (a tester): a quest scene visited Grandport with Lanzelt locked, and fast travel took
 # the player there. Maps of a locked continent are marked not visited, but the map the player is
 # on. An open continent's maps, and maps of no continent (the battlefield), stay.

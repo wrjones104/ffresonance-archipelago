@@ -2,15 +2,28 @@
 
 Only open items that still need to be tested in game live here. Once tested, record the results in [docs/playtesting_archive.md](playtesting_archive.md) and remove completed items from this file. Automated suite tests are documented in [tests/README.md](../tests/README.md).
 
-Current builds: mod `0.62.2` (`901ca04e`), world `0.31.2` (`177b8160`). Released before them: v0.31.1 to a few testers (mod `55040fae`, world `937b4b93`, 2026-11-24); v0.31.0 public (mod `7b90595e`, world `66073f7e`, 2026-11-21). Rounds 104 to 111 were built as mod 0.63.0 and world 0.32.0.
+Current builds: mod `0.62.2` (`517a874b`), world `0.31.2` (`e0989726`). Released before them: v0.31.1 to a few testers (mod `55040fae`, world `937b4b93`, 2026-11-24); v0.31.0 public (mod `7b90595e`, world `66073f7e`, 2026-11-21). Rounds 104 to 111 were built as mod 0.63.0 and world 0.32.0.
 
 Install: copy `FFRArchipelago/Scripts`, and copy `dist/ff_resonance.apworld` into `custom_worlds`. Close the Launcher and every client window first. Generate a new seed with `include_aileens_forge: true` (side quests on or off): the round 105 save holds two of each early item. Send the `[FFRAP]` lines of `UE4SS.log`. If the game crashes, send `Mods/FFRArchipelago/ap_trace.txt`, the crash folder, and the log before starting the game again.
 
+## Round 116: a safer start, the client check, stutter timings, two probes
+
+Install: copy `FFRArchipelago/Scripts`, and copy the new `dist/ff_resonance.apworld` into `custom_worlds` (the client changed). Generate a new seed, or the client warns that your seed's build is not its own.
+
+- [ ] Builds: the log says `version 0.62.2 (build 517a874b)`, and the client prints `world version 0.31.2 (build e0989726)`.
+- [ ] With the client closed, start the game. The log has `title: client not connected`. Choose the Archipelago entry: the Load Game screen opens in place of a new game, and the log has `title: no new game without the client (no ap_alive.txt: ...)`. Tell me what the entry's label said, and whether a notice showed.
+- [ ] Connect the client to your slot. `ap_alive.txt` shows up in the mod folder, and in a few seconds the log has `title: client connected`. Does the label change by itself, or only after you open and close Options (or restart)? Choose the entry: a new game starts, and the log has `title: the client is connected (<seed>:0:1)`.
+- [ ] The start: hold a direction as soon as the world map shows. Rain should not move until he stands at the town. The log has `newstart: move input held: ignored true`, then `moved to the arrival`, then `newstart: move input given back (at the arrival): ignored false`. After that Rain walks. If he walks during the move, or freezes, say so; for a freeze, run `ffrap_input` before you quit and send the log.
+- [ ] The log has one `moved to the arrival`, not two (a second one comes only with an `after the move` line far below z 90).
+- [ ] Stutter: play 5 minutes or more on the laptop, then on the desktop. Every 2 minutes the log has `perf:` lines; send them from both. Does the laptop stutter less than before? When it stutters, run `ffrap_perf` and say so, and send any `perf: a tick took` lines.
+- [ ] Shinies still count (their scan changed): pick up a shiny, a Tablet Shard and a medal shiny if you see one. Each sends `check shiny:...`, and the pop-up names the Archipelago item.
+- [ ] Probe: in the console, run `ffrap_functions CPP_BFL_Dialog CPP_DialogManager`, and send `Mods/FFRArchipelago/functions.txt`.
+- [ ] Probe: at the title, run `ffrap_point0 on`, then choose the Archipelago entry (client connected). Send the log's `point 0` lines. Did Rain show up at the town at once, or at the Earth Shrine and then jump? On the world map, `ffrap_point0` should log point 0 back at about 17214, 20957.
+
 ## Rounds 113 and 114: lifts and rafts after a fast travel out
 
-Install: copy `FFRArchipelago/Scripts` only (the apworld is round 112's). Your round 112 seed is fine.
+Use round 116's build.
 
-- [ ] Builds: the log says `version 0.62.2 (build 901ca04e)`, and the client prints `world version 0.31.2 (build 177b8160)`.
 - [ ] The Wind Shrine, as in the Tower of Mysidia: ride a lift, fast travel out, come back in by the door. Each lift is where it was on your first visit. The log has `rides: back as on a first visit: 3070:...` when you leave, and `rides on map 3070: lifts ...` when you come back.
 - [ ] The Water Shrine, the Gronoa Shrine and the Sanctissimus Shrine: the same, if you pass them.
 - [ ] Cave of Waters: cross on a raft, fast travel out, come back in by the door. A raft waits at the first dock again. The log has `rides: back as on a first visit: 3080 raft <n> -> none` when you leave, and `rides on map 3080: last raft none` when you come back, then the new raft once you ride. If no raft is at any dock, send the log.

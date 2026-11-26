@@ -72,7 +72,7 @@ Requirements and notes:
 | `shops.tsv` | Shop stock, one row per item |
 | `capabilities.tsv` | What each party member's skills (by level), Vision's (by awakening) and gear's passives do in a boss fight, for `boss_logic.py` |
 
-At runtime, the mod writes working files in its own folder: `ap_out.txt`, `ap_state.txt`, `ap_status.txt`, `settings.txt`, `ffrap_dump.txt`, `chests.tsv`, `seen.tsv`, and (when `ffrap_gate mark` is used) `crossings.txt`. `tools/fake_ap.py` writes `ap_in.txt` for standalone mod testing.
+At runtime, the client writes `ap_in.txt` and `ap_alive.txt`, and the mod writes working files in its own folder: `ap_out.txt`, `ap_state.txt`, `ap_status.txt`, `settings.txt`, `ffrap_dump.txt`, `chests.tsv`, `seen.tsv`, and (when `ffrap_gate mark` is used) `crossings.txt`. `tools/fake_ap.py` writes `ap_in.txt` for standalone mod testing.
 
 ## Where the engine calls come from
 
@@ -131,6 +131,8 @@ won      <battle group>             9056: final battle (Rain vs. Sol)
 applied  <index>  <ok|fail>  <detail>
 ```
 
+`ap_alive.txt` (client to game): one line, `<unix time>\t<session>`, rewritten every 2 s while the client is connected to its slot and deleted when it disconnects. The title entry starts a new game only when it is under 10 s old (round 116).
+
 The client only processes `check`, `story`, and `won` lines after a `seed` line matching its own session. Starting a new session clears `ap_out.txt`. `<map>` is always the map id returned by `CPP_MapManager:GetSameMapId()`.
 
 ## seen.tsv
@@ -168,7 +170,9 @@ These commands run in UE4SS's `ConsoleEnablerMod` console for development and de
 | `ffrap_chats [done]` | List Active Time Chats on the loaded save, or mark all played |
 | `ffrap_visions` | Log the first vision's synchro keys |
 | `ffrap_lock [on\|off\|open <continent\|all>\|close <continent\|all>]` | Toggle or test continent landing/crossing locks |
-| `ffrap_title [list\|add]` | List title menu entries or manually add the Archipelago entry |
+| `ffrap_title [list\|add\|refuse <type\|off>]` | List title menu entries, add the Archipelago entry, or set what the entry becomes with no client (Load Game; `off` lets it start a game) |
+| `ffrap_perf` | Log how long each loop, step and object search took since the last summary (also logged every 2 minutes) |
+| `ffrap_point0 [on\|off]` | Probe: move the world map's point 0 to the arrival during an Archipelago new game; alone, log where point 0 stands |
 | `ffrap_notice [text]` | Experimental quest-notice banner test |
 | `ffrap_logo` | Manually place the Archipelago logo on the title screen |
 | `ffrap_layout <text>` | Log widget panel chain containing `<text>` |

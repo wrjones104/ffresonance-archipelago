@@ -18,5 +18,9 @@ assert not fake_ap.has_seed(in_path), "items alone are no session"
 fake_ap.append(in_path, "seed", fake_ap.FAKE_SEED)
 assert fake_ap.has_seed(in_path)
 assert in_path.read_text(encoding="utf-8").splitlines()[-1] == "seed\tFAKE:0:1"
+# Round 116: the title entry starts a new game only with a client's heartbeat
+fake_ap.write_alive(work / "ap_alive.txt")
+stamp, session = (work / "ap_alive.txt").read_text(encoding="utf-8").rstrip("\n").split("\t")
+assert session == fake_ap.FAKE_SEED and stamp.isdigit()
 shutil.rmtree(work)
 print("fake_ap seed: ok")

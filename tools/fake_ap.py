@@ -18,6 +18,8 @@ Commands:
 
 The mod plays only on a save linked to a seed (round 100), so a fake seed line is written first
 if ap_in.txt has none. Start a game from Archipelago on the title menu, or load a save and bind it.
+While it runs it writes ap_alive.txt as the client does (round 116), so the title entry starts
+a new game.
 
 Standard library only.
 """
@@ -65,6 +67,18 @@ def append(in_path: Path, *fields: object) -> None:
         f.write("\t".join(clean(x) for x in fields) + "\n")
 
 
+ALIVE_SECONDS = 2
+
+
+def write_alive(alive_path: Path) -> None:
+    alive_path.write_text(f"{int(time.time())}\t{FAKE_SEED}\n", encoding="utf-8", newline="\n")
+
+
+def heartbeat(alive_path: Path, stop: threading.Event) -> None:
+    while not stop.wait(ALIVE_SECONDS):
+        write_alive(alive_path)
+
+
 def tail(out_path: Path, stop: threading.Event) -> None:
     """Prints new ap_out.txt lines as the game writes them."""
     offset = out_path.stat().st_size if out_path.exists() else 0
@@ -96,8 +110,11 @@ def main() -> None:
         append(in_path, "seed", FAKE_SEED)
     print(f"Bridge: {mod_dir}\nNext item index: {index}. Type 'help' for commands.")
 
+    alive_path = mod_dir / "ap_alive.txt"
+    write_alive(alive_path)
     stop = threading.Event()
     threading.Thread(target=tail, args=(out_path, stop), daemon=True).start()
+    threading.Thread(target=heartbeat, args=(alive_path, stop), daemon=True).start()
     try:
         while True:
             try:
@@ -144,6 +161,7 @@ def main() -> None:
         pass
     finally:
         stop.set()
+        alive_path.unlink(missing_ok=True)
 
 
 if __name__ == "__main__":

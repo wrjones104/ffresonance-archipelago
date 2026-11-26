@@ -11,7 +11,9 @@ The mod and this client talk through two text files in the mod folder (see the r
     the mod's own `seed` line for this seed and slot count, so checks from another seed or from
     before connecting are ignored;
   * sends the goal once enough Tablet Shards have been received, or once a `story` report reaches
-    the goal checkpoint, whichever the seed asks for.
+    the goal checkpoint, whichever the seed asks for;
+  * rewrites ap_alive.txt every few seconds while connected to its slot, so the mod's title entry
+    starts a new game only with the client connected.
 """
 
 from __future__ import annotations
@@ -21,6 +23,7 @@ import base64
 import os
 import re
 import sys
+import time
 from typing import Any
 
 import Utils
@@ -37,6 +40,7 @@ LOCATION_ID_TO_KEY = {location_id: key for key, location_id in LOCATION_KEY_TO_I
 
 GAME = "Final Fantasy Resonance"
 POLL_SECONDS = 0.5
+ALIVE_SECONDS = 2     # ap_alive.txt is rewritten this often while connected; the mod allows 10 s
 GOAL_MESSAGE = "Goal complete!"
 GOAL_MESSAGE_LINE = f"msg\t{GOAL_MESSAGE}"
 SHARD_GOAL = "tablet_shards"
@@ -133,6 +137,7 @@ class FFResonanceContext(CommonContext):
         self.scouts_written = False           # scout lines are in ap_in.txt for this session
         self.starting_party: list[int] = []
         self.lock_needs = (0, 0, 0)           # the final boss lock: characters, visions, Crystal Fragments
+        self.alive_written = 0.0              # when ap_alive.txt was last written
         self.lock_written: tuple | None = None  # the last finalboss line written
         self.progress_written: dict[str, tuple] = {}  # the last goal and checks lines written
 
@@ -142,6 +147,24 @@ class FFResonanceContext(CommonContext):
         self.mod_folder = resolve_mod_folder(path)
         self.in_path = os.path.join(self.mod_folder, "ap_in.txt")
         self.out_path = os.path.join(self.mod_folder, "ap_out.txt")
+        self.alive_path = os.path.join(self.mod_folder, "ap_alive.txt")
+
+    def write_alive(self, now: float) -> None:
+        """Round 116: the mod's title entry reads this to know the client is connected now. Before it,
+        the ap_in.txt left by a closed client made the entry start the last seed's start."""
+        if now - self.alive_written < ALIVE_SECONDS or not os.path.isdir(self.mod_folder):
+            return
+        with open(self.alive_path, "w", encoding="utf-8", newline="\n") as f:
+            f.write(f"{int(now)}\t{self.session_key}\n")
+        self.alive_written = now
+
+    def clear_alive(self) -> None:
+        if self.alive_written:
+            try:
+                os.remove(self.alive_path)
+            except FileNotFoundError:
+                pass
+        self.alive_written = 0.0
 
     def write_line(self, *fields: Any) -> None:
         with open(self.in_path, "a", encoding="utf-8", newline="\n") as f:
@@ -453,6 +476,7 @@ class FFResonanceContext(CommonContext):
     def reset_server_state(self) -> None:
         super().reset_server_state()
         self.session_key = None
+        self.clear_alive()
         self.room_seed_name = None
 
     def make_gui(self):
@@ -465,6 +489,7 @@ async def game_loop(ctx: FFResonanceContext) -> None:
     while not ctx.exit_event.is_set():
         try:
             if ctx.session_key is not None and ctx.slot is not None:
+                ctx.write_alive(time.time())
                 ctx.restore_session_file()
                 ctx.write_new_items()
                 ctx.write_lock()
@@ -483,9 +508,12 @@ async def game_loop(ctx: FFResonanceContext) -> None:
                     if not ctx.goal_announced:
                         ctx.write_line("msg", GOAL_MESSAGE)
                         ctx.goal_announced = True
+            else:
+                ctx.clear_alive()
         except OSError as e:
             logger.warning(f"Bridge file error: {e}")
         await asyncio.sleep(POLL_SECONDS)
+    ctx.clear_alive()
 
 
 MOD_IN_LIBRARY = os.path.join("steamapps", "common", "FINAL FANTASY RESONANCE", "FFRS", "Binaries", "Win64",

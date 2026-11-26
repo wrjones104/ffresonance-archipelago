@@ -679,39 +679,36 @@ local function ClassName(o)
     return ok and n or "?"
 end
 
+-- Round 116: every field item Blueprint (FieldItem, _Child, _Medal, _08Gro_40) comes from
+-- CPP_MapGimmick_FieldItem, so one search finds them all. The search for every CPP_MapGimmick that
+-- this replaces read the class of each gimmick on the map, every second: a stutter on slower PCs.
+G.FIELD_ITEM_CLASS = "CPP_MapGimmick_FieldItem"
+
 function G.LiveFieldItems()
-    local out, seen = {}, {}
-    for _, cls in ipairs({ "CPP_MapGimmick", "BP_MapGimmick_FieldItem_C" }) do
-        local ok, all = pcall(FindAllOf, cls)
-        for _, a in ipairs(ok and all or {}) do
-            if Alive(a) then
-                local cname = ClassName(a)
-                local addr
-                pcall(function() addr = a:GetAddress() end)
-                if cname:find("FieldItem", 1, true) and not (addr and seen[addr]) then
-                    if addr then seen[addr] = true end
-                    pcall(function()
-                        local e = {
-                            uid = Int(a.m_UniqueId),
-                            hidden = a.bHidden == true,
-                            interact = Int(a.interactType),
-                            class = cname,
-                            actor = a,
-                        }
-                        -- CPP_MapGimmick_FieldItem.m_IsOpen is the picked-up flag; reward fields live on CPP_MapGimmick_ItemObjectBase.
-                        pcall(function() e.open = a.m_IsOpen == true end)
-                        pcall(function()
-                            e.itemId, e.itemNum, e.money = Int(a.m_ItemId), Int(a.m_ItemNum), Int(a.m_Money)
-                        end)
-                        pcall(function() e.visible = a.VisibleCondition:ToString() end)
-                        pcall(function()
-                            local loc = a:K2_GetActorLocation()
-                            e.x, e.y = loc.X, loc.Y
-                        end)
-                        out[#out + 1] = e
-                    end)
-                end
-            end
+    local out = {}
+    local ok, all = pcall(FindAllOf, G.FIELD_ITEM_CLASS)
+    for _, a in ipairs(ok and all or {}) do
+        if Alive(a) then
+            pcall(function()
+                local e = {
+                    uid = Int(a.m_UniqueId),
+                    hidden = a.bHidden == true,
+                    interact = Int(a.interactType),
+                    class = ClassName(a),
+                    actor = a,
+                }
+                -- CPP_MapGimmick_FieldItem.m_IsOpen is the picked-up flag; reward fields live on CPP_MapGimmick_ItemObjectBase.
+                pcall(function() e.open = a.m_IsOpen == true end)
+                pcall(function()
+                    e.itemId, e.itemNum, e.money = Int(a.m_ItemId), Int(a.m_ItemNum), Int(a.m_Money)
+                end)
+                pcall(function() e.visible = a.VisibleCondition:ToString() end)
+                pcall(function()
+                    local loc = a:K2_GetActorLocation()
+                    e.x, e.y = loc.X, loc.Y
+                end)
+                out[#out + 1] = e
+            end)
         end
     end
     return out
@@ -1090,6 +1087,7 @@ end
 -- CPP_VM_Title:ExecuteEntry(type). The Archipelago entry uses type 5 as a copy of New Game;
 -- the ExecuteEntry hook in main.lua turns it back into New Game.
 
+G.TITLE_LOAD_GAME = 1
 G.TITLE_NEW_GAME = 2
 G.TITLE_ARCHIPELAGO = 5
 local TITLE_DA = "/Game/UI/Title/Data/DA_Title.DA_Title"
@@ -1111,6 +1109,10 @@ function G.TitleEntries()
 end
 
 G.TITLE_LABEL = "New Game (Archipelago)"
+-- Round 116: the label while no client is connected. The menu reads its rows when it is made,
+-- so a change shows the next time the title menu comes up.
+G.TITLE_LABEL_NO_CLIENT = "New Game (Archipelago: connect the client)"
+G.TITLE_LABEL_LIVE = G.TITLE_LABEL
 -- The menu lists the rows in the map's own order, so the Archipelago row goes under New Game
 -- by rebuilding the map in this order (OrderTitleEntries).
 local TITLE_ORDER = { 0, 1, 2, 5, 3, 4 }
@@ -3666,6 +3668,19 @@ function G.InputState()
     return string.format("%s; input manager: enabled %s, mode %s, mapping contexts %s", line, enabled, mode, stack)
 end
 
+-- Round 115: the player walked while the new start moved them, and froze after a second move.
+-- The engine's move-input lock is a counter on the controller: each true needs one false.
+-- Returns IsMoveInputIgnored after the call, or nil and why.
+function G.HoldMove(on)
+    local pc = PlayerController()
+    if not pc then return nil, "no PlayerController" end
+    local ok, err = pcall(function() pc:SetIgnoreMoveInput(on) end)
+    if not ok then return nil, tostring(err) end
+    local ignored
+    pcall(function() ignored = pc:IsMoveInputIgnored() end)
+    return ignored
+end
+
 -- Resets for a locked game, one at a time: the game's input manager first (EnableInput, then
 -- register its current mapping context again), then the engine's own. step(what) runs before
 -- each (it logs, so a crash names the call). Returns the steps that raised.
@@ -3759,6 +3774,9 @@ G.NEW_START = {
     -- its own start map, this keeps that scene from playing.
     flags = { 553 },
     near = 300,    -- a player this close to the arrival is not moved
+    -- Round 115: move input is held from the save's arrival until the player stands at the
+    -- arrival, and given back after this many ticks at the latest.
+    holdTicks = 20,
     saved = nil,   -- what NewStartPrepare changed, for NewStartRestore
 }
 do
@@ -4087,6 +4105,42 @@ function G.MoveAirships(a, far, step)
         end
     end
     return count, parts
+end
+
+-- Round 116 probe (idea 54, way 4): a new game stands at point 0 of its map. The world map's is
+-- the Earth Shrine's arrival, in the level Wld_GD (every map has a point 0 of its own).
+G.START_POINT = { class = "BP_MapTransitionPoint_C", id = 0, level = "/Wld_GD." }
+
+-- The world map's point 0 when it is loaded: the actor, and where it stands. nil and why if not.
+function G.StartPoint()
+    local P = G.START_POINT
+    local ok, all = pcall(FindAllOf, P.class)
+    local points = 0
+    for _, pt in ipairs(ok and all or {}) do
+        if Alive(pt) then
+            points = points + 1
+            local id, name, at
+            pcall(function() id = Int(pt.m_PointID) end)
+            pcall(function() name = pt:GetFullName() end)
+            if id == P.id and name and name:find(P.level, 1, true) then
+                pcall(function() at = pt:K2_GetActorLocation() end)
+                if at then return pt, { x = at.X, y = at.Y, z = at.Z } end
+                return nil, "point 0 found, but its place could not be read"
+            end
+        end
+    end
+    return nil, points .. " transition points loaded, none is the world map's point 0"
+end
+
+-- Moves the world map's point 0 to `to` ({ x, y, z }). Returns where it stood before (nil if it
+-- was not moved), and a line for the log.
+function G.MoveStartPoint(to, step)
+    local pt, at = G.StartPoint()
+    if not pt then return nil, at end
+    step(string.format("point 0 K2_SetActorLocation %.0f, %.0f, %.0f", to.x, to.y, to.z))
+    local ok = pcall(function() pt:K2_SetActorLocation({ X = to.x, Y = to.y, Z = to.z }, false, {}, true) end)
+    if not ok then return nil, "point 0 K2_SetActorLocation raised" end
+    return at, string.format("point 0 moved from %.0f, %.0f, %.0f to %.0f, %.0f, %.0f", at.x, at.y, at.z, to.x, to.y, to.z)
 end
 
 -- Moves the airship (when it is on the map) and then the player on foot to the arrival.
