@@ -2956,14 +2956,22 @@ G.CONTINENT_MAPS = {
     gronoa = { 2150, 2160, 3220, 3230, 3240, 3250, 10060, 10062, 10063, 10064 },
     pharm = { 2170, 2180, 2190, 3010, 3260, 3270, 3271, 3272, 5180, 5181, 10061, 10065, 10066 },
 }
--- Returns the maps marked not visited now. The map the player is on is left alone.
-function G.UnvisitLocked()
+-- Round 117 (the user): on an open continent too, a place counts for fast travel only once the
+-- player has stood in it on the field. `walked` (map -> true) holds those maps; a continent's map
+-- not in it is marked the same way as a locked continent's. Without `walked`, only locked
+-- continents. Returns the maps marked now. The map the player is on is left alone.
+G.CONTINENT_OF = {}
+for name, maps in pairs(G.CONTINENT_MAPS) do
+    for _, m in ipairs(maps) do G.CONTINENT_OF[m] = name end
+end
+function G.UnvisitLocked(walked)
     local sd = G.SaveData()
     if not sd then return {} end
     local locked, here, cleared = {}, G.CurrentMap(), {}
     for _, c in ipairs(G.CONTINENTS) do
-        if G.GetFlag(c.flag) == false then
-            for _, m in ipairs(G.CONTINENT_MAPS[c.name] or {}) do locked[m] = true end
+        local shut = G.GetFlag(c.flag) == false
+        for _, m in ipairs(G.CONTINENT_MAPS[c.name] or {}) do
+            if shut or (walked and not walked[m]) then locked[m] = true end
         end
     end
     pcall(function()
@@ -2986,6 +2994,21 @@ end
 -- flag 112, "elbow grease"). A fast travel out from the far side left the way in blocked for good.
 -- Off the ruins' map, a fallen floor is put back as the scene would; the scene gives nothing.
 G.KOLOBOS_BRIDGE = { map = 3040, fell = 111, fixed = 112 }
+
+-- The continents' maps the save marks visited: the places a save from before round 117 has
+-- already been to count as walked in.
+function G.VisitedMaps()
+    local sd, out = G.SaveData(), {}
+    if not sd then return out end
+    pcall(function()
+        sd.Map.perMapSaveDataMap:ForEach(function(key, value)
+            local m = Int(key:get())
+            if G.CONTINENT_OF[m] and value:get().bIsVisited == true then out[#out + 1] = m end
+        end)
+    end)
+    table.sort(out)
+    return out
+end
 
 -- Round 117 probe (ffrap_visited): a map's known and visited marks, as the save's row holds them
 -- and as CPP_BFL_SaveData_PerMap answers. `known` and `visited`, when given, are written first.

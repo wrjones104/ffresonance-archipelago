@@ -276,6 +276,8 @@ G.VISION_MOOGLE_FLAGS, G.THRONE_KEY = { 144, 145 }, { map = 3160 }
 G.CABIN_KEY, G.DUNGEON_KEY = { map = 2170 }, { item = 20019, map = 3150 }
 function G.CabinKeyManOff() return 0 end
 function G.UnvisitLocked() return {} end
+function G.VisitedMaps() return {} end
+G.CONTINENT_OF = {}
 G.RADAR_BANDS = { { upTo = 13, steps = { 20, 30 } }, { upTo = 22, steps = { 40 } }, { upTo = 31, steps = { 50 } } }
 G.RADAR = {}
 for n = 1, 13 do G.RADAR[n] = { n = n, flag = 703 + n, tier = n <= 5 and 1 or n <= 9 and 2 or 3 } end
@@ -2445,7 +2447,7 @@ G.map = 2030""")
     G.story = 8000
     tick(8)
     assert G.unvisits >= 1, "every pass"
-    assert sum("2030 are on locked continents" in l for l in logs()) == 1, "logged once"
+    assert sum("2030 not walked in or on locked continents" in l for l in logs()) == 1, "logged once"
     assert G.manCalls == 0 and G.grants108 == 0, "not on their maps"
     G.map = SIAN
     tick(4)
@@ -3286,3 +3288,67 @@ assert sum("kolobos: the fallen floor put back, flag 112" in m for m in logged()
 tick(4)
 assert sum("kolobos: the fallen floor put back" in m for m in logged()) == 1, "once"
 print("round 117 ticks, airship, Kolobos floor: ok")
+
+# Round 117 (the user): a place counts for fast travel only once the player stood in it with the
+# field up for two passes, not when a scene took them through. The places the save had visited
+# before count. The list is the session's, kept in ap_state.txt.
+GRANDPORT_117, MOZUL_117, SIAN_117, OPEN_FIELD_117 = 2030, 2100, 2170, 1000
+inbox("seed\tS117w:0:1\ncfg\topenworld\t1\n", "w")
+L, G = boot5("SD_117W", "0", {})
+L.globals().G = G
+L.execute(SCALE_STUB)
+L.execute(CAPTURE)
+L.execute(f"""
+G.map, G.story, G.field117, G.walkedSeen = {SIAN_117}, 8000, false, {{}}
+G.CONTINENT_OF = {{ [{GRANDPORT_117}] = "lanzelt", [{MOZUL_117}] = "zoldaad", [{SIAN_117}] = "pharm" }}
+function G.CurrentMap() return G.map end
+function G.OnField() return G.field117 end
+function G.VisitedMaps() return {{ {SIAN_117} }} end
+function G.UnvisitLocked(walked)
+  G.walkedSeen = {{}}
+  for m in pairs(walked or {{}}) do G.walkedSeen[#G.walkedSeen + 1] = m end
+  table.sort(G.walkedSeen)
+  return {{}}
+end
+""")
+G.chests = L.table()
+walked = lambda: list(G.walkedSeen.values())
+tick(8)
+assert walked() == [SIAN_117], ("the save's visited places count", walked())
+assert any("fast travel: 1 places visited already count as walked in" in m for m in logs())
+# a scene takes the player through Mozul Station: no field there
+G.map = MOZUL_117
+tick(6)
+assert walked() == [SIAN_117], "a scene's visit does not count"
+# on foot in Grandport: the field up for two passes
+G.map, G.field117 = GRANDPORT_117, True
+tick(6)
+assert walked() == [GRANDPORT_117, SIAN_117], walked()
+assert sum(f"fast travel: map {GRANDPORT_117} walked in" in m for m in logs()) == 1
+G.map = OPEN_FIELD_117
+tick(4)
+assert walked() == [GRANDPORT_117, SIAN_117], "the world map is no place of a continent"
+assert f"walked\t{GRANDPORT_117},{SIAN_117}\n" in read("ap_state.txt"), read("ap_state.txt")
+# kept over a restart, for the same session
+L, G = boot5("SD_117W", "0", {})
+L.globals().G = G
+L.execute(SCALE_STUB)
+L.execute(f"""
+G.map, G.story, G.walkedSeen = {OPEN_FIELD_117}, 8000, {{}}
+function G.CurrentMap() return G.map end
+function G.VisitedMaps() return {{}} end
+function G.UnvisitLocked(walked)
+  G.walkedSeen = {{}}
+  for m in pairs(walked or {{}}) do G.walkedSeen[#G.walkedSeen + 1] = m end
+  table.sort(G.walkedSeen)
+  return {{}}
+end
+""")
+G.chests = L.table()
+tick(8)
+assert list(G.walkedSeen.values()) == [GRANDPORT_117, SIAN_117], list(G.walkedSeen.values())
+# a new session starts the list again
+inbox("seed\tS117x:0:1\ncfg\topenworld\t1\n", "w")
+tick(2)
+assert f"walked\t{GRANDPORT_117}" not in read("ap_state.txt"), read("ap_state.txt")
+print("fast travel after a walk in: ok")

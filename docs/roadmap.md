@@ -48,7 +48,7 @@ Ideas 54, 55, 57, 11, 22, 49 and 38. Most are the same problem: the player canno
 - **Standard or custom scaling (49).** A switch on the Settings page: Standard shows the three strengths, Custom shows the round 102 sliders. The sliders are in git (`891e70d`), so most of the work is showing and hiding rows. Do it after the scaling line, so the line can say how to change it.
 - **A start that cannot go wrong (54).** No second move for a walking player, move input held during the move, and the client's heartbeat so the Archipelago entry needs a live client. Do it first in this group: a frozen start makes a player start over. Built in round 116 and it works (round 117). Left: the title label's refresh.
 - **The stutter (55).** Round 116 logs timings. Fix what they name before the next public release: a stutter on every half second is felt the whole run. Round 117 spread the slow steps over two ticks; the laptop test is next.
-- **Fast travel to places a scene took the player to (57).** The not-visited mark does not stop the Map screen. One probe (`ffrap_visited`), then the fix, before the next public release: it opens a locked continent.
+- **Fast travel to places a scene took the player to (57).** A place counts only after a walk in (round 117). The not-visited mark alone did not stop the Map screen, so `ffrap_visited` checks which mark it reads before the next public release.
 - **Welcome window (22).** On a new Archipelago game: the scaling line, how continents open, where the page is. The calls are known since round 117 (`CPP_BFL_Dialog.OpenDialog` with an existing row's tag, its message written first).
 - **Page layout (38).** Headings and framed rows. Nice, not needed. Leave it last in this group.
 

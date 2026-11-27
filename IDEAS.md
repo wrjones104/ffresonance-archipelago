@@ -439,4 +439,6 @@ Along the same lines, I would also want an option for players to start with all 
 
 **To find out:** with `ffrap_visited` on an open continent's town, whether the Map screen still travels there when it is only not visited, and when it is unknown. If neither stops it, the next probe is `ffrap_find Visited` and `ffrap_find Known` for the list it reads.
 
-**Open question for the user:** should a place a scene visited on an open continent stay a fast travel place, as in the game, or wait for a visit on foot?
+**The user's answer (round 117):** a place waits for a visit on foot, on an open continent too.
+
+**Built (round 117, mod build b295fb0e):** the mod keeps the places the player stood in with the field up for two passes (about 2 s), per session, in `ap_state.txt` (`walked`). Every other place of a continent is marked unknown and not visited, as a locked continent's are; the map the player is on is left alone. A session's first pass takes the places the save has visited already, so a save from before keeps its fast travel places (a scene's visit before this build counts). The log has `fast travel: map <id> walked in`, and `fast travel: maps ... not walked in or on locked continents, marked never seen`.

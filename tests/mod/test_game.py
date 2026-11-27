@@ -2172,6 +2172,13 @@ assert L.eval(f"known117({GRANDPORT})") is False and L.eval(f"known117({OLDERION
 assert L.eval(f"visited108({OBLIVION_PALACE})") is True, "the player is there"
 assert L.eval(f"visited108({OLDERION_TOWN})") is True and L.eval(f"visited108({BATTLEFIELD})") is True
 assert len(L.eval("G.UnvisitLocked()")) == 0, "nothing more to clear"
+# Round 117: on an open continent, a place not walked in is marked the same way; the walked ones stay
+assert L.eval("G.CONTINENT_OF[2070]") == "olderion" and L.eval("G.CONTINENT_OF[5010]") is None
+assert sorted(L.eval("G.VisitedMaps()").values()) == [OBLIVION_PALACE, OLDERION_TOWN]
+assert len(L.eval(f"G.UnvisitLocked({{ [{OLDERION_TOWN}] = true }})")) == 0, "walked in"
+assert list(L.eval("G.UnvisitLocked({})").values()) == [OLDERION_TOWN], "a scene's visit"
+assert L.eval(f"visited108({OLDERION_TOWN})") is False and L.eval(f"known117({OLDERION_TOWN})") is False
+L.execute(f"saveMaps:ForEach(function(k, v) if k:get() == {OLDERION_TOWN} then local r = v:get(); r.bIsVisited, r.bIsKnown = true, true end end)")
 # Round 117 probe (ffrap_visited): the row's marks, written only when asked
 assert L.eval(f"G.MapMarks({OLDERION_TOWN})").startswith(f"map {OLDERION_TOWN}: row known true, visited true")
 assert L.eval(f"G.MapMarks({OLDERION_TOWN}, true, false)").startswith(f"map {OLDERION_TOWN}: row known true, visited false")

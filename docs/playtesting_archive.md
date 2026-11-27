@@ -1767,3 +1767,5 @@ Not seen in game: whether the move lock stops the game's own walking (it uses th
 - **The point 0 probe is taken out** (`ffrap_point0`, `G.StartPoint`, `G.MoveStartPoint`).
 
 Not done: the title label's refresh while the title is up, and the two radar findings (idea 51).
+
+**After the round, the user decided (2026-11-27):** a place a scene took the player to counts for fast travel only after a visit on foot, on an open continent too (idea 57). **Built (mod build b295fb0e):** the mod keeps the places the player stood in with the field up for two passes (about 2 s), per session in `ap_state.txt`, and marks every other place of a continent unknown and not visited. A session's first pass with this build takes what the save has visited already.

@@ -439,6 +439,10 @@ local function loadState()
             for slot in value:gmatch("%d+") do state.slots[tonumber(slot)] = true end
         end
         if key == "live" and value ~= "" then state.live = value end
+        if key == "walked" then
+            state.walked = {}
+            for map in value:gmatch("%d+") do state.walked[tonumber(map)] = true end
+        end
         if key == "slotItems" then
             for slot, n in value:gmatch("(%d+)=(%d+)") do state.slotItems[tonumber(slot)] = tonumber(n) end
         end
@@ -462,6 +466,12 @@ local function saveState()
     f:write("slotItems\t", slotsText(true), "\n")
     if save.ok and save.obj then state.live = save.obj .. "|" .. tostring(save.ticks) end
     f:write("live\t", state.live or "", "\n")
+    if state.walked then
+        local maps = {}
+        for map in pairs(state.walked) do maps[#maps + 1] = map end
+        table.sort(maps)
+        f:write("walked\t", table.concat(maps, ","), "\n")
+    end
     f:close()
 end
 
@@ -513,7 +523,7 @@ local function newSession(key)
     state.seed, state.applied, state.items, state.reported = key, 0, {}, {}
     state.syncPending = true
     state.slots, state.slotItems, state.bindPending, state.live = {}, {}, false, nil
-    state.scouts = {}
+    state.scouts, state.walked, state.walkMap = {}, nil, nil
     seedCfg.party, seedCfg.finalboss, seedCfg.chocobo, seedCfg.airship, seedCfg.continent, seedCfg.radar = nil, nil, nil, nil, nil, nil
     seedCfg.quests, seedCfg.quest2, seedCfg.goal, seedCfg.checks, seedCfg.hidequests = nil, nil, nil, nil, nil
     seedCfg.forge, seedCfg.keyitems = nil, nil
@@ -3271,10 +3281,27 @@ seedExtrasTick = function()
         log("dungeon key: given in Zoldaad Dungeon, as its soldier never comes (" .. tostring(code) .. ", " .. tostring(detail) .. ")")
     end
     state.mark("extras: unvisit")
+    -- Round 117 (the user): a place counts for fast travel once the player stood in it with the
+    -- field up for two passes (about 2 s), not when a scene took them through it. The list is the
+    -- session's (ap_state.txt); a session's first pass takes what the save has visited already.
     if seedSave then
-        local ok, cleared = pcall(game.UnvisitLocked)
+        if not state.walked then
+            state.walked = {}
+            local before = game.VisitedMaps()
+            for _, map in ipairs(before) do state.walked[map] = true end
+            log("fast travel: " .. #before .. " places visited already count as walked in")
+            saveState()
+        end
+        local now = game.OnField() and game.CurrentMap() or nil
+        if now and now == state.walkMap and game.CONTINENT_OF[now] and not state.walked[now] then
+            state.walked[now] = true
+            saveState()
+            log("fast travel: map " .. now .. " walked in")
+        end
+        state.walkMap = now
+        local ok, cleared = pcall(game.UnvisitLocked, state.walked)
         if ok and #cleared > 0 then
-            log("fast travel: maps " .. table.concat(cleared, ", ") .. " are on locked continents, marked not visited")
+            log("fast travel: maps " .. table.concat(cleared, ", ") .. " not walked in or on locked continents, marked never seen")
         end
     end
     if seedSave and state.moogleSave ~= save.obj then
