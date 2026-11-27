@@ -1,6 +1,6 @@
 # Roadmap
 
-What to build next, in order, and what goes together. The ideas themselves, with what is known, are in [IDEAS.md](../IDEAS.md); numbers below are its idea numbers (done ones are in [ideas_archive.md](ideas_archive.md)). This file says only the order and the reasons. Written 2026-11-22, after v0.31.0.
+What to build next, in order, and what goes together. The ideas themselves, with what is known, are in [IDEAS.md](../IDEAS.md); numbers below are its idea numbers (done ones are in [ideas_archive.md](ideas_archive.md)). This file says only the order and the reasons. Updated 2026-11-27, after v0.32.0.
 
 ## Where we are
 
@@ -17,101 +17,94 @@ A tester (2026-11-22, v0.31.0, Normal scaling, progression balancing 65) finishe
 
 What they said: fun and well-rounded; early and mid game fast, late game fine; status effects hard with no Ribbon and few cures; magicite tight but fair; they thought level scaling was a gate at first; their partner's items felt back-loaded (likely the seed). They asked for a separate save location per seed, and a PopTracker pack.
 
-So the core loop works. The next work is less about making a seed finishable and more about making it a good seed: a fair item pool, logic that covers what the open start skips, and a game that tells the player what is going on.
+In **v0.32.0** (`2026-11-27`, world `0.32.0`, mod `0.63.0`), we shipped the item pool pass (2 Ribbons, 13 enemy-only accessories, `extra_magicite`, `early_healing_vision`, Proofs of Victory out, Lid's airship line gone), `include_aileens_forge` (8 airship-deck forge locations), and the rounds 106 to 119 stabilization wave: the direct open start with no prologue or slot reload (52), held move input and the `ap_alive.txt` client heartbeat on the title screen (54), the key-item audit and logic fixes (51), lift/raft/Kolobos floor resets after fast travel out (53), walked-in fast travel (57), and the main-loop stutter pass (55).
 
-**Rounds 109 to 111:** the new start (idea 52) went ahead of the order, because with autosave off the prologue skip never runs and the seed breaks at the start. It passed round 110 and is on by default; round 111 is a full run on it.
+So the core loop and the opening are solid. The next big release (v0.33.0) focuses on v0.32.0 follow-ups, finishing core progression logic with side quests on by default, and clear in-game UX and scaling controls.
 
 ## The order
 
-Each milestone is about one release. The first three are in the order I would do them. After that the order is looser.
+Each milestone is about one public release.
 
-### 1. Item pool pass (next release)
+### 1. Next release: v0.33.0 (world 0.33.0, mod 0.64.0) - UX, scaling controls, and core logic
 
-**Built in round 104** (world 0.32.0 build 94562703): the gear, `extra_magicite` and `early_healing_vision` (archived idea 48), passed in game. **Round 105** (world build e38986f1, mod build 395095c2): Lid's airship line, and Aileen's weapons moved up from milestone 4, as they shape the pool too (`include_aileens_forge`, docs/side_quests.md section 7). Both wait for round 105's test.
+Work batches across tester builds (`0.32.1` / `0.63.1` onward) in three stages.
 
-Straight from the feedback, and mostly apworld work.
+#### Stage A: v0.32.0 follow-ups and dungeon/UI fixes
 
-- Add items the pool has never had because they are drops or steals, not chest or quest rewards: Ribbon first, then the status-resist accessories. Each one takes a filler slot.
-- More Magicite in the pool, in place of low filler (Potions, small gil).
-- An option to put one support vision (healing or status cure) early: `early_support_vision`. Archipelago's `local_early_items` does the placing. Until then, a player can put the vision in `early_items` in their yaml.
-- Check the filler-to-useful ratio after the changes, so the pool does not tip into all useful items.
-- Lid's "We already found Mysidia..." line on the airship (scratchpad). Small, and it can ride along.
+1. Check incoming `perf:` logs on laptops and slower PCs (towns and Dragon's Maw) and trim any remaining slow steps (55).
+2. Run the `ffrap_visited` check (`unvisit` and `unknown`) to confirm the Map screen blocks unwalked places (57).
+3. Fix story boss item pop-ups so wins (`boss:9012` in round 119) show the scouted Archipelago item instead of missing the dialog (15).
+4. Fix Mobliz Shipyard's last lift (elevator 75 on map 3060, via the switch 16 talk chain / `CallSwitch`) so its 2 chests and 2 Tablet Shards are reachable (53).
+5. Fix the two radar rough edges: stop Lid's early "stopped finding treasure" line while treasures remain, and allow digging treasures right away when a Progressive Radar arrives mid-flight without a map change (51).
+6. Refresh the **New Game (Archipelago)** client-heartbeat label live while the title screen stays open (54).
 
-Why first: it is the cheapest change with the most effect on how a seed plays, and it needs no new in-game probes. The numbers and the design are in idea 48, now in ideas_archive.md.
+#### Stage B: Finish core logic and turn side quests on by default
 
-### 2. Tell the player what is going on (UX)
+1. Audit story-granted abilities skipped by the open start (`DT_TalkEventData_Chapter*` and `CharaEvent` second Limit Bursts) against `data/game/capabilities.tsv`, and grant what logic or pre-tower play expects (40).
+2. Add dump-verified per-boss `BOSS_NEEDS` rules for Tiers C and D in [boss_logic.py](../apworld/ff_resonance/boss_logic.py): Sephiroth (`9138` Phase 3 `light_physical`), Intangir (`7042`), Rogue Magitek Weapon (`7057`), the Sanctissimus gauntlet (`9071` to `9076` and `9044`), and endgame cave masters (`9110` to `9117`). Currently only Tiers A and B have per-boss `BOSS_NEEDS` rules.
+3. Switch `include_side_quests` to on by default (`DefaultOnToggle` in [options.py](../apworld/ff_resonance/options.py) and the template YAML), bringing the 28 quest rewards and 17 second rewards (45 checks) into standard seeds. Its logic ([side_quests.md](side_quests.md), section 5) is already done.
 
-Ideas 54, 55, 57, 11, 22, 49 and 38. Most are the same problem: the player cannot see the seed's state in the game. 49 is on the same page and uses the same row code.
+#### Stage C: In-game UX and scaling controls
 
-- **Save-slot cards (11).** Mark an Archipelago save on its card: seed and slot name. This answers the "which save is which" problem. A separate save folder per seed is a much bigger change (the engine picks the path) and the cards may be enough. Look at the folder only if testers still mix saves up after the cards.
-- **Explain scaling.** One line on the Seed tab ("Enemies scale to your party level, so no area is out of reach") and a short paragraph in the README and the playtester guide. Cheap. The tester thought they were gated.
-- **Standard or custom scaling (49).** A switch on the Settings page: Standard shows the three strengths, Custom shows the round 102 sliders. The sliders are in git (`891e70d`), so most of the work is showing and hiding rows. Do it after the scaling line, so the line can say how to change it.
-- **A start that cannot go wrong (54).** No second move for a walking player, move input held during the move, and the client's heartbeat so the Archipelago entry needs a live client. Do it first in this group: a frozen start makes a player start over. Built in round 116 and it works (round 117). Left: the title label's refresh.
-- **The stutter (55).** Round 116 logs timings. Fix what they name before the next public release: a stutter on every half second is felt the whole run. Round 117 spread the slow steps over two ticks: better on the laptop, still felt in towns. Round 118 took out the largest step left (the story boss step's walk of every talk row); both computers' timings are next.
-- **Fast travel to places a scene took the player to (57).** A place counts only after a walk in (round 117). The not-visited mark alone did not stop the Map screen, so `ffrap_visited` checks which mark it reads before the next public release.
-- **Welcome window (22).** On a new Archipelago game: the scaling line, how continents open, where the page is. The calls are known since round 117 (`CPP_BFL_Dialog.OpenDialog` with an existing row's tag, its message written first).
-- **Page layout (38).** Headings and framed rows. Nice, not needed. Leave it last in this group.
+Ideas 49, 56, 11, and 22, plus documentation updates. Most solve the same problem: the player cannot see or tune the seed's state cleanly in game.
 
-### 3. Finish the logic: story abilities (40) and side quests on
+1. Add a scaling explanation line on the Seed tab ("Enemies scale to your party level, so no area is out of reach") and update stale sections of [playtester_guide.md](playtester_guide.md) (which still says quests and NPCs are unshuffled and points to `Options > Gameplay`).
+2. Build unified Enemy/Boss and Custom scaling on the Settings tab (49 + 56): a `Custom scaling` switch (default Off = Standard). In `Standard` mode, Enemies and Bosses get separate On/Off switches and separate `Casual`, `Normal`, and `Expert` preset rows (copied from `Difficulty`). Turning `Custom scaling` on hides the presets and shows the five percentage sliders from round 102 (`891e70d`: `elevel`, `ehp`, `eatk`, `blevel`, `bpower`), seeded from the active presets and logged on `battle: won`.
+3. Mark Archipelago saves on Load and Save slot cards (11): write `server <host:port>` and `player <name>` into `ap_in.txt`, keep a persistent per-slot summary record, and draw the seed/slot line in `WBP_SaveData_Entry_C` (`Vertical_Mid`). This answers "which save is which" without changing the engine's save folder path; look at a separate folder only if testers still mix saves up after the cards.
+4. Show a one-time welcome window on a new Archipelago game (22) via `CPP_BFL_Dialog.OpenDialog` on an existing `CDT_DialogBox` row (`Map_FastTravel_CanNot`), covering scaling, continent unlocks, and the **Archipelago** menu entry.
 
-Boss logic itself is built (world 0.25.0 and 0.28.0: `boss_logic.py`, archived idea 29). The first version of this roadmap had it as the next big job; that was wrong. What is left:
+### 2. More locations (`v0.34.0+`)
 
-- Idea 40: the abilities the open start skips. The capability matrix (`data/game/capabilities.tsv`) counts what each member learns, so an ability the story would have given and our start does not may make logic think the party can do something it cannot.
-- Sephiroth (scratchpad): check that his rule keeps him late enough.
-- Turn `include_side_quests` on by default. Its logic (side_quests.md, section 5) is done.
-- The first full tester run finished at party level 30 with no complaints about bosses, so this is checking and tuning, not a redesign.
+Add the remaining locations once core logic and default side quests are settled. Most valuable first:
 
-### 4. More locations
+1. The rest of the bosses: Tier 3 story bosses still missing, then Tier 2 (espers, Gilgamesh, Odin, Ultima Weapon, Chamber of Arms, Arena). This also closes the "not done yet" known issue ([bosses.md](bosses.md), section 5).
+2. Mechabo upgrade quests as locations (33). The mod already starts and runs the quest chain (`side_quests.md`).
+3. Character-quest stat bonuses as items (45), once we find what writes them.
+4. Shopsanity (31), with the ocean merchant ships and hints bought with gil (25, item 5). Gil has little use now, and this gives it one.
+5. Librasanity and enemysanity (30), and character abilities as checks (28). Hundreds of locations, so they need lots of filler.
 
-Add the locations that wait on the logic. Most valuable first:
+### 3. Multiworld features: DeathLink and traps
 
-1. The rest of the bosses: tier 3 story bosses still missing, then tier 2 (espers, Chamber of Arms, Arena). This also closes the "not done yet" known issue. ([bosses.md](bosses.md), section 5.)
-2. Mechabo quests as locations (33). A quest chain the mod already runs. (Aileen's weapons were built in round 105, with milestone 1.)
-3. Stat bonuses as items (45), once it is known what writes them.
-4. Shopsanity (31), with the merchant ships and hints for gil (idea 25, item 5). Gil has little use now, and this gives it one.
-5. Librasanity and enemysanity (30), and abilities as checks (28). Hundreds of locations, so they need lots of filler. Do them after the pool pass has settled what good filler is.
+Ideas 41 and 20, together. Both need the same piece: something to bank until the next battle starts, then act on the party. Build the battle-start hook and persistent queue in `ap_state.txt` once, then DeathLink and each trap (`Bad Breath`, stat downs) are small on top of it. DeathLink is the one the Archipelago community expects; traps follow.
 
-### 5. Multiworld features: DeathLink and traps
+### 4. PopTracker pack (47)
 
-Ideas 41 and 20, together. Both need the same piece: something to bank until the next battle starts, then act on the party. Build the battle-start hook and the bank once, then DeathLink and each trap are small on top of it. DeathLink is the one the Archipelago community expects; traps follow.
+After milestones 1 and 2, not before. A pack copies the logic and the location list, so each logic change or location rename means a pack update. `data/location_names.tsv` names are already filled apart from the 3 Research Center Ruins lab key card shinies, and Universal Tracker covers players until then.
 
-### 6. PopTracker pack (47)
+### 5. Randomizer extras
 
-After milestones 3 and 4, not before. A pack copies the logic and the location list, so each logic change or location rename means a pack update. Universal Tracker already works from the apworld and covers players until then. Do the Tablet Shard names (34) before this, so the pack's names are the final ones.
-
-### 7. Randomizer extras
-
-Ideas 7 (enemy randomization), 8 (stats, weaknesses), 9 (music), 46 (custom visions) and 50 (the field character follows the party leader), and boss order (25, item 3). Fun, but none of them make a seed fairer.
+Ideas 7 (enemy randomization), 8 (stats, weaknesses), 9 (music shuffle and reroll menu), 46 (custom vision mods), and 50 (the field character follows the party leader), plus shuffled boss order (25.3), random per-seed objectives (25.4), and party slots as items (25.7). Fun, but none of them make a seed fairer.
 
 - 50 is cosmetic but touches the field pawn, which the airship position and gate crossings read (round 69). Cutscenes may look for Rain. Its first step is cheap and goes under Polish: test the Nexus "Change field Leader" mod (Party Members Only) with ours.
-
 - 8 and boss logic touch the same thing: boss logic reads each boss's weaknesses from fixed tables. Weakness randomization must hand its rolls to the logic too, or the logic asks for the wrong elements.
-- 7 and 8 clash with FFR Randomizer (10). Settle the compatibility story first.
+- 7 and 8 clash with FFRRandomizer (10). Settle the compatibility story first.
 
 ### Long shot
 
-The in-game client (12). Option B (start the client from the game) is a quality-of-life change with some risk; option A (a C++ client) is a project of its own. Only if players keep tripping on the separate client.
+The in-game client (12). Option B (start the client from the game) is a quality-of-life change with some risk; Option A (a C++ `APCpp` client) is a project of its own. Only if players keep tripping on the separate client.
 
 ## Polish, any time
 
 Small items to pick up when a round has room:
 
-- Two checks at once: the second pop-up shows the game's item (15, known issue).
-- The palace safes after a shard comes in (37): leave unless cheap (the user).
-- The Seed tab cannot scroll with a gamepad (39).
-- The two missing gifts, 1407 and 1409 (43).
-- A compatibility list in the README (10).
-- Test the Nexus "Change field Leader" mod, Party Members Only version, with ours, and list it if it works (50, way 1). Its permissions do not let us take its code.
-- Artifacts: parked (scratchpad).
+- Back-to-back check pop-ups: when two checks arrive at once, the second pop-up shows the game's item (15, known issue).
+- The Oblivion Palace safes live refresh when shards arrive while standing inside the palace (37): leave unless cheap.
+- Archipelago page layout: headings and framed rows (38). Nice, not needed.
+- The two missing gifts, `1407` and `1409` (43).
+- Test the Nexus "Change field Leader" mod, Party Members Only version, with ours, and list it in the README if it works (50, way 1). Its permissions do not let us take its code.
+- Remove the old autosave prologue-skip fallback once the direct open start (`ffrap_newstart`, v0.32.0) has full playtest mileage (52).
+- Fill the `name` column for the 3 Research Center Ruins lab key card shinies (`shiny:3220:32`, `33`, `37`) in [data/location_names.tsv](../data/location_names.tsv).
+- Artifacts: parked (26).
 
 ## What goes together
 
 | Group | Ideas | Shared piece |
 |---|---|---|
-| Item pool | pool pass (built), 45, Aileen's weapons (built) | the pool's filler budget |
-| In-game state | 11, 22, 38, 49, scaling line | showing seed state in the game's UI; the page's rows |
-| Logic | 40, side quests on by default, Sephiroth | the capability matrix |
-| Battle start | 20, 41 | the banked-effect hook |
+| v0.32.0 fixes | 15, 51, 53, 54, 55, 57 | follow-ups to the fifth public playtest build |
+| Scaling UI | 49, 56, scaling line | Enemy/Boss presets and Custom sliders on the Settings tab |
+| In-game state | 11, 22, 38 | showing seed state in the game's UI |
+| Logic | 40, Tier C/D `BOSS_NEEDS`, side quests default on | the capability matrix and default seed pool |
+| Battle start | 20, 41 | the banked-effect hook and queue |
 | Gil | 31, hints (25.5) | a reason to spend gil |
 | Big location counts | 28, 30 | lots of filler |
 | Enemy data | 7, 8, boss logic | the logic must read the rolled weaknesses |

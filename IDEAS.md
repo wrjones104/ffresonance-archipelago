@@ -2,7 +2,7 @@
 
 A scratch pad for ideas that are not on the test plan yet. Each one lists what we already know, from logs, dumps and the installed mods, and what to find out.
 
-The chapter-by-chapter progression (party, vehicles, gates, Visions, Espers) is in [docs/progression.md](docs/progression.md). The logic design built on it is in [docs/logic.md](docs/logic.md). Resolved and parked ideas (1–6, 13, 14, 16–19, 21, 23, 24, 26, 27, 29, 32–39, 42–44) are archived in [docs/ideas_archive.md](docs/ideas_archive.md).
+The chapter-by-chapter progression (party, vehicles, gates, Visions, Espers) is in [docs/progression.md](docs/progression.md). The logic design built on it is in [docs/logic.md](docs/logic.md). Resolved and parked ideas (1–6, 13, 14, 16–19, 21, 23, 24, 26, 27, 29, 32–39, 42–44, 48) are archived in [docs/ideas_archive.md](docs/ideas_archive.md).
 
 ## 7. Enemy randomization
 
@@ -115,7 +115,7 @@ The chapter-by-chapter progression (party, vehicles, gates, Visions, Espers) is 
 
 **Verdict:** worth one cheap test (way 1), when there is time. If chests can be empty, the rest follows from what the feed already does. If not, way 2 is a small, safe polish, and way 3 waits until long after progression logic.
 
-**Round 79 (the user asked whether to probe this now).** Token Legacy showed the stand-in Potion because its check came after the game's pop-up had closed, not because of the widget. An own pop-up shown at check time would still come after a Potion pop-up. Way 1 is the one that helps every kind of check: with an empty reward row (a chest's `Money 0`, a quest's empty `ObtainItemList`) the game shows no pop-up of its own, and the mod shows its text whenever the check comes. Its test also covers quests: empty one quest's reward row and see whether the row still runs, completes the quest and moves the counter. Build 42898077 fixes the quest case without it (arms the pop-up from the counter's value before the reward). **Probe built (round 81, build 27ed563a):** `ffrap_empty chest|shiny|quest <id>|off` makes this map's closed chests, its shinies or one quest's reward rows give nothing. Chests are kept empty through chest blanking (`G.emptyRows`); the check logic does not look at the contents, so the checks still go out. **Round 81 result:** it works. An empty chest shows the game's pop-up with "0 gil", an empty shiny and an empty quest row (Rogue Rebel) show their pop-up too, and each opens or completes as normal with its check sent. Rogue Rebel gave nothing of its own and showed complete. **Built (after round 81, updated through v0.31.0):** chests and shinies give nothing in place of 1 gil (`24aa6c4`), though the game still shows "0 gil" underneath before the mod rewrites it. Quest reward rows left empty showed "You obtained a vision!" in round 84, so since round 88 (`8b979d5`, `d1437b9`) quest rows that would be left empty keep the stand-in Potion again (`docs/side_quests.md`, section 4). Radar treasures, boss rewards, and NPC gifts also keep the stand-in Potion, and the pop-up is still the game's rewritten `WBP_DialogBox_C` (so two checks arriving at once, such as a chest right after a boss win, can still show the game's own item on the second pop-up).
+**Round 79 (the user asked whether to probe this now).** Token Legacy showed the stand-in Potion because its check came after the game's pop-up had closed, not because of the widget. An own pop-up shown at check time would still come after a Potion pop-up. Way 1 is the one that helps every kind of check: with an empty reward row (a chest's `Money 0`, a quest's empty `ObtainItemList`) the game shows no pop-up of its own, and the mod shows its text whenever the check comes. Its test also covers quests: empty one quest's reward row and see whether the row still runs, completes the quest and moves the counter. Build 42898077 fixes the quest case without it (arms the pop-up from the counter's value before the reward). **Probe built (round 81, build 27ed563a):** `ffrap_empty chest|shiny|quest <id>|off` makes this map's closed chests, its shinies or one quest's reward rows give nothing. Chests are kept empty through chest blanking (`G.emptyRows`); the check logic does not look at the contents, so the checks still go out. **Round 81 result:** it works. An empty chest shows the game's pop-up with "0 gil", an empty shiny and an empty quest row (Rogue Rebel) show their pop-up too, and each opens or completes as normal with its check sent. Rogue Rebel gave nothing of its own and showed complete. **Built (after round 81, updated through v0.32.0):** chests and shinies give nothing in place of 1 gil (`24aa6c4`), though the game still shows "0 gil" underneath before the mod rewrites it. Quest reward rows left empty showed "You obtained a vision!" in round 84, so since round 88 (`8b979d5`, `d1437b9`) quest rows that would be left empty keep the stand-in Potion again (`docs/side_quests.md`, section 4). Radar treasures, boss rewards, and NPC gifts also keep the stand-in Potion, and the pop-up is still the game's rewritten `WBP_DialogBox_C` (so two checks arriving at once, such as a chest right after a boss win, can still show the game's own item on the second pop-up). In round 119, a story boss win (`boss:9012`, The Hunger) logged `chest pop-up for boss:9012: no chest pop-up on screen`, so story boss item pop-ups can still miss the rewrite while the item arrives in the feed (v0.32.0 known issue, queued for v0.33.0).
 
 ## 20. Trap items, banked until the next battle
 
@@ -145,7 +145,7 @@ The chapter-by-chapter progression (party, vehicles, gates, Visions, Espers) is 
 
 ## 22. A welcome window on an Archipelago new game
 
-**Idea (round 37, 2026-11-08):** a dialogue window when an Archipelago new game starts: a short welcome to the mod and some tips. Not urgent.
+**Idea (round 37, 2026-11-08):** a dialogue window when an Archipelago new game starts: a short welcome to the mod and some tips. Planned for v0.33.0 ([docs/roadmap.md](docs/roadmap.md), milestone 1).
 
 **Round 115:** the game's own dialog windows can likely show our text: rows of `DialogBoxInfo` in `CDT_DialogBox`, opened by tag through `CPP_BFL_Dialog` (idea 54). The user wants the window to cover the start's move.
 
@@ -185,7 +185,7 @@ The chapter-by-chapter progression (party, vehicles, gates, Visions, Espers) is 
 
 **Round 59: [docs/bosses.md](docs/bosses.md) has the design.** 25 fights that still start by themselves are locations in world 0.17.0, and story bosses give Crystal Fragments for the tower.
 
-**v0.30.0 to v0.31.0:** all 40 bosses (story bosses, cave masters, and optional bosses) are now locations giving both a shuffled item and a Crystal Fragment (`9edc8ae`), boss capability logic is in place (idea 29, `640712a`, `862f260`), and enemy/boss scaling plus MRP retention were tuned in v0.31.0 (`a336275`, `1734ad6`, `19a087b`).
+**v0.30.0 to v0.32.0:** all 40 bosses (story bosses, cave masters, and optional bosses) are now locations giving both a shuffled item and a Crystal Fragment (`9edc8ae`), boss capability logic is in place (idea 29, `640712a`, `862f260`), enemy/boss scaling plus MRP retention were tuned in v0.31.0 (`a336275`, `1734ad6`, `19a087b`), and v0.32.0 shipped the item pool pass (2 Ribbons, 13 enemy-only accessories, `extra_magicite`, `early_healing_vision`) and `include_aileens_forge`.
 
 **Ideas, the strongest first:**
 1. **Boss fights as checks.** 40 story, cave master, and optional bosses are done; Twelve Arms, Arena, and non-Siren Espers remain untouched.
@@ -253,9 +253,9 @@ Along the same lines, I would also want an option for players to start with all 
 
 **Built (round 98, build 22b9afbc, v0.30.0 `0662c63`):** 17 quests give a second reward (8 gil, 2 an item, 7 a vision), and each is a location of its own, `quest2:<id>` (docs/side_quests.md, section 6).
 
-**Round 106 (mod build 5f911663):** the pop-up's two names touched (the user). The second has 10 px of space above it.
+**Round 106 (mod build 5f911663, shipped in v0.32.0 `c2e8b3a`):** the pop-up's two names touched (the user). The second now has 10 px of space above it.
 
-**To find out (stat bonuses only; second rewards shipped):** what writes a character quest's stat bonus ("Attribute Bonus: Fina" in the Rewards list, an ID 0 entry). If it is a field of the reward row, a stat bonus could be an item the mod applies when it comes in. Not looked at yet.
+**To find out (stat bonuses only; second rewards and pop-up spacing shipped):** what writes a character quest's stat bonus ("Attribute Bonus: Fina" in the Rewards list, an ID 0 entry). If it is a field of the reward row, a stat bonus could be an item the mod applies when it comes in. Not looked at yet.
 
 ## 46. Supporting custom vision mods
 
@@ -264,7 +264,7 @@ Along the same lines, I would also want an option for players to start with all 
 **Research:** I believe most custom visions are created with https://github.com/FFBE-JP-Translation/FFR-Vision-Studio, though I'm sure there are other methods. An example of a custom vision mod: https://www.nexusmods.com/finalfantasyresonance/mods/321
 ## 47. A PopTracker pack
 
-**From the user and a tester, 2026-11-22.** [PopTracker](http://poptracker.github.io/) is a map-based tracker with Archipelago auto-tracking. Players like it for the overview a map gives. On the list, not a priority ([docs/roadmap.md](docs/roadmap.md), milestone 6).
+**From the user and a tester, 2026-11-22.** [PopTracker](http://poptracker.github.io/) is a map-based tracker with Archipelago auto-tracking. Players like it for the overview a map gives. On the list, not a priority ([docs/roadmap.md](docs/roadmap.md), milestone 4).
 
 **Known so far (PopTracker's PACKS.md and AUTOTRACKING.md):**
 - A pack is a folder or zip: `manifest.json`, `scripts/init.lua`, JSON for items, locations, maps and layouts, and the images.
@@ -279,11 +279,13 @@ Along the same lines, I would also want an option for players to start with all 
 - Generating the pack's locations and rules from `data.py` and the apworld's rules, so the pack does not drift from the logic. Boss rules (`boss_logic.py`) are the hard part: they count party, visions and Magicite, which suits `$func` rules.
 - The options that change the location list (`include_side_quests` and the like), read from slot data in the clear handler.
 
-**Order:** after idea 40, side quests on by default, and the last location renames, so the pack is not rebuilt each round.
+**Order:** after idea 40, side quests on by default, and the last location renames, so the pack is not rebuilt each round. `data/location_names.tsv` names are filled apart from the 3 Research Center Ruins lab key card shinies (`shiny:3220:32`, `33`, `37`), which still fall back to `suggested`.
 
 ## 49. Standard or custom scaling on the Settings page
 
-**From the user, 2026-11-22.** Bring back the custom scaling sliders of round 102, but on the Settings page next to the strength, not on a tab of their own. A toggle picks Standard or Custom. Standard shows the three strengths we have now (Casual, Normal, Expert) and hides the sliders. Custom shows the sliders and hides the strengths. Standard is the default. Roadmap milestone 2.
+**From the user, 2026-11-22.** Bring back the custom scaling sliders of round 102, but on the Settings page next to the strength, not on a tab of their own. A toggle picks Standard or Custom. Standard shows the presets and hides the sliders. Custom shows the sliders and hides the presets. Standard is the default. Roadmap milestone 1 (v0.33.0).
+
+**Decided (2026-11-27):** ideas 49 and 56 build together on the Settings tab. In `Standard` mode (`Custom scaling` off), Enemies and Bosses get separate On/Off switches and separate `Casual`, `Normal`, and `Expert` presets. Turning `Custom scaling` on hides the presets and shows the five enemy/boss sliders (`elevel`, `ehp`, `eatk`, `blevel`, `bpower`), seeded from the active presets.
 
 **Known so far:**
 - Round 102 (`891e70d`) had a preset slider (A, B, C, Custom) and five Custom sliders on a third tab: enemy level, enemy HP, enemy Attack, boss level, boss power. `ffrap_set elevel|ehp|eatk|blevel|bpower <percent>` set the same. The sliders worked. Round 103 (`19a087b`) took the tab out, as a curve of each tester's own would make reports hard to compare. The `battle: won` line names the preset, so a report shows when Custom was on.
@@ -333,9 +335,9 @@ Along the same lines, I would also want an option for players to start with all 
 
 **Round 112 (testers, v0.31.1):** Token Legacy's last step is past the Throne Room Key's door, and Errand's End follows it. Both need the key now; a quest that starts after another takes its keys. Beyond the Blue needs a party of 4. Grandport's vision Moogle flag (144, round 107) made every Moogle play Grandport's scene: its flag 145 is set too (mod build 5d54d782).
 
-**Round 118 (the user):** with key items off, the Dungeon Key is given in Zoldaad Dungeon and the cells open. Left of this idea: the two radar findings below.
+**Round 118 (the user, shipped in v0.32.0):** the key-item fixes (`1dc94ca`, `dc2aaaf`, `01982db`) shipped in v0.32.0: with key items off, the Dungeon Key is given in Zoldaad Dungeon and the cells open, and the radar goes quiet once every reachable treasure is dug. Left of this idea for v0.33.0: the two radar findings below.
 
-**Round 117 (the user, round 108's radar check):** the radar goes quiet when its treasures are dug, but Lid says the radar stopped finding treasure while some are still to find, likely when the last treasure in the game's order is dug. And a Progressive Radar received while flying turns the radar on at once, but its treasures can be dug only after a map change. Both to look at: Lid's line is likely a chat or talk row with a radar counter condition.
+**Round 117 (the user, round 108's radar check):** the radar goes quiet when its treasures are dug, but Lid says the radar stopped finding treasure while some are still to find, likely when the last treasure in the game's order is dug. And a Progressive Radar received while flying turns the radar on at once, but its treasures can be dug only after a map change. Both to look at for v0.33.0: Lid's line is likely a chat or talk row with a radar counter condition.
 
 **Also round 108 (a player):** in the game the radar goes quiet once every treasure it can find is dug, until the next part. The mod kept it pinging, as it held the found count in the band. Now the count goes 2 past the band once the level's tiers are all found (docs/playtesting_archive.md, round 108).
 
@@ -359,7 +361,7 @@ Along the same lines, I would also want an option for players to start with all 
 
 **Round 118 (the user):** a seed that starts with the airship had none at the start until a map change. The game places the airship at the first map load, before the mod parks it in the save. Every start on foot is an airship landing point, so the start now points `DT_MapAirShip`'s `initSpawnPointId` (9000, no point) at the start's landing point for that first load (mod build 2a4f7fce). It works (round 119): the game placed its airship by the landing point at the first load, and the move put it at the arrival.
 
-**Left:** take out the prologue skip's wait for the autosave, or the skip itself, which still runs with `ffrap_newstart off` or before a seed is heard.
+**Shipped in v0.32.0 (`c9588fc`):** the direct open start is live. Left: take out the old autosave prologue skip fallback (still present with `ffrap_newstart off` or before a seed is heard) once v0.32.0 playtesting settles.
 
 ## 53. Lifts and rafts after fast travel, and Mobliz Shipyard's last lift
 
@@ -371,7 +373,7 @@ Along the same lines, I would also want an option for players to start with all 
 
 **Kolobos Ruins' floor (the user, round 117):** the floor falls under the player in a scene (flag 111), and Rain puts it back from the far side (flag 112, "elbow grease"). A fast travel out from the far side left the way in blocked. Off the ruins' map, the mod now sets flag 112 when 111 is on, as Rain's scene does (mod build afd9cf66). The switch floors and turning bridges still pass the checklist.
 
-**Round 118 (the user):** the floor comes back, and the Water Shrine, Gronoa Shrine and Sanctissimus Shrine lifts and the switch floors and bridges all pass after a fast travel out. Lifts and rafts are done; what is left of this idea is Mobliz Shipyard's last lift.
+**Round 118 (the user, shipped in v0.32.0):** the floor comes back, and the Water Shrine, Gronoa Shrine and Sanctissimus Shrine lifts and the switch floors and bridges all pass after a fast travel out. Lifts and rafts shipped in v0.32.0 (`c9588fc`); what is left of this idea for v0.33.0 is Mobliz Shipyard's last lift (elevator 75 on map 3060).
 
 **Known so far about the Shipyard (rounds 58 and 59, docs/playtesting_archive.md):**
 - Map 3060 has keypad lifts (`BP_MapGimmick_Floor_Elevator_Interact_002_C`) 72 to 75. 73 and 75 start switched off (`m_GimmickCondition 1`). The mod turns them on (`G.WakeShipyardElevators`).
@@ -406,7 +408,7 @@ Along the same lines, I would also want an option for players to start with all 
 
 **Round 116 (mod build 517a874b, world build e0989726):** ways 1 and 2 are built. The second move is only for a player below the arrival, and move input is held until the player stands at the arrival (10 s at most). The client writes `ap_alive.txt` every 2 s while connected; without it the entry is labelled "New Game (Archipelago: connect the client)" and becomes Load Game. The probes are `ffrap_functions CPP_BFL_Dialog CPP_DialogManager` (way 3) and `ffrap_point0 on` (way 4). To test in game (docs/playtesting.md).
 
-**Round 117 (the user tried round 116's build):** ways 1 and 2 work. Rain could not walk until he stood at the town; one move each time. The entry read "connect the client" and opened Load Game with the client closed, and started the seed with it connected. The label changes only when the title screen is made again. Way 4 does not work: point 0 moved to the arrival before the pawn came, but the game still put Rain at the Earth Shrine, so it places a new game from its own data. The probe is taken out. Way 3's calls are known (idea 22); the window is no longer needed for the move. What is left of this idea: the label's refresh while the title is up.
+**Round 117 (the user tried round 116's build, shipped in v0.32.0):** ways 1 and 2 work and shipped in v0.32.0 (`c9588fc`). Rain could not walk until he stood at the town; one move each time. The entry read "connect the client" and opened Load Game with the client closed, and started the seed with it connected. The label changes only when the title screen is made again. Way 4 does not work: point 0 moved to the arrival before the pawn came, but the game still put Rain at the Earth Shrine, so it places a new game from its own data. The probe is taken out. Way 3's calls are known (idea 22); the window is no longer needed for the move. What is left of this idea for v0.33.0: live refresh of the label while the title screen stays open.
 
 ## 55. A stutter like a heartbeat
 
@@ -428,13 +430,14 @@ Along the same lines, I would also want an option for players to start with all 
 
 **Round 118 (the user's laptop and desktop):** "better, but still noticeable, especially in towns" on the laptop; nothing felt on the desktop. The slow runs moved to the odd ticks, and the largest step on both computers was the story boss step: 7 to 26 ms on every odd tick, from a walk of every talk row to find two rows. The patches added 6 to 14 ms on the same ticks. **Built (mod build 2a4f7fce):** the story boss step finds its rows by `FindRow` and writes its battle group at a map's first pass and every 10 passes after. The patches and scale steps are timed in parts. To test: both computers' `perf:` lines.
 
-**Round 119 (the user's desktop):** 5 runs over 25 ms in 2 minutes, from 23 to 30, and the story boss step is gone from the timings. The largest step left was the quest colours' hook, tried every odd tick (about 7 ms each) until the Quests screen is first opened; it now waits for its class to load. To test: the laptop.
+**Round 119 (the user's desktop, shipped in v0.32.0):** 5 runs over 25 ms in 2 minutes, from 23 to 30, and the story boss step is gone from the timings. The largest step left was the quest colours' hook, tried every odd tick (about 7 ms each) until the Quests screen is first opened; it now waits for its class to load (`StaticFindObject` check, `805720b`, shipped in v0.32.0). Open in v0.32.0 playtesting (`docs/playtesting.md`): laptop and slower-PC `perf:` timings.
 
 ## 56. Separate boss scaling options
 
-**From tester feedback, having separate scaling options for bosses:**
-- Boss scaling on/off
-- Boss scaling presets
+**From tester feedback, paired with idea 49 for v0.33.0 (2026-11-27):**
+- Separate On/Off switches for Enemy scaling and Boss scaling on the Settings tab.
+- Separate `Casual`, `Normal`, and `Expert` preset rows for Enemies and Bosses (copied from `Difficulty`) in `Standard` mode, swapping to the 5 percentage sliders (`elevel`, `ehp`, `eatk`, `blevel`, `bpower`) when `Custom scaling` is turned on.
+- `game.lua` already tells boss battle groups (`G.BOSSES` and Arena `9705` to `9721`) apart from regular field enemies, so no new engine probes are needed.
 
 ## 57. Fast travel to a place a scene took the player to
 
@@ -445,14 +448,10 @@ Along the same lines, I would also want an option for players to start with all 
 - The grey on the Map screen does follow the visited mark: the airship was grey because a seed that starts with it never marked it visited (fixed in round 117).
 - Zoldaad Unlock had come before any Zoldaad map in the log. With the continent open, a visit made by a scene counts as in the game.
 
-**Built (round 117, mod build afd9cf66):** maps of a locked continent are made unknown too. `ffrap_visited <map> [unvisit|unknown|restore]` logs or writes a map's marks.
+**The user's answer (round 117):** a place waits for a visit on foot, on an open continent too.
 
-**Built later in round 117 (mod build b295fb0e):** a place counts for fast travel only after a walk in, on an open continent too.
+**Built (round 117, mod builds afd9cf66 and b295fb0e, shipped in v0.32.0 `ed5c027`):** maps of a locked continent are marked unknown as well as not visited, and `ffrap_visited <map> [unvisit|unknown|restore]` logs or writes a map's marks. The mod keeps the places the player stood in with the field up for two passes (about 2 s), per session, in `ap_state.txt` (`walked`). Every other place of a continent is marked unknown and not visited, as a locked continent's are; the map the player is on is left alone. A session's first pass takes the places the save has visited already, so a save from before keeps its fast travel places (a scene's visit before this build counts). The log has `fast travel: map <id> walked in`, and `fast travel: maps ... not walked in or on locked continents, marked never seen`.
 
 **Round 118 (the user):** the walk-in rule works: `fast travel: map <id> walked in` for each new place, and existing saves kept their places. The probe ran `unvisit` but not `unknown` (the log has the usage line in its place), and what the Map screen did is not recorded.
 
-**To find out:** with `ffrap_visited` on an open continent's town, whether the Map screen still travels there when it is only not visited, and when it is unknown. If neither stops it, the next probe is `ffrap_find Visited` and `ffrap_find Known` for the list it reads.
-
-**The user's answer (round 117):** a place waits for a visit on foot, on an open continent too.
-
-**Built (round 117, mod build b295fb0e):** the mod keeps the places the player stood in with the field up for two passes (about 2 s), per session, in `ap_state.txt` (`walked`). Every other place of a continent is marked unknown and not visited, as a locked continent's are; the map the player is on is left alone. A session's first pass takes the places the save has visited already, so a save from before keeps its fast travel places (a scene's visit before this build counts). The log has `fast travel: map <id> walked in`, and `fast travel: maps ... not walked in or on locked continents, marked never seen`.
+**To find out (`docs/playtesting.md`):** with `ffrap_visited` on an open continent's town, whether the Map screen still travels there when it is only not visited, and when it is unknown. If neither stops it, the next probe is `ffrap_find Visited` and `ffrap_find Known` for the list it reads.
