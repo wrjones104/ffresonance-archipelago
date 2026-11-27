@@ -455,3 +455,18 @@ Along the same lines, I would also want an option for players to start with all 
 **Round 118 (the user):** the walk-in rule works: `fast travel: map <id> walked in` for each new place, and existing saves kept their places. The probe ran `unvisit` but not `unknown` (the log has the usage line in its place), and what the Map screen did is not recorded.
 
 **To find out (`docs/playtesting.md`):** with `ffrap_visited` on an open continent's town, whether the Map screen still travels there when it is only not visited, and when it is unknown. If neither stops it, the next probe is `ffrap_find Visited` and `ffrap_find Known` for the list it reads.
+
+
+## 58. Universal Tracker in the client
+
+**From the user, 2026-11-27.** Embed Universal Tracker directly inside **Final Fantasy Resonance Client** when the player has `tracker.apworld` installed, as other Archipelago custom clients do, so players get the **Tracker** tab and UT commands in one window instead of connecting two separate clients to the same slot. Planned for v0.33.0 ([docs/roadmap.md](docs/roadmap.md), milestone 1).
+
+**Known so far (from `apworld/ff_resonance/world.py` and `client.py`):**
+- `FFResonanceWorld` already supports Universal Tracker without a YAML (`ut_can_gen_without_yaml = True`, `interpret_slot_data`, `re_gen_passthrough`, and `take_slot_data`, built in round 72).
+- Custom clients integrate UT by importing `TrackerGameContext` (and `TrackerCommandProcessor`, if UT commands are wanted) from `worlds.tracker.TrackerClient` inside a `try / except ImportError`, falling back to `CommonContext` and `ClientCommandProcessor` when `tracker.apworld` is not installed.
+- In `apworld/ff_resonance/client.py`, `FFResonanceContext.on_package` currently does not call `super().on_package(cmd, args)` (`CommonContext.on_package` is empty, while `TrackerGameContext.on_package` drives UT's world rebuild and location updates), and `make_gui` sets `ui.base_title` on `super().make_gui()`.
+
+**To find out:**
+- The exact `worlds.tracker.TrackerClient` hooks in the current UT release (`TrackerGameContext`, `make_gui`, `run_generator` or startup tasks, and `server_auth` / `on_package` call order) against an installed `tracker.apworld`.
+- Making sure `client.py` runs cleanly both with `tracker.apworld` installed (showing the **Tracker** tab and updating reachable locations live) and without it (plain `CommonContext`, no import error).
+- Optional later tie-in: once `FFResonanceContext` holds UT's live `locations_available` list, the client could also write the in-logic check count to `ap_in.txt` for the in-game **Seed** tab.

@@ -44,14 +44,15 @@ Work batches across tester builds (`0.32.1` / `0.63.1` onward) in three stages.
 2. Add dump-verified per-boss `BOSS_NEEDS` rules for Tiers C and D in [boss_logic.py](../apworld/ff_resonance/boss_logic.py): Sephiroth (`9138` Phase 3 `light_physical`), Intangir (`7042`), Rogue Magitek Weapon (`7057`), the Sanctissimus gauntlet (`9071` to `9076` and `9044`), and endgame cave masters (`9110` to `9117`). Currently only Tiers A and B have per-boss `BOSS_NEEDS` rules.
 3. Switch `include_side_quests` to on by default (`DefaultOnToggle` in [options.py](../apworld/ff_resonance/options.py) and the template YAML), bringing the 28 quest rewards and 17 second rewards (45 checks) into standard seeds. Its logic ([side_quests.md](side_quests.md), section 5) is already done.
 
-#### Stage C: In-game UX and scaling controls
+#### Stage C: UX, client tracker, and scaling controls
 
-Ideas 49, 56, 11, and 22, plus documentation updates. Most solve the same problem: the player cannot see or tune the seed's state cleanly in game.
+Ideas 49, 56, 58, 11, and 22, plus documentation updates. Most solve the same problem: the player cannot see or tune the seed's state cleanly in game.
 
 1. Add a scaling explanation line on the Seed tab ("Enemies scale to your party level, so no area is out of reach") and update stale sections of [playtester_guide.md](playtester_guide.md) (which still says quests and NPCs are unshuffled and points to `Options > Gameplay`).
 2. Build unified Enemy/Boss and Custom scaling on the Settings tab (49 + 56): a `Custom scaling` switch (default Off = Standard). In `Standard` mode, Enemies and Bosses get separate On/Off switches and separate `Casual`, `Normal`, and `Expert` preset rows (copied from `Difficulty`). Turning `Custom scaling` on hides the presets and shows the five percentage sliders from round 102 (`891e70d`: `elevel`, `ehp`, `eatk`, `blevel`, `bpower`), seeded from the active presets and logged on `battle: won`.
 3. Mark Archipelago saves on Load and Save slot cards (11): write `server <host:port>` and `player <name>` into `ap_in.txt`, keep a persistent per-slot summary record, and draw the seed/slot line in `WBP_SaveData_Entry_C` (`Vertical_Mid`). This answers "which save is which" without changing the engine's save folder path; look at a separate folder only if testers still mix saves up after the cards.
 4. Show a one-time welcome window on a new Archipelago game (22) via `CPP_BFL_Dialog.OpenDialog` on an existing `CDT_DialogBox` row (`Map_FastTravel_CanNot`), covering scaling, continent unlocks, and the **Archipelago** menu entry.
+5. Integrate Universal Tracker into Final Fantasy Resonance Client (58): subclass `TrackerGameContext` when `tracker.apworld` is installed (with a clean fallback to `CommonContext` when it is not) so players get the **Tracker** tab in the same client window instead of running two clients. Pure Python work in `client.py`, pairing with Stage B's logic completion.
 
 ### 2. More locations (`v0.34.0+`)
 
@@ -69,7 +70,7 @@ Ideas 41 and 20, together. Both need the same piece: something to bank until the
 
 ### 4. PopTracker pack (47)
 
-After milestones 1 and 2, not before. A pack copies the logic and the location list, so each logic change or location rename means a pack update. `data/location_names.tsv` names are already filled apart from the 3 Research Center Ruins lab key card shinies, and Universal Tracker covers players until then.
+After milestones 1 and 2, not before. A pack copies the logic and the location list, so each logic change or location rename means a pack update. `data/location_names.tsv` names are already filled apart from the 3 Research Center Ruins lab key card shinies, and Universal Tracker (especially once built into the client in idea 58) covers text and logic tracking in one window until map tracking lands.
 
 ### 5. Randomizer extras
 
@@ -109,4 +110,5 @@ Small items to pick up when a round has room:
 | Big location counts | 28, 30 | lots of filler |
 | Enemy data | 7, 8, boss logic | the logic must read the rolled weaknesses |
 | Names | 34, 47 | final location names before a pack |
+| Trackers | 47, 58 | `slot_data` rebuild (`take_slot_data`) and client/map tracking |
 | Other mods | 10, 50 | the compatibility list |
