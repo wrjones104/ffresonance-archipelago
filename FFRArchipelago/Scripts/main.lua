@@ -1465,21 +1465,6 @@ function save.armNewStart()
     log("newstart: the new game starts at " .. a.name .. " (map " .. a.map .. ", story " .. a.story .. ")")
 end
 
--- Round 116 probe (idea 54, way 4): with `ffrap_point0 on`, the world map's point 0 is moved to
--- the arrival as soon as it is found after the title's choice, so the game might place the player
--- there itself, with no move after. Each try is logged with where the pawn stands, which tells
--- whether the point is loaded before the player is placed. It is put back once the save is in:
--- the Earth Shrine's door leads to it.
-function state.point0Tick(when)
-    local ns = save.newStart
-    if not (state.point0 and ns and not ns.placeAt and not ns.pointFrom) then return end
-    local from, line = game.MoveStartPoint(ns.arrival, save.newStartStep)
-    local _, where = game.NewStartWhere(ns.arrival)
-    line = line .. "; " .. where
-    if line ~= ns.pointLine then log("point 0 (" .. when .. "): " .. line) end
-    ns.pointLine, ns.pointFrom = line, from
-end
-
 -- Puts the game's data back and forgets the new start.
 function save.dropNewStart(why)
     local put = game.NewStartRestore(save.newStartStep)
@@ -1498,10 +1483,6 @@ function save.finishNewStart()
     save.autoDone = true
     local _, where = game.NewStartWhere(ns.arrival)
     log("newstart: arrived: " .. where)
-    if ns.pointFrom then
-        local _, line = game.MoveStartPoint(ns.pointFrom, save.newStartStep)
-        log("point 0: put back: " .. line)
-    end
     ns.placeAt, ns.moves = state.ticks + 2, 0
     local ignored, why = game.HoldMove(true)
     ns.held, ns.releaseBy = ignored ~= nil, state.ticks + game.NEW_START.holdTicks
@@ -1933,7 +1914,6 @@ end
 
 local function tick()
     state.ticks = state.ticks + 1
-    if state.point0 then pcall(state.point0Tick, "tick") end
     state.mark("inbox")
     readInbox(false)
     state.mark("title")
@@ -1989,16 +1969,21 @@ local function tick()
             if state.ticks % STATUS_EVERY == 0 then pcall(scaleTick) end
             pcall(state.fightTick)
             if state.ticks % STATUS_EVERY == 0 then pcall(settingsTick) end
-            state.mark("extras, locks")
-            if state.ticks % LOCKS_EVERY == 0 then pcall(seedExtrasTick) end
+            -- Round 117: one tick in two carried every slow step (25 to 40 ms on the user's desktop,
+            -- a stutter like a heartbeat on a laptop). The extras and the table patches run on the
+            -- other tick now.
+            state.mark("extras")
+            if state.ticks % LOCKS_EVERY == 1 then pcall(seedExtrasTick) end
+            state.mark("locks")
             if state.ticks % LOCKS_EVERY == 0 then pcall(locksTick) end
             -- Round 100: Rain went to level 55 in a new game of the game's own (Fina's prologue level).
             -- Round 109: and in the seed's own save, when the prologue skip never ran (autosave off):
             -- only past the open world start's story is the party the seed's.
+            state.mark("level")
             if state.ticks % STATUS_EVERY == 0 and seedCfg.openworld and sessionSave() and game.OnField()
                 and (game.StoryCounter() or 0) >= game.OPEN_START.story then pcall(game.SyncSlotLevel) end
             state.mark("patches")
-            if seedCfg.openworld and state.ticks % LOCKS_EVERY == 0 then
+            if seedCfg.openworld and state.ticks % LOCKS_EVERY == 1 then
                 -- Round 100: the seed's table patches are for the seed's save only. The tables stay
                 -- patched until the game restarts, so a save of the game's own after one is told so.
                 local ours = sessionSave()
@@ -2533,8 +2518,11 @@ state.apMenuPage = function()
         if seedCfg[k[1]] then kinds[#kinds + 1] = k[2] end
     end
     lines[#lines + 1] = "Locations: chests" .. (#kinds > 0 and ", " .. table.concat(kinds, ", ") or "")
-    lines[#lines + 1] = "Start: " .. (seedCfg.airship == false and ("on foot" .. (seedCfg.continent and
-        (" on " .. seedCfg.continent:sub(1, 1):upper() .. seedCfg.continent:sub(2)) or "")) or "in the airship")
+    -- Round 109: every seed starts on foot by its continent's town; the airship waits there when
+    -- the seed starts with it.
+    lines[#lines + 1] = "Start: on foot" .. (seedCfg.continent and
+        (" on " .. seedCfg.continent:sub(1, 1):upper() .. seedCfg.continent:sub(2)) or "")
+        .. (seedCfg.airship ~= false and ", the airship beside you" or "")
         .. (seedCfg.chocobo == false and "; the Chocobo is an item" or "")
     return lines
 end
@@ -3254,14 +3242,19 @@ seedExtrasTick = function()
     end
     pcall(finalLockTick)
     if seedSave and seedCfg.airship == false then pcall(airshipItemTick) end
-    if seedSave and game.GetFlag(game.AIRSHIP_FLAG) == true then
+    -- Round 117 (the user): since round 109 a seed with the airship starts beside the town with the
+    -- airship parked there, and no start marks it visited, so the Map screen showed it grey.
+    if seedSave and (seedCfg.airship ~= false or game.GetFlag(game.AIRSHIP_FLAG) == true) then
         local marked = game.MarkVisited(game.AIRSHIP_MAPS)
         if marked and #marked > 0 then log("airship: maps " .. table.concat(marked, ", ") .. " marked visited, for fast travel") end
     end
+    state.mark("extras: travel")
     local travel = game.DungeonFastTravel(seedSave and true or false)
     if travel then log("fast travel: " .. travel) end
+    state.mark("extras: radar, forge")
     if seedSave and seedCfg.radar and sessionSave() then pcall(radar.tick) end
     if seedSave and seedCfg.forge then pcall(state.forge.tick) end
+    state.mark("extras: key items")
     if seedSave and seedCfg.keyitems and game.CurrentMap() == game.THRONE_KEY.map then
         local ok, n = pcall(game.ThroneKeyTriggerOff)
         if ok and n > 0 then log("throne key: the squad leader's trigger turned off (" .. n .. ")") end
@@ -3277,6 +3270,7 @@ seedExtrasTick = function()
         local code, detail = game.GrantItem(K.item, 1)
         log("dungeon key: given in Zoldaad Dungeon, as its soldier never comes (" .. tostring(code) .. ", " .. tostring(detail) .. ")")
     end
+    state.mark("extras: unvisit")
     if seedSave then
         local ok, cleared = pcall(game.UnvisitLocked)
         if ok and #cleared > 0 then
@@ -3297,10 +3291,12 @@ seedExtrasTick = function()
         game.SetProgressValue(game.RADAR_TIER_PROGRESS, game.RADAR_LID_HEARD)
         log("radar: step " .. game.RADAR_TIER_PROGRESS .. " set to " .. game.RADAR_LID_HEARD .. " (Lid's Mysidia line skipped)")
     end
+    state.mark("extras: palace")
     if seedSave then
         local ok, line = pcall(game.PalaceSync)
         if ok and line then log(line) end
     end
+    state.mark("extras: mechabo")
     if seedSave and game.ProgressValue(game.MECHABO.counter) == 0 then
         game.SetProgressValue(game.MECHABO.counter, game.MECHABO.start)
         log("mechabo: progress " .. game.MECHABO.counter .. " set to " .. game.MECHABO.start .. " (Verun's repair request)")
@@ -3319,6 +3315,7 @@ seedExtrasTick = function()
         if line ~= state.mechaboLine then log(line) end
         state.mechaboLine = line
     end
+    state.mark("extras: rides")
     if seedSave and game.CurrentMap() == game.SHIPYARD_MAP then
         local woke = game.WakeShipyardElevators()
         if woke > 0 and not shipyardLogged then log("shipyard: " .. woke .. " stopped elevators turned on") end
@@ -3339,6 +3336,12 @@ seedExtrasTick = function()
         if line and line ~= state.liftLine then log("rides on map " .. here .. ": " .. line) end
         state.liftLine = line or state.liftLine
     end
+    local KB = game.KOLOBOS_BRIDGE
+    if seedSave and here and here ~= KB.map and game.GetFlag(KB.fell) == true and game.GetFlag(KB.fixed) == false then
+        local code, detail = game.SetFlag(KB.fixed, true)
+        log("kolobos: the fallen floor put back, flag " .. KB.fixed .. " (" .. tostring(code) .. ", " .. tostring(detail) .. ")")
+    end
+    state.mark("extras: story boss")
     local onBossMap = false
     if seedSave and seedCfg.bosses and game.OnField() and game.SyncStoryBossTrigger then
         local ok, detail = game.SyncStoryBossTrigger()
@@ -3916,7 +3919,6 @@ if RegisterLoadMapPostHook then
     local okHook, errHook = pcall(RegisterLoadMapPostHook, function(_, world)
         state.traceStart("map load")
         pcall(game.ForgetObjects)
-        if state.point0 then pcall(state.point0Tick, "map load") end
         local okRun, placed, why = pcall(function() return game.ContinentMapLoaded(world:get(), locksOn()) end)
         if not okRun then
             log("locks: the map load hook failed: " .. tostring(placed))
@@ -3963,19 +3965,20 @@ command("ffrap_visions", function()
     notify("Visions: " .. text)
 end)
 
--- ffrap_point0 [on|off]: the round 116 probe (state.point0Tick); not kept. With no word, where the
--- world map's point 0 stands now.
-command("ffrap_point0", function(p)
-    if p[1] == "on" or p[1] == "off" then
-        state.point0 = p[1] == "on"
-        log("point 0: the probe is " .. p[1] .. " for this run")
-        notify("Point 0 probe " .. p[1] .. ": choose the Archipelago entry and send the log")
+-- ffrap_visited <map> [unvisit|unknown|restore] (round 117 probe): the map's known and visited
+-- marks. unvisit marks it not visited; unknown marks it neither; restore marks it both again. Then
+-- the Map screen shows whether its fast travel follows either mark.
+command("ffrap_visited", function(p)
+    local m, what = tonumber(p[1] or ""), tostring(p[2] or "")
+    local marks = { unvisit = { true, false }, unknown = { false, false }, restore = { true, true } }
+    if not m or (what ~= "" and not marks[what]) then
+        notify("Usage: ffrap_visited <map> [unvisit|unknown|restore]")
         return
     end
-    local pt, at = game.StartPoint()
-    local text = pt and string.format("at %.0f, %.0f, %.0f", at.x, at.y, at.z) or at
-    log("point 0: " .. text)
-    notify("Point 0: " .. text)
+    local mk = marks[what]
+    local line = game.MapMarks(m, mk and mk[1], mk and mk[2])
+    log("visited: " .. (what ~= "" and (what .. ": ") or "") .. line)
+    notify(line)
 end)
 
 -- ffrap_perf: the time each loop, step and object search took since the last summary.

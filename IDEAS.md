@@ -149,6 +149,8 @@ The chapter-by-chapter progression (party, vehicles, gates, Visions, Espers) is 
 
 **Round 115:** the game's own dialog windows can likely show our text: rows of `DialogBoxInfo` in `CDT_DialogBox`, opened by tag through `CPP_BFL_Dialog` (idea 54). The user wants the window to cover the start's move.
 
+**Round 117 (the dialog probe):** `CPP_BFL_Dialog.OpenDialog(InTag, InParent)` opens a row by its tag, with `IsDialogActive()`, `CloseDialog(InIsImmediately)` and `BindToDialogClose(InDialogTag, InDel)`. A GameplayTag cannot be made up, so the window is an existing row with its `Message` written first and put back after. `Map_FastTravel_CanNot` (`UI.Dialog.Box.Map.FastTravel.Prohibited`, an OK button, no message of its own) is the first to try. Since round 116 the start holds move input, so the window is not needed to cover the move.
+
 **To find out:**
 - Which of the game's own windows can show our text. The game's dialog rows are the first to try (idea 54), then the notices and tutorial windows (idea 8's notes on `CPP_WBP_ChatNotice` and the quest notice).
 - When to show it: after the reload on the world map, once per save, and not while the item feed is busy.
@@ -331,6 +333,8 @@ Along the same lines, I would also want an option for players to start with all 
 
 **Round 112 (testers, v0.31.1):** Token Legacy's last step is past the Throne Room Key's door, and Errand's End follows it. Both need the key now; a quest that starts after another takes its keys. Beyond the Blue needs a party of 4. Grandport's vision Moogle flag (144, round 107) made every Moogle play Grandport's scene: its flag 145 is set too (mod build 5d54d782).
 
+**Round 117 (the user, round 108's radar check):** the radar goes quiet when its treasures are dug, but Lid says the radar stopped finding treasure while some are still to find, likely when the last treasure in the game's order is dug. And a Progressive Radar received while flying turns the radar on at once, but its treasures can be dug only after a map change. Both to look at: Lid's line is likely a chat or talk row with a radar counter condition.
+
 **Also round 108 (a player):** in the game the radar goes quiet once every treasure it can find is dug, until the next part. The mod kept it pinging, as it held the found count in the band. Now the count goes 2 past the band once the level's tiers are all found (docs/playtesting_archive.md, round 108).
 
 ## 52. A new game with no prologue (the new start)
@@ -360,6 +364,8 @@ Along the same lines, I would also want an option for players to start with all 
 **Built in round 113 (mod build 3b66f1dc):** a lift that keeps its stop in the save is put back at its first-visit stop while the player is on another map, in the five dungeons where that is always safe: the Tower of Mysidia, the Wind Shrine, the Water Shrine, the Gronoa Shrine and the Sanctissimus Shrine (`G.LIFT_RESETS`). `tools/lift_audit.py` reads every lift's stops and arrival rules from the levels and writes `data/game/lifts.tsv`. The tower works (round 114). To test in game: the other four after a fast travel out (docs/playtesting.md).
 
 **Rafts (a player, round 114):** the boats in Cave of Waters and the Water Shrine stayed where they were left too. The save keeps the last raft ridden per map (`Map.lastRideRaftMap`); the mod takes that row out while the player is elsewhere (mod build 901ca04e). A survey of the rest of what keeps its place (round 114 in docs/playtesting_archive.md): switch floors and turning bridges (Cave of Waters, the Water Shrine, the Weapons Factory) and one falling floor (Kolobos Ruins) are left alone for now, as a reset would undo their puzzles. They are on the checklist.
+
+**Kolobos Ruins' floor (the user, round 117):** the floor falls under the player in a scene (flag 111), and Rain puts it back from the far side (flag 112, "elbow grease"). A fast travel out from the far side left the way in blocked. Off the ruins' map, the mod now sets flag 112 when 111 is on, as Rain's scene does (mod build afd9cf66). The switch floors and turning bridges still pass the checklist.
 
 **Known so far about the Shipyard (rounds 58 and 59, docs/playtesting_archive.md):**
 - Map 3060 has keypad lifts (`BP_MapGimmick_Floor_Elevator_Interact_002_C`) 72 to 75. 73 and 75 start switched off (`m_GimmickCondition 1`). The mod turns them on (`G.WakeShipyardElevators`).
@@ -394,6 +400,8 @@ Along the same lines, I would also want an option for players to start with all 
 
 **Round 116 (mod build 517a874b, world build e0989726):** ways 1 and 2 are built. The second move is only for a player below the arrival, and move input is held until the player stands at the arrival (10 s at most). The client writes `ap_alive.txt` every 2 s while connected; without it the entry is labelled "New Game (Archipelago: connect the client)" and becomes Load Game. The probes are `ffrap_functions CPP_BFL_Dialog CPP_DialogManager` (way 3) and `ffrap_point0 on` (way 4). To test in game (docs/playtesting.md).
 
+**Round 117 (the user tried round 116's build):** ways 1 and 2 work. Rain could not walk until he stood at the town; one move each time. The entry read "connect the client" and opened Load Game with the client closed, and started the seed with it connected. The label changes only when the title screen is made again. Way 4 does not work: point 0 moved to the arrival before the pawn came, but the game still put Rain at the Earth Shrine, so it places a new game from its own data. The probe is taken out. Way 3's calls are known (idea 22); the window is no longer needed for the move. What is left of this idea: the label's refresh while the title is up.
+
 ## 55. A stutter like a heartbeat
 
 **From testers, 2026-11-26 (round 116).** One player had a constant stutter "like a heartbeat"; another had none. The user feels it on their laptop and not on their desktop. A player also had lag in Dragon's Maw.
@@ -409,3 +417,26 @@ Along the same lines, I would also want an option for players to start with all 
 - Whether Dragon's Maw is slow without the mod too.
 
 **Ways to fix, once the timings say where:** keep found objects by path (as `Live` does) so searches happen only after a map load; spread the per-second work over the ticks between; run the slow scans less often away from chests.
+
+**Round 117 (the user's desktop, 50 minutes of timings):** the main loop averaged 8 to 13 ms, and one run in four to one in ten went over 25 ms. The slow runs were the even ticks, where every step that runs one tick in two came together: the seed's extras and the continent locks (9 to 40 ms), the table patches (8 ms), the loot scan (7 ms), and every 5 s scale and settings (5 to 28 ms). The object searches were small (the busiest, `WBP_FieldFuncList2_C`, about 2 ms a second). So the time is in the steps, not the searches. **Built (mod build afd9cf66):** the extras and the patches run on odd ticks, and the extras are timed in eight parts, the locks and the level sync apart. To test: the laptop, and the next `perf:` lines to name the slow part of the extras.
+
+## 56. Separate boss scaling options
+
+**From tester feedback, having separate scaling options for bosses:**
+- Boss scaling on/off
+- Boss scaling presets
+
+## 57. Fast travel to a place a scene took the player to
+
+**From the user, 2026-11-27 (round 117).** After The Tide from the Sky, fast travel went to Grandport with Lanzelt still locked. The airship showed grey on the Map screen, but fast travel went there. Zoldaad's capital could be travelled to after the Ayaka quest's scene, with no visit on foot.
+
+**Known so far (docs/playtesting_archive.md, round 117):**
+- Since round 108 the mod marks each map of a locked continent not visited (`bIsVisited` in `Map.perMapSaveDataMap`). The log shows Grandport marked not visited, then a fast travel to it two minutes later. So that mark is not what the Map screen's refusal reads ("a place you haven't visited yet", condition `bCheckLockedMap` in `DA_WldMapParameter`).
+- The grey on the Map screen does follow the visited mark: the airship was grey because a seed that starts with it never marked it visited (fixed in round 117).
+- Zoldaad Unlock had come before any Zoldaad map in the log. With the continent open, a visit made by a scene counts as in the game.
+
+**Built (round 117, mod build afd9cf66):** maps of a locked continent are made unknown too. `ffrap_visited <map> [unvisit|unknown|restore]` logs or writes a map's marks.
+
+**To find out:** with `ffrap_visited` on an open continent's town, whether the Map screen still travels there when it is only not visited, and when it is unknown. If neither stops it, the next probe is `ffrap_find Visited` and `ffrap_find Known` for the list it reads.
+
+**Open question for the user:** should a place a scene visited on an open continent stay a fast travel place, as in the game, or wait for a visit on foot?

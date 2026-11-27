@@ -2940,7 +2940,11 @@ G.DUNGEON_KEY = { item = 20019, map = 3150 }
 -- Round 108 (a tester): "The Tide from the Sky" (Olderion) takes the player through Grandport Harbor
 -- in a scene (SubEv_C03_Mercedes_02_02, then back to Olderion). The visit made Grandport a fast
 -- travel place with Lanzelt still locked. Each map of a locked continent (maps.tsv's island) is
--- marked not visited again (Map.perMapSaveDataMap), so fast travel refuses it. It stays known.
+-- marked not visited again (Map.perMapSaveDataMap), so fast travel refuses it.
+-- Round 117 (the user): not enough. With Grandport marked not visited, the Map screen still fast
+-- travelled there from Waterfall Way. The Map screen greys a place that is not visited, but its
+-- "never visited" refusal may test the known mark, so the map is made unknown too (ffrap_visited
+-- tests which one it reads).
 G.CONTINENT_MAPS = {
     grandshelt = { 2000, 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 3000, 3001, 3020, 5198, 10001, 10020, 10216, 10218, 10236, 10237 },
     lanzelt = { 2020, 2030, 2031, 3030, 3031, 10051, 10203, 10208, 10223, 10228 },
@@ -2967,14 +2971,39 @@ function G.UnvisitLocked()
             local m = Int(key:get())
             if locked[m] and m ~= here then
                 local row = value:get()
-                if row.bIsVisited == true then
-                    row.bIsVisited = false
+                if row.bIsVisited == true or row.bIsKnown == true then
+                    row.bIsVisited, row.bIsKnown = false, false
                     cleared[#cleared + 1] = m
                 end
             end
         end)
     end)
     return cleared
+end
+
+-- Round 117 (the user): Kolobos Ruins' floor falls under the player in a scene
+-- (C01_ColobosBridge_02, flag 111) and Rain puts it back from the far side (C01_ColobosBridge_03,
+-- flag 112, "elbow grease"). A fast travel out from the far side left the way in blocked for good.
+-- Off the ruins' map, a fallen floor is put back as the scene would; the scene gives nothing.
+G.KOLOBOS_BRIDGE = { map = 3040, fell = 111, fixed = 112 }
+
+-- Round 117 probe (ffrap_visited): a map's known and visited marks, as the save's row holds them
+-- and as CPP_BFL_SaveData_PerMap answers. `known` and `visited`, when given, are written first.
+function G.MapMarks(m, known, visited)
+    local sd = G.SaveData()
+    if not sd then return "no save" end
+    local row
+    pcall(function()
+        sd.Map.perMapSaveDataMap:ForEach(function(key, value)
+            if Int(key:get()) == m then row = value:get() end
+        end)
+    end)
+    if not row then return "map " .. m .. ": no row in the save" end
+    if known ~= nil then row.bIsKnown, row.bIsVisited = known, visited end
+    local perMap, answer = Lib("CPP_BFL_SaveData_PerMap"), "?"
+    if perMap then pcall(function() answer = tostring(perMap:IsVisited(m)) end) end
+    return string.format("map %d: row known %s, visited %s; IsVisited %s", m, tostring(row.bIsKnown),
+        tostring(row.bIsVisited), answer)
 end
 
 -- Round 107 (the user): Grandport Harbor's vision Moogle (NPC 720, map 2030) shows only with flag
@@ -4105,42 +4134,6 @@ function G.MoveAirships(a, far, step)
         end
     end
     return count, parts
-end
-
--- Round 116 probe (idea 54, way 4): a new game stands at point 0 of its map. The world map's is
--- the Earth Shrine's arrival, in the level Wld_GD (every map has a point 0 of its own).
-G.START_POINT = { class = "BP_MapTransitionPoint_C", id = 0, level = "/Wld_GD." }
-
--- The world map's point 0 when it is loaded: the actor, and where it stands. nil and why if not.
-function G.StartPoint()
-    local P = G.START_POINT
-    local ok, all = pcall(FindAllOf, P.class)
-    local points = 0
-    for _, pt in ipairs(ok and all or {}) do
-        if Alive(pt) then
-            points = points + 1
-            local id, name, at
-            pcall(function() id = Int(pt.m_PointID) end)
-            pcall(function() name = pt:GetFullName() end)
-            if id == P.id and name and name:find(P.level, 1, true) then
-                pcall(function() at = pt:K2_GetActorLocation() end)
-                if at then return pt, { x = at.X, y = at.Y, z = at.Z } end
-                return nil, "point 0 found, but its place could not be read"
-            end
-        end
-    end
-    return nil, points .. " transition points loaded, none is the world map's point 0"
-end
-
--- Moves the world map's point 0 to `to` ({ x, y, z }). Returns where it stood before (nil if it
--- was not moved), and a line for the log.
-function G.MoveStartPoint(to, step)
-    local pt, at = G.StartPoint()
-    if not pt then return nil, at end
-    step(string.format("point 0 K2_SetActorLocation %.0f, %.0f, %.0f", to.x, to.y, to.z))
-    local ok = pcall(function() pt:K2_SetActorLocation({ X = to.x, Y = to.y, Z = to.z }, false, {}, true) end)
-    if not ok then return nil, "point 0 K2_SetActorLocation raised" end
-    return at, string.format("point 0 moved from %.0f, %.0f, %.0f to %.0f, %.0f, %.0f", at.x, at.y, at.z, to.x, to.y, to.z)
 end
 
 -- Moves the airship (when it is on the map) and then the player on foot to the arrival.

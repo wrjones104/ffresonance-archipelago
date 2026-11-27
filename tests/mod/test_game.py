@@ -2166,10 +2166,19 @@ end
 """)
 assert sorted(L.eval("G.UnvisitLocked()").values()) == [GRANDPORT, KOL]
 assert L.eval(f"visited108({GRANDPORT})") is False and L.eval(f"visited108({KOL})") is False
+# Round 117: fast travel still went to Grandport marked not visited; the map is made unknown too.
+L.execute("function known117(m) local out; saveMaps:ForEach(function(k, v) if k:get() == m then out = v:get().bIsKnown end end); return out end")
+assert L.eval(f"known117({GRANDPORT})") is False and L.eval(f"known117({OLDERION_TOWN})") is True
 assert L.eval(f"visited108({OBLIVION_PALACE})") is True, "the player is there"
 assert L.eval(f"visited108({OLDERION_TOWN})") is True and L.eval(f"visited108({BATTLEFIELD})") is True
 assert len(L.eval("G.UnvisitLocked()")) == 0, "nothing more to clear"
+# Round 117 probe (ffrap_visited): the row's marks, written only when asked
+assert L.eval(f"G.MapMarks({OLDERION_TOWN})").startswith(f"map {OLDERION_TOWN}: row known true, visited true")
+assert L.eval(f"G.MapMarks({OLDERION_TOWN}, true, false)").startswith(f"map {OLDERION_TOWN}: row known true, visited false")
+assert L.eval(f"known117({OLDERION_TOWN})") is True and L.eval(f"visited108({OLDERION_TOWN})") is False
+assert L.eval("G.MapMarks(9999)") == "map 9999: no row in the save"
 L.execute("G.GetFlag, G.CurrentMap = prevGetFlag108, prevCurrentMap108; mgr.m_pGameSaveData = nil")
+assert L.eval("G.MapMarks(2070)") == "no save"
 assert len(L.eval("G.UnvisitLocked()")) == 0, "no save: nothing"
 
 # Round 113 (the user): lifts keep their stop in the save (Map.mapGimmick{map}.gimmickState{uid}).

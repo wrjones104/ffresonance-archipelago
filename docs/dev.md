@@ -172,7 +172,7 @@ These commands run in UE4SS's `ConsoleEnablerMod` console for development and de
 | `ffrap_lock [on\|off\|open <continent\|all>\|close <continent\|all>]` | Toggle or test continent landing/crossing locks |
 | `ffrap_title [list\|add\|refuse <type\|off>]` | List title menu entries, add the Archipelago entry, or set what the entry becomes with no client (Load Game; `off` lets it start a game) |
 | `ffrap_perf` | Log how long each loop, step and object search took since the last summary (also logged every 2 minutes) |
-| `ffrap_point0 [on\|off]` | Probe: move the world map's point 0 to the arrival during an Archipelago new game; alone, log where point 0 stands |
+| `ffrap_visited <map> [unvisit\|unknown\|restore]` | Probe: log a map's known and visited marks; `unvisit` marks it not visited, `unknown` neither, `restore` both |
 | `ffrap_notice [text]` | Experimental quest-notice banner test |
 | `ffrap_logo` | Manually place the Archipelago logo on the title screen |
 | `ffrap_layout <text>` | Log widget panel chain containing `<text>` |

@@ -191,6 +191,7 @@ function G.QuestPrizes(labels) G.prizes = labels; local n = 0; for _ in pairs(la
 function G.MechaboPatch() G.mechaboPatches = (G.mechaboPatches or 0) + 1; return 2 end
 -- the save's visited maps, and the dungeon fast travel rule as last set
 G.visited, G.AIRSHIP_MAPS = {}, { 20001, 20002 }
+G.KOLOBOS_BRIDGE = { map = 3040, fell = 111, fixed = 112 }
 function G.MarkVisited(maps)
   local marked = {}
   for _, m in ipairs(maps) do
@@ -1109,24 +1110,22 @@ assert G.TITLE_LABEL == G.TITLE_LABEL_LIVE, G.TITLE_LABEL
 choice.v = 5
 hook(None, choice)
 assert choice.v == 2 and len(list(G.prepares.values())) == prepared + 2
-# Round 116 probe: with ffrap_point0 on, the world map's point 0 goes to the arrival once found,
-# before the save is in, and back once it is (the Earth Shrine's door leads to it)
-EARTH_SHRINE_POINT = (17214, 20957, 0)
-L.eval("""function(G, x, y, z)
-  G.pointMoves = {}
-  function G.MoveStartPoint(to)
-    G.pointMoves[#G.pointMoves + 1] = to.x .. "," .. to.y
-    return { x = x, y = y, z = z }, "point 0 moved to " .. to.x .. ", " .. to.y
+# Round 117 probe: ffrap_visited writes a map's marks only with a word it knows
+SIAN = 2170
+L.eval("""function(G)
+  G.markCalls = {}
+  function G.MapMarks(m, known, visited)
+    G.markCalls[#G.markCalls + 1] = m .. ":" .. tostring(known) .. ":" .. tostring(visited)
+    return "map " .. m
   end
-end""")(G, *EARTH_SHRINE_POINT)
-L.execute('commands["ffrap_point0"]("ffrap_point0", {"on"})')
+end""")(G)
+for words in ([str(SIAN)], [str(SIAN), "unknown"], [str(SIAN), "restore"], [str(SIAN), "bogus"], ["x"]):
+    L.eval('function(w) commands["ffrap_visited"]("ffrap_visited", w) end')(L.table(*words))
+assert list(G.markCalls.values()) == [f"{SIAN}:nil:nil", f"{SIAN}:false:false", f"{SIAN}:true:true"], list(G.markCalls.values())
+assert any(m.startswith(f"[FFRAP] visited: unknown: map {SIAN}") for m in logged())
 G.ready = True
 tick(3)
-assert list(G.pointMoves.values()) == ["12470,14980"], list(G.pointMoves.values())  # Lanzelt, the seed's continent
-assert any(m.startswith("[FFRAP] point 0 (tick): point 0 moved to 12470, 14980") for m in logged())
 load(G, "SD_P0", "7000")
-assert list(G.pointMoves.values())[-1] == "17214,20957", "put back once the save is in"
-L.execute('commands["ffrap_point0"]("ffrap_point0", {"off"})')
 L.execute('commands["ffrap_newstart"]("ffrap_newstart", {"off"})')   # as the sections below expect
 heartbeat()
 print("no new game without the client: ok")
@@ -3078,6 +3077,11 @@ inbox("cfg\tgoal\ttablet_shards\t7\t50\n")
 tick(2)
 body = list(L.eval("package.loaded.game.APMENU.paged").values())[1]
 assert body.startswith("Goal: receive 50 Tablet Shards (7 so far)\n"), body
+# Round 117: a seed with the airship starts on foot too, the airship beside the player
+inbox("cfg\tairship\t1\n")
+tick(2)
+body = list(L.eval("package.loaded.game.APMENU.paged").values())[1]
+assert body.split("\n")[-1] == "Start: on foot on Lanzelt, the airship beside you", body
 # Round 83: `state` logs the page's screens, `close` is a way out of one that will not close, and
 # `tree` writes the open page's widgets to ffrap_apmenu.txt
 L.execute('''
@@ -3247,3 +3251,38 @@ lines = [m for m in L.eval("logged").values() if m.startswith("[FFRAP] perf: ")]
 assert any(m.startswith("[FFRAP] perf: tick 12 runs") for m in lines), lines
 assert any("searches FindAllOf CPP_MapGimmick_FieldItem 1x 3 ms" in m for m in lines), lines
 print("timings: ok")
+
+# Round 117 (the user): the slow steps all ran on the same tick. The extras (fast travel, rides,
+# the airship's marks) and the table patches run on one tick, the locks and the loot on the other.
+KOLOBOS_RUINS, SIAN_TOWN, AIRSHIP_DECK = 3040, 2170, 20001
+FLOOR_FELL, FLOOR_FIXED = 111, 112
+inbox("seed\tS117:0:1\ncfg\topenworld\t1\ncfg\tairship\t1\ncfg\tcontinent\tpharm\n", "w")
+L, G = boot5("SD_117", "0", {})
+L.globals().G = G
+L.execute(SCALE_STUB)
+L.execute(CAPTURE)
+L.execute("""
+G.map, G.story, G.flags117, G.parity = 3040, 8000, { [111] = true }, {}
+function G.CurrentMap() return G.map end
+function G.GetFlag(i) return G.flags117[i] == true end
+function G.SetFlag(i, on) G.flags117[i] = on; return "ok", "" end
+local travel = G.DungeonFastTravel
+function G.DungeonFastTravel(on) G.parity.extras = G.ticksSeen % 2; return travel(on) end
+function G.ContinentSync() G.parity.locks = G.ticksSeen % 2; return 0, 0 end
+""")
+G.chests = L.table()
+for _ in range(12):
+    L.execute("G.ticksSeen = (G.ticksSeen or 0) + 1")
+    tick(1)
+assert G.parity.extras is not None and G.parity.locks is not None and G.parity.extras != G.parity.locks, dict(G.parity)
+# the airship of a seed that starts with it is a visited place from the start (no Airship item)
+assert G.visited[AIRSHIP_DECK] is True, "the Map screen showed the airship grey"
+# Kolobos Ruins' fallen floor stays down while the player is in the ruins, and is put back after
+assert G.flags117[FLOOR_FIXED] is None, "not on the ruins' map"
+G.map = SIAN_TOWN
+tick(4)
+assert G.flags117[FLOOR_FIXED] is True
+assert sum("kolobos: the fallen floor put back, flag 112" in m for m in logged()) == 1
+tick(4)
+assert sum("kolobos: the fallen floor put back" in m for m in logged()) == 1, "once"
+print("round 117 ticks, airship, Kolobos floor: ok")
