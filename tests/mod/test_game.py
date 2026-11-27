@@ -1788,6 +1788,10 @@ assert not _in(-5935, -8305), "the air start is over the sea, in no continent"
 for _name, _a in L.eval("G.FOOT_STARTS").items():
     assert _in(_a.x, _a.y) == [_name], (_name, _in(_a.x, _a.y))
 assert len(list(L.eval("G.FOOT_STARTS").items())) == 9
+# Round 118: each start on foot is a landing point, and `landing` is that point's id
+_landing = {(float(r["x"]), float(r["y"])): int(r["id"]) for r in _rows("gimmicks.tsv") if r["class"] == "BP_MapAirShipLandingPoint_C"}
+for _name, _a in L.eval("G.FOOT_STARTS").items():
+    assert _landing.get((_a.x, _a.y)) == _a.landing, (_name, _a.landing, _landing.get((_a.x, _a.y)))
 # Round 67: each built-in walking crossing stands in one of the two continents it joins
 for _c in L.eval("G.CROSSINGS").values():
     assert _in(_c.x, _c.y)[0] in (_c.a, _c.b), (_c.a, _c.b, _in(_c.x, _c.y))

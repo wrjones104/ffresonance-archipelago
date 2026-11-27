@@ -333,6 +333,8 @@ Along the same lines, I would also want an option for players to start with all 
 
 **Round 112 (testers, v0.31.1):** Token Legacy's last step is past the Throne Room Key's door, and Errand's End follows it. Both need the key now; a quest that starts after another takes its keys. Beyond the Blue needs a party of 4. Grandport's vision Moogle flag (144, round 107) made every Moogle play Grandport's scene: its flag 145 is set too (mod build 5d54d782).
 
+**Round 118 (the user):** with key items off, the Dungeon Key is given in Zoldaad Dungeon and the cells open. Left of this idea: the two radar findings below.
+
 **Round 117 (the user, round 108's radar check):** the radar goes quiet when its treasures are dug, but Lid says the radar stopped finding treasure while some are still to find, likely when the last treasure in the game's order is dug. And a Progressive Radar received while flying turns the radar on at once, but its treasures can be dug only after a map change. Both to look at: Lid's line is likely a chat or talk row with a radar counter condition.
 
 **Also round 108 (a player):** in the game the radar goes quiet once every treasure it can find is dug, until the next part. The mod kept it pinging, as it held the found count in the band. Now the count goes 2 past the band once the level's tiers are all found (docs/playtesting_archive.md, round 108).
@@ -355,7 +357,9 @@ Along the same lines, I would also want an option for players to start with all 
 
 **Round 111's full run (the user, v0.31.1):** the start, the chats and the run to the Crystal Tower's top went through, with no crash. The user's airship came up near Zoldaad on a Dirnado start: the game spawned the actor elsewhere and wrote that place over the park when the player left the world map. Round 112 (mod build 5d54d782) moves it to the start the first time it is on the world map after it came, and round 113 parks the save there again.
 
-**Left:** take out the prologue skip's wait for the autosave, or the skip itself, which still runs with `ffrap_newstart off` or before a seed is heard.
+**Round 118 (the user):** a seed that starts with the airship had none at the start until a map change. The game places the airship at the first map load, before the mod parks it in the save. Every start on foot is an airship landing point, so the start now points `DT_MapAirShip`'s `initSpawnPointId` (9000, no point) at the start's landing point for that first load (mod build 2a4f7fce). Not known yet: whether that id is a landing point id. If not, the executable's `CallAirShip` and `CPP_BFL_Airship` are the next lead.
+
+**Left:** take out the prologue skip's wait for the autosave, or the skip itself, which still runs with `ffrap_newstart off` or before a seed is heard. And the airship's first place, above, to test.
 
 ## 53. Lifts and rafts after fast travel, and Mobliz Shipyard's last lift
 
@@ -366,6 +370,8 @@ Along the same lines, I would also want an option for players to start with all 
 **Rafts (a player, round 114):** the boats in Cave of Waters and the Water Shrine stayed where they were left too. The save keeps the last raft ridden per map (`Map.lastRideRaftMap`); the mod takes that row out while the player is elsewhere (mod build 901ca04e). A survey of the rest of what keeps its place (round 114 in docs/playtesting_archive.md): switch floors and turning bridges (Cave of Waters, the Water Shrine, the Weapons Factory) and one falling floor (Kolobos Ruins) are left alone for now, as a reset would undo their puzzles. They are on the checklist.
 
 **Kolobos Ruins' floor (the user, round 117):** the floor falls under the player in a scene (flag 111), and Rain puts it back from the far side (flag 112, "elbow grease"). A fast travel out from the far side left the way in blocked. Off the ruins' map, the mod now sets flag 112 when 111 is on, as Rain's scene does (mod build afd9cf66). The switch floors and turning bridges still pass the checklist.
+
+**Round 118 (the user):** the floor comes back, and the Water Shrine, Gronoa Shrine and Sanctissimus Shrine lifts and the switch floors and bridges all pass after a fast travel out. Lifts and rafts are done; what is left of this idea is Mobliz Shipyard's last lift.
 
 **Known so far about the Shipyard (rounds 58 and 59, docs/playtesting_archive.md):**
 - Map 3060 has keypad lifts (`BP_MapGimmick_Floor_Elevator_Interact_002_C`) 72 to 75. 73 and 75 start switched off (`m_GimmickCondition 1`). The mod turns them on (`G.WakeShipyardElevators`).
@@ -420,6 +426,8 @@ Along the same lines, I would also want an option for players to start with all 
 
 **Round 117 (the user's desktop, 50 minutes of timings):** the main loop averaged 8 to 13 ms, and one run in four to one in ten went over 25 ms. The slow runs were the even ticks, where every step that runs one tick in two came together: the seed's extras and the continent locks (9 to 40 ms), the table patches (8 ms), the loot scan (7 ms), and every 5 s scale and settings (5 to 28 ms). The object searches were small (the busiest, `WBP_FieldFuncList2_C`, about 2 ms a second). So the time is in the steps, not the searches. **Built (mod build afd9cf66):** the extras and the patches run on odd ticks, and the extras are timed in eight parts, the locks and the level sync apart. To test: the laptop, and the next `perf:` lines to name the slow part of the extras.
 
+**Round 118 (the user's laptop and desktop):** "better, but still noticeable, especially in towns" on the laptop; nothing felt on the desktop. The slow runs moved to the odd ticks, and the largest step on both computers was the story boss step: 7 to 26 ms on every odd tick, from a walk of every talk row to find two rows. The patches added 6 to 14 ms on the same ticks. **Built (mod build 2a4f7fce):** the story boss step finds its rows by `FindRow` and writes its battle group at a map's first pass and every 10 passes after. The patches and scale steps are timed in parts. To test: both computers' `perf:` lines.
+
 ## 56. Separate boss scaling options
 
 **From tester feedback, having separate scaling options for bosses:**
@@ -436,6 +444,10 @@ Along the same lines, I would also want an option for players to start with all 
 - Zoldaad Unlock had come before any Zoldaad map in the log. With the continent open, a visit made by a scene counts as in the game.
 
 **Built (round 117, mod build afd9cf66):** maps of a locked continent are made unknown too. `ffrap_visited <map> [unvisit|unknown|restore]` logs or writes a map's marks.
+
+**Built later in round 117 (mod build b295fb0e):** a place counts for fast travel only after a walk in, on an open continent too.
+
+**Round 118 (the user):** the walk-in rule works: `fast travel: map <id> walked in` for each new place, and existing saves kept their places. The probe ran `unvisit` but not `unknown` (the log has the usage line in its place), and what the Map screen did is not recorded.
 
 **To find out:** with `ffrap_visited` on an open continent's town, whether the Map screen still travels there when it is only not visited, and when it is unknown. If neither stops it, the next probe is `ffrap_find Visited` and `ffrap_find Known` for the list it reads.
 

@@ -3079,11 +3079,11 @@ inbox("cfg\tgoal\ttablet_shards\t7\t50\n")
 tick(2)
 body = list(L.eval("package.loaded.game.APMENU.paged").values())[1]
 assert body.startswith("Goal: receive 50 Tablet Shards (7 so far)\n"), body
-# Round 117: a seed with the airship starts on foot too, the airship beside the player
+# Round 117: a seed with the airship starts on foot too, the airship beside the player (round 118's wording)
 inbox("cfg\tairship\t1\n")
 tick(2)
 body = list(L.eval("package.loaded.game.APMENU.paged").values())[1]
-assert body.split("\n")[-1] == "Start: on foot on Lanzelt, the airship beside you", body
+assert body.split("\n")[-1] == "Start: on foot on Lanzelt, next to your airship", body
 # Round 83: `state` logs the page's screens, `close` is a way out of one that will not close, and
 # `tree` writes the open page's widgets to ffrap_apmenu.txt
 L.execute('''

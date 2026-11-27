@@ -1769,3 +1769,35 @@ Not seen in game: whether the move lock stops the game's own walking (it uses th
 Not done: the title label's refresh while the title is up, and the two radar findings (idea 51).
 
 **After the round, the user decided (2026-11-27):** a place a scene took the player to counts for fast travel only after a visit on foot, on an open continent too (idea 57). **Built (mod build b295fb0e):** the mod keeps the places the player stood in with the field up for two passes (about 2 s), per session in `ap_state.txt`, and marks every other place of a continent unknown and not visited. A session's first pass with this build takes what the save has visited already.
+
+### Round 118 (round 117's build tried: mod 0.62.2 build b295fb0e, apworld 0.31.2 build e0989726)
+
+**From the user (2026-11-27), on the laptop and the desktop:**
+- **Ticked:** the builds; the desktop's stutter ("no issues on desktop"); the fast travel probe; `fast travel: 0 places visited already count as walked in` at the first load, with fast travel places as they were; a place a scene took the player to is not a fast travel place until walked in; Kolobos Ruins' floor back after a fast travel out (`kolobos: the fallen floor put back, flag 112`); the Seed tab's start line.
+- **Ticked from rounds 113 and 114:** the Water Shrine, the Gronoa Shrine and the Sanctissimus Shrine lifts back at their first-visit stops; the switch floors and turning bridges can still be passed after a fast travel out.
+- **Ticked from round 108:** with `shuffle_key_items: false`, `dungeon key: given in Zoldaad Dungeon, as its soldier never comes`.
+- **The laptop's stutter:** "better, I think, but still noticeable, especially in the towns I visited if you're paying attention."
+- **The airship (a seed that starts with it):** the Map screen no longer shows it grey, but the airship was not there until a map change. A later seed's airship stood next to the player in Zoldaad.
+- **The Seed tab:** the user wants "On foot on <continent>, next to your airship".
+
+**What the logs show:**
+- **Timings.** The desktop's main loop averaged 13 to 16 ms, with 23 to 30 runs in each 2 minutes over 25 ms. The laptop's averaged 11 to 14 ms, with 2 to 24 (56 in the 2 minutes of the new game). The slow runs are now the odd ticks: `extras: story boss` took 7 to 26 ms on every one (about 115 runs and 750 to 1,000 ms in each 2 minutes, the largest step on both computers), and the patches 6 to 14 ms on the same ticks. On a story boss map (Kolobos Ruins, 3040) the story boss step was 18 to 26 ms. Every 10 s or so `scale, settings` took 15 to 21 ms with no level change.
+- **The airship.** In the desktop's Pharm seed the new start logged `newstart: no airship on the map; moved to the arrival`. The game builds the world map at the save's first load (10:02:08), and the mod parks the airship in the save only once the save is in (10:02:10), so the game had placed none. The Zoldaad seed's airship was seen after the player came back out of Zoldaad, at the next world map load.
+- **The fast travel probe (laptop).** `ffrap_visited 2170` read `no row in the save` before Sian was visited, then `known true, visited true` after. `unvisit` wrote `visited false; IsVisited false`. The next command got the usage line (most likely a typo for `unknown`), so the unknown step did not run. `restore` came 21 s after `unvisit`, with no map change between. Whether the Map screen refused Sian while it was not visited is not in the log.
+- **The laptop's first client line** was world 0.31.1 (build 937b4b93), from the last session's `ap_in.txt`. The client that connected was 0.31.2 (build e0989726).
+
+**Found off-line:**
+- **The story boss step** walked every row of `CDT_TalkEventData_Prod` and its parents, each in a `pcall`, twice a second, to find two rows by name (`SubEv_C02_SymbolEnemy_Encount` and `Gim_EV_Majipot_Delete_02`). On a boss map it also walked all 678 rows of `DT_BattleGroup`. That table's row names are descriptions in Japanese, not the group's id, so a group cannot be found by name.
+- **The prizes refresh** (`state.PRIZE_EVERY`, the Quests screen's Rewards written again in case the game loaded the table again) waited for a tick that is a multiple of 60. Since round 117 the patches run only on odd ticks, so it never came.
+- **The airship's first place.** `DT_MapAirShip`'s `initSpawnPointId` is 9000, and no point has that id. Every start on foot stands on a world map landing point (`BP_MapAirShipLandingPoint_C` in `gimmicks.tsv`): the Royal Capital 1002, Kol 2001, Felicitas 3001, Dilmagia 4002, Olderion 5001, Zoldaad 6002, Mysidia 7001, Gaberada 8001, Sian 9001. Whether `initSpawnPointId` is a landing point id is not known.
+- **The parked airship is a gimmick,** `BP_MapGimmick_Vehicle_AirShipe_C` (native `CPP_MapGimmick_AirShip`, from `normalAirShip` in `DT_MapAirShip`). The new start and round 112's move looked only for the ridden airship's classes, so `no airship on the map` did not say whether the parked one was there.
+- **The executable names** `CallAirShip`, `Execute_CallAirShip` and `Execute_ResetAirShipLocation`, and a library `CPP_BFL_Airship`. Not tried.
+
+**Built (mod build 2a4f7fce, apworld unchanged):**
+- **The story boss step finds its two rows by `FindRow`** (`EachTalkRow(fn, keys)`). On a boss map the battle group is written at the map's first pass and then every 10 passes (`G.STORY_BOSS_GROUP_WRITE`), in case the game loaded the table again.
+- **Timings in parts:** `patches: prizes`, `patches: quest colours`, `patches: new save, behemoth`; `scale`, `scale: table check`, `scale: party level`, `fight`, `settings`.
+- **The prizes refresh** counts from tick 1, so it falls on a tick the patches run.
+- **The airship's first place.** For a seed that starts with the airship, the new start points `initSpawnPointId` at the start's landing point before the new game loads, and puts 9000 back with the rest. The log has `ok   airship's first place: landing point 9000 -> <id>`. The new start's airship search takes in `CPP_MapGimmick_AirShip` too, so its line says `airship CPP_MapGimmick_AirShip from x, y` when the parked one is there, and round 112's move after the item comes can move it.
+- **The Seed tab** says `Start: on foot on <continent>, next to your airship`.
+
+Not seen in game: whether the game's first placement reads `initSpawnPointId` as a landing point.

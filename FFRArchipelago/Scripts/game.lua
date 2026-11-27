@@ -2231,17 +2231,18 @@ G.OPEN_STARTS = {
 G.OPEN_START = G.OPEN_STARTS.air
 -- When `start_with_airship` is off, start on foot at the landing point beside the starting
 -- continent's main town (gimmicks.tsv) and park the hidden airship there (spawn condition:
--- flag 1431 / G.AIRSHIP_FLAG) so unlocking it spawns it at the next map load.
+-- flag 1431 / G.AIRSHIP_FLAG) so unlocking it spawns it at the next map load. Each start is an
+-- airship landing point of the world map (gimmicks.tsv); `landing` is its id.
 G.FOOT_STARTS = {
-    grandshelt = { x = 12460.0, y = 20700.0, z = 170.0 },   -- the Royal Capital
-    lanzelt = { x = 12470.0, y = 14980.0, z = 65.0 },       -- Village of Kol
-    kolobos = { x = 5540.0, y = 14600.0, z = 65.0 },        -- Town of Felicitas
-    dirnado = { x = 13190.0, y = 3210.0, z = -12.0 },       -- Dilmagia
-    olderion = { x = -90.0, y = 2680.0, z = 16.0 },         -- Olderion
-    zoldaad = { x = -7200.0, y = 7200.0, z = 64.0 },        -- Zoldaad
-    mysidia = { x = -17515.0, y = -8365.0, z = 96.0 },      -- Mysidia
-    gronoa = { x = 15895.0, y = -14150.0, z = 299.0 },      -- Gaberada
-    pharm = { x = -3920.0, y = -17480.0, z = 90.0 },        -- Town of Sian
+    grandshelt = { x = 12460.0, y = 20700.0, z = 170.0, landing = 1002 },   -- the Royal Capital
+    lanzelt = { x = 12470.0, y = 14980.0, z = 65.0, landing = 2001 },       -- Village of Kol
+    kolobos = { x = 5540.0, y = 14600.0, z = 65.0, landing = 3001 },        -- Town of Felicitas
+    dirnado = { x = 13190.0, y = 3210.0, z = -12.0, landing = 4002 },       -- Dilmagia
+    olderion = { x = -90.0, y = 2680.0, z = 16.0, landing = 5001 },         -- Olderion
+    zoldaad = { x = -7200.0, y = 7200.0, z = 64.0, landing = 6002 },        -- Zoldaad
+    mysidia = { x = -17515.0, y = -8365.0, z = 96.0, landing = 7001 },      -- Mysidia
+    gronoa = { x = 15895.0, y = -14150.0, z = 299.0, landing = 8001 },      -- Gaberada
+    pharm = { x = -3920.0, y = -17480.0, z = 90.0, landing = 9001 },        -- Town of Sian
 }
 for name, a in pairs(G.FOOT_STARTS) do
     a.name, a.story, a.map, a.direction, a.parked = "foot " .. name, 8000, 1000, 2, true
@@ -2660,11 +2661,22 @@ end
 
 local bossTestSaved = nil     -- { talk = {}, group = id, groupFields = {}, chests = { ["map:id"] = {} } }
 
-local function EachTalkRow(fn)
+-- Each talk row, or with `keys` only the rows of those names, found by FindRow. Round 118: a
+-- walk of every talk row took 8 to 20 ms, and the story boss step walked them twice a second
+-- for two rows.
+local function EachTalkRow(fn, keys)
     for _, dt in ipairs(TableFamily(Find(SHOP_TABLE))) do
-        pcall(function()
-            dt:ForEachRow(function(name, row) pcall(fn, ObjText(name), row) end)
-        end)
+        if keys then
+            for _, key in ipairs(keys) do
+                local row
+                pcall(function() row = dt:FindRow(key) end)
+                if row then pcall(fn, key, row) end
+            end
+        else
+            pcall(function()
+                dt:ForEachRow(function(name, row) pcall(fn, ObjText(name), row) end)
+            end)
+        end
     end
 end
 
@@ -3263,18 +3275,19 @@ end
 -- boss can be fought at story 8000 until its flag is set. When `say` is given (ffrap_bossfight
 -- trigger), each step is logged before its engine write runs. Returns true and a summary on a
 -- story boss map, or nil and why on any other map.
+G.STORY_BOSS_GROUP_WRITE = { map = nil, calls = 0, rows = 0, every = 10 }
 function G.SyncStoryBossTrigger(say)
     local step = say or function() end
     local mapId = G.CurrentMap()
     local boss = mapId and G.STORY_BOSSES[mapId]
     if not boss then
         if not bossTestSaved then
-            EachTalkRow(function(key, row)
-                if key == STORY_BOSS_WIN and #row.OnFlagList >= 1 and Int(row.OnFlagList[1]) ~= MAJIPOT_FLAG then
+            EachTalkRow(function(_, row)
+                if #row.OnFlagList >= 1 and Int(row.OnFlagList[1]) ~= MAJIPOT_FLAG then
                     row.OnFlagList[1] = MAJIPOT_FLAG
                 end
-                if key == STORY_BOSS_WIN then G.StandIn(row, false) end
-            end)
+                G.StandIn(row, false)
+            end, { STORY_BOSS_WIN })
         end
         return nil, "no story boss on map " .. tostring(mapId)
     end
@@ -3293,11 +3306,20 @@ function G.SyncStoryBossTrigger(say)
                 G.StandIn(row, true)
                 winRows = winRows + 1
             end
-        end)
-        EachGroupRow(boss.group, function(row)
-            BossTestWriteGroup(row, STORY_BOSS_WIN)
-            groupRows = groupRows + 1
-        end)
+        end, { STORY_BOSS_FIGHT, STORY_BOSS_WIN })
+        -- Round 118: the battle groups' table has no row names to find a group by, and a walk of
+        -- it is slow, so it is written at the map's first pass and then every `every` passes,
+        -- in case the game loaded it again.
+        local W = G.STORY_BOSS_GROUP_WRITE
+        if W.map ~= mapId then W.calls = 0 end
+        if W.calls % W.every == 0 then
+            EachGroupRow(boss.group, function(row)
+                BossTestWriteGroup(row, STORY_BOSS_WIN)
+                groupRows = groupRows + 1
+            end)
+            W.rows = groupRows
+        end
+        W.map, W.calls, groupRows = mapId, W.calls + 1, W.rows
     end
     local triggers, transitions, npcs, walks, woken = 0, 0, 0, "", 0
     if boss.kind == "trigger" then
@@ -3821,7 +3843,15 @@ G.NEW_START = {
     -- Round 109: the new game stands where the world map puts a new game (south of the Earth
     -- Shrine), so the player and the airship are moved to the arrival. These are the airship's
     -- classes; the first is the actor seen as the pawn while riding (round 37).
-    airships = { "BP_MapUnitAirShip_C", "CPP_MapUnit_AirShip" },
+    -- Round 118: the parked airship is a gimmick, CPP_MapGimmick_AirShip
+    -- (BP_MapGimmick_Vehicle_AirShipe_C).
+    airships = { "BP_MapUnitAirShip_C", "CPP_MapUnit_AirShip", "CPP_MapGimmick_AirShip" },
+    -- Round 118 (the user): a seed that starts with the airship had none at the start until a
+    -- map change. The game places it at the first map load from the save, and the save is parked
+    -- only after that load. With no placement in the save, the game's first one is at
+    -- DT_MapAirShip's initSpawnPointId (9000, no point), so the start points it at the arrival's
+    -- landing point for the new game's first load, and puts it back after.
+    spawnTable = "/Game/Datatable/Asset/Map/DT_MapAirShip.DT_MapAirShip",
     -- Map 10040 at story 5270 or later plays C05_536_02 until flag 553 is on. If the game kept
     -- its own start map, this keeps that scene from playing.
     flags = { 553 },
@@ -4009,6 +4039,21 @@ function G.NewStartPrepare(opts)
     end
     -- Not a failure of the start: at worst a chat plays at the first map.
     report[#report + 1] = (held > 0 and "ok   " or "FAIL ") .. "chats wait for unit " .. tostring(away) .. ": " .. held .. " rows"
+    if opts.airship and a.landing then
+        -- Not a failure either: at worst the airship comes at the next map change, as before.
+        local dt = G.LoadObject(NS.spawnTable)
+        local was, now
+        pcall(function()
+            dt:ForEachRow(function(_, row)
+                was = was or Int(row.initSpawnPointId)
+                row.initSpawnPointId = a.landing
+                now = Int(row.initSpawnPointId)
+            end)
+        end)
+        if was then saved.spawnPoint = { path = G.PathOf(dt), id = was } end
+        report[#report + 1] = (now == a.landing and "ok   " or "FAIL ") .. "airship's first place: landing point "
+            .. tostring(was) .. " -> " .. tostring(now)
+    end
     if not ok then G.NewStartRestore(step) end
     return ok, report
 end
@@ -4046,6 +4091,13 @@ function G.NewStartRestore(step)
         end
     end
     if saved.chats then parts[#parts + 1] = chatRows .. " chat rows" end
+    if saved.spawnPoint then
+        local dt = Find(saved.spawnPoint.path)
+        local back = dt ~= nil and pcall(function()
+            dt:ForEachRow(function(_, row) row.initSpawnPointId = saved.spawnPoint.id end)
+        end)
+        parts[#parts + 1] = "airship's first place " .. saved.spawnPoint.id .. (back and "" or " (failed)")
+    end
     return table.concat(parts, "; ")
 end
 

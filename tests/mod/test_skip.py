@@ -296,7 +296,8 @@ shopRows = { VisionUpgrade = { EventType = 1 }, VisionUpgrade_Main = { EventType
 libs["/Game/Datatable/Event/TalkEvent/CDT_TalkEventData_Prod.CDT_TalkEventData_Prod"] = {
   GetFullName = function() return "CDT" end, IsValid = function() return true end,
   HasAnyInternalFlags = function() return false end, HasAnyFlags = function() return false end,
-  ForEachRow = function(_, fn) for k, r in pairs(shopRows) do fn(nameOf(k), r) end end }
+  ForEachRow = function(_, fn) for k, r in pairs(shopRows) do fn(nameOf(k), r) end end,
+  FindRow = function(_, k) return shopRows[k] end }
 sd.visionList = arr({}, 0)""")
 blocked, rows = L.execute("return G.VisionShopGuard(false, true)")
 assert blocked is True and rows == 3 and lua("shopRows.VisionUpgrade.EventType") == 0 and lua("shopRows.Other.EventType") == 1
@@ -457,7 +458,8 @@ siren = { ID = 9013, battleEventId = 77, battleFinishEventId = FName("C01_037_01
 libs["/Game/Datatable/Encount/DT_BattleGroup.DT_BattleGroup"] = {
   GetFullName = function() return "DT" end, IsValid = function() return true end,
   HasAnyInternalFlags = function() return false end, HasAnyFlags = function() return false end,
-  ForEachRow = function(_, fn) fn(nameOf("Siren"), siren) end }
+  ForEachRow = function(_, fn) groupWalks = groupWalks + 1; fn(nameOf("Siren"), siren) end }
+groupWalks = 0
 local function chest(map, id) return { mapId = map, ID = id, ItemId = 3, ItemNum = 1, Money = -1, IsTrap = false,
   battleGroupId = -1, battleFinishEventId = FName("None") } end
 chestRows = { chest(3020, 1), chest(3020, 2), chest(3020, 3), chest(2000, 1) }
@@ -547,8 +549,17 @@ L.execute("sd.Progress.eventFlag[1241] = true")
 ok, detail = L.execute("return G.SyncStoryBossTrigger(say)")
 assert ok is True and "(won true)" in detail
 assert lua("storyActors.BP_MapGimmick_EventTrigger_C[1].gimmickCond") == 1 and lua("storyActors.BP_MapUnit_NPC_C[1].bHidden") is True
+# Round 118: the battle groups are walked at a map's first pass and then every `every` passes
+walks = lua("groupWalks")
 L.execute("mockMap = 3040")
 ok, detail = L.execute("return G.SyncStoryBossTrigger(say)")
+assert lua("groupWalks") == walks + 1, "a new map's first pass writes the group"
+for _ in range(lua("G.STORY_BOSS_GROUP_WRITE.every") - 1):
+    ok, again = L.execute("return G.SyncStoryBossTrigger(say)")
+    assert again == detail, ("the summary keeps the group rows", again, detail)
+assert lua("groupWalks") == walks + 1, "not again on the same map"
+L.execute("G.SyncStoryBossTrigger(say)")
+assert lua("groupWalks") == walks + 2, "then again, in case the game loaded the table again"
 assert ok is True and lua("storyActors.BP_MapTransitionTrigger_C[1].mTransitionDataList[1].FlagCondition") == "!{flag:1241}&{flag:1441}"
 assert lua("storyActors.BP_MapTransitionTrigger_C[1].mTransitionDataList[1].isEventOnly") is True
 assert lua(pot) == 1241 and lua("talkRows.SubEv_C02_SymbolEnemy_Encount.encountGroupId") == 9012
@@ -829,6 +840,20 @@ assert f"ok   chats wait for unit {FIRST_NOT_IN_PARTY}: 2 rows" in list(report.v
 steps = list(L.eval("steps").values())
 assert steps[0] == f"GameStartSettings.TransitionMapId {VANILLA_START_MAP} -> {WORLD_MAP}", steps
 assert "NewGame row: story 8000" in steps and "NewGame row: unit 1006" in steps, steps
+assert not any("airship's first place" in r for r in report.values()), "only a seed that starts with the airship"
+# Round 118 (the user): a seed with the airship had none at the start until a map change. The
+# game's first placement (DT_MapAirShip's initSpawnPointId) points at the start's landing point.
+VANILLA_SPAWN_POINT, SIAN_LANDING = 9000, 9001
+L.execute("""airshipRow = { initSpawnPointId = 9000 }
+libs["/Game/Datatable/Asset/Map/DT_MapAirShip.DT_MapAirShip"] = newObj({ ParentTables = arr({}),
+  GetFullName = function() return "DataTable /Game/Datatable/Asset/Map/DT_MapAirShip.DT_MapAirShip" end,
+  ForEachRow = function(_, fn) fn(FName("NewRow"), airshipRow) end })""")
+ok, report = L.execute("return G.NewStartPrepare({ arrival = G.FOOT_STARTS.pharm, step = step, airship = true })")
+assert ok is True and f"ok   airship's first place: landing point {VANILLA_SPAWN_POINT} -> {SIAN_LANDING}" in list(report.values()), list(report.values())
+assert lua("airshipRow.initSpawnPointId") == SIAN_LANDING
+put = lua("G.NewStartRestore(step)")
+assert put.endswith(f"; airship's first place {VANILLA_SPAWN_POINT}"), put
+assert lua("airshipRow.initSpawnPointId") == VANILLA_SPAWN_POINT
 # a second set-up (the player backed out and chose the entry again) starts from the game's own row
 ok, _ = L.execute("return G.NewStartPrepare({ arrival = G.FOOT_STARTS.lanzelt, party = { 1004 }, step = step })")
 assert ok is True and ints("newGameRow.Party.partyList") == [1004] and 31 not in ints("newGameRow.OnFlagList")

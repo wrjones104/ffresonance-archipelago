@@ -863,7 +863,8 @@ function state.prizeTick()
         end
     end
     local sig = table.concat(parts, "|")
-    if sig == state.prizeSig and state.ticks % state.PRIZE_EVERY ~= 0 then return end
+    -- The patches run on odd ticks since round 117, so the refresh counts from 1.
+    if sig == state.prizeSig and state.ticks % state.PRIZE_EVERY ~= 1 then return end
     local written = game.QuestPrizes(labels)
     if sig ~= state.prizeSig and written > 0 then
         log("quests: " .. written .. " quest rewards " .. (#parts > 0 and "show the location's item" or "back to the game's own"))
@@ -1465,7 +1466,8 @@ function save.newStartStep(what) log("newstart: " .. what) end
 -- there when the seed starts with it.
 function save.armNewStart()
     local a = game.FOOT_STARTS[seedCfg.continent or ""] or seedArrival()
-    local ok, report = game.NewStartPrepare({ arrival = a, party = seedCfg.party, step = save.newStartStep })
+    local ok, report = game.NewStartPrepare({ arrival = a, party = seedCfg.party, step = save.newStartStep,
+                                              airship = seedCfg.airship ~= false })
     for _, line in ipairs(report) do log("newstart: " .. line) end
     if not ok then
         log("newstart: not set up; the prologue skip takes over")
@@ -1975,9 +1977,11 @@ local function tick()
             pcall(popupTick)
             pcall(gateTick)
             if bossTest.group then pcall(bossTest.tick) end
-            state.mark("scale, settings")
+            state.mark("scale")
             if state.ticks % STATUS_EVERY == 0 then pcall(scaleTick) end
+            state.mark("fight")
             pcall(state.fightTick)
+            state.mark("settings")
             if state.ticks % STATUS_EVERY == 0 then pcall(settingsTick) end
             -- Round 117: one tick in two carried every slow step (25 to 40 ms on the user's desktop,
             -- a stutter like a heartbeat on a laptop). The extras and the table patches run on the
@@ -2037,11 +2041,14 @@ local function tick()
                     local okGifts, written = pcall(game.GiftsPatch, seedCfg.radar)
                     log("gifts: " .. tostring(written) .. " NPC gift rows give the stand-in" .. (okGifts and "" or " (failed)"))
                 end
+                state.mark("patches: prizes")
                 if seedCfg.quests then pcall(state.prizeTick) end
+                state.mark("patches: quest colours")
                 if seedCfg.quests and game.QUEST_COLORS.on then
                     local okColors, err = pcall(state.questColorsTick)
                     if not okColors then log("quest colours: failed: " .. tostring(err)) end
                 end
+                state.mark("patches: new save, behemoth")
                 if newSave then
                     local okMechabo, written = pcall(game.MechaboPatch)
                     log("mechabo: " .. tostring(written) .. " rows of Verun's first step accept its quest" .. (okMechabo and "" or " (failed)"))
@@ -2529,10 +2536,10 @@ state.apMenuPage = function()
     end
     lines[#lines + 1] = "Locations: chests" .. (#kinds > 0 and ", " .. table.concat(kinds, ", ") or "")
     -- Round 109: every seed starts on foot by its continent's town; the airship waits there when
-    -- the seed starts with it.
+    -- the seed starts with it. Round 118: the user's wording.
     lines[#lines + 1] = "Start: on foot" .. (seedCfg.continent and
         (" on " .. seedCfg.continent:sub(1, 1):upper() .. seedCfg.continent:sub(2)) or "")
-        .. (seedCfg.airship ~= false and ", the airship beside you" or "")
+        .. (seedCfg.airship ~= false and ", next to your airship" or "")
         .. (seedCfg.chocobo == false and "; the Chocobo is an item" or "")
     return lines
 end
@@ -3567,6 +3574,7 @@ scaleTick = function()
     seedScaleTick()
     -- Re-apply scaling if the table was reloaded or overwritten by another mod (e.g. FFRRandomizer).
     scaleChecks = scaleChecks + 1
+    state.mark("scale: table check")
     if scaleLast and scaleChecks % SCALE_CHECK_EVERY == 0 then
         local checked, differ, sample, reloaded = game.ScaleCheck()
         if checked and (differ > 0 or reloaded) then
@@ -3577,6 +3585,7 @@ scaleTick = function()
             else applyScale(l.mode, l.a, l.b, l.withBosses, l.knobs, l.bossBand) end
         end
     end
+    state.mark("scale: party level")
     local f = scaleFollow
     if not f then return end
     local lv = game.PartyLevel()
