@@ -894,6 +894,9 @@ questHooks, instantLog = {}, {}
 function RegisterHook(name, fn) questHooks[name] = fn end
 G.QUEST_COLORS.spans = questSpans
 """)
+# Round 119: no try until the line's class is loaded (a failed RegisterHook took about 7 ms)
+assert L.eval("G.QuestColorHook(function() end)") is None and not L.eval("next(questHooks)"), "the class is not loaded yet"
+L.execute('fakePaths["/Game/UI/Quest/Bounty/widget/Detail/WBP_Quest_Reward_Text.WBP_Quest_Reward_Text_C"] = { IsValid = function() return true end }')
 assert L.eval("G.QuestColorHook(function(s) instantLog[#instantLog + 1] = s end)") == "registered"
 assert L.eval("G.QuestColorHook(function() end)") is None, "once"
 hook = 'questHooks["/Game/UI/Quest/Bounty/widget/Detail/WBP_Quest_Reward_Text.WBP_Quest_Reward_Text_C:SetText"]'

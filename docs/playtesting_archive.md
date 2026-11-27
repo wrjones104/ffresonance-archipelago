@@ -1801,3 +1801,20 @@ Not done: the title label's refresh while the title is up, and the two radar fin
 - **The Seed tab** says `Start: on foot on <continent>, next to your airship`.
 
 Not seen in game: whether the game's first placement reads `initSpawnPointId` as a landing point.
+
+### Round 119 (round 118's build tried: mod 0.62.2 build 2a4f7fce, apworld 0.31.2 build e0989726)
+
+**From the user (2026-11-27), on the desktop:**
+- **Ticked:** the builds; the desktop's timings; a story boss (Kolobos Ruins, group 9012) fought and won with its check and fragment; the airship next to the player at the start; the Seed tab's `Start: on foot on Zoldaad, next to your airship`.
+- **Still open:** the laptop's stutter and the fast travel probe, for later. The user thinks fast travel works now.
+- The user asked for the public release, v0.32.0.
+
+**What the log shows:**
+- **The airship's first place works.** `ok   airship's first place: landing point 9000 -> 6002`, then `airship CPP_MapGimmick_AirShip from -6748, 7697; moved to the arrival`. So the game placed its airship gimmick at the first load, about 660 from the landing point (the gimmick's own offset from the point, most likely), and the move put it at the arrival. The put-back line ends `airship's first place 9000`.
+- **Timings.** The main loop averaged 8.6 ms, with 5 runs over 25 ms in 2 minutes (23 to 30 in round 118's log). `extras: story boss` is gone from the `steps` line. The largest step is now `patches: quest colours`: 72 runs for 512 ms, about 7 ms a run. A level up takes 22 to 29 ms (`scale: party level`), once per level.
+- **The story boss:** `2 fight, 2 win, 1 group rows` on each pass, as before the change. `check boss:9012` and `check fragment:9012` came on the win. 30 s later the log has `chest pop-up for boss:9012: no chest pop-up on screen`, so the mod did not write the boss's pop-up. To ask: what the pop-up said.
+
+**Found off-line:**
+- **The quest colours step** tries to register its `SetText` hook every odd tick until it works, and it works only once the Quests screen's reward line class is loaded. In round 118's laptop log the patches took 665 ms in 2 minutes before `quest colours: SetText hook registered` (09:45:41) and dropped out of the six largest steps after it. A failed `RegisterHook` costs about 7 ms.
+
+**Built (mod build in the v0.32.0 release):** the hook is tried only once its class is loaded (`StaticFindObject` on the class path, a cheap look-up). The tick's own colouring is unchanged.

@@ -2105,6 +2105,9 @@ end
 function G.QuestColorHook(log)
     local Q = G.QUEST_COLORS
     if Q.hooked then return nil end
+    -- Round 119: a RegisterHook on a class not loaded yet failed at about 7 ms a try, every
+    -- second until the Quests screen was first opened.
+    if not Find(Q.SET_TEXT:match("^(.-):")) then return nil end
     local ok = pcall(RegisterHook, Q.SET_TEXT, function(self)
         if not (Q.on and Q.instant) then return end
         local w

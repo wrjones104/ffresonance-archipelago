@@ -357,9 +357,9 @@ Along the same lines, I would also want an option for players to start with all 
 
 **Round 111's full run (the user, v0.31.1):** the start, the chats and the run to the Crystal Tower's top went through, with no crash. The user's airship came up near Zoldaad on a Dirnado start: the game spawned the actor elsewhere and wrote that place over the park when the player left the world map. Round 112 (mod build 5d54d782) moves it to the start the first time it is on the world map after it came, and round 113 parks the save there again.
 
-**Round 118 (the user):** a seed that starts with the airship had none at the start until a map change. The game places the airship at the first map load, before the mod parks it in the save. Every start on foot is an airship landing point, so the start now points `DT_MapAirShip`'s `initSpawnPointId` (9000, no point) at the start's landing point for that first load (mod build 2a4f7fce). Not known yet: whether that id is a landing point id. If not, the executable's `CallAirShip` and `CPP_BFL_Airship` are the next lead.
+**Round 118 (the user):** a seed that starts with the airship had none at the start until a map change. The game places the airship at the first map load, before the mod parks it in the save. Every start on foot is an airship landing point, so the start now points `DT_MapAirShip`'s `initSpawnPointId` (9000, no point) at the start's landing point for that first load (mod build 2a4f7fce). It works (round 119): the game placed its airship by the landing point at the first load, and the move put it at the arrival.
 
-**Left:** take out the prologue skip's wait for the autosave, or the skip itself, which still runs with `ffrap_newstart off` or before a seed is heard. And the airship's first place, above, to test.
+**Left:** take out the prologue skip's wait for the autosave, or the skip itself, which still runs with `ffrap_newstart off` or before a seed is heard.
 
 ## 53. Lifts and rafts after fast travel, and Mobliz Shipyard's last lift
 
@@ -427,6 +427,8 @@ Along the same lines, I would also want an option for players to start with all 
 **Round 117 (the user's desktop, 50 minutes of timings):** the main loop averaged 8 to 13 ms, and one run in four to one in ten went over 25 ms. The slow runs were the even ticks, where every step that runs one tick in two came together: the seed's extras and the continent locks (9 to 40 ms), the table patches (8 ms), the loot scan (7 ms), and every 5 s scale and settings (5 to 28 ms). The object searches were small (the busiest, `WBP_FieldFuncList2_C`, about 2 ms a second). So the time is in the steps, not the searches. **Built (mod build afd9cf66):** the extras and the patches run on odd ticks, and the extras are timed in eight parts, the locks and the level sync apart. To test: the laptop, and the next `perf:` lines to name the slow part of the extras.
 
 **Round 118 (the user's laptop and desktop):** "better, but still noticeable, especially in towns" on the laptop; nothing felt on the desktop. The slow runs moved to the odd ticks, and the largest step on both computers was the story boss step: 7 to 26 ms on every odd tick, from a walk of every talk row to find two rows. The patches added 6 to 14 ms on the same ticks. **Built (mod build 2a4f7fce):** the story boss step finds its rows by `FindRow` and writes its battle group at a map's first pass and every 10 passes after. The patches and scale steps are timed in parts. To test: both computers' `perf:` lines.
+
+**Round 119 (the user's desktop):** 5 runs over 25 ms in 2 minutes, from 23 to 30, and the story boss step is gone from the timings. The largest step left was the quest colours' hook, tried every odd tick (about 7 ms each) until the Quests screen is first opened; it now waits for its class to load. To test: the laptop.
 
 ## 56. Separate boss scaling options
 
