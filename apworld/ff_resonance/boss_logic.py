@@ -37,8 +37,9 @@ AWAKENING_COPIES = 2
 # need one party member more than their tier, up to tier D's five (docs/boss_logic.md, section 5:
 # Double Action). Tier D's bosses are at five already.
 # Tier B: Pyroviper, Salome, Tellus (Tower of Mysidia), Behemoth. Tier C: Jotunn, Malboro Varietas,
-# Dad Bomb, Test Rider, Dragon, Gelidus, Lux, Elfdrit, Tellus (Wandering Lands).
-MULTI_ACTION = {9093, 9109, 9038, 9051, 9110, 9111, 9074, 9073, 9076, 9044, 9039, 9040, 9048}
+# Dad Bomb, Test Rider, Dragon, Gelidus, Lux, Elfdrit, Tellus (Wandering Lands). Round 121 (the dump's
+# passive 1003, Double Action): Archaeoaevis and Yakhanati too.
+MULTI_ACTION = {9093, 9109, 9038, 9051, 9110, 9111, 9074, 9073, 9076, 9044, 9039, 9040, 9048, 9075, 9072}
 MULTI_ACTION_MOST = TIER_NEEDS["D"][0]
 
 # Each tier's baseline: from tier B a healer, from tier C a group heal or a revive.
@@ -49,11 +50,20 @@ TIER_BASELINE: dict[str, Callable[[Callable[[str], bool]], bool]] = {
     "D": lambda has: has("aoe_heal") or has("revive"),
 }
 
-# Per-boss needs for tiers A and B (docs/boss_logic.md, section 5), checked against the game dump.
+
+
+def any_magic(has: Callable[[str], bool]) -> bool:
+    """Magic damage of any element, for bosses that shut out physical attacks for a while."""
+    return any(has(f"{element}_magic") for element in ELEMENTS)
+
+
+# Per-boss needs (docs/boss_logic.md, section 5), checked against the game dump: each boss unit's
+# weaknesses, passives and traits in DT_UnitParameter (round 121 for tiers C and D).
 # `has` takes a capability from data/game/capabilities.tsv, or an element for either attack type.
 # Bosses not listed need their tier's baseline only.
 BOSS_NEEDS: dict[int, Callable[[Callable[[str], bool]], bool]] = {
     9013: lambda has: has("heal") or has("lightning"),                                      # Siren
+    9016: lambda has: has("heal") or has("lightning") or has("water"),                      # Adrastea
     9079: lambda has: has("heal") or has("wind"),                                           # Marauder
     9060: lambda has: has("heal") or has("water"),                                          # Antlion
     9014: lambda has: has("water") and (has("heal") or has("resist_fire")),                 # Mom Bomb
@@ -72,6 +82,44 @@ BOSS_NEEDS: dict[int, Callable[[Callable[[str], bool]], bool]] = {
     9031: lambda has: has("wind") and (has("aoe_heal") or has("resist_earth")),             # Tellus
     9038: lambda has: has("wind") and (has("aoe_heal") or has("resist_earth")),             # Tellus
     9051: lambda has: has("wind") or has("light"),                                          # Behemoth
+    # Tier C. The baseline is a group heal or a revive.
+    9110: lambda has: has("fire") or has("dark"),                                           # Jotunn
+    # Several ailments in one breath.
+    9111: lambda has: has("fire") and has("cleanse"),                                       # Malboro Varietas
+    # Its weakness changes during the fight; wind is the first.
+    9075: lambda has: has("wind"),                                                          # Archaeoaevis
+    9074: lambda has: has("fire"),                                                          # Dad Bomb
+    9073: lambda has: has("earth") or has("light"),                                         # Test Rider
+    # It shifts between shutting out physical and magic attacks.
+    9072: lambda has: (has("wind") or has("dark")) and any_magic(has),                      # Yakhanati
+    9071: lambda has: has("wind") or has("light"),                                          # Arch Gargoyles
+    9076: lambda has: has("lightning"),                                                     # Dragon
+    # Deprotega on the party, then a strong physical attack.
+    9044: lambda has: has("fire") and (has("resist_ice") or has("cleanse")),                # Gelidus
+    9039: lambda has: has("dark") or has("resist_light"),                                   # Lux
+    # Poison, Sleep and Paralysis.
+    9040: lambda has: (has("fire") or has("light")) and (has("cleanse") or has("immune_poison")),  # Elfdrit
+    9046: lambda has: has("water") and (has("resist_fire") or has("aoe_heal")),             # Ignis
+    # Counters when its rules of engagement (physical or magic turns) are broken.
+    9048: lambda has: has("wind") and any_magic(has),                                       # Tellus
+    # Tier D. The baseline is a group heal or a revive.
+    9112: lambda has: has("ice"),                                                           # Tartarosaurus
+    # Instant Death attacks.
+    9113: lambda has: (has("fire") or has("light")) and (has("immune_death") or has("revive")),  # Catacumba
+    # Counters magic of its weakness, so its weakness hits must be physical.
+    9114: lambda has: has("fire_physical") or has("light_physical"),                        # Necromonarch
+    # Paralysis, Blind, Confuse and Berserk.
+    9115: lambda has: has("wind") and has("cleanse"),                                       # Humbaba
+    # Removes party members from battle; a revive is in the baseline.
+    9116: lambda has: has("ice"),                                                           # Titanoraidos
+    9117: lambda has: has("fire") and has("cleanse"),                                       # Malboro Menace
+    # Counters physical attacks (passive 1082) and absorbs five elements.
+    7042: lambda has: has("earth_magic") or has("light_magic") or has("dark_magic"),        # Intangir
+    # Three actions a turn when enraged; Dark does nothing.
+    7057: lambda has: has("lightning") or has("water"),                                     # Rogue Magitek Weapon
+    # Phase 1 has Magic Defense +60%; phase 3 (unit 2520) acts three times a turn, is weak to light
+    # and absorbs dark. The phases between rotate fire, ice, earth and water weaknesses.
+    9138: lambda has: has("light"),                                                         # Sephiroth
 }
 
 

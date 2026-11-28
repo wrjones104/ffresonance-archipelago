@@ -634,7 +634,7 @@ ok, detail = L.execute("return G.SyncStoryBossTrigger(say)")
 mysidia = "storyActors.BP_MapGimmick_EventTrigger_C[3].m_EventList[1]"
 assert ok is True and detail.endswith("; walk off"), detail
 assert lua(mysidia + ".MoveInfo.MoveTargetPoint") is None and lua(mysidia + ".Condition") == "!{flag:1246}&{flag:1441}"
-L.execute("mockMap = 3060")
+L.execute("mockMap = 1000")   # the world map: no story boss (3060 has Adrastea since round 121)
 ok, detail = L.execute("return G.SyncStoryBossTrigger(say)")
 assert ok is None and lua(pot) == 915, "off a story boss map, magic pot win row restores flag 915"
 # Round 62: the ready flag is written only when it changes

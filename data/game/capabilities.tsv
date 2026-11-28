@@ -1,18 +1,10 @@
 source	id	level	skill	name	capability	who
-party	1001	1	401040	Infinity Drive	fire_physical	
-party	1001	1	220010	Fire	fire_magic	
-party	1001	12	401060	Flame Sword	fire_physical	
-party	1001	15	220020	Fira	fire_magic	
-party	1001	25	401030	Crimson Onslaught	fire_physical	
-party	1001	31	220030	Firaga	fire_magic	
-party	1001	37	401050	Banishing Raid	fire_physical	
-party	1002	1	220050	Blizzard	ice_magic	
-party	1002	3	402130	Dawn Frost	ice_physical	
-party	1002	15	402150	Ice Splitter	ice_physical	
-party	1002	18	220060	Blizzara	ice_magic	
-party	1002	25	402030	Transient Rite	ice_physical	
-party	1002	31	220070	Blizzaga	ice_magic	
-party	1002	35	402050	Absolving Hailstorm	ice_physical	
+party	1006	1	408030	Chaotic Convergence	dark_magic	
+party	1006	1	408060	Dark Pain	dark_magic	
+party	1006	9	408110	Queenly Whip	dark_physical	
+party	1006	19	408050	Dystopia	dark_magic	
+party	1006	35	408040	Abyss Graviton	dark_magic	
+party	1006	41	408070	Shadow Unending	dark_magic	
 party	1003	1	403040	Holy Ray	light_magic	
 party	1003	1	403530	Shining Arrow	light_magic	
 party	1003	3	210010	Cure	heal	
@@ -26,6 +18,20 @@ party	1003	25	403030	Radiant Restoration	revive
 party	1003	32	403050	Luminant Cannon	light_magic	
 party	1003	35	210030	Curaga	heal	
 party	1003	53	210150	Arise	revive	
+party	1007	1	406030	T.R.N.D.	wind_physical	
+party	1007	3	220170	Aero	wind_magic	
+party	1007	6	406080	Gale Strike	wind_physical	
+party	1007	16	220180	Aerora	wind_magic	
+party	1007	30	220190	Aeroga	wind_magic	
+party	1007	33	406070	Blitzstrahl	lightning_physical	
+party	1007	40	406050	Demolisher Rush	wind_physical	
+party	1002	1	220050	Blizzard	ice_magic	
+party	1002	3	402130	Dawn Frost	ice_physical	
+party	1002	15	402150	Ice Splitter	ice_physical	
+party	1002	18	220060	Blizzara	ice_magic	
+party	1002	25	402030	Transient Rite	ice_physical	
+party	1002	31	220070	Blizzaga	ice_magic	
+party	1002	35	402050	Absolving Hailstorm	ice_physical	
 party	1004	1	404080	Mechabo Kick	earth_physical	
 party	1004	3	220210	Stone	earth_magic	
 party	1004	16	220220	Stonera	earth_magic	
@@ -38,19 +44,13 @@ party	1005	22	210210	Dispelga	dispel
 party	1005	28	405130	Aquatic Pulse	water_magic	
 party	1005	31	220150	Waterga	water_magic	
 party	1005	37	405050	Aqua Blast	water_magic	
-party	1006	1	408030	Chaotic Convergence	dark_magic	
-party	1006	1	408060	Dark Pain	dark_magic	
-party	1006	9	408110	Queenly Whip	dark_physical	
-party	1006	19	408050	Dystopia	dark_magic	
-party	1006	35	408040	Abyss Graviton	dark_magic	
-party	1006	41	408070	Shadow Unending	dark_magic	
-party	1007	1	406030	T.R.N.D.	wind_physical	
-party	1007	3	220170	Aero	wind_magic	
-party	1007	6	406080	Gale Strike	wind_physical	
-party	1007	16	220180	Aerora	wind_magic	
-party	1007	30	220190	Aeroga	wind_magic	
-party	1007	33	406070	Blitzstrahl	lightning_physical	
-party	1007	40	406050	Demolisher Rush	wind_physical	
+party	1001	1	401040	Infinity Drive	fire_physical	
+party	1001	1	220010	Fire	fire_magic	
+party	1001	12	401060	Flame Sword	fire_physical	
+party	1001	15	220020	Fira	fire_magic	
+party	1001	25	401030	Crimson Onslaught	fire_physical	
+party	1001	31	220030	Firaga	fire_magic	
+party	1001	37	401050	Banishing Raid	fire_physical	
 party	1008	3	220090	Thunder	lightning_magic	
 party	1008	9	407110	Magicide	dispel	
 party	1008	13	407070	Stygian Scythe	dark_magic	
@@ -59,6 +59,7 @@ party	1008	19	407060	Luminant Glim	light_magic
 party	1008	26	220110	Thundaga	lightning_magic	
 party	1008	30	407130	Tonitus	lightning_magic	
 party	1008	35	407050	Blighted Gloom	dark_magic	
+party	1003	40	210190	Holy	light_magic	
 vision	13017	0	220010	Fire	fire_magic	
 vision	13017	0	220210	Stone	earth_magic	
 vision	13017	1	414200	Rapid Fire	fire_magic	

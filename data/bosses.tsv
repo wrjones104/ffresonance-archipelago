@@ -27,6 +27,7 @@ group	flag	map	kind	name	reward	win_row	round	note	area	tier	level
 9004	1240	3000	story	Belmodar		Gim_EV_Majipot_Delete_02	62	Trigger rewritten from story 1040 to !{flag:1240}		A	4
 9012	1241	3040	story	The Hunger		Gim_EV_Majipot_Delete_02	62	Trigger rewritten from story 1190 to !{flag:1241}		A	9
 9014	1242	2050	story	Mom Bomb		Gim_EV_Majipot_Delete_02	62	Trigger rewritten from story 2060 to !{flag:1242}		A	14
+9016	1252	3060	story	Adrastea		Gim_EV_Majipot_Delete_02	121	The zone before the third lift (row C02_Moburizu_001_01, Dng_04Dir_41_01_EV) rewritten to !{flag:1252}; in the story the lift leads to the cart escape and this fight (the user)		A	16
 9088	526	3180	story	Liquid Flame		SubEv_BarrierReleased_BattleEnd_Left	62	Chain sets story 5066 or 5070, which the mod takes out		B	34
 9089	527	3180	story	Iron Giant		SubEv_BarrierReleased_BattleEnd_Right	62	Chain sets story 5066 or 5070, which the mod takes out		B	34
 9060	113	1000	optional	Antlion		C01_ArijigokuWin_02	69	In Lanzelt's sandpit, between Kol and Grandport. The mod makes a win always set flag 113	Lanzelt	A	20

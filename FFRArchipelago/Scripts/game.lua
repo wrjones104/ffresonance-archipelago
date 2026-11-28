@@ -2617,6 +2617,7 @@ G.BOSSES = {
     { group = 9013, flag = 1243 }, { group = 9017, flag = 1244 }, { group = 9031, flag = 1245 },
     { group = 9038, flag = 1246 }, { group = 9039, flag = 1247 }, { group = 9040, flag = 1248 },
     { group = 9044, flag = 1249 }, { group = 9046, flag = 1250 }, { group = 9048, flag = 1251 },
+    { group = 9016, flag = 1252 },   -- Adrastea (round 121)
 }
 -- Win rows whose own reward is the location's item now: the 15 cave masters' Magicite, and
 -- Sephiroth's vision.
@@ -2652,6 +2653,12 @@ G.STORY_BOSSES = {
     [3030] = { group = 9013, flag = 1243, event = "C01_036_01", kind = "list", class = "BP_MapTransitionTrigger_C", field = "m_EventList" },
     -- Aether, Wind Shrine
     [3070] = { group = 9017, flag = 1244, event = "C02_221_01", kind = "list", class = "BP_MapTransitionTrigger_C", field = "m_EventList" },
+    -- Adrastea, Mobliz Shipyard (round 121, the user): in the story the third lift leads to a scene,
+    -- the cart escape (map 5041) and this fight, which ends in Dwarven Forge. At 8000 the map loads
+    -- Dng_04Dir_41_02_GD, which has no story zones, but the event level Dng_04Dir_41_01_EV streams
+    -- apart from it and holds the zone before the lift (C02_Moburizu_001_01, at 415, 13085, 1632).
+    -- Flag 1252 was Behemoth's (round 72, taken out) and is used by nothing in the game.
+    [3060] = { group = 9016, flag = 1252, event = "C02_Moburizu_001_01", kind = "list", class = "BP_MapGimmick_EventTrigger_C", field = "m_EventList" },
     -- Tellus, Nameless Ruins: a door like The Hunger's. Its second entry goes nowhere (map -1), so
     -- after the win the first entry is a plain door again: the stairs to the upper floor (round 74).
     [3180] = { group = 9031, flag = 1245, event = "C05_510_01", point = 5000, kind = "transition", reopen = true },
@@ -3537,6 +3544,29 @@ local function GrantSiren(sd)
         end)
     end
     return ok, "Siren: summon abilities on both Finas"
+end
+
+-- Round 121 (idea 40): skills a story row gives for good, which the open start skips. Each is added
+-- once its owner reaches the level a player has at that point of the story. Must match
+-- STORY_SKILLS in tools/gen_from_dump.py, which puts them in the logic's capabilities.
+G.STORY_ABILITIES = {
+    { unit = 1004, skill = 404030, level = 30, name = "Lid's Enterprise Airstrike" },   -- Lid_LB2_Get, after Lazarov
+    { unit = 1003, skill = 210190, level = 40, name = "Fina's Holy" },                  -- C06_608_01, before Lux
+    { unit = 1001, skill = 401130, level = 43, name = "Rain's The Power Within" },      -- C06_626_01, before Gelidus
+}
+-- Returns the names of the skills added now.
+function G.GrantStoryAbilities()
+    local sd, added = G.SaveData(), {}
+    if not sd then return added end
+    for _, a in ipairs(G.STORY_ABILITIES) do
+        local entry = (G.UnitLevel(a.unit) or 0) >= a.level and UnitEntry(sd, a.unit)
+        if entry then
+            local list, have = entry.activeSkillIdList, false
+            for i = 1, #list do have = have or Int(list[i]) == a.skill end
+            if not have and pcall(AppendOnce, list, a.skill) then added[#added + 1] = a.name end
+        end
+    end
+    return added
 end
 
 -- Guard the moogle's Vision Enhancement shopkeeper talk rows: when no vision is owned, convert the

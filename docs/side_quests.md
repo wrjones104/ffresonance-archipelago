@@ -137,7 +137,7 @@ The quest rows that give quest items are not touched.
 
 ## 6. The world
 
-- **A new option, `include_side_quests`** (off by default until a round shows it works, then on). Its locations are `quest:<id>`, kind `quest`, named "Quest: <name>" (the game's English quest name).
+- **A new option, `include_side_quests`** (off by default until a round shows it works, then on; on by default since round 121, for v0.33.0). Its locations are `quest:<id>`, kind `quest`, named "Quest: <name>" (the game's English quest name).
 - **Each location's vanilla item:** the reward's first item (not its gil, and not its vision). It goes into the pool like a chest's.
 - **Second rewards (round 98, the user):** 17 quests give a second reward, and each is a location of its own, `quest2:<id>` (AP id 6,100,000,000 + quest), named "Quest: <name> - Second Reward", with the quest's own logic. 8 give gil (its Gil item goes into the pool), 2 a second item (Secrets Unearthed's Magicite Shard, Rogue Rebel's Rose Circlet), and 7 a vision (in the pool already with `shuffle_visions`, else held there). The stat bonuses of the character quests are not items and stay with the quest.
 - **The key-item pool:** take the 11 untested quest items (20020, 20023 to 20032) out of `PROGRESSION["key"]` whether or not the option is on. They unlock nothing for anyone today.

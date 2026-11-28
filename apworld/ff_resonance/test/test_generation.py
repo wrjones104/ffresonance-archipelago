@@ -1,3 +1,5 @@
+import inspect
+import re
 from argparse import Namespace
 
 from BaseClasses import CollectionState, ItemClassification, LocationProgressType, MultiWorld
@@ -6,7 +8,9 @@ from worlds.AutoWorld import call_all
 from test.general import gen_steps
 
 from ..data import ADAMANTITE_ITEM, AIRSHIP_ITEM, FORGE, BOSSES, CHESTS, FILLER_VALUE, FRAGMENTS, GIFTS, CHOCOBO_ITEM, MAGICITE_ITEMS, NO_ROUTE, POOL_ADDITIONS, RADAR, RADAR_ITEM, RADAR_PARTS, RADAR_PART_CHESTS, CONTINENT_UNLOCKS, CRYSTALS, FRAGMENT_ITEM, ITEMS, NO_BOX, SIDE_QUESTS, TABLET_SHINIES, PROGRESSION, SHINIES, SHUFFLE_ID_LIMIT, UNIT_ITEM_BASE
-from ..boss_logic import awakening, has_capability
+from .. import boss_logic
+from ..boss_logic import BOSS_NEEDS, BOSS_TIER, ELEMENTS, awakening, has_capability
+from ..data import CAPABILITIES
 from ..items import CLASSIFICATIONS, FILLER_CATEGORIES, FRAGMENT_NAME, HEALING_VISIONS, additions, item_name_groups
 from ..locations import GOAL_EVENT, LOCATION_KEY_TO_ID, SEPHIROTH, VICTORY
 from ..options import ExcludedRegions, ExtraMagicite, FinalBossFragments, Goal, TabletShardsRequired
@@ -24,7 +28,7 @@ QUEST_LOCATIONS = 28    # round 78: the quest log's 33, less the Mechabo three a
 QUEST_SECOND_REWARDS = 17   # round 98: 9 quests give a second item or a vision, 8 give gil
 # Quest items the game never tests (docs/side_quests.md, section 2): out of the pool.
 QUEST_ONLY_ITEMS = (20020, 20023, 20024, 20025, 20026, 20027, 20028, 20029, 20030, 20031, 20032)
-CAVE_MASTERS, STORY_BOSSES, OPTIONAL_BOSSES = 15, 21, 4   # round 71: ten more story bosses; round 72: Behemoth out
+CAVE_MASTERS, STORY_BOSSES, OPTIONAL_BOSSES = 15, 22, 4   # round 71: ten more story bosses; round 72: Behemoth out; round 121: Adrastea
 FRAGMENT_BOSSES = CAVE_MASTERS + STORY_BOSSES + OPTIONAL_BOSSES   # round 97: every boss gives one
 # Round 97: the NPC gifts are always locations, but the Magi-tenna's, which goes with the radar.
 GIFTS_ON = [g for g in GIFTS if not g.get("radar_part")]
@@ -887,6 +891,32 @@ class TestBossCapabilities(FFResonanceTestBase):
         self.assertFalse(boss.can_reach(self.multiworld.state), "no healer")
         self.collect_by_name(["Fina"])
         self.assertTrue(boss.can_reach(self.multiworld.state))
+
+    def test_adrastea_needs_a_healer_or_its_weakness(self) -> None:
+        """Round 121: Adrastea (Mobliz Shipyard) is weak to lightning and water. Rain and Lasswell
+        have neither, nor a heal."""
+        boss = self.multiworld.get_location("Mobliz Shipyard: Adrastea", self.player)
+        self.collect_by_name(["Dirnado Unlock", "Lanzelt Unlock"])
+        self.assertFalse(boss.can_reach(self.multiworld.state))
+        self.collect_by_name(["Fina"])
+        self.assertTrue(boss.can_reach(self.multiworld.state))
+
+    def test_every_late_boss_has_needs_of_its_own(self) -> None:
+        """Round 121: tiers C and D have per-boss rules from the dump, and each rule asks only for
+        capabilities that data/game/capabilities.tsv has."""
+        late = {group for group, tier in BOSS_TIER.items() if tier in ("C", "D")}
+        self.assertEqual(late - set(BOSS_NEEDS), set())
+        asked = set(re.findall(r'has\("(\w+)"\)', inspect.getsource(boss_logic)))
+        self.assertEqual({c for c in asked if c not in CAPABILITIES and c not in ELEMENTS}, set())
+
+
+class TestSideQuestsByDefault(FFResonanceTestBase, real_defaults=True):
+    """Round 121 (the roadmap, v0.33.0): a player's yaml with no say has the side quests in."""
+
+    def test_quest_locations_are_in(self) -> None:
+        self.assertEqual(self.world.fill_slot_data()["include_side_quests"], 1)
+        names = {loc.name for loc in self.multiworld.get_locations(self.player)}
+        self.assertTrue({"Quest: Mog Tag", "Quest: More Mog Tag"} <= names)
 
 
 class TestBossesNotPriority(FFResonanceTestBase):

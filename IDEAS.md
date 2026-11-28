@@ -239,6 +239,8 @@ Along the same lines, I would also want an option for players to start with all 
 - Whether the start should add them all, or only those a player could have before the tower.
 - The character events (`CharaEvent`) and other tables may add more, such as other characters' second Limit Bursts.
 
+**Round 121 (off-line, mod build 3490441c):** of every `AbilitySettings` in the talk tables, three skills are kept for good and come from no level: Lid's Enterprise Airstrike (404030, `Lid_LB2_Get`, run by battle event 4400 after Lazarov), Fina's Holy (210190) and Rain's The Power Within (401130). The rest are taken away again (Last Resonance and Radiant Light, chapter 8), come with espers, or come with the Mechabo quests. The other characters' second Limit Bursts are learned by level. **Built:** the mod adds the three at levels 30, 40 and 43 (`G.STORY_ABILITIES`), and `capabilities.tsv` has them at the same levels (`STORY_SKILLS` in `tools/gen_from_dump.py`). To test in game; then this idea is done.
+
 ## 41. Deathlink
 
 **Idea**: when the user's party falls in battle, send out a deathlink to the multiworld. Similarly, when a deathlink is received from the multiworld, the party falls.
@@ -393,6 +395,8 @@ Along the same lines, I would also want an option for players to start with all 
 - Whether a `CallSwitch` on 75 from Lua, with the player at the top, brings it up.
 
 **Round 120 (found off-line, mod build 3f446645):** 75 is the only lift in the Shipyard with no stops and no arrival points (`m_TransitionDataList`) in the level, at -400, 14400, -1620. The keypad Blueprint has `CallSwitch(stop, direction)` (Up 1, Down 2), which returns false when the lift is at that stop already, and `Execute_BP(stop)`. **Probe built:** `ffrap_lift [<uid> [call <stop> up|down | exec <stop> | on]]` lists the map's keypad lifts or calls one. To test in game (docs/playtesting.md).
+
+**Round 121 (the user, from the game without the mod):** the third lift leads to nothing else in the shipyard: to scenes, the cart escape and Adrastea, and then to Dwarven Forge. So the lift itself need not work. **Built (mod build 3490441c, apworld build d62f58e9):** Adrastea (group 9016, flag 1252) is a story boss. The zone before the lift (`C02_Moburizu_001_01`, in the event level `Dng_04Dir_41_01_EV`, which loads whatever the story) starts the fight, and the party stays in the shipyard after the win. `ffrap_lift` stays as the probe if the zone is not there. To test in game.
 
 ## 54. A start that cannot go wrong
 

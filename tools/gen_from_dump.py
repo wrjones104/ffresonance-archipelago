@@ -172,6 +172,12 @@ PLAYABLE_LEVEL_FILES = {"DT_UnitLevelParameterRain": 1001, "DT_UnitLevelParamete
                         "DT_UnitLevelParameterFina": 1003, "DT_UnitLevelParameterLid": 1004,
                         "DT_UnitLevelParameterNichol": 1005, "DT_UnitLevelParameterDarkfina": 1006,
                         "DT_UnitLevelParameterJake": 1007, "DT_UnitLevelParameterSakura": 1008}
+# Round 121 (idea 40): skills a story row gives for good, which the open start skips. The mod adds
+# each when its owner reaches the level a player has at that point of the story (G.STORY_ABILITIES
+# in game.lua): Lid's second Limit Burst after Lazarov (30, battle event 4400, row Lid_LB2_Get),
+# Fina's Holy before Lux (40, C06_608_01), Rain's The Power Within before Gelidus (43, C06_626_01).
+# (unit, skill) -> level.
+STORY_SKILLS = {(1004, 404030): 30, (1003, 210190): 40, (1001, 401130): 43}
 STATUSES = {1: "poison", 2: "blind", 3: "sleep", 4: "silence", 5: "paralysis", 6: "confuse", 7: "petrify",
             8: "charm", 10: "berserk", 11: "doom", 12: "slow", 13: "death"}
 
@@ -245,6 +251,8 @@ def capabilities():
             for skill_id in r["AddSkills"]:
                 if skill_id != -1:
                     add("party", unit, r["Level"], skill_id)
+    for (unit, skill_id), level in STORY_SKILLS.items():
+        add("party", unit, level, skill_id)
     for r in table_rows("Item/Vision/DT_VisionAwakeningMasteryData").values():
         for d in r["detailData"]:
             if enum(d["parameterType"]) in ("ActiveSkill", "PassiveSkill"):

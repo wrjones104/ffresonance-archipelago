@@ -1942,6 +1942,27 @@ assert L.eval("visionItems[1].ID") == 13017 and L.eval("visionItems[1].awakening
 assert L.eval("visionItems[1].keys.n") == 8 and L.eval("visionItems[1].keys[1006]") == 0
 L.execute("G.SaveData = savedSaveData")
 
+# Round 121 (idea 40): story skills the open start skips come at the level the story gives them
+FINA, HOLY, HOLY_LEVEL = 1003, 210190, 40
+L.execute(f"""
+storyLevels = {{ [{FINA}] = {HOLY_LEVEL - 1} }}
+storySD = {{ unitParameterList = {{ {{ UnitId = {FINA}, activeSkillIdList = {{ 220010 }} }} }} }}
+savedSaveData, savedUnitLevel = G.SaveData, G.UnitLevel
+G.SaveData = function() return storySD end
+G.UnitLevel = function(unit) return storyLevels[unit] end
+""")
+assert len(L.eval("G.GrantStoryAbilities()")) == 0, "Fina is below Holy's level"
+L.execute(f"storyLevels[{FINA}] = {HOLY_LEVEL}")
+assert list(L.eval("G.GrantStoryAbilities()").values()) == ["Fina's Holy"]
+assert L.eval("storySD.unitParameterList[1].activeSkillIdList[2]") == HOLY
+assert len(L.eval("G.GrantStoryAbilities()")) == 0, "once"
+L.execute("G.SaveData, G.UnitLevel = savedSaveData, savedUnitLevel")
+sys.path.insert(0, str(paths.REPO / "tools"))
+import gen_from_dump
+lua_story = {(a["unit"], a["skill"]): a["level"] for a in L.eval("G.STORY_ABILITIES").values()}
+assert lua_story == gen_from_dump.STORY_SKILLS, (lua_story, gen_from_dump.STORY_SKILLS)
+print("story skills: ok")
+
 # Round 50: the player's settings. Reward rates are multiples of the shipped ones (MRP is 1.5 on
 # Expert); encounters off clears doMovementEncount and puts the player's distance out of reach;
 # a rate divides the walking distances; back on, everything is as first seen.

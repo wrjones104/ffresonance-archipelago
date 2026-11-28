@@ -210,7 +210,7 @@ local state = {
 -- Round 120: every step run once in STATUS_EVERY came on the same tick (26 to 30 ms on the laptop,
 -- every 5 s). Each has its own tick of the ten now; settings and the chest blanking take odd ticks,
 -- away from the locks and the loot scan.
-state.STATUS_AT = { scale = 0, status = 2, level = 4, settings = 5, blank = 7 }
+state.STATUS_AT = { scale = 0, status = 2, level = 4, settings = 5, blank = 7, skills = 9 }
 
 -- Round 77: a crash about a second after a map change, in a game-thread Lua loop (FName::ToString
 -- on a freed object, as in round 71). The stack does not say which mod's loop: FFRS_QoL runs eight.
@@ -3284,6 +3284,12 @@ seedExtrasTick = function()
     state.mark("extras: radar, forge")
     if seedSave and seedCfg.radar and sessionSave() then pcall(radar.tick) end
     if seedSave and seedCfg.forge then pcall(state.forge.tick) end
+    -- Round 121 (idea 40): story skills the open start skips, once their owner's level is there.
+    state.mark("extras: story skills")
+    if seedSave and state.ticks % STATUS_EVERY == state.STATUS_AT.skills then
+        local okSkills, added = pcall(game.GrantStoryAbilities)
+        if okSkills and #added > 0 then notify("Learned from the story: " .. table.concat(added, ", ")) end
+    end
     state.mark("extras: key items")
     if seedSave and seedCfg.keyitems and game.CurrentMap() == game.THRONE_KEY.map then
         local ok, n = pcall(game.ThroneKeyTriggerOff)

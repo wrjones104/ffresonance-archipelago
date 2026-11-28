@@ -123,6 +123,8 @@ Light has no Vision mitigation passive; `Scintillating Ring` in Sian (`Pharm`) i
 
 ## 5. First-Pass Logical Requirements for All 41 Bosses
 
+**Round 121:** the rules in `boss_logic.py` (`BOSS_NEEDS`) for tiers C and D were checked against the dump and differ from the tables below in places: the game's cave master groups are 9079 to 9117, not 9969 to 9992; Sephiroth's last phase (unit 2520) is weak to Light of either kind; Archaeoaevis and Yakhanati also act twice. Adrastea (9016, tier A, weak to Lightning and Water) is a location now. The code is the reference.
+
 Stats, weaknesses, resistances, and passive traits come from `DT_BattleGroup.json`, `DT_UnitParameter.json`, and [data/bosses.tsv](../data/bosses.tsv). Each boss inherits its Tier baseline from Section 2 in addition to the boss-specific rule below.
 
 ### Tier A: Early Story Bosses and Low-Level Cave Masters (Lv 4-20)

@@ -179,7 +179,7 @@ Every battle group with a Boss-category unit (155), walked back from its fight r
 | 9051 | Behemoth | 3280 Crystal Tower | automatic door `m_EventList2`, story 8020 | yes, flag 1252 |
 | 9001 | Umbra | 3020 | door, story 1110 | no: a scripted loss (win and loss run the same row) |
 | 9024, 9025 | Ignis | 3130 | native zone, story 4140 | no: 9024 is a scripted loss, and 9025 follows it |
-| 9016 | Adrastea | 3060 | after battle 9905, in a chain with flags 210 and 211 | not yet |
+| 9016 | Adrastea | 3060 | after battle 9905, in a chain with flags 210 and 211 | round 121: the zone before the third lift (`C02_Moburizu_001_01`, `Dng_04Dir_41_01_EV`), flag 1252 |
 | 9021, 9023, 9028, 9029, 9045 | Leviathan, Ignis, Evan, Lazarov, Aether | | no actor found: they run inside longer story scenes | not yet |
 | 9027 | Emperor of Zoldaad | 3160 | door with no condition | not yet: to look at |
 | 9035 | Byblos | 3190 Arcane Library | a bookshelf (`InteractEventTrigger`), story 5108, hidden otherwise | not yet: the shelf is hidden |

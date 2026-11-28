@@ -36,11 +36,13 @@ Round 120 (mod build 3f446645) worked through this list. What is left waits for 
 1. Laptop `perf:` timings (55). Round 120 trimmed the quest colours hook, spread the 5-second steps over their own ticks, and asks `OnField()` once per run. Next: the laptop's timings again; Dragon's Maw is still to look at.
 2. ~~The `ffrap_visited` check (57).~~ Done in round 120: the Map screen refuses a place marked not visited. Idea 57 is in the archive.
 3. Story boss item pop-ups (15). Round 120 logs whether the win row held the stand-in; the next round says what the pop-up showed. Fix from that.
-4. Mobliz Shipyard's last lift (elevator 75 on map 3060) (53). Round 120 built the `ffrap_lift` probe (`CallSwitch`, `Execute_BP`); the fix follows its result.
+4. Mobliz Shipyard's last lift (53). In the story it leads only to Adrastea (the user, round 121), so round 121 made the zone before it start Adrastea as a story boss. `ffrap_lift` stays as the probe.
 5. The radar (51). Lid's early "stopped finding treasure" line is fixed in round 120 (`G.RadarLidLines`). Left: digging right away when a Progressive Radar arrives in flight (the pinger's point list, probe next).
 6. ~~Refresh the **New Game (Archipelago)** label live on the title screen (54).~~ Built in round 120, to test.
 
 #### Stage B: Finish core logic and turn side quests on by default
+
+Round 121 (mod build 3490441c, apworld build d62f58e9) built all three, to test in game.
 
 1. Audit story-granted abilities skipped by the open start (`DT_TalkEventData_Chapter*` and `CharaEvent` second Limit Bursts) against `data/game/capabilities.tsv`, and grant what logic or pre-tower play expects (40).
 2. Add dump-verified per-boss `BOSS_NEEDS` rules for Tiers C and D in [boss_logic.py](../apworld/ff_resonance/boss_logic.py): Sephiroth (`9138` Phase 3 `light_physical`), Intangir (`7042`), Rogue Magitek Weapon (`7057`), the Sanctissimus gauntlet (`9071` to `9076` and `9044`), and endgame cave masters (`9110` to `9117`). Currently only Tiers A and B have per-boss `BOSS_NEEDS` rules.

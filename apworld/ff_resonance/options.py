@@ -170,12 +170,13 @@ class IncludeRadarTreasures(DefaultOnToggle):
     display_name = "Include Radar Treasures"
 
 
-class IncludeSideQuests(Toggle):
+class IncludeSideQuests(DefaultOnToggle):
     """
     The rewards of 28 quests from the game's quest log are locations: the character quests, the
     vision quests, the town quests and Mog Tag. A quest with a second reward (gil, an item or a
     vision) has a second location for it. A quest's own fetch items (Ruby Fragments, Viscus
     Vitae and the like) stay where they are, since the game tests the quest's progress, not them.
+    On by default since v0.33.0.
     """
     display_name = "Include Side Quests"
 
