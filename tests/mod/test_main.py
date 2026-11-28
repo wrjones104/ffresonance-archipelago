@@ -118,8 +118,10 @@ function G.QuestRewardColors(spans, say)
   local out = {}
   for label in pairs(spans) do if not G.questDone then out[#out + 1] = "coloured: " .. label end end
   G.questDone = #out > 0 or G.questDone
-  return out
+  return out, G.questShown or 1
 end
+function G.BeginRun() end
+function G.EndRun() end
 function G.GetFlag(i) return false end
 -- the Archipelago page is on by default; its own section below replaces this
 G.APMENU = { Ensure = function() end, Page = function() return nil, "not open" end, Unstick = function() end,
@@ -667,6 +669,24 @@ load(G, "SD_C", "500")
 out = read("ap_out.txt")
 assert "check\tchest:3020:3\n" in out, out
 assert list(G.blankCalls.values())[-1] is True
+
+# Round 120: the steps run once in ten ticks (the settings, the chest blanking, the status file)
+# came on the same tick, 26 to 30 ms on the laptop every 5 s. Each has a tick of its own now.
+STATUS_EVERY = 10
+G.settingsRuns = 0
+L.eval("function(G) local plain = G.ApplyEncounterTables; "
+       "G.ApplyEncounterTables = function(...) G.settingsRuns = G.settingsRuns + 1 return plain(...) end end")(G)
+ran = []
+for _ in range(STATUS_EVERY):
+    if os.path.exists(path("ap_status.txt")):
+        os.remove(path("ap_status.txt"))
+    settings_before, blanks_before = G.settingsRuns, len(G.blankCalls)
+    tick(1)
+    ran.append({name for name, did in (("settings", G.settingsRuns > settings_before),
+                                       ("blank", len(G.blankCalls) > blanks_before),
+                                       ("status", os.path.exists(path("ap_status.txt")))) if did})
+assert sorted(name for step in ran for name in step) == ["blank", "settings", "status"], ran
+assert all(len(step) <= 1 for step in ran), ran
 
 # e: the linked game saves to slot 4; the summary catches up a tick later
 G.saveTicks = "700"
@@ -2582,8 +2602,13 @@ assert L.eval("next(G.questSpans)") is None, "off: every row taken out"
 L.execute("package.loaded.game.QUEST_COLORS.on, G.questDone = true, nil; logged = {}")
 tick(4)
 assert L.eval("G.questDone") is True and not any("quest colours: coloured: " in s for s in logs()), logs()
-# and `instant on` registers the SetText hook while the screen is open
+# and `instant on` registers the SetText hook while the screen is open. Round 120: not before,
+# as each try cost about 6 ms on every other tick
 L.execute('commands["ffrap_quest"]("ffrap_quest", {"instant", "on"})')
+L.execute("G.questShown = 0")
+tick(4)
+assert not any("quest colours: SetText hook registered" in s for s in logs()), logs()
+L.execute("G.questShown = nil")
 tick(2)
 assert any("quest colours: SetText hook registered" in s for s in logs()), logs()
 L.execute('package.loaded.game.QUEST_COLORS.on = false')

@@ -1105,3 +1105,22 @@ Awakening a vision fully costs one of each tier, so 26 visions need 78. A defaul
 **The pool now (10 full fills, real defaults):** equipment 131 to 146, Magicite 37 to 46, consumables 151 to 133, gil 7 to 1 (the small gil amounts are the cheapest filler). The healer was in sphere 0 in all 10.
 
 **Round 104 result (the user, 2026-11-23): passed.** The spoiler had the gear and the extra Magicite, a healer was in sphere 1, a received Ribbon and an imbue charm went into the bag and could be equipped, and `extra_magicite: 0` with `early_healing_vision: false` gave the old pool. Whether the tester's status problem is gone needs their next seed.
+
+## 57. Fast travel to a place a scene took the player to
+
+**Status:** Implemented (round 117, mod builds afd9cf66 and b295fb0e, shipped in v0.32.0 `ed5c027`); the Map screen's refusal confirmed in round 120.
+
+**From the user, 2026-11-27 (round 117).** After The Tide from the Sky, fast travel went to Grandport with Lanzelt still locked. The airship showed grey on the Map screen, but fast travel went there. Zoldaad's capital could be travelled to after the Ayaka quest's scene, with no visit on foot.
+
+**Known so far (docs/playtesting_archive.md, round 117):**
+- Since round 108 the mod marks each map of a locked continent not visited (`bIsVisited` in `Map.perMapSaveDataMap`). The log shows Grandport marked not visited, then a fast travel to it two minutes later. So that mark is not what the Map screen's refusal reads ("a place you haven't visited yet", condition `bCheckLockedMap` in `DA_WldMapParameter`).
+- The grey on the Map screen does follow the visited mark: the airship was grey because a seed that starts with it never marked it visited (fixed in round 117).
+- Zoldaad Unlock had come before any Zoldaad map in the log. With the continent open, a visit made by a scene counts as in the game.
+
+**The user's answer (round 117):** a place waits for a visit on foot, on an open continent too.
+
+**Built (round 117, mod builds afd9cf66 and b295fb0e, shipped in v0.32.0 `ed5c027`):** maps of a locked continent are marked unknown as well as not visited, and `ffrap_visited <map> [unvisit|unknown|restore]` logs or writes a map's marks. The mod keeps the places the player stood in with the field up for two passes (about 2 s), per session, in `ap_state.txt` (`walked`). Every other place of a continent is marked unknown and not visited, as a locked continent's are; the map the player is on is left alone. A session's first pass takes the places the save has visited already, so a save from before keeps its fast travel places (a scene's visit before this build counts). The log has `fast travel: map <id> walked in`, and `fast travel: maps ... not walked in or on locked continents, marked never seen`.
+
+**Round 118 (the user):** the walk-in rule works: `fast travel: map <id> walked in` for each new place, and existing saves kept their places. The probe ran `unvisit` but not `unknown` (the log has the usage line in its place), and what the Map screen did is not recorded.
+
+**Round 120 (the user, `ffrap_visited 2170`):** with Sian marked not visited, the Map screen showed it grey and refused it ("Fast Travel cannot be used to go to a place you haven't visited yet"). Marked unknown, it still showed, grey, and was refused. So the refusal follows the visited mark, and the mod's marks (unknown and not visited) are right. Done.

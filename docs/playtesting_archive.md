@@ -1818,3 +1818,31 @@ Not seen in game: whether the game's first placement reads `initSpawnPointId` as
 - **The quest colours step** tries to register its `SetText` hook every odd tick until it works, and it works only once the Quests screen's reward line class is loaded. In round 118's laptop log the patches took 665 ms in 2 minutes before `quest colours: SetText hook registered` (09:45:41) and dropped out of the six largest steps after it. A failed `RegisterHook` costs about 7 ms.
 
 **Built (mod build in the v0.32.0 release):** the hook is tried only once its class is loaded (`StaticFindObject` on the class path, a cheap look-up). The tick's own colouring is unchanged.
+
+### Round 120 (v0.32.0 tried: mod 0.63.0 build 2a1d876c, apworld 0.32.0 build e0989726)
+
+**From the user (2026-11-28), on the laptop:**
+- **The stutter:** "definitely better", but still seen now and then on the world map and in towns. A player who first reported it says the same: much better, still noticed. On the laptop it is "barely noticeable".
+- **A story boss's pop-up:** the user thinks many story bosses give no item, so no pop-up comes. The cave masters' pop-ups work.
+- **The fast travel probe (Town of Sian, 2170):** with `unvisit` the Map screen showed Sian grey and refused it ("Fast Travel cannot be used to go to a place you haven't visited yet"). With `unknown` it still showed Sian, grey, and refused it. `restore` gave it back.
+
+**What the log shows (`UE4SS_laptop 2026-11-28.log`, 20 minutes):**
+- **Timings.** The main loop averaged 8.4 to 14.9 ms, with 0 to 17 runs over 25 ms in each 2 minutes. The fast tick averaged 0.3 ms.
+- **The quest colours step was still the largest:** 115 runs and 530 to 940 ms in each 2 minutes, about 7 ms on every odd tick. Its `SetText` hook never registered: the Quests screen was not opened. The search for the reward lines took 0.4 ms of that, so the rest was the hook's try.
+- **The 5-second steps came on one tick.** Most runs over 25 ms were every 5 s, with `settings` 5 to 11 ms, `story` 4 to 7 ms (the chest blanking and the status file), `locks` 2 to 4 and `loot` 3 to 9. A level up added `scale: party level`, 27 to 30 ms, once.
+- **The field HUD search** (`FindAllOf WBP_FieldFuncList2_C`) ran about 6 times a tick, 400 to 500 ms in each 2 minutes. Every `OnField()` call searched again.
+
+**Found off-line:**
+- **The fast travel refusal follows the visited mark** (`bIsVisited`), and a place marked unknown is refused too. Idea 57's marks (unknown and not visited) are right.
+- **Lid's "the radar seems to have stopped picking up treasure"** (`SubEv_C05_TreasureRadar_10_01` to `_03`) comes after the dig rows of treasures 5, 9 and 13, the last of each tier in the game's order (`ContinuousEventList`). Treasure 5's needs step 30, 9's step 40 and 13's nothing. The mod holds the step at 30 and 40 (the game sets 30 after the first find), so the line came on those digs while other treasures were left.
+- **The radar's dig points** are `CPP_MapPingerPoint` actors with an `m_FlagCondition`, and the pinger (`CPP_MapPinger`) keeps an `m_PingerPointList`. Most likely the list is made when the world map loads, which is why a Progressive Radar received in flight is dug only after a map change. Not tried.
+- **Mobliz Shipyard's lift 75** (`Dng_04Dir_41_02_GD`) is the only lift there with no stops and no arrival points (`m_TransitionDataList`) in the level. It stands at -400, 14400, -1620. The keypad Blueprint has `CallSwitch(stop, direction)` (Up 1, Down 2, from `eMapGimmick_Elevator_DirectionType`), which returns false when the lift is at that stop already, and `Execute_BP(stop)`, the keypad's own call.
+
+**Built (mod 0.63.1 build 3f446645, apworld 0.32.1 build e0989726, the apworld unchanged but for its version):**
+- **The quest colours hook** is tried only with a reward line on screen (`patches: quest hook` in the timings).
+- **The 5-second steps each have a tick of their own** (`state.STATUS_AT`): scale on 0, the status file on 2, the level sync on 4, settings on 5 and the chest blanking on 7. Settings and the blanking take odd ticks, away from the locks and the loot. The blanking and the status file are timed apart (`blank`, `status`).
+- **`OnField()` is asked once per loop run** (`G.BeginRun` and `G.EndRun` around each loop's run). A hook outside the loops still asks each time.
+- **Lid's line** follows what is left (`G.RadarLidLines`): each of the three rows goes on to it only while that dig would leave no treasure the radar can find. The log has `radar: N of Lid's "stopped picking up treasure" lines set for what is left to dig`.
+- **The title entry's label** follows the client while the title stays up (`G.RefreshTitleLabel`, every 3 s). The log has `title: entry label now "..." on screen`.
+- **The story boss line** says whether the win row holds the stand-in: `story boss: map ... : 2 fight, 2 win (2 with the stand-in), ...`. Round 97's story boss showed its pop-up with the item, so a win with no pop-up is not how it was built.
+- **Probe `ffrap_lift [<uid> [call <stop> up|down | exec <stop> | on]]`:** lists the keypad lifts on the map (condition, stop, spline points, place, distance), or calls one lift's `CallSwitch` or `Execute_BP`.

@@ -117,6 +117,8 @@ The chapter-by-chapter progression (party, vehicles, gates, Visions, Espers) is 
 
 **Round 79 (the user asked whether to probe this now).** Token Legacy showed the stand-in Potion because its check came after the game's pop-up had closed, not because of the widget. An own pop-up shown at check time would still come after a Potion pop-up. Way 1 is the one that helps every kind of check: with an empty reward row (a chest's `Money 0`, a quest's empty `ObtainItemList`) the game shows no pop-up of its own, and the mod shows its text whenever the check comes. Its test also covers quests: empty one quest's reward row and see whether the row still runs, completes the quest and moves the counter. Build 42898077 fixes the quest case without it (arms the pop-up from the counter's value before the reward). **Probe built (round 81, build 27ed563a):** `ffrap_empty chest|shiny|quest <id>|off` makes this map's closed chests, its shinies or one quest's reward rows give nothing. Chests are kept empty through chest blanking (`G.emptyRows`); the check logic does not look at the contents, so the checks still go out. **Round 81 result:** it works. An empty chest shows the game's pop-up with "0 gil", an empty shiny and an empty quest row (Rogue Rebel) show their pop-up too, and each opens or completes as normal with its check sent. Rogue Rebel gave nothing of its own and showed complete. **Built (after round 81, updated through v0.32.0):** chests and shinies give nothing in place of 1 gil (`24aa6c4`), though the game still shows "0 gil" underneath before the mod rewrites it. Quest reward rows left empty showed "You obtained a vision!" in round 84, so since round 88 (`8b979d5`, `d1437b9`) quest rows that would be left empty keep the stand-in Potion again (`docs/side_quests.md`, section 4). Radar treasures, boss rewards, and NPC gifts also keep the stand-in Potion, and the pop-up is still the game's rewritten `WBP_DialogBox_C` (so two checks arriving at once, such as a chest right after a boss win, can still show the game's own item on the second pop-up). In round 119, a story boss win (`boss:9012`, The Hunger) logged `chest pop-up for boss:9012: no chest pop-up on screen`, so story boss item pop-ups can still miss the rewrite while the item arrives in the feed (v0.32.0 known issue, queued for v0.33.0).
 
+**Round 120 (the user):** many story bosses give no item, so maybe no pop-up came. But the mod gives the story bosses' shared win row (`Gim_EV_Majipot_Delete_02`) the stand-in Potion on their maps so that one comes, and in round 97 it did, with the item. The story boss line now says whether the row held the stand-in (`2 win (2 with the stand-in)`), and the next round asks what the pop-up said (mod build 3f446645).
+
 ## 20. Trap items, banked until the next battle
 
 **Idea:** trap items that hit the party: "Bad Breath" (random status ailments), and stat downs such as Deprotect (defence down) and Deshell (magic defence down). Status ailments end with the battle. So a trap that arrives on a map or in a menu is banked by the mod and fires at the start of the next battle.
@@ -339,6 +341,8 @@ Along the same lines, I would also want an option for players to start with all 
 
 **Round 117 (the user, round 108's radar check):** the radar goes quiet when its treasures are dug, but Lid says the radar stopped finding treasure while some are still to find, likely when the last treasure in the game's order is dug. And a Progressive Radar received while flying turns the radar on at once, but its treasures can be dug only after a map change. Both to look at for v0.33.0: Lid's line is likely a chat or talk row with a radar counter condition.
 
+**Round 120 (found off-line, mod build 3f446645):** Lid's line (`SubEv_C05_TreasureRadar_10_0n`) follows the dig rows of treasures 5, 9 and 13, the last of each tier in the game's order. 5's and 9's need step 30 and 40, which the mod holds, and 13's needs nothing. Each of the three rows now goes on to the line only while its dig would leave nothing the radar can find (`G.RadarLidLines`). To test in game. The dig points are `CPP_MapPingerPoint` actors with an `m_FlagCondition`, and the pinger keeps an `m_PingerPointList`, most likely made at the world map's load: that is the likely reason a radar received in flight works only after a map change. Next: `ffrap_inspect CPP_MapPinger` before and after a Progressive Radar arrives in flight, for the list's size and the pinger's functions.
+
 **Also round 108 (a player):** in the game the radar goes quiet once every treasure it can find is dug, until the next part. The mod kept it pinging, as it held the found count in the band. Now the count goes 2 past the band once the level's tiers are all found (docs/playtesting_archive.md, round 108).
 
 ## 52. A new game with no prologue (the new start)
@@ -388,6 +392,8 @@ Along the same lines, I would also want an option for players to start with all 
 - In game: `ffrap_inspect` on 75 at the top, and `ffrap_snapshot` before and after the switch 16 scene (`tools/snapdiff.py`), to see which save rows change.
 - Whether a `CallSwitch` on 75 from Lua, with the player at the top, brings it up.
 
+**Round 120 (found off-line, mod build 3f446645):** 75 is the only lift in the Shipyard with no stops and no arrival points (`m_TransitionDataList`) in the level, at -400, 14400, -1620. The keypad Blueprint has `CallSwitch(stop, direction)` (Up 1, Down 2), which returns false when the lift is at that stop already, and `Execute_BP(stop)`. **Probe built:** `ffrap_lift [<uid> [call <stop> up|down | exec <stop> | on]]` lists the map's keypad lifts or calls one. To test in game (docs/playtesting.md).
+
 ## 54. A start that cannot go wrong
 
 **From the user, 2026-11-26 (round 115).** Rain froze at the start: the user walked while the new start moved him to the Town of Sian, and had to start again. Can the start load while a window is up (idea 22)? Can a new game be refused while the client is not connected? Make the opening hard to break.
@@ -409,6 +415,8 @@ Along the same lines, I would also want an option for players to start with all 
 **Round 116 (mod build 517a874b, world build e0989726):** ways 1 and 2 are built. The second move is only for a player below the arrival, and move input is held until the player stands at the arrival (10 s at most). The client writes `ap_alive.txt` every 2 s while connected; without it the entry is labelled "New Game (Archipelago: connect the client)" and becomes Load Game. The probes are `ffrap_functions CPP_BFL_Dialog CPP_DialogManager` (way 3) and `ffrap_point0 on` (way 4). To test in game (docs/playtesting.md).
 
 **Round 117 (the user tried round 116's build, shipped in v0.32.0):** ways 1 and 2 work and shipped in v0.32.0 (`c9588fc`). Rain could not walk until he stood at the town; one move each time. The entry read "connect the client" and opened Load Game with the client closed, and started the seed with it connected. The label changes only when the title screen is made again. Way 4 does not work: point 0 moved to the arrival before the pawn came, but the game still put Rain at the Earth Shrine, so it places a new game from its own data. The probe is taken out. Way 3's calls are known (idea 22); the window is no longer needed for the move. What is left of this idea for v0.33.0: live refresh of the label while the title screen stays open.
+
+**Built in round 120 (mod build 3f446645):** every title check (3 s), text on screen that reads the other Archipelago label is rewritten to the current one (`G.RefreshTitleLabel`). The choice itself already followed the client live. To test in game; once it passes, this idea is done.
 
 ## 55. A stutter like a heartbeat
 
@@ -432,30 +440,14 @@ Along the same lines, I would also want an option for players to start with all 
 
 **Round 119 (the user's desktop, shipped in v0.32.0):** 5 runs over 25 ms in 2 minutes, from 23 to 30, and the story boss step is gone from the timings. The largest step left was the quest colours' hook, tried every odd tick (about 7 ms each) until the Quests screen is first opened; it now waits for its class to load (`StaticFindObject` check, `805720b`, shipped in v0.32.0). Open in v0.32.0 playtesting (`docs/playtesting.md`): laptop and slower-PC `perf:` timings.
 
+**Round 120 (the user's laptop, v0.32.0):** "definitely better", still seen now and then on the world map and in towns; a player says the same. The loop averaged 8 to 15 ms. The quest colours hook had never registered (the Quests screen was not opened) and still cost about 6 ms on every odd tick; the 5-second steps (settings, chest blanking, status file) came on the same tick as the locks and loot, 26 to 30 ms every 5 s; and `OnField()` searched for the field HUD about 6 times a tick. **Built (mod build 3f446645):** the hook is tried only with a reward line on screen, each 5-second step has a tick of its own (`state.STATUS_AT`), and `OnField()` is asked once per loop run. To test: the laptop's `perf:` lines.
+
 ## 56. Separate boss scaling options
 
 **From tester feedback, paired with idea 49 for v0.33.0 (2026-11-27):**
 - Separate On/Off switches for Enemy scaling and Boss scaling on the Settings tab.
 - Separate `Casual`, `Normal`, and `Expert` preset rows for Enemies and Bosses (copied from `Difficulty`) in `Standard` mode, swapping to the 5 percentage sliders (`elevel`, `ehp`, `eatk`, `blevel`, `bpower`) when `Custom scaling` is turned on.
 - `game.lua` already tells boss battle groups (`G.BOSSES` and Arena `9705` to `9721`) apart from regular field enemies, so no new engine probes are needed.
-
-## 57. Fast travel to a place a scene took the player to
-
-**From the user, 2026-11-27 (round 117).** After The Tide from the Sky, fast travel went to Grandport with Lanzelt still locked. The airship showed grey on the Map screen, but fast travel went there. Zoldaad's capital could be travelled to after the Ayaka quest's scene, with no visit on foot.
-
-**Known so far (docs/playtesting_archive.md, round 117):**
-- Since round 108 the mod marks each map of a locked continent not visited (`bIsVisited` in `Map.perMapSaveDataMap`). The log shows Grandport marked not visited, then a fast travel to it two minutes later. So that mark is not what the Map screen's refusal reads ("a place you haven't visited yet", condition `bCheckLockedMap` in `DA_WldMapParameter`).
-- The grey on the Map screen does follow the visited mark: the airship was grey because a seed that starts with it never marked it visited (fixed in round 117).
-- Zoldaad Unlock had come before any Zoldaad map in the log. With the continent open, a visit made by a scene counts as in the game.
-
-**The user's answer (round 117):** a place waits for a visit on foot, on an open continent too.
-
-**Built (round 117, mod builds afd9cf66 and b295fb0e, shipped in v0.32.0 `ed5c027`):** maps of a locked continent are marked unknown as well as not visited, and `ffrap_visited <map> [unvisit|unknown|restore]` logs or writes a map's marks. The mod keeps the places the player stood in with the field up for two passes (about 2 s), per session, in `ap_state.txt` (`walked`). Every other place of a continent is marked unknown and not visited, as a locked continent's are; the map the player is on is left alone. A session's first pass takes the places the save has visited already, so a save from before keeps its fast travel places (a scene's visit before this build counts). The log has `fast travel: map <id> walked in`, and `fast travel: maps ... not walked in or on locked continents, marked never seen`.
-
-**Round 118 (the user):** the walk-in rule works: `fast travel: map <id> walked in` for each new place, and existing saves kept their places. The probe ran `unvisit` but not `unknown` (the log has the usage line in its place), and what the Map screen did is not recorded.
-
-**To find out (`docs/playtesting.md`):** with `ffrap_visited` on an open continent's town, whether the Map screen still travels there when it is only not visited, and when it is unknown. If neither stops it, the next probe is `ffrap_find Visited` and `ffrap_find Known` for the list it reads.
-
 
 ## 58. Universal Tracker in the client
 

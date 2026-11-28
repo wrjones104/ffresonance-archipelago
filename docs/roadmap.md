@@ -1,6 +1,6 @@
 # Roadmap
 
-What to build next, in order, and what goes together. The ideas themselves, with what is known, are in [IDEAS.md](../IDEAS.md); numbers below are its idea numbers (done ones are in [ideas_archive.md](ideas_archive.md)). This file says only the order and the reasons. Updated 2026-11-27, after v0.32.0.
+What to build next, in order, and what goes together. The ideas themselves, with what is known, are in [IDEAS.md](../IDEAS.md); numbers below are its idea numbers (done ones are in [ideas_archive.md](ideas_archive.md)). This file says only the order and the reasons. Updated 2026-11-28, after round 120.
 
 ## Where we are
 
@@ -31,12 +31,14 @@ Work batches across tester builds (`0.32.1` / `0.63.1` onward) in three stages.
 
 #### Stage A: v0.32.0 follow-ups and dungeon/UI fixes
 
-1. Check incoming `perf:` logs on laptops and slower PCs (towns and Dragon's Maw) and trim any remaining slow steps (55).
-2. Run the `ffrap_visited` check (`unvisit` and `unknown`) to confirm the Map screen blocks unwalked places (57).
-3. Fix story boss item pop-ups so wins (`boss:9012` in round 119) show the scouted Archipelago item instead of missing the dialog (15).
-4. Fix Mobliz Shipyard's last lift (elevator 75 on map 3060, via the switch 16 talk chain / `CallSwitch`) so its 2 chests and 2 Tablet Shards are reachable (53).
-5. Fix the two radar rough edges: stop Lid's early "stopped finding treasure" line while treasures remain, and allow digging treasures right away when a Progressive Radar arrives mid-flight without a map change (51).
-6. Refresh the **New Game (Archipelago)** client-heartbeat label live while the title screen stays open (54).
+Round 120 (mod build 3f446645) worked through this list. What is left waits for the next round's results.
+
+1. Laptop `perf:` timings (55). Round 120 trimmed the quest colours hook, spread the 5-second steps over their own ticks, and asks `OnField()` once per run. Next: the laptop's timings again; Dragon's Maw is still to look at.
+2. ~~The `ffrap_visited` check (57).~~ Done in round 120: the Map screen refuses a place marked not visited. Idea 57 is in the archive.
+3. Story boss item pop-ups (15). Round 120 logs whether the win row held the stand-in; the next round says what the pop-up showed. Fix from that.
+4. Mobliz Shipyard's last lift (elevator 75 on map 3060) (53). Round 120 built the `ffrap_lift` probe (`CallSwitch`, `Execute_BP`); the fix follows its result.
+5. The radar (51). Lid's early "stopped finding treasure" line is fixed in round 120 (`G.RadarLidLines`). Left: digging right away when a Progressive Radar arrives in flight (the pinger's point list, probe next).
+6. ~~Refresh the **New Game (Archipelago)** label live on the title screen (54).~~ Built in round 120, to test.
 
 #### Stage B: Finish core logic and turn side quests on by default
 
@@ -101,7 +103,7 @@ Small items to pick up when a round has room:
 
 | Group | Ideas | Shared piece |
 |---|---|---|
-| v0.32.0 fixes | 15, 51, 53, 54, 55, 57 | follow-ups to the fifth public playtest build |
+| v0.32.0 fixes | 15, 51, 53, 54, 55 | follow-ups to the fifth public playtest build |
 | Scaling UI | 49, 56, scaling line | Enemy/Boss presets and Custom sliders on the Settings tab |
 | In-game state | 11, 22, 38 | showing seed state in the game's UI |
 | Logic | 40, Tier C/D `BOSS_NEEDS`, side quests default on | the capability matrix and default seed pool |

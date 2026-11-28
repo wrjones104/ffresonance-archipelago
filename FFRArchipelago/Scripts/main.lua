@@ -54,7 +54,7 @@
 -- follows the save slots the linked game is saved to. While any other save is loaded, the mod
 -- grants nothing, reports nothing and leaves the chests vanilla.
 
-local VERSION = "0.63.0"
+local VERSION = "0.63.1"
 local PROTOCOL = 2        -- the bridge protocol; the apworld's MOD_PROTOCOL
 
 local MOD_DIR = (debug.getinfo(1, "S").source:gsub("^@", ""):gsub("\\", "/"):match("^(.*/)Scripts/[^/]+$"))
@@ -207,6 +207,10 @@ local state = {
     apNewGame = false, -- the Archipelago title entry was just chosen: the next new game is one
     newStartOn = nil,  -- ffrap_newstart on|off (round 109); on unless set off. Kept in ap_state.txt once set
 }
+-- Round 120: every step run once in STATUS_EVERY came on the same tick (26 to 30 ms on the laptop,
+-- every 5 s). Each has its own tick of the ten now; settings and the chest blanking take odd ticks,
+-- away from the locks and the loot scan.
+state.STATUS_AT = { scale = 0, status = 2, level = 4, settings = 5, blank = 7 }
 
 -- Round 77: a crash about a second after a map change, in a game-thread Lua loop (FName::ToString
 -- on a freed object, as in round 71). The stack does not say which mod's loop: FFRS_QoL runs eight.
@@ -875,8 +879,11 @@ end
 -- for its first line coloured and any it could not colour; ffrap_quest colors on logs it all.
 function state.questColorsTick()
     local Q = game.QUEST_COLORS
-    if Q.instant and not Q.hooked and game.QuestColorHook(log) then log("quest colours: SetText hook registered") end
-    local lines = game.QuestRewardColors(state.prizeSpans or {}, Q.trace)
+    local lines, shown = game.QuestRewardColors(state.prizeSpans or {}, Q.trace)
+    -- Round 120: with the Quests screen never opened, trying the hook still cost about 6 ms on
+    -- every other tick on the laptop. It is tried only with a reward line on screen now.
+    state.mark("patches: quest hook")
+    if Q.instant and not Q.hooked and shown > 0 and game.QuestColorHook(log) then log("quest colours: SetText hook registered") end
     for _, line in ipairs(lines) do
         local coloured, failed = line:find("^coloured") ~= nil, line:find("^not coloured") ~= nil
         if state.questVerbose or failed or (coloured and not state.questWorked) then log("quest colours: " .. line) end
@@ -1619,6 +1626,8 @@ local function titleTick()
         game.TITLE_LABEL = live and game.TITLE_LABEL_LIVE or game.TITLE_LABEL_NO_CLIENT
         if live ~= state.clientLive then log("title: client " .. (live and "connected" or "not connected")) end
         state.clientLive = live
+        local okLabel, relabelled = pcall(game.RefreshTitleLabel, game.TITLE_LABEL)
+        if okLabel and relabelled > 0 then log("title: entry label now \"" .. game.TITLE_LABEL .. "\" on screen") end
     end
     local ok, detail = game.AddTitleEntry(not inGame)
     if ok and hookTitle() then
@@ -1978,11 +1987,11 @@ local function tick()
             pcall(gateTick)
             if bossTest.group then pcall(bossTest.tick) end
             state.mark("scale")
-            if state.ticks % STATUS_EVERY == 0 then pcall(scaleTick) end
+            if state.ticks % STATUS_EVERY == state.STATUS_AT.scale then pcall(scaleTick) end
             state.mark("fight")
             pcall(state.fightTick)
             state.mark("settings")
-            if state.ticks % STATUS_EVERY == 0 then pcall(settingsTick) end
+            if state.ticks % STATUS_EVERY == state.STATUS_AT.settings then pcall(settingsTick) end
             -- Round 117: one tick in two carried every slow step (25 to 40 ms on the user's desktop,
             -- a stutter like a heartbeat on a laptop). The extras and the table patches run on the
             -- other tick now.
@@ -1994,7 +2003,7 @@ local function tick()
             -- Round 109: and in the seed's own save, when the prologue skip never ran (autosave off):
             -- only past the open world start's story is the party the seed's.
             state.mark("level")
-            if state.ticks % STATUS_EVERY == 0 and seedCfg.openworld and sessionSave() and game.OnField()
+            if state.ticks % STATUS_EVERY == state.STATUS_AT.level and seedCfg.openworld and sessionSave() and game.OnField()
                 and (game.StoryCounter() or 0) >= game.OPEN_START.story then pcall(game.SyncSlotLevel) end
             state.mark("patches")
             if seedCfg.openworld and state.ticks % LOCKS_EVERY == 1 then
@@ -2100,13 +2109,15 @@ local function tick()
                 end
                 -- The tables can be rebuilt while the game runs, so blanking is applied again
                 -- now and then; rows already blank are skipped.
-                if state.blank and state.ticks % STATUS_EVERY == 0 then game.BlankChests(true) end
+                state.mark("blank")
+                if state.blank and state.ticks % STATUS_EVERY == state.STATUS_AT.blank then game.BlankChests(true) end
             else
                 state.lastStory = nil   -- report the story again once the session's save is back
             end
         end
     end
-    if state.ticks % STATUS_EVERY == 0 then writeStatus() end
+    state.mark("status")
+    if state.ticks % STATUS_EVERY == state.STATUS_AT.status then writeStatus() end
     if os.clock() - state.perf.since >= state.perf.every then
         for _, line in ipairs(state.perfLines()) do log(line) end
     end
@@ -3202,6 +3213,8 @@ function radar.tick()
         local inBand = false
         for _, step in ipairs(band.steps) do inBand = inBand or now == step end
         if not inBand then now = game.SetProgressValue(game.RADAR_TIER_PROGRESS, band.steps[1]) end
+        local okLines, lines = pcall(game.RadarLidLines, level)
+        if okLines and lines > 0 then log("radar: " .. lines .. " of Lid's \"stopped picking up treasure\" lines set for what is left to dig") end
     end
     local line = string.format("radar: level %d (flag %d %s, step %s, found %s)%s", level, game.RADAR_ON_FLAG,
         tostring(game.GetFlag(game.RADAR_ON_FLAG)), tostring(now), tostring(found),
@@ -4017,6 +4030,22 @@ command("ffrap_visited", function(p)
     notify(line)
 end)
 
+-- ffrap_lift [<uid> [call <stop> up|down | exec <stop> | on]] (round 120 probe): the keypad lifts
+-- on this map, or one lift, and a call of its own functions. For Mobliz Shipyard's lift 75.
+command("ffrap_lift", function(p)
+    local uid, action = tonumber(p[1] or ""), p[2]
+    local stop, direction = tonumber(p[3] or ""), game.LIFT_DIRECTIONS[tostring(p[4] or "")]
+    local usable = not p[1] or (uid and (action == nil or action == "on"
+        or (action == "exec" and stop) or (action == "call" and stop and direction)))
+    if not usable then
+        notify("Usage: ffrap_lift [<uid> [call <stop> up|down | exec <stop> | on]]")
+        return
+    end
+    local lines = game.LiftProbe(uid, action, stop, direction)
+    for _, line in ipairs(lines) do log("lift: " .. line) end
+    notify(lines[#lines])
+end)
+
 -- ffrap_perf: the time each loop, step and object search took since the last summary.
 command("ffrap_perf", function()
     for _, line in ipairs(state.perfLines()) do log(line) end
@@ -4070,7 +4099,9 @@ local function every(ms, name, fn)
     local function run()
         local t0 = os.clock()
         state.mark(name)
+        game.BeginRun()
         local ok, err = pcall(fn)
+        game.EndRun()
         if not ok then log(name .. " error: " .. tostring(err)) end
         state.mark(name .. " done")
         state.perfLoop(name, os.clock() - t0)

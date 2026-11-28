@@ -332,6 +332,13 @@ assert L.eval("blocks[2].justify") == 0, "left-justified"
 L.execute("blocks[2].justify = 2")
 assert L.eval('(G.TitleVersionLine("FFRArchipelago 0.8.1"))') == "already"
 assert L.eval("blocks[2].justify") == 0, "kept left-justified"
+# Round 120: the entry's label on screen follows the client while the title stays up
+L.execute("blocks[1].text = G.TITLE_LABEL_NO_CLIENT")
+assert L.eval("G.RefreshTitleLabel(G.TITLE_LABEL_LIVE)") == 1 and L.eval("blocks[1].text") == "New Game (Archipelago)"
+assert L.eval("G.RefreshTitleLabel(G.TITLE_LABEL_LIVE)") == 0, "once"
+assert L.eval("G.RefreshTitleLabel(G.TITLE_LABEL_NO_CLIENT)") == 1 and L.eval("blocks[1].text") == L.eval("G.TITLE_LABEL_NO_CLIENT")
+assert L.eval("blocks[3].text") == "© SQUARE ENIX", "other text is left alone"
+L.execute("blocks[1].text = 'Continue'")
 # its layout, for the logo
 L.execute(r"""
 local function w(cls, name) local o = { cls = cls, name = name }
@@ -611,6 +618,20 @@ for i, msg in enumerate(["Received Potion from Bob", "Sent Ether to Alice"]):
     ok = L.execute(f'return G.FeedLine("{msg}", {i})')
     assert ok is True, ok
 assert L.eval("#hud.kids") == 1, "one box"
+# Round 120: inside one loop run the field HUD is looked for once; outside the runs, each time
+L.execute(r"""
+hudSearches = 0
+local oldFAO3 = FindAllOf
+function FindAllOf(c) if c == "WBP_FieldFuncList2_C" then hudSearches = hudSearches + 1 end return oldFAO3(c) end
+""")
+L.execute("G.BeginRun()")
+assert L.eval("G.OnField()") is True and L.eval("G.OnField()") is True
+L.execute("hudOn = false")
+assert L.eval("G.OnField()") is True, "kept for the rest of the run"
+L.execute("G.EndRun()")
+assert L.eval("hudSearches") == 1, L.eval("hudSearches")
+assert L.eval("G.OnField()") is False and L.eval("hudSearches") == 2
+L.execute("hudOn = true")
 assert L.eval("hud.kids[1].slot.h") == 3 and L.eval("hud.kids[1].slot.v") == 3, "right is 3 (round 21)"
 assert L.eval("hud.kids[1].slot.pad.Right") == 48 and L.eval("hud.kids[1].slot.pad.Bottom") == 140
 assert L.eval("hud.kids[1].outer == hudTree") is True
@@ -843,7 +864,9 @@ local oldFAO9 = FindAllOf
 function FindAllOf(c) if c == "WBP_Quest_Reward_Text_C" then return { rewardLine } end return oldFAO9(c) end
 questSpans = { ["Alice's Hookshot"] = { text = "Hookshot", flags = 2 } }
 """)
-lines = list(L.eval("G.QuestRewardColors(questSpans)").values())
+assert L.eval("select(2, G.QuestRewardColors({}))") == 1, "one reward line on screen"
+L.eval("G.QuestRewardColors({})")
+lines = list(L.eval("(G.QuestRewardColors(questSpans))").values())
 SEEN_HOOKSHOT = 'seen: 1 reward lines on screen: "Alice\'s Hookshot" (scouted) by property'
 assert lines == [SEEN_HOOKSHOT, "coloured: Alice's Hookshot (in a NamedSlot, in its place)"], lines
 assert L.eval("rewardSlot.content.cls") == "HorizontalBox", "the row in the block's place"
@@ -852,9 +875,9 @@ assert [L.eval(f"rewardSlot.content.kids[{i}].text") for i in (1, 2)] == ["Alice
 SLATEBLUE_R = 0.153
 assert L.eval("rewardSlot.content.kids[2].ColorAndOpacity.SpecifiedColor.R") == SLATEBLUE_R
 assert L.eval("rewardSlot.content.kids[1].Justification") == 0, "left, as the game's line"
-assert list(L.eval("G.QuestRewardColors(questSpans)").values()) == [], "once"
+assert list(L.eval("(G.QuestRewardColors(questSpans))").values()) == [], "once"
 L.execute('rewardBlock.text = "Phoenix Down"')
-lines = list(L.eval("G.QuestRewardColors(questSpans)").values())
+lines = list(L.eval("(G.QuestRewardColors(questSpans))").values())
 assert lines[-1] == "taken out: Alice's Hookshot" and L.eval("rewardSlot.content == rewardBlock") is True, lines
 # in a panel: the row beside the block, which is hidden
 L.execute(r"""
@@ -867,21 +890,21 @@ function rewardPanel:HasAnyFlags() return false end
 function rewardPanel:GetFullName() return "HorizontalBox " .. self.path end
 rewardBlock.parentWidget, rewardBlock.text = rewardPanel, "Alice's Hookshot"
 """)
-lines = list(L.eval("G.QuestRewardColors(questSpans)").values())
+lines = list(L.eval("(G.QuestRewardColors(questSpans))").values())
 assert lines[-1] == "coloured: Alice's Hookshot (in a HorizontalBox)", lines
 assert L.eval("rewardBlock.vis") == 1 and L.eval("#rewardPanel.kids") == 2
-assert list(L.eval("G.QuestRewardColors({})").values())[-1] == "taken out: Alice's Hookshot", "off: all taken out"
+assert list(L.eval("(G.QuestRewardColors({}))").values())[-1] == "taken out: Alice's Hookshot", "off: all taken out"
 assert L.eval("rewardBlock.vis") == 0 and L.eval("#rewardPanel.kids") == 1
 # no property of that name: the entry panel's named slot gives the block
 L.execute(r"""
 rewardLine.CommonTextBlock_194 = nil
 rewardLine.WBP_IconEntryLayoutPanel_76 = { GetContentForSlot = function(self, name) if name:ToString() == "Slot_33_Content" then return rewardBlock end end }
 """)
-lines = list(L.eval("G.QuestRewardColors(questSpans)").values())
+lines = list(L.eval("(G.QuestRewardColors(questSpans))").values())
 assert lines[0] == 'seen: 1 reward lines on screen: "Alice\'s Hookshot" (scouted) by slot', lines
 L.eval("G.QuestRewardColors({})")
 L.execute("rewardLine.WBP_IconEntryLayoutPanel_76 = nil")
-assert list(L.eval("G.QuestRewardColors(questSpans)").values()) == ["seen: 1 reward lines on screen: no text block"]
+assert list(L.eval("(G.QuestRewardColors(questSpans))").values()) == ["seen: 1 reward lines on screen: no text block"]
 # Round 96: on by default; `instant` hooks the line's own SetText (a Blueprint function, so the
 # hook runs after the text is written) and colours that line at once, and puts back a row the
 # line showed for another reward
@@ -2299,6 +2322,32 @@ assert L.eval("G.RadarPatch()") == 0
 assert L.eval("#G.RADAR") == 13 and L.eval("G.RADAR[13].flag") == 716
 print("radar rows: ok")
 
+# Round 120: Lid's "stopped picking up treasure" line comes after the dig of treasure 5, 9 or 13
+# only when that dig leaves nothing the radar can find
+RADAR_NEVER = "{flag:703}&!{flag:703}"
+L.execute(r"""
+for n, cond in pairs({ [5] = "{progress:49}==30", [9] = "{progress:49}==40", [13] = "" }) do
+  local row = gimTalk.rows[G.RADAR[n].row] or { ObtainItemList = {} }
+  row.ContinuousEventList = { { Condition = cond, EventId = FName("SubEv_C05_TreasureRadar_10") } }
+  gimTalk.rows[G.RADAR[n].row] = row
+end
+radarDug = {}
+radarSavedGetFlag = G.GetFlag
+G.GetFlag = function(i) return radarDug[i] == true end
+""")
+lid_line = lambda n: L.eval(f"gimTalk.rows[G.RADAR[{n}].row].ContinuousEventList[1].Condition")
+assert L.eval("G.RadarLidLines(1)") == 3 and lid_line(5) == RADAR_NEVER, "treasures 1 to 4 left"
+L.execute("for n = 1, 4 do radarDug[G.RADAR[n].flag] = true end")
+assert L.eval("G.RadarLidLines(1)") == 1 and lid_line(5) == "{progress:49}==30", "5 is the last of tier 1"
+assert lid_line(9) == RADAR_NEVER and lid_line(13) == RADAR_NEVER
+L.execute("radarDug[G.RADAR[5].flag] = true")
+assert L.eval("G.RadarLidLines(2)") == 1 and lid_line(5) == RADAR_NEVER, "tier 2's treasures are left now"
+L.execute("for n = 6, 8 do radarDug[G.RADAR[n].flag] = true end")
+assert L.eval("G.RadarLidLines(2)") == 1 and lid_line(9) == "{progress:49}==40"
+assert L.eval("G.RadarLidLines(2)") == 0, "once"
+L.execute("G.GetFlag = radarSavedGetFlag")
+print("radar lines: ok")
+
 # Round 78: a side quest's reward row loses the location's item (round 81: no stand-in Potion),
 # and keeps its gil and a second item. A vision comes out too. The list here behaves like the engine's array: Empty() clears it, and reading one index
 # past the end adds an element.
@@ -3129,3 +3178,28 @@ made = lua("bodies")
 L.eval(f'G.APMENU.Page("Archipelago", pageBody, say)')
 assert lua("bodies") == made, "the text is made only while the page is open"
 print("archipelago page: ok")
+
+# Round 120 probe: ffrap_lift lists the keypad lifts and calls one's CallSwitch or Execute_BP
+SHIPYARD_TOP_LIFT, TOP_STOP, UP = 75, 1, 1
+L.execute(f'''
+  liftCalls = {{}}
+  shipLift = {{ m_UniqueId = {SHIPYARD_TOP_LIFT}, m_GimmickCondition = 0, m_CurrentSplineKeyIndex = 0, m_IsCallSwitch = false }}
+  function shipLift:IsValid() return true end
+  function shipLift:HasAnyInternalFlags() return false end
+  function shipLift:HasAnyFlags() return false end
+  function shipLift:GetClass() return {{ GetFName = function() return {{ ToString = function() return "BP_MapGimmick_Floor_Elevator_Interact_002_C" end }} end }} end
+  function shipLift:K2_GetActorLocation() return {{ X = -400, Y = 14400, Z = -1620 }} end
+  function shipLift:GetComponentByClass() return {{ GetNumberOfSplinePoints = function() return 2 end }} end
+  function shipLift:CallSwitch(stop, dir) liftCalls[#liftCalls + 1] = "call " .. stop .. " " .. dir return stop ~= self.m_CurrentSplineKeyIndex end
+  function shipLift:Execute_BP(stop) liftCalls[#liftCalls + 1] = "exec " .. stop end
+  local prevLiftFAO = FindAllOf
+  function FindAllOf(c) if c == "BP_MapGimmick_Floor_Elevator_Interact_C" then return {{ shipLift }} end return prevLiftFAO(c) end
+''')
+listed = list(L.eval("G.LiftProbe()").values())
+assert listed[0].startswith(f"lift {SHIPYARD_TOP_LIFT} (BP_MapGimmick_Floor_Elevator_Interact_002_C): condition 0, stop 0 of 2 points, "
+                            "call switch false, at -400, 14400, -1620"), listed
+called = list(L.eval(f"G.LiftProbe({SHIPYARD_TOP_LIFT}, 'call', {TOP_STOP}, {UP})").values())
+assert called[-1] == f"CallSwitch({TOP_STOP}, {UP}): true" and L.eval("liftCalls[1]") == f"call {TOP_STOP} {UP}", called
+assert list(L.eval(f"G.LiftProbe({SHIPYARD_TOP_LIFT}, 'exec', {TOP_STOP})").values())[-1] == f"Execute_BP({TOP_STOP}): called"
+assert list(L.eval("G.LiftProbe(72)").values()) == ["no keypad lift 72 on this map"]
+print("lift probe: ok")

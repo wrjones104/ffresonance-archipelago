@@ -1257,6 +1257,24 @@ function G.OrderTitleEntries()
     return true, "rebuilt as [" .. table.concat(now, ",") .. "]"
 end
 
+-- Round 120 (round 117's finding): the menu draws its rows' labels when it is made, so the entry
+-- kept "connect the client" after the client connected, until a quit to the title. Rewrites any
+-- text on screen that reads one of the Archipelago labels but not `label`. Returns how many.
+function G.RefreshTitleLabel(label)
+    local stale = { [G.TITLE_LABEL_LIVE] = true, [G.TITLE_LABEL_NO_CLIENT] = true }
+    stale[label] = nil
+    local changed = 0
+    for _, class in ipairs({ "TextBlock", "RichTextBlock" }) do
+        local ok, all = pcall(FindAllOf, class)
+        for _, tb in ipairs(ok and all or {}) do
+            local text
+            if Alive(tb) then pcall(function() text = tb:GetText():ToString() end) end
+            if text and stale[text] and pcall(function() tb:SetText(FText(label)) end) then changed = changed + 1 end
+        end
+    end
+    return changed
+end
+
 -- Writes `line` above the game's version text in the title screen's corner ("1.0.1.0", above
 -- copyright lines). Sets left justification (ETextJustify Left = 0) so the wider mod line does
 -- not push the version off-screen right. Rechecked periodically because the title widget rebuilds
@@ -1528,9 +1546,17 @@ local function FeedHost()
 end
 
 -- True while the field HUD is on screen: not in a battle, a menu, an event or loading.
+-- Round 120: a tick asked this five times or so, each a FindAllOf of the field HUD (about 2 ms a
+-- tick on the laptop). Inside one loop run (G.BeginRun to G.EndRun, one game frame) the answer is
+-- kept; a hook outside the loops asks again each time.
 function G.OnField()
-    return FeedHost() ~= nil
+    local run = G.run
+    if not run then return FeedHost() ~= nil end
+    if run.onField == nil then run.onField = FeedHost() ~= nil end
+    return run.onField
 end
+function G.BeginRun() G.run = {} end
+function G.EndRun() G.run = nil end
 
 -- Blanks a shiny actor that is an AP location to nothing (matching blanked chests), using the same
 -- shuffle limits (`shinies`) and Tablet Shards (`shards`) filter as the apworld. Returns true if modified.
@@ -2097,7 +2123,7 @@ function G.QuestRewardColors(spans, say)
         table.insert(out, 1, summary)
         Q.lastSeen = summary
     end
-    return out
+    return out, #seen
 end
 -- The instant probe: a hook on the reward line's SetText (a Blueprint function, so UE4SS calls it
 -- after the text is written). The class loads with the Quests screen, so it is tried until it
@@ -2833,6 +2859,35 @@ function G.RadarPatch()
     return written
 end
 
+-- Round 120 (round 117's finding): the dig rows of treasures 5, 9 and 13, the last of each tier in
+-- the game's order, go on to Lid's "the radar seems to have stopped picking up treasure"
+-- (SubEv_C05_TreasureRadar_10_0n). 5's and 9's need step 30 and 40, which the mod holds, and
+-- 13's needs nothing, so the line came while treasures were left. Each of those rows goes on to
+-- the line only while the dig would leave none the radar can find (`level` Progressive Radars).
+-- Flag 703 is set by every dig row, so RADAR_NEVER is never true. Returns the rows written.
+G.RADAR_LAST = { [5] = "{progress:49}==30", [9] = "{progress:49}==40", [13] = "" }
+G.RADAR_NEVER = "{flag:703}&!{flag:703}"
+function G.RadarLidLines(level)
+    local want, keys = {}, {}
+    for n, line in pairs(G.RADAR_LAST) do
+        local last = true
+        for _, p in ipairs(G.RADAR) do
+            if p.n ~= n and p.tier <= level and G.GetFlag(p.flag) ~= true then last = false end
+        end
+        want[G.RADAR[n].row] = last and line or G.RADAR_NEVER
+        keys[#keys + 1] = G.RADAR[n].row
+    end
+    local written = 0
+    EachTalkRow(function(key, row)
+        local entry = row.ContinuousEventList[1]
+        if ObjText(entry.Condition) ~= want[key] then
+            entry.Condition = want[key]
+            written = written + 1
+        end
+    end, keys)
+    return written
+end
+
 -- Round 78: side quests that are locations (quests.lua, from data/quests.tsv; docs/side_quests.md).
 -- A quest's check is its counter at or past the value its reward row writes.
 G.QUESTS = require("quests")
@@ -3297,7 +3352,7 @@ function G.SyncStoryBossTrigger(say)
     local won = G.GetFlag(boss.flag) == true
     local cond = "!{flag:" .. boss.flag .. "}"
     local fightCond = cond .. "&{flag:" .. G.STORY_BOSS_READY_FLAG .. "}"
-    local fightRows, winRows, groupRows = 0, 0, 0
+    local fightRows, winRows, groupRows, standIns = 0, 0, 0, 0
     if not bossTestSaved then
         step(string.format("story boss: tables for group %d, flag %d (won %s)", boss.group, boss.flag, tostring(won)))
         EachTalkRow(function(key, row)
@@ -3308,6 +3363,10 @@ function G.SyncStoryBossTrigger(say)
                 for i = 1, #row.OnFlagList do row.OnFlagList[i] = boss.flag end
                 G.StandIn(row, true)
                 winRows = winRows + 1
+                -- Round 120: round 119's win showed no pop-up for the mod to write. This says
+                -- whether the row held the stand-in that brings it.
+                local list = row.ObtainItemList
+                if #list >= 1 and Int(list[1].ID) == BOSS_STAND_IN then standIns = standIns + 1 end
             end
         end, { STORY_BOSS_FIGHT, STORY_BOSS_WIN })
         -- Round 118: the battle groups' table has no row names to find a group by, and a walk of
@@ -3451,8 +3510,8 @@ function G.SyncStoryBossTrigger(say)
             end
         end
     end
-    local detail = string.format("map %d group %d flag %d (won %s): %d fight, %d win, %d group rows; %d triggers, %d transitions, %d npcs%s%s",
-        mapId, boss.group, boss.flag, tostring(won), fightRows, winRows, groupRows, triggers, transitions, npcs, walks,
+    local detail = string.format("map %d group %d flag %d (won %s): %d fight, %d win (%d with the stand-in), %d group rows; %d triggers, %d transitions, %d npcs%s%s",
+        mapId, boss.group, boss.flag, tostring(won), fightRows, winRows, standIns, groupRows, triggers, transitions, npcs, walks,
         woken > 0 and ("; " .. woken .. " zones turned on") or "")
     return true, detail
 end
@@ -6470,6 +6529,51 @@ function G.WakeShipyardElevators()
         end
     end
     return woke
+end
+
+-- Round 120 probe (ffrap_lift): Mobliz Shipyard's lift 75 is on but stands at the bottom, and
+-- nothing at the top calls it. It is the only lift there with no stops and no arrival points in
+-- the level. The keypad Blueprint has CallSwitch(stop, direction: Up 1, Down 2), which returns
+-- false when the lift is at that stop already, and Execute_BP(stop), the keypad's own call.
+-- With no `uid`, lists the keypad lifts on the map. Returns lines for the log.
+G.LIFT_DIRECTIONS = { up = 1, down = 2 }
+function G.LiftProbe(uid, action, stop, direction)
+    local ok, all = pcall(FindAllOf, "BP_MapGimmick_Floor_Elevator_Interact_C")
+    local out, me = {}, G.PlayerPose()
+    for _, a in ipairs(ok and all or {}) do
+        if Alive(a) then
+            local id, cond, key, call, pos, points = -1, "?", "?", "?", nil, "?"
+            pcall(function() id = Int(a.m_UniqueId) end)
+            if not uid or id == uid then
+                pcall(function() cond = tostring(Int(a.m_GimmickCondition)) end)
+                pcall(function() key = tostring(Int(a.m_CurrentSplineKeyIndex)) end)
+                pcall(function() call = tostring(a.m_IsCallSwitch) end)
+                pcall(function() pos = a:K2_GetActorLocation() end)
+                pcall(function()
+                    local spline = a:GetComponentByClass(StaticFindObject("/Script/Engine.SplineComponent"))
+                    points = tostring(spline:GetNumberOfSplinePoints())
+                end)
+                local far = (pos and me) and string.format(", %.0f from you", math.sqrt((pos.X - me.x) ^ 2 + (pos.Y - me.y) ^ 2 + (pos.Z - me.z) ^ 2)) or ""
+                out[#out + 1] = string.format("lift %d (%s): condition %s, stop %s of %s points, call switch %s, at %s%s",
+                    id, ClassName(a), cond, key, points, call,
+                    pos and string.format("%.0f, %.0f, %.0f", pos.X, pos.Y, pos.Z) or "?", far)
+                if action == "call" then
+                    gateStep(string.format("lift %d: CallSwitch(%d, %d)", id, stop, direction))
+                    local okCall, moved = pcall(function() return a:CallSwitch(stop, direction) end)
+                    out[#out + 1] = "CallSwitch(" .. stop .. ", " .. direction .. "): " .. (okCall and tostring(moved) or ("failed: " .. tostring(moved)))
+                elseif action == "exec" then
+                    gateStep(string.format("lift %d: Execute_BP(%d)", id, stop))
+                    local okExec, err = pcall(function() a:Execute_BP(stop) end)
+                    out[#out + 1] = "Execute_BP(" .. stop .. "): " .. (okExec and "called" or ("failed: " .. tostring(err)))
+                elseif action == "on" then
+                    pcall(function() a:SetGimmickCondition(GIMMICK_ACTIVE, false) end)
+                    out[#out + 1] = "turned on"
+                end
+            end
+        end
+    end
+    if #out == 0 then out[1] = uid and ("no keypad lift " .. uid .. " on this map") or "no keypad lifts on this map" end
+    return out
 end
 
 -- Round 113 (the user): a lift with m_IsSave keeps its stop (spline point index) in the save, in
